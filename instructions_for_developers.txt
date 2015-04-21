@@ -131,4 +131,13 @@ will be updated with your changes, so now everyone can see them and wonder
 what the heck you were thinking when you made them!
 
 This covers the basics of setting up and maintaining this project. More will
-likely come later as the need arises. 
+likely come later as the need arises. Below are some general tips and
+recommendations:
+
+TIPS & RECOMMENDATIONS: 
+
+- Consider making multiple commits to your local repository before pushing
+to the server. You'll probably not need to push your changes to the server
+every time you do a local commit, so why waste the effort when you can combine
+all of your changes into one push? The commit history and messages will be
+pushed to the server as well, so you don't need to worry about that. 

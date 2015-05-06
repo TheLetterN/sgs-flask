@@ -17,3 +17,7 @@ from app import views
 
 #Next we load our config.py file, which contains settings for our application:
 app.config.from_object('config')
+
+#Add the SITE_NAME constant from config.py to Jinja globals so we can use it
+#in our templates without having to pass it to view functions.
+app.jinja_env.globals.update(SITE_NAME=app.config['SITE_NAME'])

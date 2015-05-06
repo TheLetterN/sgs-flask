@@ -6,5 +6,4 @@ from config import SITE_NAME
 @app.route('/')
 @app.route('/index')
 def index():
-    return render_template('index.html',
-                           title=SITE_NAME)
+    return render_template('index.html')

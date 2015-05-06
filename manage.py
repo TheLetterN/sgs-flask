@@ -2,7 +2,8 @@
 """Manage running, testing, and interacting with sgs_flask.
 Use manage.py --help to list available commands."""
 import unittest
-from flask.ext.script import Manager, Command
+from flask.ext.script import Manager
+from flask.ext.migrate import MigrateCommand
 from app import app
 import tests
 
@@ -21,6 +22,8 @@ def test():
     suite = unittest.TestLoader().loadTestsFromModule(tests)
     unittest.TextTestRunner(verbosity=2).run(suite)
 
+#Manage our database and migrations
+manager.add_command('db', MigrateCommand)
 
 if __name__ == '__main__':
     manager.run()

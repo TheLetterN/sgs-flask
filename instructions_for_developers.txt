@@ -34,9 +34,9 @@ For example, if you put it in your Documents folder, you would run:
 	
 	cd ~/Documents/sgs_flask
 
-3) Create a virtual environment named flask within the sgs_flask directory:
+3) Create a virtual environment named venv within the sgs_flask directory:
 
-	virtualenv flask 
+	virtualenv venv
 
 This will install a virtual environment for Python such that, when properly
 used, you won't have to worry about anything you install affecting anything
@@ -44,11 +44,11 @@ on your system outside of the sgs_flask directory.
 
 4) Activate your virtual environment:
 
-	source /path/to/sgs_flask/flask/bin/activate
+	source /path/to/sgs_flask/venv/bin/activate
 
 !IMPORTANT!: Remember this command, you will need to use it to activate the
 virtual environment if it has been deactivated (either by running 
-/path/to/sgs_flask/bin/deactivate or closing your terminal window)  before 
+/path/to/sgs_flask/venv/bin/deactivate or closing your terminal window)  before 
 running any files in sgs_flask, otherwise the website will try to use your 
 system's version of Python instead of the virtual environment! It won't make
 your computer burst into flames, but it won't work, either!

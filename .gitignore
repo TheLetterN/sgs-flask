@@ -1,6 +1,6 @@
-#Ignore the flask directory, as it contains the python virtual environment
+#Ignore the venv directory, as it contains the python virtual environment
 #which needs to be installed by the developer on their computer
-flask/
+venv/
 
 #Ignore compiled .pyc files
 *.pyc

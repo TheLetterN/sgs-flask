@@ -5,6 +5,9 @@ venv/
 #Ignore compiled .pyc files
 *.pyc
 
+#Ignore vim swap files
+*.swp
+
 #Since we're working in a largely Mac environment, we'll need to ignore those
 #pesky ..DS_Store files!
 .DS_Store

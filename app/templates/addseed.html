@@ -1,0 +1,74 @@
+{% extends "layout.html" %}
+{% block content %}
+<form method="POST" action="{{ url_for('manage', action='addseed') }}">
+    {{ form.hidden_tag() }}
+
+    {{ form.name.label }}
+    {% for error in form.name.errors %}
+    <div class="error">{{ error }}</div>
+    {% endfor %}
+    {{ form.name }}
+
+    {{ form.binomen.label }}
+    {% for error in form.binomen.errors %}
+    <div class="error">{{ error }}</div>
+    {% endfor %}
+    {{ form.binomen }}
+
+    {{ form.description.label }}
+    {% for error in form.description.errors %}
+    <div class="error">{{ error }}</div>
+    {% endfor %}
+    {{ form.description }}
+
+    {{ form.variety.label }}
+    {% for error in form.variety.errors %}
+    <div class="error">{{ error }}</div>
+    {% endfor %}
+    {{ form.variety }}
+
+    {{ form.category.label }}
+    {% for error in form.category.errors %}
+    <div class="error">{{ error }}</div>
+    {% endfor %}
+    {{ form.category }}
+
+    {{ form.price.label }}
+    {% for error in form.price.errors %}
+    <div class="error">{{ error }}</div>
+    {% endfor %}
+    {{ form.price }}
+
+    {{ form.is_active.label }}
+    {% for error in form.is_active.errors %}
+    <div class="error">{{ error }}</div>
+    {% endfor %}
+    {{ form.is_active }}
+
+    {{ form.in_stock.label }}
+    {% for error in form.in_stock.errors %}
+    <div class="error">{{ error }}</div>
+    {% endfor %}
+    {{ form.in_stock }}
+
+    {{ form.synonyms.label }}
+    {% for error in form.synonyms.errors %}
+    <div class="error">{{ error }}</div>
+    {% endfor %}
+    {{ form.synonyms }}
+
+    {{ form.series.label }}
+    {% for error in form.series.errors %}
+    <div class="error">{{ error }}</div>
+    {% endfor %}
+    {{ form.series }}
+
+    {{ form.thumbnail.label }}
+    {% for error in form.thumbnail.errors %}
+    <div class="error">{{ error }}</div>
+    {% endfor %}
+    {{ form.thumbnail }}
+
+    {{ form.submit }}
+</form>
+{% endblock %}

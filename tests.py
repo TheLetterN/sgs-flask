@@ -154,10 +154,23 @@ class TestAddSeedForm(unittest.TestCase):
         seed = create_seed_data()
         errormsg = ('Each word in binomen (genus and species) ' +
                     'must be 64 characters or less.')
-        print errormsg
         seed['binomen'] = ('Foo superlongspeciesnamewhichisutterlyimprobable' +
                            'butstilltechnicallypossiblesoweshouldtestforit')
-        print seed['binomen']
+        retval = self.simulate_post(seed)
+        assert errormsg in retval.data
+
+    def test_binomen_word_count(self):
+        """Binomen should be exactly 2 words."""
+        seed = create_seed_data()
+        errormsg = 'Binomen must be 2 words separated by a space.'
+        seed['binomen'] = 'Too many words'
+        retval = self.simulate_post(seed)
+        assert errormsg in retval.data
+        #Create a new seed because thumbnail causes a ValueError exception if
+        #we try to re-use the same seed data object more than once due to the
+        #StringIO object being closed after posting to our test client.
+        seed = create_seed_data()
+        seed['binomen'] = 'Toofew'
         retval = self.simulate_post(seed)
         assert errormsg in retval.data
 

@@ -96,4 +96,11 @@ class AddSeedForm(Form):
                         'must be 64 characters or less.'
                     )
 
+            #Binomen should also be exactly 2 words.
+            if len(split_binomen) != 2:
+                is_valid = False
+                self.binomen.errors.append(
+                    'Binomen must be 2 words separated by a space.'
+                )
+
             return is_valid

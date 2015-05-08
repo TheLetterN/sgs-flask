@@ -16,6 +16,7 @@ any changes we make! They can be run via the command:
 """
 
 import os
+import shutil
 import unittest
 from cStringIO import StringIO
 from werkzeug import secure_filename
@@ -213,7 +214,11 @@ def clear_tmp():
     """Deletes all files in the tmp directory."""
     temppath = os.path.join(basedir, 'tmp')
     for tempfile in os.listdir(temppath):
-        os.remove(os.path.join(temppath, tempfile))
+        fullfile = os.path.join(temppath, tempfile)
+        if os.path.isdir(fullfile):
+            shutil.rmtree(fullfile)
+        else:
+            os.remove(fullfile)
 
 
 #If tests.py is run directly, it should automatically run all tests.

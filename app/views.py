@@ -23,9 +23,9 @@ def manage(action=None):
         form = AddSeedForm()
         if form.validate_on_submit():
             flash('%s has been added!' % form.name.data)
-            #Now that we know everything's valid, we can save the thumbnail
             thumbfile = request.files[form.thumbnail.name]
-            thumbfile.save(os.path.join(app.config['UPLOAD_FOLDER'],
+            form.create_images_directory()
+            thumbfile.save(os.path.join(form.get_images_directory(),
                                         secure_filename(thumbfile.filename)))
 
             return redirect(url_for('manage'))

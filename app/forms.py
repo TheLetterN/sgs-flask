@@ -1,4 +1,5 @@
 """WTForms for use on the site."""
+import os
 from flask.ext.wtf import Form
 from flask.ext.wtf.file import FileField, FileAllowed
 from wtforms import(
@@ -9,6 +10,7 @@ from wtforms import(
         TextAreaField
 )
 from wtforms.validators import InputRequired, Length
+from app import app
 
 
 class AddSeedForm(Form):
@@ -104,3 +106,25 @@ class AddSeedForm(Form):
                 )
 
             return is_valid
+    
+    def get_images_directory(self):
+        """Returns a path to this seed's image directory."""
+        return get_images_directory(variety=self.variety.data, name=self.name.data)
+
+    def create_images_directory(self):
+        """Create seed's images directory if not present."""
+        try:
+            os.makedirs(self.get_images_directory())
+        except OSError as error:
+            if (error.errno == os.errno.EEXIST and 
+                    os.path.isdir(self.get_images_directory())):
+                pass
+            else:
+                raise
+
+
+def get_images_directory(variety, name):
+    """Returns path to images for seed with given name and variety."""
+    return os.path.join(app.config['IMAGES_FOLDER'],
+                        variety.lower(),
+                        name.lower())

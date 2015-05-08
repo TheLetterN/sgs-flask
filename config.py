@@ -17,5 +17,8 @@ SQLALCHEMY_DATABASE_URI = 'sqlite:///app.db'
 #Upload folder location
 UPLOAD_FOLDER = os.path.join(basedir, 'app', 'static', 'uploads')
 
+#Images folder location
+IMAGES_FOLDER = os.path.join(basedir, 'app', 'static', 'images')
+
 #Website information
 SITE_NAME = 'Swallowtail Garden Seeds'

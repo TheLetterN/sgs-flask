@@ -68,3 +68,21 @@ class AddSeedForm(Form):
                                 'Thumbnail format: jpg, png, gif')]
         )
     submit = SubmitField('Add Seed')
+
+    def validate(self):
+        if not Form.validate(self):
+            return False
+        else:
+            is_valid = True
+
+            #Each synonym should be <= 64 characters long
+            synonym_list = [synonym.strip() for synonym in
+                            self.synonyms.data.split(',')]
+            for synonym in synonym_list:
+                if len(synonym) > 64:
+                    is_valid = False
+                    self.synonyms.errors.append(
+                        'Each synonym must be 64 characters or less.'
+                    )
+
+            return is_valid

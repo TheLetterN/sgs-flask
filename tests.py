@@ -140,6 +140,15 @@ class TestAddSeedForm(unittest.TestCase):
         retval = self.simulate_post(seed)
         assert errormsg in retval.data
 
+    def test_too_long_synonym(self):
+        """Synonyms longer than 64 characters should cause an error."""
+        seed = create_seed_data()
+        errormsg = 'Each synonym must be 64 characters or less.'
+        seed['synonyms'] = seed['synonyms'] + ', This synonym is unreasonably\
+                           long and it really shouldn\'t be likely to happen.'
+        retval = self.simulate_post(seed)
+        assert errormsg in retval.data
+
 
 def create_seed_data():
     return dict(

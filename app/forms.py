@@ -75,7 +75,7 @@ class AddSeedForm(Form):
         else:
             is_valid = True
 
-            #Each synonym should be <= 64 characters long
+            #Each synonym should be <= 64 characters.
             synonym_list = [synonym.strip() for synonym in
                             self.synonyms.data.split(',')]
             for synonym in synonym_list:
@@ -83,6 +83,17 @@ class AddSeedForm(Form):
                     is_valid = False
                     self.synonyms.errors.append(
                         'Each synonym must be 64 characters or less.'
+                    )
+
+            #Each word in binomen should be <= 64 characters.
+            split_binomen = [nomen.strip() for nomen in
+                             self.binomen.data.split(' ')]
+            for nomen in split_binomen:
+                if len(nomen) > 64:
+                    is_valid = False
+                    self.binomen.errors.append(
+                        'Each word in binomen (genus and species) ' +
+                        'must be 64 characters or less.'
                     )
 
             return is_valid

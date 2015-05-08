@@ -149,17 +149,29 @@ class TestAddSeedForm(unittest.TestCase):
         retval = self.simulate_post(seed)
         assert errormsg in retval.data
 
+    def test_too_long_genus_or_species_in_binomen(self):
+        """Each word in binomen must be <= 64 characters."""
+        seed = create_seed_data()
+        errormsg = ('Each word in binomen (genus and species) ' +
+                    'must be 64 characters or less.')
+        print errormsg
+        seed['binomen'] = ('Foo superlongspeciesnamewhichisutterlyimprobable' +
+                           'butstilltechnicallypossiblesoweshouldtestforit')
+        print seed['binomen']
+        retval = self.simulate_post(seed)
+        assert errormsg in retval.data
+
 
 def create_seed_data():
     return dict(
         name='Soulmate',
         binomen='Asclepias incarnata',
-        description='Produces absolutely beautiful deep rose pink flowers in \
-                     large umbels in only 3 months from sowing. They are \
-                     superb cut flowers, and of course the butterflies find \
-                     them irresistible. Long blooming. Grows to 3.5 feet tall \
-                     and is a stunning background plant. Easy to germinate \
-                     seeds. Winter hardy to zone 3.',
+        description=('Produces absolutely beautiful deep rose pink flowers ' +
+                     'in large umbels in only 3 months from sowing. They ' +
+                     'are superb cut flowers, and of course the butterflies ' +
+                     'find them irresistible. Long blooming. Grows to 3.5 ' +
+                     'feet tall and is a stunning background plant. Easy to ' + 
+                     'germinate seeds. Winter hardy to zone 3.'),
         variety='Butterfly Weed',
         category='Perennial Flower',
         price='2.99',

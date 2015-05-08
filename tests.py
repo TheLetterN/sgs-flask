@@ -126,9 +126,18 @@ class TestAddSeedForm(unittest.TestCase):
     def test_bad_file_type(self):
         """Thumbnail files should be in jpg, png, or gif format."""
         seed = create_seed_data()
+        errormsg = 'Thumbnail format: jpg, png, gif' 
         seed['thumbnail'] = (StringIO('Not really HTML'), 'soulmate.html')
         retval = self.simulate_post(seed)
-        errormsg = 'Thumbnail format: jpg, png, gif' 
+        assert errormsg in retval.data
+        seed['thumbnail'] = (StringIO('Not really PHP'), 'soulmate.php')
+        retval = self.simulate_post(seed)
+        assert errormsg in retval.data
+        seed['thumbnail'] = (StringIO('Not really an EXE'), 'soulmate.exe')
+        retval = self.simulate_post(seed)
+        assert errormsg in retval.data
+        seed['thumbnail'] = (StringIO('Not really a python file'), 'soulmate.py')
+        retval = self.simulate_post(seed)
         assert errormsg in retval.data
 
 

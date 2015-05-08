@@ -191,6 +191,14 @@ class TestAddSeedForm(unittest.TestCase):
             get_images_directory(variety=seed['variety'], name=seed['name']),
             secure_filename('thumb.jpg'))))
 
+    def test_no_thumbnail(self):
+        """Nothing should go wrong if there's no thumbnail file."""
+        seed = create_seed_data()
+        seed['thumbnail'] = None
+        success = '%s has been added!' % seed['name']
+        retval = self.simulate_post(seed)
+        self.assertTrue(success in retval.data)
+
 
 def create_seed_data():
     return dict(

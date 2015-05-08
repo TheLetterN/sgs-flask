@@ -23,10 +23,11 @@ def manage(action=None):
         form = AddSeedForm()
         if form.validate_on_submit():
             flash('%s has been added!' % form.name.data)
-            thumbfile = request.files[form.thumbnail.name]
-            form.create_images_directory()
-            thumbfile.save(os.path.join(form.get_images_directory(),
-                                        secure_filename(thumbfile.filename)))
+            if form.thumbnail.data:
+                thumbfile = request.files[form.thumbnail.name]
+                form.create_images_directory()
+                thumbfile.save(os.path.join(form.get_images_directory(),
+                                            secure_filename(thumbfile.filename)))
 
             return redirect(url_for('manage'))
         else:

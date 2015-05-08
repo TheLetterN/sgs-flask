@@ -15,9 +15,12 @@ any changes we make! They can be run via the command:
     manage.py test
 """
 
+import os
 import unittest
 from cStringIO import StringIO
+from werkzeug import secure_filename
 from app import app
+from config import basedir
 
 
 class TestCaseExample(unittest.TestCase):
@@ -95,11 +98,15 @@ class TestAddSeedForm(unittest.TestCase):
         #Turn CSRF off when testing forms
         app.config['WTF_CSRF_ENABLED'] = False
 
+        #Set upload folder to tmp
+        app.config['UPLOAD_FOLDER'] = os.path.join(basedir, 'tmp')
+
         #Create a test app
         self.app = app.test_client()
 
     def tearDown(self):
-        pass
+        #Delete all files in the tmp folder
+        clear_tmp()
 
     def simulate_post(self, data):
         """Posts data to our test client and returns the result."""
@@ -174,6 +181,14 @@ class TestAddSeedForm(unittest.TestCase):
         retval = self.simulate_post(seed)
         assert errormsg in retval.data
 
+    def test_thumbnail_upload(self):
+        """A seed form that validates should upload its thumbnail."""
+        seed = create_seed_data()
+        seed['thumbnail'] = (StringIO('Still not a real file.'), 'thumb.jpg')
+        retval = self.simulate_post(seed)
+        assert os.path.isfile(os.path.join(app.config['UPLOAD_FOLDER'],
+                                           secure_filename('thumb.jpg')))
+
 
 def create_seed_data():
     return dict(
@@ -193,6 +208,13 @@ def create_seed_data():
         synonyms='swamp milkweed, rose milkweed',
         thumbnail=(StringIO('This is a fake file.'), 'soulmate.jpg')
         )
+
+def clear_tmp():
+    """Deletes all files in the tmp directory."""
+    temppath = os.path.join(basedir, 'tmp')
+    for tempfile in os.listdir(temppath):
+        os.remove(os.path.join(temppath, tempfile))
+
 
 #If tests.py is run directly, it should automatically run all tests.
 if __name__ == '__main__':

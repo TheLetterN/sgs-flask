@@ -14,5 +14,8 @@ SECRET_KEY = '\xecU\xf2\xb6\xb6\x86\x81\xba\x1a\x0ci\xfc\xe2OfB\xaf\xaa\xc3\xc7O
 #Database information
 SQLALCHEMY_DATABASE_URI = 'sqlite:///app.db'
 
+#Upload folder location
+UPLOAD_FOLDER = os.path.join(basedir, 'app', 'static', 'uploads')
+
 #Website information
 SITE_NAME = 'Swallowtail Garden Seeds'

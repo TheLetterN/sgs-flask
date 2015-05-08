@@ -1,0 +1,6 @@
+#Ignore all files in this folder by default.
+*
+
+#If we want any files/folders in app/static/images in our repository we need
+#to add them to this file with ! in front of them.
+!.gitignore

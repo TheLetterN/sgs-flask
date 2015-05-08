@@ -101,12 +101,17 @@ class TestAddSeedForm(unittest.TestCase):
     def tearDown(self):
         pass
 
+    def simulate_post(self, data):
+        """Posts data to our test client and returns the result."""
+        return self.app.post('/manage/addseed', data=data, 
+                             follow_redirects=True)
+
     def test_valid_seed_data(self):
         """A valid set of data should flash a success message."""
         seed = create_seed_data()
         #success = the message we flash if the seed is submitted successfully.
         success = '%s has been added!' % seed['name']
-        retval = self.app.post('/manage/addseed', data=seed, follow_redirects=True)
+        retval = self.simulate_post(seed)
         assert success in retval.data
 
     def test_no_seed_data(self):
@@ -115,8 +120,16 @@ class TestAddSeedForm(unittest.TestCase):
         #These fields should have InputRequired validators:
         #name, binomen, description, variety, category, price
         #Total expected InputRequired errors: 6
-        retval = self.app.post('/manage/addseed', data=seed, follow_redirects=True)
+        retval = self.simulate_post(seed)
         self.assertEqual(retval.data.count('This field is required.'), 6)
+
+    def test_bad_file_type(self):
+        """Thumbnail files should be in jpg, png, or gif format."""
+        seed = create_seed_data()
+        seed['thumbnail'] = (StringIO('Not really HTML'), 'soulmate.html')
+        retval = self.simulate_post(seed)
+        errormsg = 'Thumbnail format: jpg, png, gif' 
+        assert errormsg in retval.data
 
 
 def create_seed_data():

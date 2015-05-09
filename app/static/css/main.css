@@ -1,0 +1,14 @@
+html {
+    height: 100%;
+    background: linear-gradient(#eefaff, #446611);
+    background: -moz-linear-gradient(#eefaff, #446611);
+    background: -webkit-linear-gradient(#eefaff, #446611);
+    background: -o-linear-gradient(#eefaff, #446611);
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+body {
+    margin: 40px;
+    padding: 10px;
+    background-color: #feffdd;
+}

@@ -7,6 +7,7 @@
     {% else %}
     <title>{{ SITE_NAME }}</title>
     {% endif %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
 </head>
 <body>
     {% block content %}{% endblock %}

@@ -4,60 +4,71 @@
 <form method="POST" action="{{ url_for('manage', action='addseed') }}">
     {{ form.hidden_tag() }}
     {{ form.name.label }}
+    {{ form.name }}
     {% for error in form.name.errors %}
     <span class="error">{{ error }}</span>
     {% endfor %}
-    {{ form.name }}<br>
+    <br>
     {{ form.binomen.label }}
+    {{ form.binomen }}
     {% for error in form.binomen.errors %}
     <span class="error">{{ error }}</span>
     {% endfor %}
-    {{ form.binomen }}<br>
+    <br>
     {{ form.description.label }}
+    {{ form.description }}
     {% for error in form.description.errors %}
     <span class="error">{{ error }}</span>
     {% endfor %}
-    {{ form.description }}<br>
+    <br>
     {{ form.variety.label }}
+    {{ form.variety }}
     {% for error in form.variety.errors %}
     <span class="error">{{ error }}</span>
     {% endfor %}
-    {{ form.variety }}<br>
+    <br>
     {{ form.category.label }}
+    {{ form.category }}
     {% for error in form.category.errors %}
     <span class="error">{{ error }}</span>
     {% endfor %}
-    {{ form.category }}<br>
+    <br>
     {{ form.price.label }}
+    {{ form.price }}
     {% for error in form.price.errors %}
     <span class="error">{{ error }}</span>
     {% endfor %}
-    {{ form.price }}<br>
+    <br>
     {{ form.is_active.label }}
+    {{ form.is_active }}
     {% for error in form.is_active.errors %}
     <span class="error">{{ error }}</span>
     {% endfor %}
-    {{ form.is_active }}<br>
+    <br>
     {{ form.in_stock.label }}
+    {{ form.in_stock }}
     {% for error in form.in_stock.errors %}
     <span class="error">{{ error }}</span>
     {% endfor %}
-    {{ form.in_stock }}<br>
+    <br>
     {{ form.synonyms.label }}
+    {{ form.synonyms }}
     {% for error in form.synonyms.errors %}
     <span class="error">{{ error }}</span>
     {% endfor %}
-    {{ form.synonyms }}<br>
+    <br>
     {{ form.series.label }}
+    {{ form.series }}
     {% for error in form.series.errors %}
     <span class="error">{{ error }}</span>
     {% endfor %}
-    {{ form.series }}<br>
+    <br>
     {{ form.thumbnail.label }}
+    {{ form.thumbnail }}
     {% for error in form.thumbnail.errors %}
     <span class="error">{{ error }}</span>
     {% endfor %}
-    {{ form.thumbnail }}<br>
+    <br>
     {{ form.submit(class_='submit') }}</span>
 </form>
 {% endblock %}

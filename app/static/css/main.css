@@ -1,3 +1,53 @@
+/* http://meyerweb.com/eric/tools/css/reset/ 
+   v2.0 | 20110126
+   License: none (public domain)
+*/
+
+html, body, div, span, applet, object, iframe,
+h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+a, abbr, acronym, address, big, cite, code,
+del, dfn, em, img, ins, kbd, q, s, samp,
+small, strike, strong, sub, sup, tt, var,
+b, u, i, center,
+dl, dt, dd, ol, ul, li,
+fieldset, form, label, legend,
+table, caption, tbody, tfoot, thead, tr, th, td,
+article, aside, canvas, details, embed, 
+figure, figcaption, footer, header, hgroup, 
+menu, nav, output, ruby, section, summary,
+time, mark, audio, video {
+        margin: 0;
+        padding: 0;
+        border: 0;
+        font-size: 100%;
+        font: inherit;
+        vertical-align: baseline;
+}
+/* HTML5 display-role reset for older browsers */
+article, aside, details, figcaption, figure, 
+footer, header, hgroup, menu, nav, section {
+        display: block;
+}
+body {
+        line-height: 1;
+}
+ol, ul {
+        list-style: none;
+}
+blockquote, q {
+        quotes: none;
+}
+blockquote:before, blockquote:after,
+q:before, q:after {
+        content: '';
+        content: none;
+}
+table {
+        border-collapse: collapse;
+        border-spacing: 0;
+}
+/* end reset */
+
 html {
     height: 100%;
     background: linear-gradient(#eefaff, #446611);
@@ -12,6 +62,17 @@ body {
     padding: 10px;
     background-color: #feffdd;
 }
+
+h1 {
+    color: #060;
+    border-bottom: 0.3em solid #4f4;
+    padding-bottom: 0.2em;
+    margin-bottom: 0.4em;
+    font-size: 1.5em;
+}
+
+
+/* form elements */
 label {
     float: left;
     text-align: right;
@@ -22,17 +83,17 @@ input, textarea {
     width: 40%;
     font-family: monospace;
 }
-input:focus {
+input:focus, textarea:focus {
     background-color: #ffff99;
 }
 input.submit {
     width: 6em;
+    margin-left: 7em;
+   margin-top: 0.5em; 
 }
-
 label:after {
     content: ": ";
 }
-
 .error {
     background-color: #faa;
 }

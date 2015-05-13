@@ -1,5 +1,6 @@
 {% extends "layout.html" %}
 {% block content %}
+<h1>Add a seed to the database:</h1>
 <form method="POST" action="{{ url_for('manage', action='addseed') }}">
     {{ form.hidden_tag() }}
     {{ form.name.label }}

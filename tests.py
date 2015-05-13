@@ -20,9 +20,10 @@ import shutil
 import unittest
 from cStringIO import StringIO
 from werkzeug import secure_filename
-from app import app
+from app import app, db
 from config import basedir
 from app.forms import get_images_directory
+from app.models import Seed
 
 
 class TestCaseExample(unittest.TestCase):
@@ -182,6 +183,7 @@ class TestAddSeedForm(unittest.TestCase):
         retval = self.simulate_post(seed)
         self.assertTrue(errormsg in retval.data)
 
+    #TODO: The functionality this tests for should be moved to models
     def test_thumbnail_upload(self):
         """A valid thumbnail should be saved and moved to its seed's images."""
         seed = create_seed_data()
@@ -198,6 +200,31 @@ class TestAddSeedForm(unittest.TestCase):
         success = '%s has been added!' % seed['name']
         retval = self.simulate_post(seed)
         self.assertTrue(success in retval.data)
+
+
+class TestSeedModel(unittest.TestCase):
+    """Tests for our Seed object."""
+
+    def setUp(self):
+        app.config['TESTING'] = True
+        app.config['SQLALCHEMY_DATABASE_URI'] = (
+            'sqlite:///' + os.path.join(basedir, 'tmp', 'test.db')
+        )
+        app.config['IMAGES_FOLDER'] = os.path.join(basedir, 'tmp')
+        self.app = app.test_client()
+        db.create_all()
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        clear_tmp()
+
+    def test_add_synonym(self):
+        """Add synonym should add a string to synonyms."""
+        seed = create_seed_object()
+        synonym = 'white indian hemp'
+        seed.add_synonym(synonym)
+        self.assertTrue(synonym in seed.get_synonyms())
 
 
 def create_seed_data():
@@ -217,6 +244,25 @@ def create_seed_data():
         in_stock=True,
         synonyms='swamp milkweed, rose milkweed',
         thumbnail=(StringIO('This is a fake file.'), 'soulmate.jpg')
+        )
+
+def create_seed_object():
+    """Creates a default valid Seed object."""
+    return Seed(
+        name='Soulmate',
+        binomen='Asclepias incarnata',
+        description=('Produces absolutely beautiful deep rose pink flowers ' +
+                     'in large umbels in only 3 months from sowing. They ' +
+                     'are superb cut flowers, and of course the butterflies ' +
+                     'find them irresistible. Long blooming. Grows to 3.5 ' +
+                     'feet tall and is a stunning background plant. Easy to ' + 
+                     'germinate seeds. Winter hardy to zone 3.'),
+        variety='Butterfly Weed',
+        category='Perennial Flower',
+        price='2.99',
+        is_active=True,
+        in_stock=True,
+        synonyms='swamp milkweed, rose milkweed'
         )
 
 def clear_tmp():

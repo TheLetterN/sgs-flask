@@ -12,3 +12,27 @@ body {
     padding: 10px;
     background-color: #feffdd;
 }
+label {
+    float: left;
+    text-align: right;
+    width: 6em;
+    margin-right: 0.5em;
+}
+input, textarea {
+    width: 40%;
+    font-family: monospace;
+}
+input:focus {
+    background-color: #ffff99;
+}
+input.submit {
+    width: 6em;
+}
+
+label:after {
+    content: ": ";
+}
+
+.error {
+    background-color: #faa;
+}

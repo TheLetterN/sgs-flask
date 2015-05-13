@@ -72,12 +72,11 @@ class AddSeedForm(Form):
     submit = SubmitField('Add Seed')
 
     def validate(self):
+        is_valid = True
         if not Form.validate(self):
-            return False
-        else:
-            is_valid = True
-
+            is_valid = False
             #Each synonym should be <= 64 characters.
+        if self.synonyms.data:
             synonym_list = [synonym.strip() for synonym in
                             self.synonyms.data.split(',')]
             for synonym in synonym_list:
@@ -87,7 +86,8 @@ class AddSeedForm(Form):
                         'Each synonym must be 64 characters or less.'
                     )
 
-            #Each word in binomen should be <= 64 characters.
+        #Each word in binomen should be <= 64 characters.
+        if self.binomen.data:
             split_binomen = [nomen.strip() for nomen in
                              self.binomen.data.split(' ')]
             for nomen in split_binomen:
@@ -105,7 +105,7 @@ class AddSeedForm(Form):
                     'Binomen must be 2 words separated by a space.'
                 )
 
-            return is_valid
+        return is_valid
     
     def get_images_directory(self):
         """Returns a path to this seed's image directory."""

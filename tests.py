@@ -249,6 +249,16 @@ class TestSeedModel(unittest.TestCase):
         seed.add_synonyms_from_string(synonyms)
         self.assertEqual(seed.get_synonyms_string(), synonyms)
 
+    def test_set_binomen(self):
+        """set_binomen should set genus and species."""
+        seed = create_seed_object()
+        seed.binomen = None
+        genus = 'Fake'
+        species = 'binomen'
+        seed.set_binomen(genus + ' ' + species)
+        self.assertEqual(seed.genus, genus)
+        self.assertEqual(seed.species, species)
+
 
 def create_seed_data():
     return dict(

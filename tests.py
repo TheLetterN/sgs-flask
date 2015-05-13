@@ -224,7 +224,22 @@ class TestSeedModel(unittest.TestCase):
         seed = create_seed_object()
         synonym = 'white indian hemp'
         seed.add_synonym(synonym)
-        self.assertTrue(synonym in seed.get_synonyms())
+        self.assertTrue(synonym in seed.get_synonyms_list())
+
+    def test_add_synonyms_from_list(self):
+        """add_synonyms_from_list should add from a list object."""
+        #We don't want the default synonyms present, so we clear them
+        seed = create_seed_object()
+        clear_synonyms(seed)
+        synlist = ['swamp milkweed',
+                   'rose milkweed',
+                   'swamp silkweed',
+                   'white indian hemp']
+        seed.add_synonyms_from_list(synlist)
+        self.assertEqual(
+            sorted(seed.get_synonyms_list()),
+            sorted(synlist)
+        )
 
 
 def create_seed_data():
@@ -264,6 +279,17 @@ def create_seed_object():
         in_stock=True,
         synonyms='swamp milkweed, rose milkweed'
         )
+
+def clear_synonyms(seed):
+    """Clears the synonyms for a given seed object.
+    NOTE: This does not clear them from the database!
+    """
+    for synonym in seed.synonyms.all():
+        seed.synonyms.remove(synonym)
+    #There is no return here because seed is a mutable object; Python passes
+    #mutable objects by reference, so if we made seed2 = seed1, for example,
+    #It does not create a new copy of seed1, it instead makes seed2 point to
+    #seed1. If you alter seed1, it will alter seed2, too, and vice-versa!
 
 def clear_tmp():
     """Deletes all files in the tmp directory."""

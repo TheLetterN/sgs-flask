@@ -74,7 +74,7 @@ class Seed(db.Model):
     def add_synonyms_from_string(self, synonyms):
         self.add_synonyms_from_list(string_to_list(synonyms))
 
-    def get_synonyms(self):
+    def get_synonyms_list(self):
         """Returns a list of synonyms."""
         synonyms = []
         for synonym in self.synonyms.all():
@@ -83,7 +83,7 @@ class Seed(db.Model):
 
     def get_synonyms_string(self):
         """Returns a string containing list of synonyms."""
-        return list_to_string(self.get_synonyms())
+        return list_to_string(self.get_synonyms_list())
 
     def set_binomen(self, binomen):
         """Sets genus and species from a binomen string."""

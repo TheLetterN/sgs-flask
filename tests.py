@@ -259,6 +259,14 @@ class TestSeedModel(unittest.TestCase):
         self.assertEqual(seed.genus, genus)
         self.assertEqual(seed.species, species)
 
+    def test_seed_to_from_db(self):
+        """A seed should not change when added/gotten from the database."""
+        seed1 = create_seed_object()
+        db.session.add(seed1)
+        db.session.commit()
+        seed2 = Seed.query.filter_by(name=seed1.name).first()
+        self.assertEqual(seed1, seed2)
+
 
 def create_seed_data():
     return dict(

@@ -241,6 +241,14 @@ class TestSeedModel(unittest.TestCase):
             sorted(synlist)
         )
 
+    def test_synonyms_string(self):
+        """Synonyms in format "syn1, syn2, syn3" should be addable/gettable."""
+        seed = create_seed_object()
+        clear_synonyms(seed)
+        synonyms = 'swamp milkweed, rose milkweed, swamp silkweed, white indian hemp'
+        seed.add_synonyms_from_string(synonyms)
+        self.assertEqual(seed.get_synonyms_string(), synonyms)
+
 
 def create_seed_data():
     return dict(

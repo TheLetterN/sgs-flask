@@ -1,5 +1,6 @@
 import os
 from app import app, db
+from config import basedir
 
 class Seed(db.Model):
     """Seed is an SQLAlchemy db model for handling seed product data.
@@ -90,6 +91,32 @@ class Seed(db.Model):
         genspec = [nomen.strip() for nomen in binomen.split(' ')]
         self.genus = genspec[0].lower().capitalize()
         self.species = genspec[1].lower()
+
+    def get_images_directory(self):
+        """Returns the path to this seed's image files."""
+        return os.path.join(
+            app.config['IMAGES_FOLDER'],
+            self.variety.lower(),
+            self.name.lower()
+        )
+
+
+    def create_images_directory(self):
+        """Creates this seed's images directory if not present."""
+        try:
+            os.makedirs(self.get_images_directory())
+        except OSError as error:
+            if (error.errorno == os.errorno.EEXIST and
+                    os.path.isdir(self.get_images_directory())):
+                pass
+            else:
+                raise
+
+    def save_image(self, image):
+        """Saves an image to this seed's images directory."""
+        fullpath = os.path.join(self.get_images_directory(), image.filename)
+        self.create_images_directory()
+        image.save(fullpath)
 
 
 class Synonym(db.Model):

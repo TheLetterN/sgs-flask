@@ -19,10 +19,9 @@ import os
 import shutil
 import unittest
 from cStringIO import StringIO
-from werkzeug import secure_filename
+from werkzeug import secure_filename, FileStorage
 from app import app, db
 from config import basedir
-from app.forms import get_images_directory
 from app.models import Seed
 
 
@@ -184,14 +183,14 @@ class TestAddSeedForm(unittest.TestCase):
         self.assertTrue(errormsg in retval.data)
 
     #TODO: The functionality this tests for should be moved to models
-    def test_thumbnail_upload(self):
-        """A valid thumbnail should be saved and moved to its seed's images."""
-        seed = create_seed_data()
-        seed['thumbnail'] = (StringIO('Still not a real file.'), 'thumb.jpg')
-        retval = self.simulate_post(seed)
-        self.assertTrue(os.path.isfile(os.path.join(
-            get_images_directory(variety=seed['variety'], name=seed['name']),
-            secure_filename('thumb.jpg'))))
+#    def test_thumbnail_upload(self):
+#        """A valid thumbnail should be saved and moved to its seed's images."""
+#        seed = create_seed_data()
+#        seed['thumbnail'] = (StringIO('Still not a real file.'), 'thumb.jpg')
+#        retval = self.simulate_post(seed)
+#        self.assertTrue(os.path.isfile(os.path.join(
+#            get_images_directory(variety=seed['variety'], name=seed['name']),
+#            secure_filename('thumb.jpg'))))
 
     def test_no_thumbnail(self):
         """Nothing should go wrong if there's no thumbnail file."""
@@ -267,6 +266,19 @@ class TestSeedModel(unittest.TestCase):
         seed2 = Seed.query.filter_by(name=seed1.name).first()
         self.assertEqual(seed1, seed2)
 
+    def test_save_image(self):
+        """save_image should save an image to the appropriate place."""
+        seed = create_seed_object()
+        image = create_fake_image(filename='soulmate.jpg')
+        fullname = os.path.join(
+            app.config['IMAGES_FOLDER'], 
+            seed.variety.lower(),
+            seed.name.lower(),
+            image.filename
+        )
+        seed.save_image(image)
+        self.assertTrue(os.path.isfile(fullname))
+
 
 def create_seed_data():
     return dict(
@@ -305,6 +317,9 @@ def create_seed_object():
         in_stock=True,
         synonyms='swamp milkweed, rose milkweed'
         )
+
+def create_fake_image(data=StringIO('This will still never be a real image.'), filename='fake.jpg'):
+    return FileStorage(stream=data, filename=filename)
 
 def clear_synonyms(seed):
     """Clears the synonyms for a given seed object.

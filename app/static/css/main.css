@@ -87,8 +87,12 @@ input[type=text], textarea {
     border: 1px solid #888;
     margin-top: 2px;
 }
-input:focus, textarea:focus {
+input[type=text]:focus, textarea:focus {
     background-color: #ffff99;
+}
+input[type=text]:hover, textarea:hover {
+    border: 1px solid #88f;
+    background-color: #ddf;
 }
 input.submit {
     width: 6em;
@@ -102,23 +106,9 @@ label:after {
     background-color: #faa;
 }
 
-/* tooltips */
-a.tooltip {
-    display: inline-block;
-    text-decoration: none;
-    color: #fff;
-    background-color: #66f;
-    border: 1px solid #006;
-    border-radius: 8px;
-    font-size: x-small;
-    vertical-align: top;
-    padding: 1px 3px 1px 3px;
-    margin-top: 2px;
-    margin-left: 4px;
-}
-a.tooltip span {
+/* form tooltips */
+input + span.tooltip, textarea + span.tooltip {
     display: none;
-    font-size: medium;
     margin-right: 50px;     /* This should = margin-right + padding-right of body */
     z-index: 10;
     background-color: #ddf;
@@ -129,7 +119,7 @@ a.tooltip span {
     border-radius: 3px;
     box-shadow: 3px 3px 4px #668;
 }
-a.tooltip:hover span {
+input:hover + span.tooltip, textarea:hover + span.tooltip {
     display: inline;
     position: absolute;
 }

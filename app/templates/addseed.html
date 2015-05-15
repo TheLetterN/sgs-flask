@@ -12,7 +12,7 @@
     <br>
     {{ form.binomen.label }}
     {{ form.binomen }}
-    <span class="tooltip">Binomen (scientific name) of seed. Must be exactly 2 words separated by a space. Example: &quot;Asclepias incarnata&quot.</span>
+    <span class="tooltip">Binomen (scientific name) of seed. Must be exactly 2 words separated by a space. Example: &quot;Asclepias incarnata&quot;.</span>
     {% for error in form.binomen.errors %}
     <span class="error">{{ error }}</span>
     {% endfor %}
@@ -33,7 +33,7 @@
     <br>
     {{ form.category.label }}
     {{ form.category }}
-    <span class="tooltip">Broad category this plant belongs to. Usually either refers to type of plant (herb, flower, vegetable, etc.) or its lifespan (annual, prennial) or both. Example: &quot;perennial flower&quot;.</span>
+    <span class="tooltip">Broad category this plant belongs to. Usually either refers to type of plant (herb, flower, vegetable, etc.) or its lifespan (annual, perennial) or both. Example: &quot;perennial flower&quot;.</span>
     {% for error in form.category.errors %}
     <span class="error">{{ error }}</span>
     {% endfor %}

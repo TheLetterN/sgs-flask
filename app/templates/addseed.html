@@ -5,66 +5,77 @@
     {{ form.hidden_tag() }}
     {{ form.name.label }}
     {{ form.name }}
+    <a href="#" class="tooltip">?<span>Seed name not including variety. Example: &quot;Soulmate&quot;, <strong>not</strong> &quot;Soulmate Butterfly Weed&quot;!</span></a>
     {% for error in form.name.errors %}
     <span class="error">{{ error }}</span>
     {% endfor %}
     <br>
     {{ form.binomen.label }}
     {{ form.binomen }}
+    <a href="#" class="tooltip">?<span>Binomen (scientific name) of seed. Must be exactly 2 words separated by a space. Example: &quot;Asclepias incarnata&quot.</span></a>
     {% for error in form.binomen.errors %}
     <span class="error">{{ error }}</span>
     {% endfor %}
     <br>
     {{ form.description.label }}
     {{ form.description }}
+    <a href="#" class="tooltip">?<span>Product description. Example: &quot;Attracts butterflies and probably some other critters you're less pleased to have around.&quot;.</span></a>
     {% for error in form.description.errors %}
     <span class="error">{{ error }}</span>
     {% endfor %}
     <br>
     {{ form.variety.label }}
     {{ form.variety }}
+    <a href="#" class="tooltip">?<span>Variety of plant. Example: &quot;Butterfly Weed&quot;.</span></a>
     {% for error in form.variety.errors %}
     <span class="error">{{ error }}</span>
     {% endfor %}
     <br>
     {{ form.category.label }}
     {{ form.category }}
+    <a href="#" class="tooltip">?<span>Broad category this plant belongs to. Usually either refers to type of plant (herb, flower, vegetable, etc.) or its lifespan (annual, prennial) or both. Example: &quot;perennial flower&quot;.</span></a>
     {% for error in form.category.errors %}
     <span class="error">{{ error }}</span>
     {% endfor %}
     <br>
     {{ form.price.label }}
     {{ form.price }}
+    <a href="#" class="tooltip">?<span>Decimal value for price of seed. NOTE: Do not include the $ symbol, just the numerical value! Example: &quot;2.99&quot;.</span></a>
     {% for error in form.price.errors %}
     <span class="error">{{ error }}</span>
     {% endfor %}
     <br>
     {{ form.is_active.label }}
     {{ form.is_active }}
+    <a href="#" class="tooltip">?<span>Check/leave checked if the product is currently active. Active products are ones we intend to continue selling.</span></a>
     {% for error in form.is_active.errors %}
     <span class="error">{{ error }}</span>
     {% endfor %}
     <br>
     {{ form.in_stock.label }}
     {{ form.in_stock }}
+    <a href="#" class="tooltip">?<span>Check/leave checked if the product is currently in stock.</span></a>
     {% for error in form.in_stock.errors %}
     <span class="error">{{ error }}</span>
     {% endfor %}
     <br>
     {{ form.synonyms.label }}
     {{ form.synonyms }}
+    <a href="#" class="tooltip">?<span>(Optional) A list of synonyms for the seed delineated by commas. Example: &quot;swamp milkweed, rose milkweed, swamp silkweed, white indian hemp&quot;.</span></a>
     {% for error in form.synonyms.errors %}
     <span class="error">{{ error }}</span>
     {% endfor %}
     <br>
     {{ form.series.label }}
     {{ form.series }}
+    <a href="#" class="tooltip">?<span>(Optional) The series the seed belongs to, if applicable. Examples: &quot;Benary&apos;s Giant&quot;, &quot;Magic Fountains&quot;.</span></a>
     {% for error in form.series.errors %}
     <span class="error">{{ error }}</span>
     {% endfor %}
     <br>
     {{ form.thumbnail.label }}
     {{ form.thumbnail }}
+    <a href="#" class="tooltip">?<span>(Optional) Thumbnail image to upload. Will automatically be set to this seed's thumbnail.</span></a>
     {% for error in form.thumbnail.errors %}
     <span class="error">{{ error }}</span>
     {% endfor %}

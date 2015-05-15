@@ -1,6 +1,14 @@
 import os
-from app import app, db
-from config import basedir
+from flask import flash
+from app import app
+from flask.ext.sqlalchemy import SQLAlchemy
+from flask.ext.migrate import Migrate
+
+#Create database
+db = SQLAlchemy(app)
+
+#Create our db migration object
+migrate = Migrate(app, db)
 
 class Seed(db.Model):
     """Seed is an SQLAlchemy db model for handling seed product data.
@@ -38,16 +46,17 @@ class Seed(db.Model):
     is_active = db.Column(db.Boolean)
     in_stock = db.Column(db.Boolean)
     thumbnail = db.Column(db.String(64))
+    errors = []
     
     def __init__(self,
-                 name,
-                 binomen,
-                 description,
-                 variety,
-                 category,
-                 price,
-                 is_active,
-                 in_stock,
+                 name=None,
+                 binomen=None,
+                 description=None,
+                 variety=None,
+                 category=None,
+                 price=None,
+                 is_active=None,
+                 in_stock=None,
                  thumbnail=None,
                  synonyms=None,
                  series=None):
@@ -118,6 +127,14 @@ class Seed(db.Model):
         self.create_images_directory()
         image.save(fullpath)
 
+    def verify(self):
+        """Verifies that seed is ready to be stored in the database."""
+        valid = True
+        if Seed.query.filter_by(name=self.name).first() is not None:
+            self.errors.append('%s is already in the database! Please edit it instead of re-adding.' % self.name)
+            valid = False
+        return valid
+            
 
 class Synonym(db.Model):
     """A synonym for a seed.

@@ -4,8 +4,6 @@
 
 #First we import the built-in modules we need for our website:
 from flask import Flask
-from flask.ext.sqlalchemy import SQLAlchemy
-from flask.ext.migrate import Migrate
 
 #Now we create an "app" object which we will use throughout our program; this
 #is essntially the core object of our website, which everything else either
@@ -23,9 +21,3 @@ app.config.from_object('config')
 #Add the SITE_NAME constant from config.py to Jinja globals so we can use it
 #in our templates without having to pass it to view functions.
 app.jinja_env.globals.update(SITE_NAME=app.config['SITE_NAME'])
-
-#Create a database object for interacting with our database.
-db = SQLAlchemy(app)
-
-#Create a migrate object for managing database migrations.
-migrate = Migrate(app, db)

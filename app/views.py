@@ -28,8 +28,10 @@ def manage(action=None):
                 name=form.name.data,
                 binomen=form.binomen.data,
                 description=form.description.data,
-                variety=form.variety.data,
-                category=form.category.data,
+                #Lower and strip variety and category to make it easier to
+                #search for them in the database.
+                variety=form.variety.data.lower().strip(),      
+                category=form.category.data.lower().strip(),
                 price=form.price.data,
                 is_active=form.is_active.data,
                 in_stock=form.in_stock.data,
@@ -51,3 +53,13 @@ def manage(action=None):
     else:
         title = app.config['SITE_NAME'] + ' - Manage Site'
         return render_template('manage.html', title=title)
+
+@app.route('/seeds')
+@app.route('/seeds/<variety>')
+def seeds(variety=None):
+    if variety:
+        variety = variety.lower().strip()
+        title = app.config['SITE_NAME'] + ' - ' + variety + ' seeds'
+        seeds = Seed.query.filter_by(variety=variety).all()
+        return render_template('variety.html', title=title, variety=variety, seeds=seeds)
+

@@ -1,0 +1,7 @@
+{% extends "layout.html" %}
+{% block content %}
+<h2>{{ variety }}</h2>
+    {% for seed in seeds %}
+    {% include "seed.html" %}
+    {% endfor %}
+{% endblock %}

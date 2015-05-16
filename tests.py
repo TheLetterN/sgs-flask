@@ -184,6 +184,19 @@ class TestViews(unittest.TestCase):
         retval = self.simulate_post(seed)
         self.assertTrue(success in retval.data)
 
+    def test_seeds_variety_view(self):
+        """/seeds/<variety> should show a list of seeds of that variety."""
+        soulmate = create_seed_object()
+        soulmate.variety = soulmate.variety
+        db.session.add(soulmate)
+        milkmaid = create_seed_object()
+        milkmaid.name = 'Milkmaid'
+        db.session.add(milkmaid)
+        db.session.commit()
+        retval = self.app.get('/seeds/%s' % soulmate.variety)
+        self.assertTrue(soulmate.name in retval.data)
+        self.assertTrue(milkmaid.name in retval.data)
+
 
 class TestSeedModel(unittest.TestCase):
     """Tests for our Seed object."""
@@ -282,8 +295,8 @@ def create_seed_data():
                      'find them irresistible. Long blooming. Grows to 3.5 ' +
                      'feet tall and is a stunning background plant. Easy to ' + 
                      'germinate seeds. Winter hardy to zone 3.'),
-        variety='Butterfly Weed',
-        category='Perennial Flower',
+        variety='Butterfly Weed'.lower().strip(),       #lower and strip for db
+        category='Perennial Flower'.lower().strip(),
         price='2.99',
         is_active=True,
         in_stock=True,
@@ -302,8 +315,8 @@ def create_seed_object():
                      'find them irresistible. Long blooming. Grows to 3.5 ' +
                      'feet tall and is a stunning background plant. Easy to ' + 
                      'germinate seeds. Winter hardy to zone 3.'),
-        variety='Butterfly Weed',
-        category='Perennial Flower',
+        variety='Butterfly Weed'.lower().strip(),
+        category='Perennial Flower'.lower().strip(),
         price='2.99',
         is_active=True,
         in_stock=True,

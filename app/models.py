@@ -1,8 +1,9 @@
 import os
-from flask import flash, url_for, request
-from app import app
+from werkzeug import secure_filename
+from flask import flash, url_for
 from flask.ext.sqlalchemy import SQLAlchemy
 from flask.ext.migrate import Migrate
+from app import app
 
 #Create database
 db = SQLAlchemy(app)
@@ -82,8 +83,7 @@ class Seed(db.Model):
         self.add_synonyms_from_string(form.synonyms.data)
         series = form.series.data
         if form.thumbnail.data:
-            thumbfile = request.files[form.thumbnail.name]
-            self.save_thumbnail(thumbfile)
+            self.save_thumbnail(form.thumbnail.data)
 
     def add_synonym(self, synonym):
         """Adds a synonym linked to our seed object."""
@@ -168,13 +168,13 @@ class Seed(db.Model):
 
     def save_image(self, image):
         """Saves an image to this seed's images directory."""
-        fullpath = os.path.join(self.get_images_directory(), image.filename)
+        fullpath = os.path.join(self.get_images_directory(), secure_filename(image.filename))
         self.create_images_directory()
         image.save(fullpath)
 
     def save_thumbnail(self, image):
         """Saves and sets a thumbnail image."""
-        self.thumbnail = image.filename
+        self.thumbnail = secure_filename(image.filename)
         self.save_image(image)
 
     def get_image_location(self, filename):

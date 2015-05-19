@@ -1,5 +1,5 @@
 import os
-from flask import flash
+from flask import flash, url_for
 from app import app
 from flask.ext.sqlalchemy import SQLAlchemy
 from flask.ext.migrate import Migrate
@@ -146,6 +146,36 @@ class Seed(db.Model):
         self.create_images_directory()
         image.save(fullpath)
 
+    def get_image_location(self, filename):
+        """Returns the full path of the image specified."""
+        return os.path.join(self.get_images_directory(), filename)
+
+    def image_exists(self, filename):
+        """Returns true if the specified image file exists."""
+        if os.path.isfile(get_image_location(filename)):
+            return True
+        else:
+            return False
+
+    def thumbnail_exists(self):
+        """Returns true if thumbnail image file exists."""
+        if self.thumbnail is not None:
+            return self.image_exists(self.thumbnail)
+        else:
+            return False
+
+    def get_image_url(self, filename):
+        """Returns the URL for an image as assocated with this seed."""
+        return (url_for('static') + 
+                '/images/' + 
+                self.variety.lower() + '/' +
+                self.name.lower() + '/' +
+                filename)
+
+    def get_thumbnail_url(self):
+        """Returns the URL of this seed's thumbnail."""
+        return get_image_url(self.thumbnail)
+        
     def verify(self):
         """Verifies that seed is ready to be stored in the database."""
         valid = True

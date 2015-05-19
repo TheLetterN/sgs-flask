@@ -1,4 +1,7 @@
 <section class="seed">
+    {% if seed.thumbnail_exists() %}
+    <img class="thumbnail" src="{{ seed.get_thumbnail_url() }}">
+    {% endif %}
     <h3 class="name">{{ seed.get_fullname() }}</h3>
     <div class="variety">{{ seed.variety|capitalize }}</div>
     <div class="binomen">{{ seed.get_binomen() }}</div>

@@ -107,8 +107,7 @@ label:after {
 }
 
 /* form tooltips */
-input + span.tooltip, textarea + span.tooltip {
-    display: none;
+span.tooltip {
     margin-right: 50px;     /* This should = margin-right + padding-right of body */
     z-index: 10;
     background-color: #ddf;
@@ -118,6 +117,9 @@ input + span.tooltip, textarea + span.tooltip {
     margin-left: 1em;
     border-radius: 3px;
     box-shadow: 3px 3px 4px #668;
+}
+input + span.tooltip, textarea + span.tooltip {
+    display: none;
 }
 input:hover + span.tooltip, textarea:hover + span.tooltip {
     display: inline;

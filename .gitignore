@@ -14,3 +14,7 @@ venv/
 
 #We don't want to add our database to the repository.
 app.db
+
+#Nor do we want to add our database migrations.
+migrations/
+

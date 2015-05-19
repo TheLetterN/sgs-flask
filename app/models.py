@@ -7,9 +7,6 @@ from flask.ext.migrate import Migrate
 #Create database
 db = SQLAlchemy(app)
 
-#Create our db migration object
-migrate = Migrate(app, db)
-
 class Seed(db.Model):
     """Seed is an SQLAlchemy db model for handling seed product data.
     
@@ -163,7 +160,7 @@ class Seed(db.Model):
         try:
             os.makedirs(self.get_images_directory())
         except OSError as error:
-            if (error.errorno == os.errorno.EEXIST and
+            if (error.errno == os.errno.EEXIST and
                     os.path.isdir(self.get_images_directory())):
                 pass
             else:

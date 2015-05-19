@@ -200,15 +200,15 @@ class Seed(db.Model):
 
     def get_image_url(self, filename):
         """Returns the URL for an image as assocated with this seed."""
-        return (url_for('static') + 
-                '/images/' + 
-                self.variety.lower() + '/' +
-                self.name.lower() + '/' +
-                filename)
+        relpath = ('images/' + 
+                   self.variety.lower() + '/' + 
+                   self.name.lower() + '/' +
+                   filename)
+        return url_for('static', filename=relpath)
 
     def get_thumbnail_url(self):
         """Returns the URL of this seed's thumbnail."""
-        return get_image_url(self.thumbnail)
+        return self.get_image_url(self.thumbnail)
         
     def verify(self):
         """Verifies that seed is ready to be stored in the database."""

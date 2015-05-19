@@ -197,6 +197,16 @@ class TestViews(unittest.TestCase):
         self.assertTrue(soulmate.name in retval.data)
         self.assertTrue(milkmaid.name in retval.data)
 
+    def test_seeds_variety_view_with_thumbnail(self):
+        """If there's a thumbnail, it should show up!"""
+        seed = create_seed_object()
+        thumbnail = create_fake_image(filename='soulmate.jpg')
+        seed.save_thumbnail(thumbnail)
+        db.session.add(seed)
+        db.session.commit()
+        retval = self.app.get('/seeds/%s' % seed.variety)
+        self.assertTrue(seed.get_thumbnail_url() in retval.data)
+
 
 class TestSeedModel(unittest.TestCase):
     """Tests for our Seed object."""

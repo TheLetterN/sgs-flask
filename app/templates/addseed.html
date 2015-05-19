@@ -19,7 +19,7 @@
     <br>
     {{ form.description.label }}
     {{ form.description }}
-    <span class="tooltip">Product description. Example: &quot;Attracts butterflies and probably some other critters you're less pleased to have around.&quot;.</span>
+    <span class="tooltip">Product description, HTML allowed for formatting. Example: &quot;Attracts &lt;strong&gt;butterflies&lt;/strong&gt; and &lt;em&gt;probably&lt;/em&gt; some other critters you're less pleased to have around.&quot;.</span>
     {% for error in form.description.errors %}
     <span class="error">{{ error }}</span>
     {% endfor %}

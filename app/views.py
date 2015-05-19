@@ -28,10 +28,8 @@ def manage(action=None):
                 name=form.name.data,
                 binomen=form.binomen.data,
                 description=form.description.data,
-                #Lower and strip variety and category to make it easier to
-                #search for them in the database.
-                variety=form.variety.data.lower().strip(),      
-                category=form.category.data.lower().strip(),
+                variety=form.variety.data,      
+                category=form.category.data,
                 price=form.price.data,
                 is_active=form.is_active.data,
                 in_stock=form.in_stock.data,

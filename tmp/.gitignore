@@ -1,5 +1,5 @@
 #Ignore all files...
 *
 
-#...except for this one!
+#...except this one!
 !.gitignore

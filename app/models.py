@@ -63,8 +63,8 @@ class Seed(db.Model):
         self.name = name
         self.set_binomen(binomen)
         self.description = description
-        self.variety = variety
-        self.category = category
+        self.set_variety(variety)
+        self.set_category(category)
         self.price = price
         self.is_active = is_active
         self.in_stock = in_stock
@@ -100,6 +100,14 @@ class Seed(db.Model):
         genspec = [nomen.strip() for nomen in binomen.split(' ')]
         self.genus = genspec[0].lower().capitalize()
         self.species = genspec[1].lower()
+
+    def set_variety(self, variety):
+        """Sets variety in the proper format for use with the database."""
+        self.variety = variety.lower().strip()
+
+    def set_category(self, category):
+        """Sets category in db-friendly format."""
+        self.category = category.lower().strip()
 
     def get_images_directory(self):
         """Returns the path to this seed's image files."""

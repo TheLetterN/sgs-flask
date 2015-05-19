@@ -295,8 +295,8 @@ def create_seed_data():
                      'find them irresistible. Long blooming. Grows to 3.5 ' +
                      'feet tall and is a stunning background plant. Easy to ' + 
                      'germinate seeds. Winter hardy to zone 3.'),
-        variety='Butterfly Weed'.lower().strip(),       #lower and strip for db
-        category='Perennial Flower'.lower().strip(),
+        variety='Butterfly Weed',
+        category='Perennial Flower',
         price='2.99',
         is_active=True,
         in_stock=True,
@@ -315,8 +315,8 @@ def create_seed_object():
                      'find them irresistible. Long blooming. Grows to 3.5 ' +
                      'feet tall and is a stunning background plant. Easy to ' + 
                      'germinate seeds. Winter hardy to zone 3.'),
-        variety='Butterfly Weed'.lower().strip(),
-        category='Perennial Flower'.lower().strip(),
+        variety='Butterfly Weed',
+        category='Perennial Flower',
         price='2.99',
         is_active=True,
         in_stock=True,
@@ -345,7 +345,8 @@ def clear_tmp():
         if os.path.isdir(fullfile):
             shutil.rmtree(fullfile)
         else:
-            os.remove(fullfile)
+            if '.gitignore' not in fullfile:
+                os.remove(fullfile)
 
 
 #If tests.py is run directly, it should automatically run all tests.

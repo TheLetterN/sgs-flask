@@ -146,13 +146,18 @@ class Seed(db.Model):
         self.create_images_directory()
         image.save(fullpath)
 
+    def save_thumbnail(self, image):
+        """Saves and sets a thumbnail image."""
+        self.thumbnail = image.filename
+        self.save_image(image)
+
     def get_image_location(self, filename):
         """Returns the full path of the image specified."""
         return os.path.join(self.get_images_directory(), filename)
 
     def image_exists(self, filename):
         """Returns true if the specified image file exists."""
-        if os.path.isfile(get_image_location(filename)):
+        if os.path.isfile(self.get_image_location(filename)):
             return True
         else:
             return False

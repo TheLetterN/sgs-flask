@@ -284,6 +284,15 @@ class TestSeedModel(unittest.TestCase):
         seed2 = create_seed_object()
         self.assertFalse(seed2.verify())
 
+    def test_save_thumbnail(self):
+        """save_thumbnail should set Seed.thumbnail and save the image."""
+        seed = create_seed_object()
+        image = create_fake_image(filename='soulmate.jpg')
+        seed.save_thumbnail(image)
+        self.assertEqual(seed.thumbnail, image.filename)
+        self.assertTrue(seed.thumbnail_exists())
+
+
 
 def create_seed_data():
     return dict(

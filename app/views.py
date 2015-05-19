@@ -23,26 +23,13 @@ def manage(action=None):
     if action == 'addseed':
         form = AddSeedForm()
         if form.validate_on_submit():
-            flash('%s has been added!' % form.name.data)
-            seed = Seed(
-                name=form.name.data,
-                binomen=form.binomen.data,
-                description=form.description.data,
-                variety=form.variety.data,      
-                category=form.category.data,
-                price=form.price.data,
-                is_active=form.is_active.data,
-                in_stock=form.in_stock.data,
-                synonyms=form.synonyms.data,
-                series=form.series.data
-            )
-            if form.thumbnail.data:
-                thumbfile = request.files[form.thumbnail.name]
-                seed.thumbnail = thumbfile.filename
-                seed.save_image(thumbfile)
+            seed = Seed()
+            seed.populate_from_form(form)
             if seed.verify():
                 db.session.add(seed)
                 db.session.commit()
+                flash('%s has been added!' % form.name.data)
+
 
             return redirect(url_for('manage'))
         else:

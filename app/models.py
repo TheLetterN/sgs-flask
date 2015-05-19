@@ -1,5 +1,5 @@
 import os
-from flask import flash, url_for
+from flask import flash, url_for, request
 from app import app
 from flask.ext.sqlalchemy import SQLAlchemy
 from flask.ext.migrate import Migrate
@@ -71,6 +71,22 @@ class Seed(db.Model):
         self.thumbnail = thumbnail
         self.add_synonyms_from_string(synonyms)
         self.series = series
+    
+    def populate_from_form(self, form):
+        """Populates addseed from a complete form object."""
+        self.name = form.name.data
+        self.set_binomen(form.binomen.data)
+        self.description = form.description.data
+        self.set_variety(form.variety.data)
+        self.set_category(form.category.data)
+        self.price = form.price.data
+        self.is_active = form.is_active.data
+        self.in_stock = form.in_stock.data
+        self.add_synonyms_from_string(form.synonyms.data)
+        series = form.series.data
+        if form.thumbnail.data:
+            thumbfile = request.files[form.thumbnail.name]
+            self.save_thumbnail(thumbfile)
 
     def add_synonym(self, synonym):
         """Adds a synonym linked to our seed object."""
@@ -82,7 +98,10 @@ class Seed(db.Model):
             self.add_synonym(synonym)
 
     def add_synonyms_from_string(self, synonyms):
-        self.add_synonyms_from_list(string_to_list(synonyms))
+        if synonyms is not None:
+            self.add_synonyms_from_list(string_to_list(synonyms))
+        else:
+            synonyms = None
 
     def get_synonyms_list(self):
         """Returns a list of synonyms."""
@@ -104,9 +123,13 @@ class Seed(db.Model):
 
     def set_binomen(self, binomen):
         """Sets genus and species from a binomen string."""
-        genspec = [nomen.strip() for nomen in binomen.split(' ')]
-        self.genus = genspec[0].lower().capitalize()
-        self.species = genspec[1].lower()
+        if binomen is not None:
+            genspec = [nomen.strip() for nomen in binomen.split(' ')]
+            self.genus = genspec[0].lower().capitalize()
+            self.species = genspec[1].lower()
+        else:
+            self.genus = None
+            self.species = None
 
     def get_binomen(self):
         """Returns a binomen string."""
@@ -114,11 +137,17 @@ class Seed(db.Model):
 
     def set_variety(self, variety):
         """Sets variety in the proper format for use with the database."""
-        self.variety = variety.lower().strip()
+        if variety is not None:
+            self.variety = variety.lower().strip()
+        else:
+            variety = None
 
     def set_category(self, category):
         """Sets category in db-friendly format."""
-        self.category = category.lower().strip()
+        if category is not None:
+            self.category = category.lower().strip()
+        else:
+            self.category = None
 
     def get_images_directory(self):
         """Returns the path to this seed's image files."""

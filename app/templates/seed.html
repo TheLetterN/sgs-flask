@@ -1,3 +1,7 @@
 <section class="seed">
-    <h3>{{ seed.name }}</h3>
+    <h3 class="name">{{ seed.get_fullname() }}</h3>
+    <div class="variety">{{ seed.variety|capitalize }}</div>
+    <div class="binomen">{{ seed.get_binomen() }}</div>
+    <div class="description">{{ seed.description|safe }}</div>
+    <div class="price">Price: ${{ seed.price }}</div>
 </section>

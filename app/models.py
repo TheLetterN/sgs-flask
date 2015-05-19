@@ -95,11 +95,22 @@ class Seed(db.Model):
         """Returns a string containing list of synonyms."""
         return list_to_string(self.get_synonyms_list())
 
+    def get_fullname(self):
+        """Returns full seed name including series."""
+        if self.series is not None:
+            return self.series + ' ' + self.name
+        else:
+            return self.name
+
     def set_binomen(self, binomen):
         """Sets genus and species from a binomen string."""
         genspec = [nomen.strip() for nomen in binomen.split(' ')]
         self.genus = genspec[0].lower().capitalize()
         self.species = genspec[1].lower()
+
+    def get_binomen(self):
+        """Returns a binomen string."""
+        return self.genus + ' ' + self.species
 
     def set_variety(self, variety):
         """Sets variety in the proper format for use with the database."""

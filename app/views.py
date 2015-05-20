@@ -26,8 +26,7 @@ def manage(action=None):
             seed = Seed()
             seed.populate_from_form(form)
             if seed.verify():
-                db.session.add(seed)
-                db.session.commit()
+                seed.save()
                 flash('%s has been added!' % form.name.data)
 
 

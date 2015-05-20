@@ -232,10 +232,18 @@ class Seed(db.Model):
             varieties.append(unicode(self.variety))
         with open(filename, 'w') as outfile:
             outfile.write(json.dumps(varieties))
+
+    def save_to_database(self):
+        """Saves seed to the database."""
+        db.session.add(self)
+        db.session.commit()
+
+    def save(self):
+        """Saves seed's JSON files and saves seed to database."""
+        self.add_variety_to_json_file()
+        self.save_to_database()
         
                     
-            
-
 class Synonym(db.Model):
     """A synonym for a seed.
 

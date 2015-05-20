@@ -15,13 +15,13 @@ any changes we make! They can be run via the command:
     manage.py test
 """
 
+import json
 import os
 import shutil
 import unittest
 from cStringIO import StringIO
 from werkzeug import secure_filename, FileStorage
 from app import app
-from config import basedir
 from app.models import db, Seed
 
 
@@ -74,14 +74,14 @@ class TestViews(unittest.TestCase):
         app.config['WTF_CSRF_ENABLED'] = False
 
         #Set images folder to tmp.
-        app.config['IMAGES_FOLDER'] = os.path.join(basedir, 'tmp')
+        app.config['IMAGES_FOLDER'] = os.path.join(app.config['BASE_FOLDER'], 'tmp')
 
         #Create a test app.
         self.app = app.test_client()
 
         #Set testing database location.
         app.config['SQLALCHEMY_DATABASE_URI'] = (
-            'sqlite:///' + os.path.join(basedir, 'tmp', 'test.db')
+            'sqlite:///' + os.path.join(app.config['BASE_FOLDER'], 'tmp', 'test.db')
         )
 
         #Create our test database.
@@ -214,9 +214,10 @@ class TestSeedModel(unittest.TestCase):
     def setUp(self):
         app.config['TESTING'] = True
         app.config['SQLALCHEMY_DATABASE_URI'] = (
-            'sqlite:///' + os.path.join(basedir, 'tmp', 'test.db')
+            'sqlite:///' + os.path.join(app.config['BASE_FOLDER'], 'tmp', 'test.db')
         )
-        app.config['IMAGES_FOLDER'] = os.path.join(basedir, 'tmp')
+        app.config['IMAGES_FOLDER'] = os.path.join(app.config['BASE_FOLDER'], 'tmp')
+        app.config['JSON_FOLDER'] = os.path.join(app.config['BASE_FOLDER'], 'tmp')
         self.app = app.test_client()
         db.create_all()
 
@@ -302,6 +303,23 @@ class TestSeedModel(unittest.TestCase):
         self.assertEqual(seed.thumbnail, image.filename)
         self.assertTrue(seed.thumbnail_exists())
 
+    def test_add_variety_to_json_file(self):
+        """Should save Seed.variety to a json list in varieties.json"""
+        seed = create_seed_object()
+        seed.add_variety_to_json_file()
+        filename = os.path.join(app.config['JSON_FOLDER'], 'varieties.json')
+        with open(filename, 'r') as infile:
+            varieties = json.loads(infile.read())
+        self.assertTrue(seed.variety in varieties)
+        seed2 = create_seed_object()
+        seed2.set_variety('milkweed')
+        seed2.add_variety_to_json_file()
+        with open(filename, 'r') as infile:
+            varieties = json.loads(infile.read())
+        self.assertTrue(seed2.variety in varieties)
+        #And we should make sure both seeds' varieties are there!
+        self.assertTrue(seed2.variety in varieties and
+                        seed.variety in varieties)
 
 
 def create_seed_data():
@@ -358,7 +376,7 @@ def clear_synonyms(seed):
 
 def clear_tmp():
     """Deletes all files in the tmp directory."""
-    temppath = os.path.join(basedir, 'tmp')
+    temppath = os.path.join(app.config['BASE_FOLDER'], 'tmp')
     for tempfile in os.listdir(temppath):
         fullfile = os.path.join(temppath, tempfile)
         if os.path.isdir(fullfile):

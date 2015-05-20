@@ -1,3 +1,4 @@
+import json
 import os
 from werkzeug import secure_filename
 from flask import flash, url_for
@@ -214,6 +215,25 @@ class Seed(db.Model):
             self.errors.append('%s is already in the database! Please edit it instead of re-adding.' % self.name)
             valid = False
         return valid
+
+    def add_variety_to_json_file(self):
+        """Checks varieties.json and adds this seed's variety if needed."""
+        filename = os.path.join(app.config['JSON_FOLDER'], 'varieties.json')
+        varieties = []
+        try:
+            with open(filename, 'r') as infile:
+                varieties = json.loads(infile.read())
+                if self.variety not in varieties:
+                    varieties.append(unicode(self.variety))
+                else:
+                    varieties = []
+        except IOError:
+            #File doesn't exist, prepare varieties to be written to new file.
+            varieties.append(unicode(self.variety))
+        with open(filename, 'w') as outfile:
+            outfile.write(json.dumps(varieties))
+        
+                    
             
 
 class Synonym(db.Model):

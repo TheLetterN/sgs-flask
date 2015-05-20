@@ -219,19 +219,41 @@ class Seed(db.Model):
     def add_variety_to_json_file(self):
         """Checks varieties.json and adds this seed's variety if needed."""
         filename = os.path.join(app.config['JSON_FOLDER'], 'varieties.json')
-        varieties = []
+        changed = False
         try:
             with open(filename, 'r') as infile:
                 varieties = json.loads(infile.read())
                 if self.variety not in varieties:
-                    varieties.append(unicode(self.variety))
-                else:
-                    varieties = []
+                    varieties.append(self.variety)
+                    changed = True
         except IOError:
             #File doesn't exist, prepare varieties to be written to new file.
-            varieties.append(unicode(self.variety))
-        with open(filename, 'w') as outfile:
-            outfile.write(json.dumps(varieties))
+            varieties = [self.variety]
+            changed = True
+        if changed == True:
+            with open(filename, 'w') as outfile:
+                outfile.write(json.dumps(varieties))
+
+    def add_category_to_json_file(self):
+        """Adds seed's category and variety to categories.json if needed."""
+        changed = False
+        filename = os.path.join(app.config['JSON_FOLDER'], 'categories.json')
+        try:
+            with open(filename, 'r') as infile:
+                categories = json.loads(infile.read())
+                if self.category not in categories:
+                    categories[self.category]=[self.variety]
+                    changed = True
+                elif self.variety not in categories[self.category]:
+                    categories[self.category].append(self.variety)
+                    changed = True
+        except IOError:
+            categories = {self.category: [self.variety]}
+            changed = True
+        if changed == True:
+            with open(filename, 'w') as outfile:
+                outfile.write(json.dumps(categories))
+
 
     def save_to_database(self):
         """Saves seed to the database."""
@@ -241,6 +263,7 @@ class Seed(db.Model):
     def save(self):
         """Saves seed's JSON files and saves seed to database."""
         self.add_variety_to_json_file()
+        self.add_category_to_json_file()
         self.save_to_database()
         
                     

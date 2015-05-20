@@ -320,6 +320,30 @@ class TestSeedModel(unittest.TestCase):
         self.assertTrue(seed2.variety in varieties and
                         seed.variety in varieties)
 
+    def test_add_category_to_json_file(self):
+        """Should add category and variety to categories.json if needed."""
+        seed1 = create_seed_object()
+        seed1.add_category_to_json_file()      
+        filename = os.path.join(app.config['JSON_FOLDER'], 'categories.json')
+        with open(filename, 'r') as infile:
+            categories = json.loads(infile.read())
+        self.assertTrue(seed1.variety in categories[seed1.category])
+        seed2 = create_seed_object()
+        seed2.set_variety('milkweed')
+        seed2.add_category_to_json_file()
+        with open(filename, 'r') as infile:
+            categories = json.loads(infile.read())
+        self.assertTrue(seed2.variety in categories[seed2.category] and
+                        seed1.variety in categories[seed2.category])
+        seed3 = create_seed_object()
+        seed3.set_category('plant')
+        seed3.add_category_to_json_file()
+        with open(filename, 'r') as infile:
+            categories = json.loads(infile.read())
+        self.assertTrue(seed3.category in categories and
+                        seed1.category in categories)
+      
+
 
 def create_seed_data():
     return dict(

@@ -232,7 +232,7 @@ class Seed(db.Model):
             changed = True
         if changed == True:
             with open(filename, 'w') as outfile:
-                outfile.write(json.dumps(varieties))
+                outfile.write(json.dumps(varieties, indent=2))
 
     def add_category_to_json_file(self):
         """Adds seed's category and variety to categories.json if needed."""
@@ -252,7 +252,7 @@ class Seed(db.Model):
             changed = True
         if changed == True:
             with open(filename, 'w') as outfile:
-                outfile.write(json.dumps(categories))
+                outfile.write(json.dumps(categories, indent=2))
 
 
     def save_to_database(self):

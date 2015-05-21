@@ -27,8 +27,10 @@ app.config.from_object('config')
 app.jinja_env.globals.update(SITE_NAME=app.config['SITE_NAME'])
 
 #Allow loading JSON files from jinja templates.
-def load_json_file(filename, directory=app.config['JSON_FOLDER']):
+def load_json_file(filename, directory=None):
     """Loads specified json file and returns a Python object."""
+    if directory == None:
+        directory = app.config['JSON_FOLDER']
     fullname = os.path.join(directory, filename)
     if os.path.isfile(fullname):
         with open(fullname, 'r') as infile:

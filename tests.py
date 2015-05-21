@@ -76,13 +76,16 @@ class TestViews(unittest.TestCase):
         #Set images folder to tmp.
         app.config['IMAGES_FOLDER'] = os.path.join(app.config['BASE_FOLDER'], 'tmp')
 
-        #Create a test app.
-        self.app = app.test_client()
+        #Set JSON folder to tmp.
+        app.config['JSON_FOLDER'] = os.path.join(app.config['BASE_FOLDER'], 'tmp')
 
         #Set testing database location.
         app.config['SQLALCHEMY_DATABASE_URI'] = (
             'sqlite:///' + os.path.join(app.config['BASE_FOLDER'], 'tmp', 'test.db')
         )
+
+        #Create a test app.
+        self.app = app.test_client()
 
         #Create our test database.
         db.create_all()
@@ -206,6 +209,23 @@ class TestViews(unittest.TestCase):
         db.session.commit()
         retval = self.app.get('/seeds/%s' % seed.variety)
         self.assertTrue(seed.get_thumbnail_url() in retval.data)
+
+    def test_categories_nav(self):
+        """Added categories and varieties should appear in sidebar nav."""
+        seed = create_seed_object()
+        seed.save()
+        retval = self.app.get('/')
+        self.assertTrue(('>%s<' % seed.category) in retval.data and
+                        ('>%s<' % seed.variety) in retval.data)
+        seed2 = create_seed_object()
+        seed2.set_category('frog')
+        seed2.set_variety('green tree frog')
+        seed2.name = 'green tree frog'
+        seed2.save()
+        retval = self.app.get('/')
+        self.assertTrue(('>%s<' % seed2.category) in retval.data and
+                        ('>%s<' % seed.category) in retval.data)
+                        
 
 
 class TestSeedModel(unittest.TestCase):

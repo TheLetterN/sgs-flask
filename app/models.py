@@ -71,6 +71,24 @@ class Seed(db.Model):
         self.thumbnail = thumbnail
         self.add_synonyms_from_string(synonyms)
         self.series = series
+
+    def __eq__(self, other):
+        if (
+                self.name == other.name and
+                self.get_binomen() == other.get_binomen() and
+                self.description == other.description and
+                self.variety == other.variety and
+                self.category == other.category and
+                self.price == other.price and
+                self.is_active == other.is_active and
+                self.in_stock == other.in_stock and
+                self.thumbnail == other.thumbnail and
+                self.get_synonyms_list() == other.get_synonyms_list() and
+                self.series == other.series):
+            return True
+        else:
+            return False
+
     
     def populate_from_form(self, form):
         """Populates addseed from a complete form object."""

@@ -5,30 +5,17 @@ Insert something worth reading here!
 
 Installation:
 -------------
+(Lines beginning with $ are terminal commands. Do not enter the $ in the
+terminal, just what comes after it. Lines ending in \ signify that the next
+line in this document is part of the same line as entered in the terminal.)
 
 $ cd /path/to/sgs_flask
 $ virtualenv venv
 $ source venv/bin/activate
-$ pip install flask
-$ pip install flask-script
-$ pip install flask-migrate
-$ pip install flask-wtf
+$ pip install flask flask-sqlalchemy flask-script flask-wtf flask-migrate \
+openpyxl
+
 
 Requirements:
 -------------
-Flask==0.10.1
-Flask-Migrate==1.4.0
-Flask-SQLAlchemy==2.0
-Flask-Script==2.0.5
-Flask-WTF==0.11
-Jinja2==2.7.3
-Mako==1.0.1
-MarkupSafe==0.23
-SQLAlchemy==1.0.3
-WTForms==2.0.2
-Werkzeug==0.10.4
-alembic==0.7.6
-argparse==1.2.1
-itsdangerous==0.24
-wsgiref==0.1.2
-
+Requirements are listed in the requirements.txt file.

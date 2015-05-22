@@ -1,6 +1,7 @@
 import json
 import os
 from werkzeug import secure_filename
+from openpyxl import load_workbook, Workbook
 from flask import flash, url_for
 from flask.ext.sqlalchemy import SQLAlchemy
 from flask.ext.migrate import Migrate
@@ -291,4 +292,82 @@ def string_to_list(stringlist):
 def list_to_string(listobj):
     """Returns a list as a string w/ commas."""
     return ', '.join(listobj)
+
+def save_seeds_to_xlsx(seeds, filename):
+    """Saves a list of Seed objects to an Excel spreadsheet."""
+    wb = Workbook()
+    sheet = wb.active
+    sheet.title = 'seeds'
+    sheet.append(['Name',
+                  'Binomen',
+                  'Variety',
+                  'Category',
+                  'Price',
+                  'Description',
+                  'Synonyms',
+                  'Series',
+                  'Thumbnail',
+                  'Active',
+                  'In Stock'])
+    for seed in seeds:
+        sheet.append([seed.name,
+                      seed.get_binomen(),
+                      seed.variety,
+                      seed.category,
+                      seed.price,
+                      seed.description,
+                      seed.get_synonyms_string(),
+                      seed.series,
+                      seed.thumbnail,
+                      seed.is_active,
+                      seed.in_stock])
+    sheet.freeze_panes = sheet['A2']
+    wb.save(filename)
+
+def load_seeds_from_xlsx(filename):
+    """Returns a list of Seed objects loaded from an Excel spreadsheet."""
+    seeds = []
+    wb = load_workbook(filename)
+    sheet = wb['seeds']
+    rows = sheet.iter_rows()
+    firstrow = next(iter(rows))
+    for idx, cell in enumerate(firstrow, start=0):
+        val = cell.value.lower().strip()
+        if val == 'name':
+            name_col = idx
+        elif val == 'binomen':
+            binomen_col = idx
+        elif val == 'variety':
+            variety_col = idx
+        elif val == 'category':
+            category_col = idx
+        elif val == 'price':
+            price_col = idx
+        elif val == 'description':
+            description_col = idx
+        elif val == 'synonyms':
+            synonyms_col = idx
+        elif val == 'series':
+            series_col = idx
+        elif val == 'thumbnail':
+            thumbnail_col = idx
+        elif val == 'active':
+            active_col = idx
+        elif val == 'in stock':
+            in_stock_col = idx
+    for row in rows:
+        seeds.append(Seed(name=row[name_col].value,
+                          binomen=row[binomen_col].value,
+                          variety=row[variety_col].value,
+                          category=row[category_col].value,
+                          price=row[price_col].value,
+                          description=row[description_col].value,
+                          synonyms=row[synonyms_col].value,
+                          series=row[series_col].value,
+                          thumbnail=row[thumbnail_col].value,
+                          is_active=row[active_col].value,
+                          in_stock=row[in_stock_col].value))
+    return seeds
+
+
 

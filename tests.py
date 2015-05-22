@@ -22,7 +22,12 @@ import unittest
 from cStringIO import StringIO
 from werkzeug import secure_filename, FileStorage
 from app import app
-from app.models import db, Seed
+from app.models import (
+    db,
+    Seed,
+    save_seeds_to_xlsx,
+    load_seeds_from_xlsx
+)
 
 
 class TestCaseExample(unittest.TestCase):
@@ -362,7 +367,27 @@ class TestSeedModel(unittest.TestCase):
             categories = json.loads(infile.read())
         self.assertTrue(seed3.category in categories and
                         seed1.category in categories)
-      
+
+    def test_seeds_to_and_from_xlsx(self):
+        """Seeds save to xlsx file should be loadable from it too."""
+        filename = os.path.join(app.config['BASE_FOLDER'], 'tmp', 'test.xlsx')
+        seed1 = create_seed_object()
+        seed2 = Seed(
+            name='Fake Seed',
+            binomen='Semen fictus',
+            description='It\'s fake, mon!',
+            variety='please ignore',
+            category='nonexistent',
+            price=99.2,
+            is_active=False,
+            in_stock=True)
+        seeds1 = [seed1, seed2]
+        save_seeds_to_xlsx(seeds=seeds1, filename=filename)
+        seeds2 = load_seeds_from_xlsx(filename)
+        self.assertEqual(seeds1, seeds2)
+
+
+
 
 
 def create_seed_data():

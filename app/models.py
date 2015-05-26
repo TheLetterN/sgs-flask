@@ -337,8 +337,8 @@ def save_seeds_to_xlsx(seeds, filename):
                       seed.get_synonyms_string(),
                       seed.series,
                       seed.thumbnail,
-                      seed.is_active,
-                      seed.in_stock])
+                      'true' if seed.is_active else 'false',
+                      'true' if seed.in_stock else 'false'])
     sheet.freeze_panes = sheet['A2']
     wb.save(filename)
 
@@ -374,6 +374,15 @@ def load_seeds_from_xlsx(filename):
         elif val == 'in stock':
             in_stock_col = idx
     for row in rows:
+        if (row[active_col].value.lower() == 'true'):
+            is_active = True
+        else:
+            is_active = False
+        if (row[in_stock_col].value.lower() == 'true'):
+            in_stock = True
+        else:
+            in_stock = False
+
         seeds.append(Seed(name=row[name_col].value,
                           binomen=row[binomen_col].value,
                           variety=row[variety_col].value,
@@ -383,8 +392,8 @@ def load_seeds_from_xlsx(filename):
                           synonyms=row[synonyms_col].value,
                           series=row[series_col].value,
                           thumbnail=row[thumbnail_col].value,
-                          is_active=row[active_col].value,
-                          in_stock=row[in_stock_col].value))
+                          is_active=is_active,
+                          in_stock=in_stock))
     return seeds
 
 

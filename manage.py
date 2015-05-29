@@ -23,7 +23,7 @@ def hello():
 @manager.command
 def test():
     """Run all unit tests from tests.py."""
-    suite = unittest.TestLoader().loadTestsFromModule(tests)
+    suite = unittest.TestLoader().discover('tests')
     unittest.TextTestRunner(verbosity=2).run(suite)
 
 

@@ -15,9 +15,6 @@ venv/
 #pesky ..DS_Store files!
 .DS_Store
 
-#We don't want to add our database to the repository.
+#We also want to ignore app.db and migrations from the old files
 app.db
-
-#Nor do we want to add our database migrations.
 migrations/
-

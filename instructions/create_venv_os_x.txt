@@ -1,0 +1,17 @@
+﻿Instructions for creating virtual environment in OS X:
+
+You will need to install Python 3, as OS X only comes with python 2. To do so:
+
+1. In a browser, navigate to: https://www.python.org/downloads/mac-osx/
+2. Click the link to the latest Python 3 release (Stable release, NOT beta or alpha; it will probably be 3.4.x)
+3. On the download page you navigated to, scroll down to Files and download the version labeled “Mac OS X 64-bit/32-bit installer”
+4. Open the downloaded .pkg file to run the python installer, and follow the instructions in the dialogues to install it.
+
+Now that you have Python 3 installed, you'll need to create a virtual environment:
+1. Open Terminal.app
+2. Navigate to the project's directory. For example, if the project is “sgs_flask” in your Documents folder:
+    cd ~/Documents/sgs_flask
+3. Create a virtual environment named venv:
+    pyvenv-3.4 venv
+4. Congratulations, you should now have a folder titled 'venv' within your project directory, which contains a virtual Python 3 environment!
+5. See using_venv.txt for instructions on using your virtual environment.

@@ -1,0 +1,4 @@
+The documents in this folder are meant to be followed in this order:
+
+1) create_venv_os_x.txt (if on OS X) or create_venv_ubuntu.txt (if on Ubuntu 14.04)
+2) using_venv.txt

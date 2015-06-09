@@ -1,0 +1,22 @@
+﻿Instructions for creating virtual enviromnent in Ubuntu 14.04:
+
+As of writing this document (June 6, 2015) Ubuntu 14.04 has a slightly broken
+version of pyvenv-3.4, so you will need to follow these instructions to 
+correctly set up your virtual environment:
+
+1. In a terminal, navigate to the project's directory. For example, if the 
+project is “sgs_flask” in your Documents folder:
+    cd ~/Documents/sgs_flask
+2. Run this command:
+    pyvenv-3.4 --without-pip venv
+3. Activate the virtual environment:
+    source venv/bin/activate
+4. Download the pip installer:
+    wget https://bootstrap.pypa.io/get-pip.py
+5. Run the pip installer:
+    python get-pip.py
+6. Once installed, you can (and should) delete get-pip.py
+7. Deactivate the virtual environment with this command:
+    deactivate
+8. Congratulations, you should now have a working Python 3 virtual environment!
+9. See using_venv.txt for instructions on using your virtual environment.

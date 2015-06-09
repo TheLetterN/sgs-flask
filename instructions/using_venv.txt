@@ -1,0 +1,20 @@
+All of our Python libraries should be installed in our virtual environment,
+rather than being installed system-wide. As such, we need to run our project
+from the virtual environment we previously set up. To do so:
+
+1. Open a terminal and navigate to the project directory in it. Example:
+    cd ~/Documents/sgs_flask
+2. Activate the virtual enviromnent:
+    source venv/bin/activate
+
+This way, all python-related commands and scripts you run from this terminal
+will use what's installed in the virtual environment rather than using the
+versions installed system-wide.
+
+When finished working, you should deactivate the virtual environment:
+    deactivate
+
+That's about all there is to it; remember to always make sure you're in the
+virtual environment when installing modules with pip, otherwise it will try
+to install them system-wide, and fail! You can tell you're in the virtual
+environment when your shell is prefixed with: (venv)

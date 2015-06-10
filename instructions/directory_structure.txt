@@ -1,0 +1,20 @@
+The directory structure for the sgs_flask project is as follows:
+
+sgs_flask/
+    |-- manage.py
+    |-- config.py
+    |__ /app                    # Main application directory.
+        |-- __init__.py
+        |__ /static
+            |__ /css
+            |__ /images
+        |__ /main               # Module for main sections of the site.
+            |-- __init__.py
+            |-- views.py
+        |__ /auth               # Module for user management.
+            |-- __init__.py
+            |-- views.py
+    |__ /tests                  # Scripts for testing our code.
+    |__ /venv                   # Python virtual environment.
+
+        

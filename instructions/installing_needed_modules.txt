@@ -12,3 +12,15 @@ Or you may install the exact versions of the modules used by running:
 I recommend installing the latest versions of the modules used, ideally, but
 if anything goes wrong with the latest versions, requirements.txt has a known
 working setup.
+
+Explanation of each module:
+
+flask -- Flask, the microframework at the base of our web application.
+flask-sqlalchemy -- Integrates the SQLAlchemy module (which is automatically
+    installed as a pre-requisite) into Flask to allow us to easily make and
+    use database modules.
+flask-login -- Flask module to make user authentication and access restriction
+    easier for us to manage.
+flake8  -- Runnable module to check our code for PEP8 compliance and some other
+    clean code practices. It is recommended to run this on any python file you
+    create or edit.

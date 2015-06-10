@@ -1,0 +1,14 @@
+To install the modules needed for our Flask project:
+
+1. Navigate to sgs_flask in a terminal:
+    cd /path/to/sgs_flask
+2. Activate the virtual environment:
+    source venv/bin/activate
+3. Install modules with pip:
+    pip install flask flask-sqlalchemy flask-login
+Or you may install the exact versions of the modules used by running:
+    pip install -r requirements.txt
+
+I recommend installing the latest versions of the modules used, ideally, but
+if anything goes wrong with the latest versions, requirements.txt has a known
+working setup.

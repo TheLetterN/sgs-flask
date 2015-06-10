@@ -1,6 +1,6 @@
 ﻿Instructions for creating virtual enviromnent in Ubuntu 14.04:
 
-As of writing this document (June 6, 2015) Ubuntu 14.04 has a slightly broken
+Ubuntu 14.04 LTS: As of writing this document (June 6, 2015) Ubuntu 14.04 has a slightly broken
 version of pyvenv-3.4, so you will need to follow these instructions to 
 correctly set up your virtual environment:
 
@@ -20,3 +20,15 @@ project is “sgs_flask” in your Documents folder:
     deactivate
 8. Congratulations, you should now have a working Python 3 virtual environment!
 9. See using_venv.txt for instructions on using your virtual environment.
+
+Ubuntu 15.04: This will probably work for future versions of Ubuntu as well:
+
+1. Install python3-venv:
+    sudo apt-get install python3-venv
+2. Navigate to project directory in a terminal.
+    cd /path/to/sgs_flask
+3. Create the virtual environment with pyvenv:
+    pyvenv venv
+4. Congratulations, you should now have a working Python 3 virtual environment.
+5. See using_venv.txt for instructions on using your virtual environment.
+

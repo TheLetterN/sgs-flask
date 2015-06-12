@@ -5,7 +5,8 @@ To install the modules needed for our Flask project:
 2. Activate the virtual environment:
     source venv/bin/activate
 3. Install modules with pip:
-    pip install flask flask-sqlalchemy flask-login flake8 pytest flask-script
+    pip install flask flask-sqlalchemy flask-login flake8 pytest flask-script \
+    flask-migrate
 Or you may install the exact versions of the modules used by running:
     pip install -r requirements.txt
 

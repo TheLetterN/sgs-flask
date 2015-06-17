@@ -1,0 +1,22 @@
+Style Guide for SGS Flask
+
+General:
+
+- Please follow the PEP8 style guide, and run flake8 on any python files you
+  you edit before committing them to the repository.
+- Where not otherwise specified, arrange classes, attributes, methods, and top-
+  level functions alphabetically.
+
+Classes:
+
+- Magic methods (special Python methods such as __init__ or __repr__) should
+  always be after other methods.
+
+Database Models:
+
+- Local data attributes come first, followed by relationships and foreign keys.
+
+Unit Tests:
+
+- Unit tests should be split into files based on which file they are testing.
+- setUp and tearDown methods should always come first.

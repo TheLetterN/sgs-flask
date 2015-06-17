@@ -27,6 +27,9 @@ class Seed(db.Model):
     stock_status = db.Column(db.Integer)
     common_name_id = db.Column(db.Integer, db.ForeignKey('common_names.id'))
 
+    def __repr__(self):
+        return '<{0} \'{1}\'>'.format(self.__class__.__name__, self.name)
+
 
 class Category(db.Model):
     """Broad categories for seeds, such as perennial flower, herb, vegetable.
@@ -46,6 +49,9 @@ class Category(db.Model):
         backref=db.backref('categories', lazy='dynamic')
     )
 
+    def __repr__(self):
+        return '<{0} \'{1}\'>'.format(self.__class__.__name__, self.name)
+
 
 class CommonName(db.Model):
     """Common names for seeds, such as butterfly weed, sunflower, agastache.
@@ -60,6 +66,9 @@ class CommonName(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), unique=True)
     seeds = db.relationship('Seed', backref='common_name', lazy='dynamic')
+
+    def __repr__(self):
+        return '<{0} \'{1}\'>'.format(self.__class__.__name__, self.name)
 
 
 seeds_categories = db.Table(

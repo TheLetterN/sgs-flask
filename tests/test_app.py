@@ -1,13 +1,10 @@
-"""
-    Tests basic functionality of our Flask application.
-"""
-
 import unittest
 from flask import current_app
 from app import create_app
 
 
 class TestApp(unittest.TestCase):
+    """Tests for base Flask application."""
     def setUp(self):
         self.app = create_app('testing')
         self.app_context = self.app.app_context()

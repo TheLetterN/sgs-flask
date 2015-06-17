@@ -1,12 +1,9 @@
-"""
-    Tests views in the main module.
-"""
-
 import unittest
 from app import create_app
 
 
 class TestMainViews(unittest.TestCase):
+    """Tests for view functions in main module."""
     def setUp(self):
         app = create_app('testing')
         self.app = app.test_client()

@@ -2,6 +2,24 @@ from werkzeug import generate_password_hash, check_password_hash
 from app import db
 
 
+class Role(db.Model):
+    """Table representing user roles.
+
+    Database Columns:
+        id -- Auto-generated ID number.
+        name -- What we call the role.
+    Relationships:
+        users -- backrefs 'role' to User.
+    """
+    __tablename__ = 'roles'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(64), unique=True)
+    users = db.relationship('User', backref='role', lazy='dynamic')
+
+    def __repr__(self):
+        return '<{0} \'{1}\'>'.format(self.__class__.__name__, self.name)
+
+
 class User(db.Model):
     """Table representing registered users.
 
@@ -35,17 +53,5 @@ class User(db.Model):
     def verify_password(self, password):
         return check_password_hash(self.password_hash, password)
 
-
-class Role(db.Model):
-    """Table representing user roles.
-
-    Database Columns:
-        id -- Auto-generated ID number.
-        name -- What we call the role.
-    Relationships:
-        users -- backrefs 'role' to User.
-    """
-    __tablename__ = 'roles'
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(64), unique=True)
-    users = db.relationship('User', backref='role', lazy='dynamic')
+    def __repr__(self):
+        return '<{0} \'{1}\'>'.format(self.__class__.__name__, self.name)

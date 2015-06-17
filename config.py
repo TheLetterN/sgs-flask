@@ -13,7 +13,8 @@ class Config(object):
 
     @staticmethod
     def init_app(app):
-        pass
+        app.jinja_env.trim_blocks = True
+        app.jinja_env.lstrip_blocks = True
 
 
 class DevelopmentConfig(Config):

@@ -1,4 +1,19 @@
 {% extends "main/base.html" %}
 {% block content %}
-        <p>You can't log in without a form, can you?</p>
+        <form method="POST" action="{{ url_for('auth.login') }}">
+            {{ form.hidden_tag() }}
+            {% for error in form.username.errors %}
+            <span class="error">{{ error }}</span><br>
+            {% endfor %}
+            {{ form.username.label }}<br>
+            {{ form.username }}<br>
+            {% for error in form.password.errors %}
+            <span class="error">{{ error }}</span><br>
+            {% endfor %}
+            {{ form.password.label }}<br>
+            {{ form.password }}<br>
+            {{ form.remember_me.label }}<br>
+            {{ form.remember_me }}<br>
+            {{ form.submit }}<br>
+        </form>
 {% endblock %}

@@ -15,6 +15,7 @@ Classes:
 Database Models:
 
 - Local data attributes come first, followed by relationships and foreign keys.
+- Association tables should end with _association.
 
 Unit Tests:
 

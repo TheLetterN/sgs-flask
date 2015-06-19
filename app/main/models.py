@@ -1,5 +1,17 @@
 from app import db
 
+categories_common_names_association = db.Table(
+    'categories_common_names_association',
+    db.Column('category_id', db.Integer, db.ForeignKey('categories.id')),
+    db.Column('common_name_id', db.Integer, db.ForeignKey('common_names.id'))
+)
+
+seeds_categories_association = db.Table(
+    'seeds_categories_association',
+    db.Column('seed_id', db.Integer, db.ForeignKey('seeds.id')),
+    db.Column('category_id', db.Integer, db.ForeignKey('categories.id'))
+)
+
 
 class Seed(db.Model):
     """Table containing seed information for display on the site.
@@ -15,8 +27,8 @@ class Seed(db.Model):
         stock_status -- 0 = Discontinued 1 = In Stock 2 = Out of Stock
         common_name_id -- id for the CommonName associated with this seed.
     Relationships:
-        common_name -- backref from CommonName.
-        categories -- backref from Category.
+        common_name -- o2m, backref from CommonName.
+        categories -- m2m,  backref from Category.
     """
     __tablename__ = 'seeds'
     id = db.Column(db.Integer, primary_key=True)
@@ -42,7 +54,8 @@ class Category(db.Model):
         meta_keywords -- Content for meta keywords tag.
         name -- Name of category. (e.g. Perennial Flower)
     Relationships:
-        seeds -- backref to Seed.
+        seeds -- m2m, backref to Seed.
+        common_names -- m2m,  backref to CommonName.
     """
     __tablename__ = 'categories'
     id = db.Column(db.Integer, primary_key=True)
@@ -51,7 +64,12 @@ class Category(db.Model):
     name = db.Column(db.String(64), unique=True)
     seeds = db.relationship(
         'Seed',
-        secondary='seeds_categories',
+        secondary=seeds_categories_association,
+        backref=db.backref('categories', lazy='dynamic')
+    )
+    common_names = db.relationship(
+        'CommonName',
+        secondary=categories_common_names_association,
         backref=db.backref('categories', lazy='dynamic')
     )
 
@@ -68,7 +86,7 @@ class CommonName(db.Model):
         meta_description -- Content for meta description tag.
         meta_keywords -- Content for meta keywords tag.
     Relationships:
-        seeds -- backref to Seed.
+        seeds -- o2m, backref to Seed.
     """
     __tablename__ = 'common_names'
     id = db.Column(db.Integer, primary_key=True)
@@ -79,10 +97,3 @@ class CommonName(db.Model):
 
     def __repr__(self):
         return '<{0} \'{1}\'>'.format(self.__class__.__name__, self.name)
-
-
-seeds_categories = db.Table(
-    'seeds_categories',
-    db.Column('seed_id', db.Integer, db.ForeignKey('seeds.id')),
-    db.Column('category_id', db.Integer, db.ForeignKey('categories.id'))
-)

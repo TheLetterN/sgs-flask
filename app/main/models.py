@@ -9,6 +9,7 @@ class Seed(db.Model):
         binomen -- Scientific name of the seed.
         cultivar -- The cultivar name of the seed. (e.g. Tumbling Tom)
         description -- Product description for seed.
+        packet_size -- Quantity or weight of seeds per packet.
         price -- Price of the seed.
         sku -- SKU for the seed.
         stock_status -- 0 = Discontinued 1 = In Stock 2 = Out of Stock
@@ -22,6 +23,7 @@ class Seed(db.Model):
     binomen = db.Column(db.String(64))
     cultivar = db.Column(db.String(64))
     description = db.Column(db.Text)
+    packet_size = db.Column(db.String(16))  # TODO verify with Don.
     price = db.Column(db.Float)
     sku = db.Column(db.String(16), unique=True)
     stock_status = db.Column(db.Integer)
@@ -36,12 +38,16 @@ class Category(db.Model):
 
     Database Columns:
         id -- Auto-generated unique identifier.
+        meta_description -- Content for meta description tag.
+        meta_keywords -- Content for meta keywords tag.
         name -- Name of category. (e.g. Perennial Flower)
     Relationships:
         seeds -- backref to Seed.
     """
     __tablename__ = 'categories'
     id = db.Column(db.Integer, primary_key=True)
+    meta_description = db.Column(db.Text)       # TODO verify with Don
+    meta_keywords = db.Column(db.Text)          # TODO verify with Don
     name = db.Column(db.String(64), unique=True)
     seeds = db.relationship(
         'Seed',
@@ -59,11 +65,15 @@ class CommonName(db.Model):
     Database Columns:
         id -- Auto-generated unique identifier.
         name -- The common name of a seed.
+        meta_description -- Content for meta description tag.
+        meta_keywords -- Content for meta keywords tag.
     Relationships:
         seeds -- backref to Seed.
     """
     __tablename__ = 'common_names'
     id = db.Column(db.Integer, primary_key=True)
+    meta_description = db.Column(db.Text)       # TODO verify with Don
+    meta_keywords = db.Column(db.Text)          # TODO verify with Don
     name = db.Column(db.String(64), unique=True)
     seeds = db.relationship('Seed', backref='common_name', lazy='dynamic')
 

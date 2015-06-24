@@ -1,4 +1,12 @@
 {% extends "main/base.html" %}
-{% block content %}
+
+<!-- head needs 2 indents -->
+{% block head %}
+        <title>Swallowtail Garden Seeds</title>
+        <link rel="canonical" href="{{ url_for('main.index', _external=True) }}">
+{% endblock %}
+
+<!-- body needs 2 indents -->
+{% block body %}
         <p>In Soviet Russia, website visits YOU!</p>
 {% endblock %}

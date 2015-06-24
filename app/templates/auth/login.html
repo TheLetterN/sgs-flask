@@ -1,5 +1,14 @@
 {% extends "main/base.html" %}
-{% block content %}
+
+<!-- head needs 2 indents -->
+{% block head %}
+        <title>Log In</title>
+        <meta name="robots" content="noindex, nofollow">
+        <link rel="canonical" href="{{ url_for('auth.login', _external=True) }}">
+{% endblock %}
+
+<!-- body needs 2 indents -->
+{% block body %}
         <form method="POST" action="{{ url_for('auth.login') }}">
             {{ form.hidden_tag() }}
             {% for error in form.username.errors %}

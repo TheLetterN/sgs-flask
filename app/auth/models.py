@@ -49,6 +49,13 @@ class User(UserMixin, db.Model):
 
     @password.setter
     def password(self, password):
+        """This is a convenience function so you can use User.password = x"""
+        # IMO, this method of setting password_hash is too opaque.
+        # User.set_password makes it more obvious that the password is being
+        # acted on by a function, so I recommend that instead. -N
+        self.set_password(password)
+
+    def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 
     def verify_password(self, password):

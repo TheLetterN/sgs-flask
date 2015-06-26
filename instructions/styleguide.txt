@@ -17,7 +17,10 @@ Database Models:
 - Local data attributes come first, followed by relationships and foreign keys.
 - Association tables should end with _association.
 
-Unit Tests:
+Tests:
 
-- Unit tests should be split into files based on which file they are testing.
+- Tests should be split into files based on which file they are testing.
 - setUp and tearDown methods should always come first.
+- Unit tests and other fast tests that don't utilize the database should go in
+  tests/fast_tests/ while tests involving the database belong in 
+  tests/database_tests/

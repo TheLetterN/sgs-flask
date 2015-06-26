@@ -1,9 +1,11 @@
 from flask import Flask
 from flask.ext.login import LoginManager
+from flask.ext.mail import Mail
 from flask.ext.sqlalchemy import SQLAlchemy
 from config import config
 
 db = SQLAlchemy()
+mail = Mail()
 
 login_manager = LoginManager()
 login_manager.session_protection = 'strong'
@@ -17,6 +19,7 @@ def create_app(config_name):
 
     db.init_app(app)
     login_manager.init_app(app)
+    mail.init_app(app)
 
     from .main import main as main_blueprint
     from .auth import auth as auth_blueprint

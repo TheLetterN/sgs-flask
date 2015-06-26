@@ -8,5 +8,10 @@
 
 <!-- body needs 2 indents -->
 {% block body %}
+        {% with messages = get_flashed_messages() %}
+        {% for message in messages %}
+        <span class="flashed_message">{{ message }}</span>
+        {% endfor %}
+        {% endwith %}
         <p>In Soviet Russia, website visits YOU!</p>
 {% endblock %}

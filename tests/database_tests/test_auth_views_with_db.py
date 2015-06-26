@@ -32,5 +32,6 @@ class TestAuthRoutesWithDB(unittest.TestCase):
         retval = self.tc.post('/auth/login', data=data, follow_redirects=False)
         self.assertEqual(retval.status_code, 302)
 
+
 if __name__ == '__main__':
     unittest.main()

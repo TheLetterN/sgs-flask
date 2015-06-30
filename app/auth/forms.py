@@ -25,14 +25,17 @@ class RegistrationForm(Form):
         'Email Address',
         validators=[Email(), InputRequired(), Length(1, 254)])
     email2 = StringField(
-        'Re-type Email Address',
-        validators=[EqualTo('email', message='Email addresses do not match!')])
+        'Confirm Email Address',
+        validators=[EqualTo('email', message='Email addresses do not match!'),
+                    InputRequired()])
     password = PasswordField(
         'Password',
         validators=[InputRequired(), Length(1, 64)])
     password2 = PasswordField(
         'Confirm Password',
-        validators=[EqualTo('password', message='Passwords do not match!')])
+        validators=[EqualTo('password', message='Passwords do not match!'),
+                    InputRequired()])
+    submit = SubmitField('Register')
     username = StringField(
         'Username',
         validators=[
@@ -41,7 +44,7 @@ class RegistrationForm(Form):
             Regexp('^[A-Za-z0-9][A-Za-z0-9_. ]*$', 0,
                    'Username must begin with a letter or number,  and may only'
                    ' contain letters, numbers, spaces, dots, dashes, and'
-                   'underscores.')])
+                   ' underscores.')])
 
     def validate_email(self, field):
         if User.query.filter_by(email=field.data).first() is not None:
@@ -51,4 +54,4 @@ class RegistrationForm(Form):
     def validate_username(self, field):
         if User.query.filter_by(name=field.data).first() is not None:
             raise ValidationError('Username already in use,'
-                                  'please choose another.')
+                                  ' please choose another.')

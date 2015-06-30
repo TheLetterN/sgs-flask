@@ -80,7 +80,7 @@ h1 {
 label {
     float: left;
     text-align: right;
-    width: 6em;
+    width: 12em;
     margin-right: 0.5em;
 }
 input[type=text], textarea {
@@ -98,10 +98,8 @@ input[type=text]:hover, textarea:hover {
     border: 1px solid #88f;
     background-color: #ddf;
 }
-input.submit {
-    width: 6em;
-    margin-left: 7em;
-   margin-top: 0.5em; 
+input[type=submit] {
+    margin-top: 0.5em;
 }
 label:after {
     content: ": ";

@@ -1,0 +1,47 @@
+{% extends "main/base.html" %}
+
+<!-- head needs 2 indents -->
+{% block head %}
+        <title>Register</title>
+        <meta name="robots" content="noindex, nofollow">
+        <link rel="canonical" href="{{ url_for('auth.register', _external=True) }}">
+{% endblock %}
+
+<!-- body needs 2 indents -->
+{% block body %}
+        <h1>Account Registration</h1>
+        <form method="POST" action="{{ url_for('auth.register') }}">
+            {{ form.hidden_tag() }}
+            {{ form.email.label }}
+            {{ form.email }}
+            {% for error in form.email.errors %}
+            <span class="error">{{ error }}</span>
+            {% endfor %}
+            <br>
+            {{ form.email2.label }}
+            {{ form.email2 }}
+            {% for error in form.email2.errors %}
+            <span class="error">{{ error }}</span>
+            {% endfor %}
+            <br>
+            {{ form.username.label }}
+            {{ form.username }}
+            {% for error in form.username.errors %}
+            <span class="error">{{ error }}</span>
+            {% endfor %}
+            <br>
+            {{ form.password.label }}
+            {{ form.password }}
+            {% for error in form.password.errors %}
+            <span class="error">{{ error }}</span>
+            {% endfor %}
+            <br>
+            {{ form.password2.label }}
+            {{ form.password2 }}
+            {% for error in form.password2.errors %}
+            <span class="error">{{ error }}</span>
+            {% endfor %}
+            <br>
+            {{ form.submit }}
+        </form>
+{% endblock %}

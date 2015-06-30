@@ -72,6 +72,9 @@ h1 {
     font-size: 1.5em;
 }
 
+.flashed_message {
+    background-color: #aaffaa;
+}
 
 /* form elements */
 label {

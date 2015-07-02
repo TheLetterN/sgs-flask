@@ -10,6 +10,8 @@ class Config(object):
         '\xbdc@:b\xac\xfa\xfa\xd1z[\xa3=\xd1\x9a\x0b&\xe3\x1d5\xe9\x84(\xda'
     SQLALCHEMY_COMMIT_ON_TEARDOWN = True
     ADMINISTRATORS = os.environ.get('SGS_ADMINISTRATORS')
+    INFO_EMAIL = os.environ.get('SGS_INFO_EMAIL') or \
+        'nicholasp@localhost'   # TODO: Change this address!
 
     @staticmethod
     def init_app(app):

@@ -59,8 +59,10 @@ html {
 }
 
 body {
-    margin: 40px;
-    padding: 10px;
+    margin-left: 10%;
+    margin-right: 10%;
+    margin-top: 2%;
+    padding: 1em;
     background-color: #feffdd;
 }
 
@@ -77,35 +79,60 @@ h1 {
 }
 
 /* form elements */
-label {
-    float: left;
-    text-align: right;
-    width: 12em;
-    margin-right: 0.5em;
+form ol {
+    max-width: 90%;
+    display: block;
 }
-input[type=text], textarea {
-    width: 40%;
+form li {
+    display: block;
+}
+
+label {
+    display: inline-block;
+    margin-right: 0.5em;
+    width: 10em;
+    max-width: 80%;
+    text-align: right;
+}
+input {
+    display: inline-block;
+}
+input[type=text], input[type=password], textarea {
+    min-width: 200px;
+    width: 20%;
     font-family: monospace;
     color: black;
     background-color: white;
     border: 1px solid #888;
     margin-top: 2px;
 }
-input[type=text]:focus, textarea:focus {
+input[type=text]:focus, input[type=password]:focus, textarea:focus {
     background-color: #ffff99;
 }
-input[type=text]:hover, textarea:hover {
+input[type=text]:hover, input[type=password]:hover, textarea:hover {
     border: 1px solid #88f;
     background-color: #ddf;
 }
 input[type=submit] {
     margin-top: 0.5em;
+    margin-left: 13em;
 }
 label:after {
     content: ": ";
 }
 .error {
     background-color: #faa;
+}
+@media (max-width: 600px) {
+    input[type=submit] {
+        margin-left: 0;
+    }
+    input {
+        display: block;
+    }
+    label {
+        text-align: left;
+    }
 }
 
 /* form tooltips */

@@ -9,20 +9,35 @@
 
 <!-- body needs 2 indents -->
 {% block body %}
+        {% with messages = get_flashed_messages() %}
+        {% for message in messages %}
+        <div class="flashed_message">{{ message }}</div>
+        {% endfor %}
+        {% endwith %}
         <form method="POST" action="{{ url_for('auth.login') }}">
-            {{ form.hidden_tag() }}
-            {% for error in form.username.errors %}
-            <span class="error">{{ error }}</span><br>
-            {% endfor %}
-            {{ form.username.label }}<br>
-            {{ form.username }}<br>
-            {% for error in form.password.errors %}
-            <span class="error">{{ error }}</span><br>
-            {% endfor %}
-            {{ form.password.label }}<br>
-            {{ form.password }}<br>
-            {{ form.remember_me.label }}<br>
-            {{ form.remember_me }}<br>
-            {{ form.submit }}<br>
+            <ol>
+                <li>
+                {{ form.hidden_tag() }}
+                {{ form.username.label }}
+                {{ form.username }}
+                {% for error in form.username.errors %}
+                <span class="error">{{ error }}</span>
+                {% endfor %}
+                </li>
+                <li>
+                {{ form.password.label }}
+                {{ form.password }}
+                {% for error in form.password.errors %}
+                <span class="error">{{ error }}</span>
+                {% endfor %}
+                </li>
+                <li>
+                {{ form.remember_me.label }}
+                {{ form.remember_me }}
+                </li>
+                <li>
+                {{ form.submit }}
+                </li>
+            </ol>
         </form>
 {% endblock %}

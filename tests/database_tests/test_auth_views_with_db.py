@@ -27,6 +27,7 @@ class TestAuthRoutesWithDB(unittest.TestCase):
         user.name = data['username']
         user.password = data['password']
         user.email = 'gullible@bash.org'
+        user.confirmed = True
         db.session.add(user)
         db.session.commit()
         retval = self.tc.post('/auth/login', data=data, follow_redirects=False)

@@ -25,7 +25,7 @@ class RegistrationForm(Form):
         'Email Address',
         validators=[Email(), InputRequired(), Length(1, 254)])
     email2 = StringField(
-        'Confirm Email Address',
+        'Confirm Email',
         validators=[EqualTo('email', message='Email addresses do not match!'),
                     InputRequired()])
     password = PasswordField(

@@ -1,4 +1,5 @@
 import unittest
+from app import create_app
 from app.auth.models import Role, User
 
 
@@ -20,10 +21,12 @@ class TestRole(unittest.TestCase):
 class TestUser(unittest.TestCase):
     """Unit tests for the User class in app/auth/models"""
     def setUp(self):
-        pass
+        self.app = create_app('testing')
+        self.app_context = self.app.app_context()
+        self.app_context.push()
 
     def tearDown(self):
-        pass
+        self.app_context.pop()
 
     def test_password_attribute_raises_exception(self):
         """Trying to read User.password should raise an attribute error."""
@@ -50,6 +53,13 @@ class TestUser(unittest.TestCase):
         dummy = User()
         dummy.name = 'Gabbo'
         self.assertEqual(repr(dummy), '<User \'Gabbo\'>')
+
+    def test_confirm_token_works_with_generated_token(self):
+        """confirm_token should return True if given a valid token."""
+        user = User()
+        user.id = 42
+        token = user.generate_confirmation_token()
+        self.assertTrue(user.confirm_token(token))
 
 
 if __name__ == '__main__':

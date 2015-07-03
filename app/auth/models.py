@@ -3,6 +3,7 @@ from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from werkzeug import generate_password_hash, check_password_hash
 from flask.ext.login import UserMixin
 from app import db, login_manager
+from app.email import send_email
 
 
 class Role(db.Model):
@@ -59,7 +60,6 @@ class User(UserMixin, db.Model):
             return False
         if data.get('confirm') != self.id:
             return False
-        self.confirmed = True
         return True
 
     def generate_confirmation_token(self, expiration=3600):
@@ -78,6 +78,11 @@ class User(UserMixin, db.Model):
         # acted on by a function, so I recommend that instead. -N
         self.set_password(password)
 
+    def send_confirmation_email(self):
+        token = self.generate_confirmation_token()
+        send_email(self.email, 'Confirm Your Account',
+                   'auth/email/confirmation', user=self, token=token)
+
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 
@@ -86,6 +91,22 @@ class User(UserMixin, db.Model):
 
     def __repr__(self):
         return '<{0} \'{1}\'>'.format(self.__class__.__name__, self.name)
+
+
+def get_user_from_confirmation_token(token):
+    s = Serializer(current_app.config['SECRET_KEY'])
+    try:
+        data = s.loads(token)
+    except:
+        raise ValueError('Token is malformed or invalid!')
+    if 'confirm' in data:
+        user = User.query.filter_by(id=data['confirm']).first()
+        if user.confirmed is True:
+            raise ValueError('The user for this token is already confirmed!')
+        else:
+            return user
+    else:
+        raise KeyError('Confirmation token toes not contain valid data!')
 
 
 @login_manager.user_loader

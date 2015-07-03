@@ -1,0 +1,9 @@
+{% with messages = get_flashed_messages() %}
+    {% for message in messages %}
+        {% if 'Error:' in message %}
+        <div class="flashed_error">{{ message }}</div>
+        {% else %}
+        <div class="flashed_message">{{ message }}</div>
+        {% endif %}
+    {% endfor %}
+{% endwith %}

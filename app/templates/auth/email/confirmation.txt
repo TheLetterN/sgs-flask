@@ -1,0 +1,11 @@
+Dear {{ user.name }},
+
+Thank you for creating an account with us at Swallowtail Garden Seeds!
+
+To activate your account, please follow the link below:
+
+{{ url_for('auth.confirm', token=token, _external=True) }}
+
+Thanks again,
+
+The Swallowtail Garden Seeds Team

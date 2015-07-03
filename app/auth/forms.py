@@ -55,3 +55,19 @@ class RegistrationForm(Form):
         if User.query.filter_by(name=field.data).first() is not None:
             raise ValidationError('Username already in use,'
                                   ' please choose another.')
+
+
+class ResendConfirmationForm(Form):
+    email = StringField(
+        'Email Address',
+        validators=[Email(), InputRequired(), Length(1, 254)])
+    submit = SubmitField('Send')
+
+    def validate_email(self, field):
+        user = User.query.filter_by(email=field.data).first()
+        if user is None:
+            raise ValidationError('No account associated with this email '
+                                  'address!')
+        elif user.confirmed is True:
+            raise ValidationError('The account associated with this email '
+                                  'address has already been confirmed!')

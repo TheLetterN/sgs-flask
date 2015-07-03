@@ -12,6 +12,8 @@ class Config(object):
     ADMINISTRATORS = os.environ.get('SGS_ADMINISTRATORS')
     INFO_EMAIL = os.environ.get('SGS_INFO_EMAIL') or \
         'nicholasp@localhost'   # TODO: Change this address!
+    EMAIL_SUBJECT_PREFIX = os.environ.get('SGS_EMAIL_SUBJECT_PREFIX') or \
+        'Swallowtail Garden Seeds - '
 
     @staticmethod
     def init_app(app):

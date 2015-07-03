@@ -58,14 +58,14 @@ html {
     font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
+/* Defaults */
 body {
     margin-left: 10%;
     margin-right: 10%;
-    margin-top: 2%;
+    margin-top: 1%;
     padding: 1em;
     background-color: #feffdd;
 }
-
 h1 {
     color: #060;
     border-bottom: 0.3em solid #4f4;
@@ -75,12 +75,32 @@ h1 {
 }
 
 .flashed_message {
+    display: inline-block;
     background-color: #aaffaa;
+    padding-left: 0.5em;
+    padding-right: 0.5em;
+    padding-top: 0.2em;
+    padding-bottom: 0.2em;
+    margin-bottom: 0.5em;
+    border-style: solid;
+    border-width: 1px;
+    border-color: #66ff66;
+}
+.flashed_error {
+    display: inline-block;
+    background-color: #ffaaaa;
+    padding-left: 0.5em;
+    padding-right: 0.5em;
+    padding-top: 0.2em;
+    padding-bottom: 0.2em;
+    margin-bottom: 0.5em;
+    border-style: solid;
+    border-width: 1px;
+    border-color: #ff6666;
 }
 
 /* form elements */
 form ol {
-    max-width: 90%;
     display: block;
 }
 form li {
@@ -122,16 +142,26 @@ label:after {
 }
 .error {
     background-color: #faa;
+    padding-left: 0.2em;
+    padding-right: 0.2em;
+    margin: 0.1em;
 }
-@media (max-width: 600px) {
+
+@media (max-width: 800px) {
     input[type=submit] {
         margin-left: 0;
     }
     input {
         display: block;
+        margin-bottom: 0.5em;
     }
     label {
+        display: block;
         text-align: left;
+        margin-top: 0.5em;
+    }
+    .error:before {
+        content: "^ ";
     }
 }
 

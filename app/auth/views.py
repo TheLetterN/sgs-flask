@@ -1,8 +1,10 @@
 from flask import flash, redirect, render_template, request, url_for
-from flask.ext.login import login_required, login_user, logout_user
+from flask.ext.login import current_user, login_required, login_user, \
+    logout_user
 from app import db
 from . import auth
-from .forms import LoginForm, RegistrationForm, ResendConfirmationForm
+from .forms import LoginForm, RegistrationForm, ResendConfirmationForm, \
+    ResetPasswordForm, ResetPasswordRequestForm
 from .models import get_user_from_confirmation_token, User
 
 
@@ -86,3 +88,39 @@ def resend():
         flash('Confirmation email sent to {0}.'.format(form.email.data))
         return redirect(url_for('main.index'))
     return render_template('auth/resend.html', form=form)
+
+
+@auth.route('/reset_password', methods=['GET', 'POST'])
+def reset_password_request():
+    if not current_user.is_anonymous():
+        flash('Error: You are already logged in!')
+        return redirect(url_for('main.index'))  # TODO: redirect to profile
+    form = ResetPasswordRequestForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(email=form.email.data).first()
+        user.send_reset_password_email()
+        flash('An email with instructions for resetting your password has ' +
+              'been sent to {0}.'.format(form.email.data))
+        return redirect(url_for('main.index'))
+    return render_template('auth/reset_password_request.html', form=form)
+
+
+@auth.route('/reset_password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    if not current_user.is_anonymous():
+        return redirect(url_for('main.index'))  # TODO: redirect to profile
+    form = ResetPasswordForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(email=form.email.data).first()
+        if user is None:
+            flash('Error: wrong email address!')
+            return redirect(url_for('main.index'))  # TODO: redirect better
+        if user.reset_password(token, form.password1.data):
+            flash('New password set, you may now use it to log in!')
+            return redirect(url_for('auth.login'))
+        else:
+            flash('Error: Reset token is too old or invalid! If you still '
+                  'need to reset your password, please try again using the '
+                  'form below: ')
+            return redirect(url_for('auth.reset_password_request'))
+    return render_template('auth/reset_password.html', form=form, token=token)

@@ -8,11 +8,7 @@
 
 <!-- body needs 2 indents -->
 {% block body %}
-        {% with messages = get_flashed_messages() %}
-        {% for message in messages %}
-        <div class="flashed_message">{{ message }}</div>
-        {% endfor %}
-        {% endwith %}
+        {% include "main/flashed.html" %}
         <p>In Soviet Russia, website visits YOU!</p>
         <p>
 

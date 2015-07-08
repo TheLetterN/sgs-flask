@@ -66,8 +66,34 @@ class ResendConfirmationForm(Form):
     def validate_email(self, field):
         user = User.query.filter_by(email=field.data).first()
         if user is None:
-            raise ValidationError('No account associated with this email '
-                                  'address!')
+            raise ValidationError('There is no account associated with this '
+                                  'email address!')
         elif user.confirmed is True:
             raise ValidationError('The account associated with this email '
                                   'address has already been confirmed!')
+
+
+class ResetPasswordForm(Form):
+    email = StringField(
+        'Email Address',
+        validators=[Email(), InputRequired(), Length(1, 254)])
+    password1 = PasswordField(
+        'New Password',
+        validators=[InputRequired(), Length(1, 64)])
+    password2 = PasswordField(
+        'Confirm Password',
+        validators=[EqualTo('password1', message='Passwords must match!')])
+    submit = SubmitField('Reset Password')
+
+
+class ResetPasswordRequestForm(Form):
+    email = StringField(
+        'Email Address',
+        validators=[Email(), InputRequired(), Length(1, 254)])
+    submit = SubmitField('Request Password Reset')
+
+    def validate_email(self, field):
+        user = User.query.filter_by(email=field.data).first()
+        if user is None:
+            raise ValidationError('There is no account associated with this '
+                                  'email address!')

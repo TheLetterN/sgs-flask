@@ -61,6 +61,16 @@ class TestUser(unittest.TestCase):
         token = user.generate_confirmation_token()
         self.assertTrue(user.confirm_token(token))
 
+    def test_password_reset(self):
+        """Password should be reset if given a valid token and a new pass."""
+        user = User()
+        user.id = 42
+        user.set_password('hunter2')
+        token = user.generate_password_reset_token()
+        newpass = 'hunter2000'
+        self.assertTrue(user.reset_password(token, newpass))
+        self.assertTrue(user.verify_password(newpass))
+
 
 if __name__ == '__main__':
     unittest.main()

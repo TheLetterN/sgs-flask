@@ -66,6 +66,10 @@ class User(UserMixin, db.Model):
         s = Serializer(current_app.config['SECRET_KEY'], expiration)
         return s.dumps({'confirm': self.id})
 
+    def generate_password_reset_token(self, expiration=3600):
+        s = Serializer(current_app.config['SECRET_KEY'], expiration)
+        return s.dumps({'reset_password': self.id})
+
     @property
     def password(self):
         raise AttributeError('password is not a readable attribute!')
@@ -78,10 +82,28 @@ class User(UserMixin, db.Model):
         # acted on by a function, so I recommend that instead. -N
         self.set_password(password)
 
+    def reset_password(self, token, password):
+        """Resets password to new password if the token passed is valid."""
+        s = Serializer(current_app.config['SECRET_KEY'])
+        try:
+            data = s.loads(token)
+        except:
+            return False
+        if data.get('reset_password') != self.id:
+            return False
+        else:
+            self.set_password(password)
+            return True
+
     def send_confirmation_email(self):
         token = self.generate_confirmation_token()
         send_email(self.email, 'Confirm Your Account',
                    'auth/email/confirmation', user=self, token=token)
+
+    def send_reset_password_email(self):
+        token = self.generate_password_reset_token()
+        send_email(self.email, 'Reset Your Password',
+                   'auth/email/reset_password', user=self, token=token)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)

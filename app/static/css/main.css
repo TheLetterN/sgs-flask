@@ -105,10 +105,18 @@ form li {
 }
 form fieldset {
     border-style: solid;
-    border-width: 0.5px;
+    border-width: 1px;
     border-color: #99ff99;
     margin-top: 1em;
     margin-bottom: 1em;
+    padding: 0.5em;
+    width: 100%;
+    max-width: fit-content;
+    max-width: -moz-fit-content;
+    max-width: -webkit-fit-content;
+}
+fieldset legend {
+    border: 1px solid #00dd00;
     padding: 0.25em;
 }
 
@@ -145,11 +153,12 @@ input[type=submit] {
 label:after {
     content: ": ";
 }
-.error {
+.form_error {
     background-color: #faa;
     padding-left: 0.2em;
     padding-right: 0.2em;
-    margin: 0.1em;
+    margin: 0.2em;
+    display: inline-block;
 }
 
 @media (max-width: 800px) {
@@ -165,7 +174,7 @@ label:after {
         text-align: left;
         margin-top: 0.5em;
     }
-    .error:before {
+    .form_error:before {
         content: "^ ";
     }
 }

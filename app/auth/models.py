@@ -52,7 +52,7 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(128))
     role_id = db.Column(db.Integer, db.ForeignKey('roles.id'))
 
-    def confirm_token(self, token):
+    def confirm_account(self, token):
         s = Serializer(current_app.config['SECRET_KEY'])
         try:
             data = s.loads(token)
@@ -62,9 +62,25 @@ class User(UserMixin, db.Model):
             return False
         return True
 
-    def generate_confirmation_token(self, expiration=3600):
+    def confirm_new_email(self, token):
+        s = Serializer(current_app.config['SECRET_KEY'])
+        try:
+            data = s.loads(token)
+        except:
+            return False
+        if data.get('id') != self.id:
+            return False
+        else:
+            self.email = data.get('new_email')
+            return True
+
+    def generate_account_confirmation_token(self, expiration=3600):
         s = Serializer(current_app.config['SECRET_KEY'], expiration)
         return s.dumps({'confirm': self.id})
+
+    def generate_new_email_token(self, new_email, expiration=3600):
+        s = Serializer(current_app.config['SECRET_KEY'], expiration)
+        return s.dumps({'id': self.id, 'new_email': new_email})
 
     def generate_password_reset_token(self, expiration=3600):
         s = Serializer(current_app.config['SECRET_KEY'], expiration)
@@ -95,8 +111,8 @@ class User(UserMixin, db.Model):
             self.set_password(password)
             return True
 
-    def send_confirmation_email(self):
-        token = self.generate_confirmation_token()
+    def send_account_confirmation_email(self):
+        token = self.generate_account_confirmation_token()
         send_email(self.email, 'Confirm Your Account',
                    'auth/email/confirmation', user=self, token=token)
 
@@ -104,6 +120,11 @@ class User(UserMixin, db.Model):
         token = self.generate_password_reset_token()
         send_email(self.email, 'Reset Your Password',
                    'auth/email/reset_password', user=self, token=token)
+
+    def send_new_email_confirmation(self, new_email):
+        token = self.generate_new_email_token(new_email)
+        send_email(new_email, 'Confirm New Email Address',
+                   'auth/email/confirm_new_email', user=self, token=token)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)

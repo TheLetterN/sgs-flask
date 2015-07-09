@@ -1,12 +1,32 @@
+from flask.ext.login import current_user
 from flask.ext.wtf import Form
-from wtforms import (
-    BooleanField,
-    PasswordField,
-    StringField,
-    SubmitField,
-    ValidationError)
+from wtforms import BooleanField, PasswordField, StringField, SubmitField, \
+    ValidationError
 from wtforms.validators import Email, EqualTo, InputRequired, Length, Regexp
 from app.auth.models import User
+
+
+class EditUserForm(Form):
+    email1 = StringField(
+        'New Email',
+        validators=[Email(), Length(1, 254)])
+    email2 = StringField(
+        'Confirm Email',
+        validators=[EqualTo('email1', message="Email addresses must match!")])
+    new_password1 = PasswordField(
+        'New Password',
+        validators=[Length(0, 64)])
+    new_password2 = PasswordField(
+        'Confirm Password',
+        validators=[EqualTo('new_password1', message='Passwords must match!')])
+    current_password = PasswordField(
+        'Current Password',
+        validators=[Length(1, 64)])
+    submit = SubmitField('Submit Changes')
+
+    def validate_current_password(self, field):
+        if not current_user.verify_password(field.data):
+            raise ValidationError('Password is incorrect!')
 
 
 class LoginForm(Form):

@@ -1,7 +1,7 @@
 <p>Dear {{ user.name }},</p>
 <p>Thank you for creating an account with us at Swallowtail Garden Seeds!</p>
-<p>To activate your account, please <a href="{{ url_for('auth.confirm', token=token, _external=True) }}">click here</a>.</p>
+<p>To activate your account, please <a href="{{ url_for('auth.confirm_account', token=token, _external=True) }}">click here</a>.</p>
 <p>If the above link does not work, you can paste this directly in your browser's location bar:</p>
-<p>{{ url_for('auth.confirm', token=token, _external=True) }}</p>
+<p>{{ url_for('auth.confirm_account', token=token, _external=True) }}</p>
 <p>Thanks again,</p>
 <p>The Swallowtail Garden Seeds Team</p>

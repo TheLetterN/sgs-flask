@@ -1,10 +1,10 @@
 {% extends "main/base.html" %}
-
+{% from "main/form_errors.html" import form_errors %}
 <!-- head needs 2 indents -->
 {% block head %}
         <title>Resend Account Confirmation</title>
         <meta name="robots" content="noindex, nofollow">
-        <link rel="canonical" href="{{ url_for('auth.resend', _external=True) }}">
+        <link rel="canonical" href="{{ url_for('auth.resend_confirmation', _external=True) }}">
 {% endblock %}
 
 <!-- body needs 2 indents -->
@@ -12,15 +12,13 @@
         <h1>Resend Account Confirmation</h1>
         {% include 'main/flashed.html' %}
         <p>To recieve a new confirmation email, please enter the email address you used to register your account:</p>
-        <form method="POST" action="{{ url_for('auth.resend') }}">
+        <form method="POST" action="{{ url_for('auth.resend_confirmation') }}">
             {{ form.hidden_tag() }}
             <ol>
                 <li>
                     {{ form.email.label }}
                     {{ form.email }}
-                    {% for error in form.email.errors %}
-                    <span class="error">{{ error }}</span>
-                    {% endfor %}
+                    {{ form_errors(form.email) }}
                 </li>
                 <li>
                     {{ form.submit }}

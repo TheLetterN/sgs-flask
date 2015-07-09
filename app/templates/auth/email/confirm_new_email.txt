@@ -1,0 +1,10 @@
+Dear Swallowtail Garden Seeds user,
+
+To finish changing your account's associated email address to this one, please
+follow this link:
+
+{{ url_for('auth.confirm_new_email', token=token, _external=True) }}
+
+We hope to see you again soon,
+
+The Swallowtail Garden Seeds Team

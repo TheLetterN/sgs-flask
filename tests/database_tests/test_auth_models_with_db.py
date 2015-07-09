@@ -24,7 +24,7 @@ class TestUserWithDB(unittest.TestCase):
         user1.email = 'gullible@bash.org'
         db.session.add(user1)
         db.session.commit()
-        token = user1.generate_confirmation_token()
+        token = user1.generate_account_confirmation_token()
         user2 = get_user_from_confirmation_token(token)
         self.assertEqual(user1.id, user2.id)
 

@@ -1,5 +1,5 @@
 {% extends "main/base.html" %}
-
+{% from "main/form_errors.html" import form_errors %}
 <!-- head needs 2 indents -->
 {% block head %}
         <title>Log In</title>
@@ -11,29 +11,25 @@
 {% block body %}
         <h1>Log In</h1>
         {% include "main/flashed.html" %}
-        <form method="POST" action="{{ url_for('auth.login') }}">
+        <form method="POST">
             <ol>
                 <li>
-                {{ form.hidden_tag() }}
-                {{ form.username.label }}
-                {{ form.username }}
-                {% for error in form.username.errors %}
-                <span class="error">{{ error }}</span>
-                {% endfor %}
+                    {{ form.hidden_tag() }}
+                    {{ form.username.label }}
+                    {{ form.username }}
+                    {{ form_errors(form.username) }}
                 </li>
                 <li>
-                {{ form.password.label }}
-                {{ form.password }}
-                {% for error in form.password.errors %}
-                <span class="error">{{ error }}</span>
-                {% endfor %}
+                    {{ form.password.label }}
+                    {{ form.password }}
+                    {{ form_errors(form.password) }}
                 </li>
                 <li>
-                {{ form.remember_me.label }}
-                {{ form.remember_me }}
+                    {{ form.remember_me.label }}
+                    {{ form.remember_me }}
                 </li>
                 <li>
-                {{ form.submit }}
+                    {{ form.submit }}
                 </li>
             </ol>
         </form>

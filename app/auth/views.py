@@ -10,6 +10,7 @@ from .models import get_user_from_confirmation_token, User
 
 @auth.route('/confirm_account/<token>')
 def confirm_account(token):
+    """Get an account confirmation token and confirm account if it's valid."""
     error_instructions = ('Please try again, or use the form below to'
                           ' revieve a new confirmation token:')
     if token is None:
@@ -35,6 +36,7 @@ def confirm_account(token):
 
 @auth.route('confirm_new_email/<token>')
 def confirm_new_email(token):
+    """Get a new email confirmation token and set new email if it's valid."""
     if current_user.confirm_new_email(token):
         db.session.add(current_user)
         db.session.commit()
@@ -50,6 +52,7 @@ def confirm_new_email(token):
 @auth.route('/edit_user', methods=['GET', 'POST'])
 @login_required
 def edit_user():
+    """Allow user to edit their account information."""
     form = EditUserForm()
     if form.validate_on_submit():
         user_edited = False
@@ -85,6 +88,7 @@ def edit_user():
 
 @auth.route('/login', methods=['GET', 'POST'])
 def login():
+    """Allow registered, confirmed users to log in."""
     form = LoginForm()
     if form.validate_on_submit():
         user = User.query.filter_by(name=form.username.data).first()
@@ -107,6 +111,7 @@ def login():
 @auth.route('/logout')
 @login_required
 def logout():
+    """Log out the user if they visit this view while logged in."""
     logout_user()
     flash('You have been logged out.')
     return redirect(url_for('main.index'))
@@ -114,6 +119,7 @@ def logout():
 
 @auth.route('/register', methods=['GET', 'POST'])
 def register():
+    """Allow a new user to create an account."""
     form = RegistrationForm()
     if form.validate_on_submit():
         user = User()
@@ -131,6 +137,7 @@ def register():
 
 @auth.route('/resend_confirmation', methods=['GET', 'POST'])
 def resend_confirmation():
+    """Send a new account confirmation email."""
     form = ResendConfirmationForm()
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data).first()
@@ -142,6 +149,7 @@ def resend_confirmation():
 
 @auth.route('/reset_password/<token>', methods=['GET', 'POST'])
 def reset_password(token):
+    """Allow the user to reset their password if token is valid."""
     form = ResetPasswordForm()
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data).first()
@@ -161,6 +169,7 @@ def reset_password(token):
 
 @auth.route('/reset_password', methods=['GET', 'POST'])
 def reset_password_request():
+    """Allow the user to request a token to let them reset their password."""
     form = ResetPasswordRequestForm()
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data).first()

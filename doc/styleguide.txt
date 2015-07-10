@@ -6,6 +6,8 @@ General:
   you edit before committing them to the repository.
 - Where not otherwise specified, arrange classes, attributes, methods, and top-
   level functions alphabetically.
+- Try to follow Google's style guide when writing docstrings. Sphinx's docs
+  include good examples: http://sphinx-doc.org/latest/ext/example_google.html
 
 Classes:
 

@@ -1,5 +1,3 @@
 Things to do (or at least seriously consider) in the future:
 
--Fix the git repository if needed. Might just be a local issue.
-
 -Implement a way to keep people from abusing password reset emails. Right now someone could spam the hell out of a user's email address with password requests. Maybe limit it to X requests from a given IP each day?

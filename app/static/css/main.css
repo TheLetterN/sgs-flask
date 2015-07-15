@@ -55,6 +55,7 @@ html {
     background: -webkit-linear-gradient(#eefaff, #446611);
     background: -o-linear-gradient(#eefaff, #446611);
     background-attachment: fixed;
+    font-size: 16px;
     font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 

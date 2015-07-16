@@ -1,21 +1,6 @@
 import unittest
 from app import create_app
-from app.auth.models import Role, User
-
-
-class TestRole(unittest.TestCase):
-    """Unit tests for the Role class in app/auth/models"""
-    def setUp(self):
-        pass
-
-    def tearDown(self):
-        pass
-
-    def test_repr(self):
-        """Role.__repr__ should return "<Role 'Role.name'>"."""
-        role = Role()
-        role.name = 'Peasant'
-        self.assertEqual(repr(role), '<Role \'Peasant\'>')
+from app.auth.models import User
 
 
 class TestUser(unittest.TestCase):
@@ -27,6 +12,24 @@ class TestUser(unittest.TestCase):
 
     def tearDown(self):
         self.app_context.pop()
+
+    def test_can(self):
+        """can should return True if user has permission, False if not.
+
+        Note:
+            Permissions are in the form of set bits in an integer. Since the
+            actual Permission attributes may change in the future, we can
+            more easily test can() with dummy permissions here, it works the
+            same way as using Permission attributes insted.
+        """
+        user = User()
+        perm1 = 0b1
+        perm2 = 0b10
+        perm3 = 0b100
+        user.permissions = perm1 | perm3    # 0b101
+        self.assertTrue(user.can(perm1))
+        self.assertTrue(user.can(perm3))
+        self.assertFalse(user.can(perm2))
 
     def test_confirm_account_works_with_generated_token(self):
         """confirm_account should return True if given a valid token."""
@@ -44,6 +47,27 @@ class TestUser(unittest.TestCase):
         token = user.generate_new_email_token(new_email)
         self.assertTrue(user.confirm_new_email(token))
         self.assertEqual(new_email, user.email)
+
+    def test_grant_permission(self):
+        """grant_permission should set a permission and not unset it."""
+        user = User()
+        user.permissions = 0
+        perm1 = 0b1
+        perm2 = 0b10
+        perm3 = 0b100
+        user.grant_permission(perm1)
+        self.assertEqual(user.permissions, 0b1)
+        user.grant_permission(perm3)
+        self.assertEqual(user.permissions, 0b101)
+        user.grant_permission(perm2)
+        self.assertEqual(user.permissions, 0b111)
+        # Already set permissions should remain unchanged.
+        user.grant_permission(perm1)
+        self.assertEqual(user.permissions, 0b111)
+        user.grant_permission(perm2)
+        self.assertEqual(user.permissions, 0b111)
+        user.grant_permission(perm3)
+        self.assertEqual(user.permissions, 0b111)
 
     def test_password_attribute_raises_exception(self):
         """Trying to read User.password should raise an attribute error."""
@@ -74,6 +98,23 @@ class TestUser(unittest.TestCase):
         dummy = User()
         dummy.password = 'enlargeyourpennies'
         self.assertTrue(dummy.password_hash is not None)
+
+    def test_revoke_permission(self):
+        """revoke_permission should remove perm if set.
+
+        It should not change anything if the permission given isn't set.
+        """
+        user = User()
+        user.permissions = 0b111
+        user.revoke_permission(0b10)
+        self.assertEqual(user.permissions, 0b101)
+        user.revoke_permission(0b1)
+        self.assertEqual(user.permissions, 0b100)
+        # Revoking unset permissions shouldn't change anything.
+        user.revoke_permission(0b10)
+        self.assertEqual(user.permissions, 0b100)
+        user.revoke_permission(0b1)
+        self.assertEqual(user.permissions, 0b100)
 
     def test_repr(self):
         """User.__repr__ should return "<User 'User.name'>"."""

@@ -75,6 +75,22 @@ h1 {
     font-size: 1.5em;
 }
 
+a.registration_link {
+    color: #000000;
+    display: inline-block;
+    background-color: #ccffcc;
+    border: 1px solid #aaddaa;
+    font-size: 0.8em;
+    padding: 0.4em;
+    text-decoration: none;
+}
+
+a.registration_link:hover {
+    text-decoration: underline;
+    background-color: #ccccff;
+    border-color: #aaaadd;
+}
+
 .flashed_message {
     display: inline-block;
     background-color: #aaffaa;

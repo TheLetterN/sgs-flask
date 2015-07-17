@@ -2,10 +2,11 @@ from flask import flash, redirect, render_template, request, url_for
 from flask.ext.login import current_user, login_required, login_user, \
     logout_user
 from app import db
+from app.decorators import permission_required
 from . import auth
 from .forms import EditUserForm, LoginForm, RegistrationForm, \
     ResendConfirmationForm, ResetPasswordForm, ResetPasswordRequestForm
-from .models import get_user_from_confirmation_token, User
+from .models import get_user_from_confirmation_token, Permission, User
 
 
 @auth.route('/confirm_account/<token>')
@@ -115,6 +116,15 @@ def logout():
     logout_user()
     flash('You have been logged out.')
     return redirect(url_for('main.index'))
+
+
+@auth.route('/manage_permissions')
+@login_required
+@permission_required(Permission.MANAGE_PERMISSIONS)
+def manage_permissions():
+    """Allow management of a user's permissions."""
+    # TODO: Finish implementing this.
+    return 'Test page please ignore.'
 
 
 @auth.route('/register', methods=['GET', 'POST'])

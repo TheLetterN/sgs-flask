@@ -1,0 +1,32 @@
+{% extends "main/base.html" %}
+{% from "main/form_errors.html" import form_errors %}
+<!-- head and body need 2 indents. -->
+{% block head %}
+    <title>Manage User</title>
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="canonical" href="{{ url_for('auth.manage_user', _external=True) }}">
+{% endblock %}
+{% block body %}
+        <h1>Manage User: {{ username }}</h1>
+        {% include "main/flashed.html" %}
+        <form method="POST">
+            {{ form.hidden_tag() }}
+            <ol>
+                <fieldset>
+                    <legend>Permissions</legend>
+                    <li>
+                        {{ form.manage_users.label }}
+                        {{ form.manage_users }}
+                        {{ form_errors(form.manage_users) }}
+                    </li>
+                    <li>
+                        {{ form.manage_seeds.label }}
+                        {{ form.manage_seeds }}
+                    </li>
+                </fieldset>
+                <li>
+                    {{ form.submit }}
+                </li>
+            </ol>
+        </form>
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends "main/base.html" %}
+<!-- head and body needs 2 indents -->
+{% block head %}
+        <title>Select User</title>
+        <meta name="robots" content="noindex, nofollow">
+        <link rel="canonical" href="{{ url_for('auth.select_user', _external=True) }}">
+{% endblock %}
+{% block body %}
+        <h1>Select User</h1>
+        {% include "main/flashed.html" %}
+        <form method="POST">
+            {{ form.hidden_tag() }}
+            <ol>
+                <li>
+                    {{ form.select_user.label }}
+                    {{ form.select_user }}
+                </li>
+                <li>
+                    {{ form.submit }}
+                </li>
+            </ol>
+        </form>
+{% endblock %}

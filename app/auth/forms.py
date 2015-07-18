@@ -1,7 +1,7 @@
 from flask.ext.login import current_user
 from flask.ext.wtf import Form
-from wtforms import BooleanField, PasswordField, StringField, SubmitField, \
-    ValidationError
+from wtforms import BooleanField, PasswordField, StringField, SelectField, \
+    SubmitField, ValidationError
 from wtforms.validators import Email, EqualTo, InputRequired, Length, Regexp
 from app.auth.models import User
 
@@ -67,8 +67,8 @@ class LoginForm(Form):
         validators=[InputRequired(), Length(1, 64)])
 
 
-class ManagePermissionsForm(Form):
-    """Form for managing user permissions.
+class ManageUserForm(Form):
+    """Form to allow user with MANAGE_USERS permission to edit user data.
 
     Attributes:
         manage_permissions (BooleanField): Whether or not user is allowed to
@@ -77,8 +77,10 @@ class ManagePermissionsForm(Form):
                                      manage the seeds database.
         submit (SubmitField): Submit button.
     """
-    manage_permissions = BooleanField('Manage Permissions')
+    # Permissions
+    manage_users = BooleanField('Manage Users')
     manage_seeds = BooleanField('Manage Seeds')
+    # Submit button
     submit = SubmitField('Submit Changes')
 
 
@@ -214,22 +216,17 @@ class ResetPasswordRequestForm(Form):
 
 
 class SelectUserForm(Form):
-    """Form to select a user for use with other pages.
+    """Form for selecting a user from the database to use with other forms.
 
     Attributes:
-        username (StringField): Field for a user account's name/nickname.
+        select_user (SelectField): Select field to pick a user from the
+                                   database.
         submit (SubmitField): Submit button.
     """
-    username = StringField('Username', validators=[InputRequired()])
-    submit = SubmitField('Select User')
+    select_user = SelectField('Select User', coerce=int)
+    submit = SubmitField('Submit')
 
-    def validate_username(self, field):
-        """Raise an exception if the user specified does not exist.
-
-        Raises:
-            ValidationError: User must exist in the database.
-        """
-        user = User.query.filter_by(name=field.data)
-        if user is None:
-            raise ValidationError('User\'{0}\' was not '.format(field.data) +
-                                  'found in the database!')
+    def load_users(self):
+        """Populate select_user with users from the database."""
+        self.select_user.choices = [(user.id, user.name) for user in
+                                    User.query.order_by('name')]

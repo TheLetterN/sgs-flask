@@ -20,12 +20,12 @@ class Permission(object):
         or "DANCE_THE_POLKA".
 
     Attributes:
-        MANAGE_PERMISSIONS (int): This bit is set if the user is allowed to
-                                  manage the permissions of other users.
+        MANAGE_USERS (int): This bit is set if the user is allowed to edit the
+                            data/permissions of other users.
         MANAGE_SEEDS (int): This bit is set if the user is allowed to manage
                             the seeds database.
     """
-    MANAGE_PERMISSIONS = 0b1
+    MANAGE_USERS = 0b1
     MANAGE_SEEDS = 0b10
 
 

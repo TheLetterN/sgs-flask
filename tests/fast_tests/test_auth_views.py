@@ -1,6 +1,7 @@
 import unittest
-from app import create_app, db
+from app import create_app
 from app.auth.models import User
+from app.auth.views import update_permission
 
 
 class TestAuthRoutes(unittest.TestCase):
@@ -14,9 +15,24 @@ class TestAuthRoutes(unittest.TestCase):
     def tearDown(self):
         self.app_context.pop()
 
-    def test_login_returns_valid_page(self):
-        retval = self.tc.get('/auth/login')
-        self.assertEqual(retval.status_code, 200)
+    def test_update_permission(self):
+        """update_permission returns True if updated, false if not.
+
+        It should also change the user's permission if updated.
+        """
+        user = User()
+        user.permissions = 0
+        perm1 = 0b1
+        perm2 = 0b10
+        self.assertTrue(update_permission(user, perm1, True, 'perm1'))
+        self.assertTrue(user.can(perm1))
+        self.assertFalse(update_permission(user, perm1, True, 'perm1'))
+        self.assertTrue(user.can(perm1))
+        self.assertTrue(update_permission(user, perm2, True, 'perm2'))
+        self.assertTrue(user.can(perm2))
+        self.assertTrue(update_permission(user, perm1, False, 'perm1'))
+        self.assertFalse(user.can(perm1))
+        self.assertTrue(user.can(perm2))
 
 
 if __name__ == '__main__':

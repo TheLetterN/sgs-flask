@@ -14,9 +14,9 @@ from .models import get_user_from_confirmation_token, Permission, User
 def confirm_account(token):
     """Get an account confirmation token and confirm account if it's valid."""
     error_instructions = ('Please try again, or use the form below to'
-                          ' revieve a new confirmation token:')
+                          ' recieve a new confirmation token:')
     if token is None:
-        return redirect(url_for('auth.resend'))
+        return redirect(url_for('auth.resend_confirmation'))
     else:
         try:
             user = get_user_from_confirmation_token(token)
@@ -142,6 +142,12 @@ def manage_user(user_id=None):
     if form.validate_on_submit():
         # TODO: Continue adding more form fields to this!
         user_info_changed = False
+        if form.manage_users.data is False and user.id == current_user.id:
+            flash('Error: Please do not try to remove permission to manage'
+                  ' users from yourself! If you really need the permission'
+                  ' revoked, ask another administrator to do it.')
+            return redirect(url_for('auth.select_user',
+                                    target_route='auth.manage_user'))
         if (update_permission(user,
                               Permission.MANAGE_USERS,
                               form.manage_users.data,

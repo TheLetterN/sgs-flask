@@ -1,7 +1,7 @@
 import unittest
 from app import create_app
 from app.auth.models import User
-from app.auth.views import update_permission
+from app.auth.views import confirm_account, update_permission
 
 
 class TestAuthRoutes(unittest.TestCase):
@@ -14,6 +14,11 @@ class TestAuthRoutes(unittest.TestCase):
 
     def tearDown(self):
         self.app_context.pop()
+
+    def test_confirm_account_no_token(self):
+        """If no token given, confirm_account redirects to resend page."""
+        retval = confirm_account(None)
+        self.assertEqual(retval.location, '/auth/resend_confirmation')
 
     def test_update_permission(self):
         """update_permission returns True if updated, false if not.

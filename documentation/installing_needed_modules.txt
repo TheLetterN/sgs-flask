@@ -6,7 +6,7 @@ To install the modules needed for our Flask project:
     source venv/bin/activate
 3. Install modules with pip:
     pip install flask flask-sqlalchemy flask-login flake8 pytest flask-script \
-    flask-migrate flask-wtf flask-mail itsdangerous
+    flask-migrate flask-wtf flask-mail itsdangerous coverage
 Or you may install the exact versions of the modules used by running:
     pip install -r requirements.txt
 4. Optionally, you should consider installing the ipython shell, which is nicer

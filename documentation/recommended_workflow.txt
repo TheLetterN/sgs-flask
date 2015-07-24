@@ -1,0 +1,40 @@
+Recommended Workflow
+====================
+
+These are guidelines for how one should approach working on the project.
+They are not rigid rules (for example, you don't really need to write tests
+before what you're testing, it's just a good idea to) but the closer you follow
+them, the easier your life will be!
+
+1) Check git status and make sure there are no uncommitted files waiting. If
+   there are any, skip ahead to whatever step you left off at before, or if
+   unsure, skip to step 4. Follow the steps until you complete step 11, then
+   start over now that you're ready to add functionality.
+2) Write tests for the functionality you wish to add.
+3) Add the functionality.
+4) Run the tests needed. You can run all tests with:
+    ./manage.py test
+   Be sure to check ./manage.py test --help for additional options to run only
+   specific test files or fast tests. The integration tests that access the
+   database are slow, so running all tests is usually not ideal!
+5) Fix what needs to be fixed, if anything.
+6) Run:
+    coverage run --include='*app/*' manage.py test && coverage report -m
+7) Add any tests needed to cover any missed statements, and repeat steps 4-7 as
+   needed until full coverage is achieved. To make coverage ignore a block of
+   code that either doesn't need testing, or is not feasible to test, add this 
+   inline comment to the line that creates the block:
+    # pragma: no cover
+8) Once the new functionality is added and tests are passing, run git status.
+9) Run flake8 on any .py files that have been updated, and edit them as needed
+   until flake8 returns no errors when run on the files.
+10) Add the files to the commit using: 
+    git add <filename>.
+11) Commit to the local repository with:
+    git commit -m "<message about changes>"
+12) If it makes sense to do so (such as it being the end of the day, or you
+    are finished working on the module you modified for the time being) you
+    should push your commit to the repository on luckdragon with:
+    git push origin master
+
+

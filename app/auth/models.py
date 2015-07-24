@@ -225,7 +225,7 @@ class User(UserMixin, db.Model):
         if self.permissions & permission > 0:
             self.permissions ^= permission
 
-    def send_account_confirmation_email(self):
+    def send_account_confirmation_email(self):  # pragma: no cover
         """Send an account confirmation email to this user.
 
         An account confirmation token is generated and used in an email
@@ -238,7 +238,7 @@ class User(UserMixin, db.Model):
         send_email(self.email, 'Confirm Your Account',
                    'auth/email/confirmation', user=self, token=token)
 
-    def send_reset_password_email(self):
+    def send_reset_password_email(self):  # pragma: no cover
         """Send an email with a token allowing user to reset their password.
 
         A password reset verification token is generated and used in an email
@@ -250,7 +250,7 @@ class User(UserMixin, db.Model):
         send_email(self.email, 'Reset Your Password',
                    'auth/email/reset_password', user=self, token=token)
 
-    def send_new_email_confirmation(self, new_email):
+    def send_new_email_confirmation(self, new_email):  # pragma: no cover
         """Send an email with a token allowing user to change email address.
 
         A token containing the user's id and the new email they would like to

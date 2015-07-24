@@ -1,19 +1,39 @@
 import unittest
 from wtforms import ValidationError
 from app import create_app, db
-from app.auth.forms import RegistrationForm, ResendConfirmationForm
+from app.auth.forms import EditUserForm, RegistrationForm, \
+    ResendConfirmationForm, ResetPasswordRequestForm, SelectUserForm
 from app.auth.models import User
 
 
-def create_dummy_user(
-        email='gullible@bash.org',
-        name='AzureDiamond',
-        password='hunter2'):
-    user = User()
-    user.name = name
-    user.set_password(password)
-    user.email = email
-    return user
+class TestEditUserFormWithDB(unittest.TestCase):
+    """Test custom methods in EditUserForm."""
+    def setUp(self):
+        self.app = create_app('testing')
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+        db.create_all()
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
+
+    def test_validate_current_password(self):
+        """validate_current_password raises exception w/ bad password."""
+        user = create_dummy_user()
+        user.confirmed = True
+        db.session.add(user)
+        db.session.commit()
+        with self.app.test_client() as tc:
+            tc.post('/auth/login', data=dict(
+                username=user.name,
+                password='hunter2'
+                ), follow_redirects=True)
+            form = EditUserForm()
+            form.current_password.data = 'turtles'
+            with self.assertRaises(ValidationError):
+                form.validate_current_password(form.current_password)
 
 
 class TestRegistrationFormWithDB(unittest.TestCase):
@@ -79,6 +99,71 @@ class TestResendConfirmationFormWithDB(unittest.TestCase):
         form.email.data = user.email
         with self.assertRaises(ValidationError):
             form.validate_email(form.email)
+
+
+class TestResetPasswordRequestFormWithDB(unittest.TestCase):
+    """Test custom methods in ResetPasswordRequestForm"""
+    def setUp(self):
+        self.app = create_app('testing')
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+        db.create_all()
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
+
+    def test_validate_email(self):
+        """validate_email raises ValidationError if address not in db."""
+        user = create_dummy_user()
+        db.session.add(user)
+        db.session.commit()
+        form = ResetPasswordRequestForm()
+        form.email.data = 'notahoneypot@nsa.gov'
+        with self.assertRaises(ValidationError):
+            form.validate_email(form.email)
+
+
+class TestSelectUserForm(unittest.TestCase):
+    """Test custom methods in SelectUserForm."""
+    def setUp(self):
+        self.app = create_app('testing')
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+        db.create_all()
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
+
+    def test_load_users(self):
+        """load_users loads all users in database into select_user.choices."""
+        user1 = User()
+        user1.name = 'Bob'
+        user1.email = 'dobbs@subgenius.org'
+        user2 = User()
+        user2.name = 'Eris'
+        user2.email = 'kallisti@discordia.org'
+        db.session.add(user1)
+        db.session.add(user2)
+        form = SelectUserForm()
+        form.load_users()
+        print(form.select_user.choices)
+        self.assertTrue((user1.id, user1.name) in form.select_user.choices)
+        self.assertTrue((user2.id, user2.name) in form.select_user.choices)
+
+
+def create_dummy_user(
+        email='gullible@bash.org',
+        name='AzureDiamond',
+        password='hunter2'):
+    user = User()
+    user.name = name
+    user.set_password(password)
+    user.email = email
+    return user
 
 
 if __name__ == '__main__':

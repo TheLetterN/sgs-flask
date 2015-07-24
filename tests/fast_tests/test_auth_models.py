@@ -38,6 +38,26 @@ class TestUser(unittest.TestCase):
         token = user.generate_account_confirmation_token()
         self.assertTrue(user.confirm_account(token))
 
+    def test_confirm_account_bad_token_or_wrong_user(self):
+        """confirm_account returns false if token is bad or for wrong user."""
+        user1 = User()
+        user1.id = 42
+        user2 = User()
+        user2.id = 33
+        token = user1.generate_account_confirmation_token()
+        self.assertFalse(user2.confirm_account(token))
+        self.assertFalse(user1.confirm_account('badtoken'))
+
+    def test_confirm_new_email_bad_token_or_wrong_user(self):
+        """confirm_new_email returns false if token is bad or wrong user."""
+        user1 = User()
+        user1.id = 42
+        user2 = User()
+        user2.id = 33
+        token = user1.generate_new_email_token('foo@bar.com')
+        self.assertFalse(user2.confirm_new_email(token))
+        self.assertFalse(user1.confirm_account('badtoken'))
+
     def test_confirm_new_email_works_with_generated_token(self):
         """confirm_new_mail should return True & set email w/ valid token."""
         user = User()
@@ -98,6 +118,23 @@ class TestUser(unittest.TestCase):
         dummy = User()
         dummy.password = 'enlargeyourpennies'
         self.assertTrue(dummy.password_hash is not None)
+
+    def test_reset_password_bad_token_or_wrong_user(self):
+        """reset_password returns false with a bad token or wrong user."""
+        user1 = User()
+        user1.id = 42
+        user2 = User()
+        user2.id = 33
+        token = user1.generate_password_reset_token()
+        self.assertFalse(user2.reset_password(token, 'foo'))
+        self.assertFalse(user1.reset_password('badtoken', 'foo'))
+
+    def test_reset_password_with_valid_token(self):
+        """reset_password returns true with a valid token."""
+        user = User()
+        user.id = 42
+        token = user.generate_password_reset_token()
+        self.assertTrue(user.reset_password(token, 'foo'))
 
     def test_revoke_permission(self):
         """revoke_permission should remove perm if set.

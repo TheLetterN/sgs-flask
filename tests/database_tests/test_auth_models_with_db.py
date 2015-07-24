@@ -1,6 +1,7 @@
 import unittest
 from app import create_app, db
-from app.auth.models import get_user_from_confirmation_token, User
+from app.auth.models import get_user_from_confirmation_token, Serializer, User
+from flask import current_app
 
 
 class TestUserWithDB(unittest.TestCase):
@@ -15,6 +16,26 @@ class TestUserWithDB(unittest.TestCase):
         db.session.remove()
         db.drop_all()
         self.app_context.pop()
+
+    def test_get_user_from_confirmation_token_bad_or_wrong_token(self):
+        """get_user_from... should raise exception with bad/wrong token."""
+        s = Serializer(current_app.config['SECRET_KEY'])
+        wrongtoken = s.dumps({'whee': 'beep!'})
+        with self.assertRaises(KeyError):
+            get_user_from_confirmation_token(wrongtoken)
+        with self.assertRaises(ValueError):
+            get_user_from_confirmation_token('badtoken')
+
+    def test_get_user_from_confirmation_token(self):
+        """get_user_from... raises exeption if user already confirmed."""
+        user = User()
+        user.id = 42
+        user.confirmed = True
+        db.session.add(user)
+        db.session.commit()
+        token = user.generate_account_confirmation_token()
+        with self.assertRaises(ValueError):
+            get_user_from_confirmation_token(token)
 
     def test_get_user_from_confirmation_token_with_valid_token(self):
         """get_user_from_confirmation_token should work given a valid token."""

@@ -4,7 +4,7 @@ from flask.ext.mail import Message
 from app import mail
 
 
-def send_message(app, msg):
+def send_message(app, msg):  # pragma: no cover
     """Send a message via Flask-Mail.
 
     Note:
@@ -22,7 +22,7 @@ def send_message(app, msg):
         mail.send(msg)
 
 
-def send_email(to, subject, template, **kwargs):
+def send_email(to, subject, template, **kwargs):  # pragma: no cover
     """Send an email via Flask-Mail in a separate thread.
 
     This function handles formatting the email to send, and spawning a new

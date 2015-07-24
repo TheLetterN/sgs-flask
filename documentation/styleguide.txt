@@ -6,6 +6,7 @@ General:
   you edit before committing them to the repository.
 - Where not otherwise specified, arrange classes, attributes, methods, and top-
   level functions alphabetically.
+- Top-level functions should be defined after classes.
 - Try to follow Google's style guide when writing docstrings. Sphinx's docs
   include good examples: http://sphinx-doc.org/latest/ext/example_google.html
 
@@ -23,6 +24,8 @@ Tests:
 
 - Tests should be split into files based on which file they are testing.
 - setUp and tearDown methods should always come first.
+- Helper methods within test classes (that don't begin with test) should come
+  before test methods.
 - Unit tests and other fast tests that don't utilize the database should go in
   tests/fast_tests/ while tests involving the database belong in 
   tests/database_tests/

@@ -9,10 +9,13 @@
 <!-- body needs 2 indents -->
 {% block body %}
         {% include "main/flashed.html" %}
+        {% if not current_user.is_anonymous() %}
+        <p>Hello, {{current_user.name}}!</p>
+        {% else %}
+        <p>Hello, stranger!</p>
+        {% endif %}
         <p>In Soviet Russia, website visits YOU!</p>
-        <p>
-
-        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc dapibus elit eget mauris posuere semper. Suspendisse varius vel libero ac eleifend. Aenean sed ex viverra, suscipit sem sollicitudin, egestas sapien. Integer at hendrerit nulla. In pharetra facilisis neque, a condimentum metus lacinia in. Donec felis libero, suscipit quis turpis ac, rhoncus viverra mauris. Donec ultricies quis diam at accumsan. Sed laoreet dui sapien, vel porta enim laoreet vel. Donec sodales dui enim. Vestibulum magna velit, maximus nec finibus eget, molestie non sapien. Aenean consequat pretium nibh sit amet varius.
+        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc dapibus elit eget mauris posuere semper. Suspendisse varius vel libero ac eleifend. Aenean sed ex viverra, suscipit sem sollicitudin, egestas sapien. Integer at hendrerit nulla. In pharetra facilisis neque, a condimentum metus lacinia in. Donec felis libero, suscipit quis turpis ac, rhoncus viverra mauris. Donec ultricies quis diam at accumsan. Sed laoreet dui sapien, vel porta enim laoreet vel. Donec sodales dui enim. Vestibulum magna velit, maximus nec finibus eget, molestie non sapien. Aenean consequat pretium nibh sit amet varius.
 
         Etiam semper ac tortor vitae consequat. Quisque vestibulum eros quis euismod tempor. Proin id pulvinar diam, sed fermentum ipsum. Integer turpis felis, euismod a dapibus ac, gravida consequat diam. In et tortor lacinia, viverra ex semper, feugiat augue. Ut libero enim, tempor vel fermentum in, mattis vel magna. Suspendisse feugiat neque vel mollis dapibus. Suspendisse fermentum dolor non diam viverra commodo. Nullam mi mi, fermentum nec lacinia sit amet, scelerisque sit amet odio. Phasellus congue, velit in hendrerit convallis, eros ipsum viverra lorem, a varius mi mauris ac eros. Aliquam consequat, velit quis fermentum cursus, nulla dolor scelerisque purus, et tristique arcu nisl vitae neque. Proin eget diam at justo gravida sodales. Aliquam sit amet viverra ligula, ac tincidunt orci. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Vivamus facilisis dignissim orci vitae pellentesque. Mauris et volutpat ligula.
 

@@ -31,11 +31,17 @@ def hello(goodbye=False):
     '-f',
     '--fast',
     action='store_true',
-    help="Do not run database tests.")
-def test(fast=False):
-    """Run all tests. -f or --fast to skip slow tests that use the database."""
+    help="Only run tests that don't access the database/other slow methods.")
+@manager.option(
+    '-l',
+    '--load',
+    help='Load and run a specific tests file.')
+def test(fast=False, load=None):
+    """Run tests. Default runs all tests. See --help for more options. """
     if fast:
         pytest.main('tests/fast_tests')
+    elif load is not None:
+        pytest.main(load)
     else:
         pytest.main('tests')
 

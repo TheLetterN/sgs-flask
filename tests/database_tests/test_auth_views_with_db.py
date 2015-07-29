@@ -4,8 +4,8 @@ from app import create_app, db
 from app.auth.models import Permission, User
 
 
-class TestAuthRoutesWithDB(unittest.TestCase):
-    """Tests routes in auth model which use the db."""
+class TestConfirmAccountWithDB(unittest.TestCase):
+    """Test the confirm_account route in the auth module."""
     def setUp(self):
         self.app = create_app('testing')
         self.app_context = self.app.app_context()
@@ -18,14 +18,6 @@ class TestAuthRoutesWithDB(unittest.TestCase):
         db.drop_all()
         self.app_context.pop()
 
-    def login(self, username, password, tc=None):
-        if tc is None:
-            tc = self.tc
-        return tc.post('/auth/login', data=dict(
-            username=username,
-            password=password
-            ), follow_redirects=True)
-
     def test_confirm_account_confirms_account_with_valid_token(self):
         """User.confirmed is true if confirm_account given a valid token."""
         user = make_dummy_user()
@@ -37,6 +29,21 @@ class TestAuthRoutesWithDB(unittest.TestCase):
         user2 = User.query.get(user.id)
         self.assertTrue(user2.confirmed)
 
+
+class TestConfirmNewEmailWithDB(unittest.TestCase):
+    """Test the confirm_new_email route in the auth module."""
+    def setUp(self):
+        self.app = create_app('testing')
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+        self.tc = self.app.test_client()
+        db.create_all()
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
+
     def test_confirm_new_email_with_bad_token(self):
         """confirm_new_email given a bad token redirects w/ error message."""
         user = make_dummy_user()
@@ -44,7 +51,7 @@ class TestAuthRoutesWithDB(unittest.TestCase):
         db.session.add(user)
         db.session.commit()
         with self.app.test_client() as tc:
-            self.login(user.name, 'hunter2', tc=tc)
+            login(user.name, 'hunter2', tc=tc)
             retval = tc.get('/auth/confirm_new_email/badtoken',
                             follow_redirects=True)
         self.assertTrue('Error: could not change email' in str(retval.data))
@@ -66,6 +73,21 @@ class TestAuthRoutesWithDB(unittest.TestCase):
         user2 = User.query.get(user.id)
         self.assertEqual(new_email, user2.email)
 
+
+class TestEditUserWithDB(unittest.TestCase):
+    """Test edit_user route in the auth module."""
+    def setUp(self):
+        self.app = create_app('testing')
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+        self.tc = self.app.test_client()
+        db.create_all()
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
+
     def test_edit_user_changed_email(self):
         """edit_user should flash a success message if email is changed."""
         user = make_dummy_user()
@@ -73,7 +95,7 @@ class TestAuthRoutesWithDB(unittest.TestCase):
         db.session.add(user)
         db.session.commit()
         with self.app.test_client() as tc:
-            self.login(user.name, 'hunter2', tc=tc)
+            login(user.name, 'hunter2', tc=tc)
             data = dict(
                 email1='fool@bar.com',
                 email2='fool@bar.com',
@@ -88,7 +110,7 @@ class TestAuthRoutesWithDB(unittest.TestCase):
         db.session.add(user)
         db.session.commit()
         with self.app.test_client() as tc:
-            self.login(user.name, 'hunter2', tc=tc)
+            login(user.name, 'hunter2', tc=tc)
             data = dict(
                 email1=user.email,
                 email2=user.email,
@@ -105,7 +127,7 @@ class TestAuthRoutesWithDB(unittest.TestCase):
         db.session.add(user)
         db.session.commit()
         with self.app.test_client() as tc:
-            self.login(user.name, 'hunter2', tc=tc)
+            login(user.name, 'hunter2', tc=tc)
             data = dict(
                 email1=user.email,
                 email2=user.email,
@@ -113,17 +135,32 @@ class TestAuthRoutesWithDB(unittest.TestCase):
             rv = tc.post('/auth/edit_user', data=data, follow_redirects=True)
         self.assertTrue('No changes have been made' in str(rv.data))
 
+
+class TestLoginWithDB(unittest.TestCase):
+    """Test login route in the auth module."""
+    def setUp(self):
+        self.app = create_app('testing')
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+        self.tc = self.app.test_client()
+        db.create_all()
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
+
     def test_login_bad_data(self):
         """login should flash an error message if login is incorrect."""
-        rv = self.login('not', 'themama')
+        rv = login('not', 'themama', tc=self.tc)
         self.assertTrue('Error: Username or password' in str(rv.data))
         user = make_dummy_user()
         user.confirmed = True
         db.session.add(user)
         db.session.commit()
-        rv2 = self.login(user.name, 'badpassword')
+        rv2 = login(user.name, 'badpassword', tc=self.tc)
         self.assertTrue('Error: Username or password' in str(rv2.data))
-        rv3 = self.login('badusername', 'hunter2')
+        rv3 = login('badusername', 'hunter2', tc=self.tc)
         self.assertTrue('Error: Username or password' in str(rv3.data))
 
     def test_login_not_confirmed(self):
@@ -132,7 +169,7 @@ class TestAuthRoutesWithDB(unittest.TestCase):
         user.confirmed = False
         db.session.add(user)
         db.session.commit()
-        rv = self.login(user.name, 'hunter2')
+        rv = login(user.name, 'hunter2', tc=self.tc)
         self.assertTrue('Error: Account not confirmed!' in str(rv.data))
 
     def test_login_success(self):
@@ -141,8 +178,23 @@ class TestAuthRoutesWithDB(unittest.TestCase):
         user.confirmed = True
         db.session.add(user)
         db.session.commit()
-        rv = self.login(user.name, 'hunter2')
+        rv = login(user.name, 'hunter2', tc=self.tc)
         self.assertTrue('You are now logged in' in str(rv.data))
+
+
+class TestLogoutWithDB(unittest.TestCase):
+    """Test logout route in the auth module."""
+    def setUp(self):
+        self.app = create_app('testing')
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+        self.tc = self.app.test_client()
+        db.create_all()
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
 
     def test_logout(self):
         """logout flashes a message telling the user they logged out."""
@@ -151,9 +203,144 @@ class TestAuthRoutesWithDB(unittest.TestCase):
         db.session.add(user)
         db.session.commit()
         with self.app.test_client() as tc:
-            self.login(user.name, 'hunter2', tc=tc)
+            login(user.name, 'hunter2', tc=tc)
             rv = tc.get('/auth/logout', follow_redirects=True)
         self.assertTrue('You have been logged out.' in str(rv.data))
+
+
+class TestManageUserWithDB(unittest.TestCase):
+    """Test manage_user route in the auth module."""
+    def setUp(self):
+        self.app = create_app('testing')
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+        self.tc = self.app.test_client()
+        db.create_all()
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
+
+    @staticmethod
+    def make_form_data(user,
+                       email=None,
+                       manage_users=None,
+                       manage_seeds=None,
+                       password=None,
+                       username=None):
+        """Create a dict containing data to submit to /auth/manage_user/<id>
+
+        Note:
+            All arguments except user should be set to the passed user's
+            relevant data if no new values are supplied.
+
+        Args:
+            user (User): The user whose data is being edited in the test.
+            email (str): A new email address, if any.
+            manage_users (bool): Whether or not the user can manage users.
+            manage_seeds (bool): Whether or not the user can manage the seeds
+                                 database.
+            password (str): A new password, if any.
+            username (str): A new username, if any.
+
+        Returns:
+            dict: Data for a simulated POST to /auth/manage_user/<id>
+        """
+        data = dict()
+        if email is not None:
+            data['email1'] = email
+            data['email2'] = email
+        else:
+            data['email1'] = user.email
+            data['email2'] = user.email
+        if manage_users is not None:
+            if manage_users is True:
+                data['manage_users'] = True
+            elif manage_users is False:
+                data['manage_users'] = None    # Unchecked box submits no data.
+            else:
+                raise ValueError('manage_users must be True, False, or None!')
+        else:
+            if user.can(Permission.MANAGE_USERS):
+                data['manage_users'] = True
+            else:
+                data['manage_users'] = None
+        if manage_seeds is not None:
+            if manage_seeds is True:
+                data['manage_seeds'] = True
+            elif manage_seeds is False:
+                data['manage_seeds'] = None
+            else:
+                raise ValueError('manage_seeds must be True, False, or None!')
+        else:
+            if user.can(Permission.MANAGE_SEEDS):
+                data['manage_seeds'] = True
+            else:
+                data['manage_seeds'] = None
+        if password is not None:
+            data['password1'] = password
+            data['password2'] = password
+        else:
+            data['password1'] = None
+            data['password1'] = None
+        if username is not None:
+            data['username1'] = username
+            data['username2'] = username
+        else:
+            data['username1'] = user.name
+            data['username2'] = user.name
+        return data
+
+    def test_manage_user_change_email_address(self):
+        """manage_user changes email address if new one not in use already."""
+        user = make_smart_user()
+        db.session.add(user)
+        db.session.commit()
+        new_email = 'schmotgoy@bash.org'
+        data = self.make_form_data(user, email=new_email)
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            tc.post('/auth/manage_user/{0}'.format(user.id),
+                    data=data,
+                    follow_redirects=True)
+            self.assertEqual(user.email, new_email)
+
+    def test_manage_user_change_password(self):
+        """Changing the user's password should flash a success message.
+
+        It should flash a success message even if the password is the same as
+        the old one, as we don't want to allow admins to try to guess passwords
+        entered by the user.
+        """
+        user = make_smart_user()
+        db.session.add(user)
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            data1 = self.make_form_data(user, password='hunter2')
+            rv1 = tc.post('/auth/manage_user/{0}'.format(user.id),
+                          data=data1,
+                          follow_redirects=True)
+            self.assertTrue('password has been changed' in str(rv1.data))
+            data2 = self.make_form_data(user, password='hunter3')
+            rv2 = tc.post('/auth/manage_user/{0}'.format(user.id),
+                          data=data2,
+                          follow_redirects=True)
+            self.assertTrue('password has been changed' in str(rv2.data))
+
+    def test_manage_user_change_username(self):
+        """manage_user changes username if not in use already."""
+        user = make_smart_user()
+        db.session.add(user)
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            data = self.make_form_data(user, username='BlueZirconia')
+            tc.post('/auth/manage_user/{0}'.format(user.id),
+                    data=data,
+                    follow_redirects=True)
+            self.assertEqual(user.name, 'BlueZirconia')
 
     def test_manage_user_current_user_lacks_permission(self):
         """manage_user aborts with a 403 error if user w/o permission visits.
@@ -168,35 +355,60 @@ class TestAuthRoutesWithDB(unittest.TestCase):
         db.session.add(user)
         db.session.commit()
         with self.app.test_client() as tc:
-            self.login(user.name, 'hunter2', tc=tc)
+            login(user.name, 'hunter2', tc=tc)
             rv = tc.get('/auth/manage_user', follow_redirects=False)
             self.assertEqual(rv.status_code, 403)
 
-    def test_manage_user_prevent_lockout(self):
+    def test_manage_user_prevents_lockout(self):
         """Flash error if user tries to revoke their own MANAGE_USERS perm."""
         user = make_smart_user()
         db.session.add(user)
         db.session.commit()
-        data = dict(
-            manage_users=None,  # HTML checkboxes submit no data if unchecked
-            manage_seeds=None)
         with self.app.test_client() as tc:
-            self.login(user.name, 'hunter2', tc=tc)
+            login(user.name, 'hunter2', tc=tc)
+            data = self.make_form_data(user, manage_users=False)
             rv = tc.post('/auth/manage_user/{0}'.format(user.id),
                          data=data,
                          follow_redirects=True)
         self.assertTrue('Error: Please do not try to remove' in str(rv.data))
+
+    def test_manage_user_prevents_change_to_email_of_other_user(self):
+        """Flash an error if new email is in use by another user."""
+        user = make_smart_user()
+        db.session.add(user)
+        cavy = make_guinea_pig()
+        db.session.add(cavy)
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            data = self.make_form_data(cavy, email=user.email)
+            rv = tc.post('/auth/manage_user/{0}'.format(cavy.id),
+                         data=data,
+                         follow_redirects=True)
+            self.assertTrue('Error: Email address already in' in str(rv.data))
+
+    def test_manage_user_prevents_change_to_username_of_other_user(self):
+        """Flash an error if new username is already used by another user."""
+        user = make_smart_user()
+        cavy = make_guinea_pig()
+        db.session.add(user)
+        db.session.add(cavy)
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            data = self.make_form_data(cavy, username=user.name)
+            rv = tc.post('/auth/manage_user/{0}'.format(cavy.id),
+                         data=data,
+                         follow_redirects=True)
+            self.assertTrue('Error: Username is already' in str(rv.data))
 
     def test_manage_user_no_changes(self):
         """manage_user flashes a message if no changes are made."""
         user = make_smart_user()
         db.session.add(user)
         db.session.commit()
-        data = dict(
-            manage_users=True,
-            manage_seeds=None)  # HTML checkboxes submit no data if unchecked
+        data = self.make_form_data(user)
         with self.app.test_client() as tc:
-            self.login(user.name, 'hunter2', tc=tc)
+            login(user.name, 'hunter2', tc=tc)
             rv = tc.post('/auth/manage_user/{0}'.format(user.id),
                          data=data,
                          follow_redirects=True)
@@ -208,7 +420,7 @@ class TestAuthRoutesWithDB(unittest.TestCase):
         db.session.add(user)
         db.session.commit()
         with self.app.test_client() as tc:
-            self.login(user.name, 'hunter2', tc=tc)
+            login(user.name, 'hunter2', tc=tc)
             rv = tc.get('/auth/manage_user', follow_redirects=False)
             print(rv.data)
         self.assertTrue('/auth/select_user' in str(rv.location))
@@ -219,7 +431,7 @@ class TestAuthRoutesWithDB(unittest.TestCase):
         db.session.add(user)
         db.session.commit()
         with self.app.test_client() as tc:
-            self.login(user.name, 'hunter2', tc=tc)
+            login(user.name, 'hunter2', tc=tc)
             rv = tc.get('/auth/manage_user/999', follow_redirects=True)
         self.assertTrue('Error: No user exists with' in str(rv.data))
 
@@ -227,26 +439,21 @@ class TestAuthRoutesWithDB(unittest.TestCase):
         """manage_user updates permissions if changes are submitted."""
         user = make_smart_user()
         db.session.add(user)
-        cavy = User()   # Cavy is another name for guinea pig.
-        cavy.name = 'Mister Squeals'
-        cavy.set_password('food')
-        cavy.confirmed = True
+        cavy = make_guinea_pig()
         db.session.add(cavy)
         db.session.commit()
         with self.app.test_client() as tc:
-            self.login(user.name, 'hunter2', tc=tc)
+            login(user.name, 'hunter2', tc=tc)
             self.assertFalse(cavy.can(Permission.MANAGE_SEEDS))
-            data1 = dict(
-                manage_users=None,
-                manage_seeds=True)
+            data1 = self.make_form_data(cavy, manage_seeds=True)
             tc.post('/auth/manage_user/{0}'.format(cavy.id),
                     data=data1,
                     follow_redirects=True)
             self.assertTrue(cavy.can(Permission.MANAGE_SEEDS))
             self.assertFalse(cavy.can(Permission.MANAGE_USERS))
-            data2 = dict(
-                manage_users=True,
-                manage_seeds=None)  # HTML checkboxes submit no data unchecked
+            data2 = self.make_form_data(cavy,
+                                        manage_users=True,
+                                        manage_seeds=False)
             tc.post('/auth/manage_user/{0}'.format(cavy.id),
                     data=data2,
                     follow_redirects=True)
@@ -259,9 +466,24 @@ class TestAuthRoutesWithDB(unittest.TestCase):
         db.session.add(user)
         db.session.commit()
         with self.app.test_client() as tc:
-            self.login(user.name, 'hunter2', tc=tc)
+            login(user.name, 'hunter2', tc=tc)
             rv = tc.get('/auth/manage_user/3d', follow_redirects=True)
         self.assertTrue('Error: User id must be an integer!' in str(rv.data))
+
+
+class TestRegisterWithDB(unittest.TestCase):
+    """Test register route in the auth module."""
+    def setUp(self):
+        self.app = create_app('testing')
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+        self.tc = self.app.test_client()
+        db.create_all()
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
 
     def test_register_adds_user_to_database(self):
         """register adds user to db if form validates."""
@@ -286,6 +508,21 @@ class TestAuthRoutesWithDB(unittest.TestCase):
         rv = self.tc.post('/auth/register', data=data, follow_redirects=True)
         self.assertTrue('A confirmation email has been sent' in str(rv.data))
 
+
+class TestResendConfirmationWithDB(unittest.TestCase):
+    """Test resend_confirmation route in the auth module."""
+    def setUp(self):
+        self.app = create_app('testing')
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+        self.tc = self.app.test_client()
+        db.create_all()
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
+
     def test_resend_confirmation_logged_in_user(self):
         """resend_confirmation flashes an error if user is logged in.
 
@@ -297,7 +534,7 @@ class TestAuthRoutesWithDB(unittest.TestCase):
         db.session.add(user)
         db.session.commit()
         with self.app.test_client() as tc:
-            self.login(user.name, 'hunter2', tc=tc)
+            login(user.name, 'hunter2', tc=tc)
             rv = tc.get('/auth/resend_confirmation',
                         follow_redirects=True)
             self.assertTrue('Error: Your account is already' in str(rv.data))
@@ -312,6 +549,21 @@ class TestAuthRoutesWithDB(unittest.TestCase):
                           data=dict(email=user.email),
                           follow_redirects=True)
         self.assertTrue('Confirmation email sent to' in str(rv.data))
+
+
+class TestResetPasswordWithDB(unittest.TestCase):
+    """Test reset_password route in the auth module."""
+    def setUp(self):
+        self.app = create_app('testing')
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+        self.tc = self.app.test_client()
+        db.create_all()
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
 
     def test_reset_password_email_not_in_db(self):
         """reset_password flashes an error message if email is not in db."""
@@ -396,13 +648,28 @@ class TestAuthRoutesWithDB(unittest.TestCase):
                           follow_redirects=True)
         self.assertTrue('An email with instructions' in str(rv.data))
 
+
+class TestSelectUserWithDB(unittest.TestCase):
+    """Test select_user route in the auth module."""
+    def setUp(self):
+        self.app = create_app('testing')
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+        self.tc = self.app.test_client()
+        db.create_all()
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
+
     def test_select_user_success_redirect(self):
         """select_user should redirect to target_route if successful."""
         user = make_smart_user()
         db.session.add(user)
         db.session.commit()
         with self.app.test_client() as tc:
-            self.login(user.name, 'hunter2', tc=tc)
+            login(user.name, 'hunter2', tc=tc)
             rv = self.tc.post(
                 '/auth/select_user?target_route=auth.manage_user',
                 data=dict(select_user=1),
@@ -410,6 +677,23 @@ class TestAuthRoutesWithDB(unittest.TestCase):
             self.assertEqual(rv.location, url_for('auth.manage_user',
                                                   user_id=1,
                                                   _external=True))
+
+
+def login(username, password, tc):
+    """Log a user in to the given test client.
+
+    Args:
+        username (str): username of account to log in.
+        password (str): password for account to log in.
+        tc (flask.testing.FlaskClient): Test client to log in to.
+    returns:
+        flask.wrappers.Response: Response object (generated web page and
+                                 related data) from the login POST.
+    """
+    return tc.post('/auth/login', data=dict(
+        username=username,
+        password=password
+        ), follow_redirects=True)
 
 
 def make_dummy_user():
@@ -423,6 +707,20 @@ def make_dummy_user():
     user.set_password('hunter2')
     user.email = 'gullible@bash.org'
     return user
+
+
+def make_guinea_pig():
+    """Create an additional dummy user when more than one user is needed.
+
+    Returns:
+        User: A basic user with a confirmed account but no privileges.
+    """
+    cavy = User()   # Cavy is another name for guinea pig.
+    cavy.email = 'squeals@rodents.com'
+    cavy.name = 'Mister Squeals'
+    cavy.set_password('food')
+    cavy.confirmed = True
+    return cavy
 
 
 def make_smart_user():

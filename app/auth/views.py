@@ -206,8 +206,32 @@ def manage_user(user_id=None):
                                 target_route='auth.manage_user'))
     form = ManageUserForm()
     if form.validate_on_submit():
-        # TODO: Continue adding more form fields to this!
         user_info_changed = False
+        if form.email1.data != user.email:
+            if User.query.filter_by(email=form.email1.data).first() is None:
+                user.email = form.email1.data
+                flash('{0}\'s email address'.format(user.name) +
+                      ' changed to: {0}'.format(form.email1.data))
+                user_info_changed = True
+            else:
+                flash('Error: Email address already in use by another user!')
+        if form.password1.data is not None and len(form.password1.data) > 0:
+            if user.verify_password(form.password1.data) is False:
+                # Just in case an admin tries to guess a password created by
+                # the user for nefarious purposes, even though they'd have to
+                # get it right on the first try to know they got it right.
+                user.set_password(form.password1.data)
+            flash('{0}\'s password has been changed.'.format(user.name))
+            user_info_changed = True
+        if form.username1.data != user.name:
+            if User.query.filter_by(name=form.username1.data).first() is \
+                    None:
+                flash('{0}\'s username'.format(user.name) +
+                      ' changed to: {0}.'.format(form.username1.data))
+                user.name = form.username1.data
+                user_info_changed = True
+            else:
+                flash('Error: Username is already in use by someone else!')
         if form.manage_users.data is False and user.id == current_user.id:
             flash('Error: Please do not try to remove permission to manage'
                   ' users from yourself! If you really need the permission'
@@ -230,6 +254,11 @@ def manage_user(user_id=None):
         else:
             flash('No changes made to {0}\'s account.'.format(user.name))
         return redirect(url_for('auth.manage_user', user_id=user_id))
+    # Populate form with existing data:
+    form.email1.data = user.email
+    form.email2.data = user.email
+    form.username1.data = user.name
+    form.username2.data = user.name
     if user.can(Permission.MANAGE_USERS):
         form.manage_users.data = True
     if user.can(Permission.MANAGE_SEEDS):

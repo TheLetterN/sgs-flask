@@ -13,7 +13,46 @@
             {{ form.hidden_tag() }}
             <ol>
                 <fieldset>
-                    <legend>Permissions</legend>
+                    <legend>Change {{ username }}'s Email Address:</legend>
+                    <li>
+                        {{ form.email1.label }}
+                        {{ form.email1 }}
+                        {{ form_errors(form.email1) }}
+                    </li>
+                    <li>
+                        {{form.email2.label }}
+                        {{ form.email2 }}
+                        {{ form_errors(form.email2) }}
+                    </li>
+                </fieldset>
+                <fieldset>
+                    <legend>Change {{ username }}'s Password:</legend>
+                    <li>
+                        {{ form.password1.label }}
+                        {{ form.password1 }}
+                        {{ form_errors(form.password1) }}
+                    </li>
+                    <li>
+                        {{ form.password2.label }}
+                        {{ form.password2 }}
+                        {{ form_errors(form.password2) }}
+                    </li>
+                </fieldset>
+                <fieldset>
+                    <legend>Change {{ username }}'s Username:</legend>
+                    <li>
+                        {{ form.username1.label }}
+                        {{ form.username1 }}
+                        {{ form_errors(form.username1) }}
+                    </li>
+                    <li>
+                        {{ form.username2.label }}
+                        {{ form.username2 }}
+                        {{ form_errors(form.username2) }}
+                    </li>
+                </fieldset>
+                <fieldset>
+                    <legend>Change {{ username }}'s Permissions</legend>
                     <li>
                         {{ form.manage_users.label }}
                         {{ form.manage_users }}

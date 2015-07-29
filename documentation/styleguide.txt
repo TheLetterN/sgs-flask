@@ -14,6 +14,10 @@ Classes:
 
 - Magic methods (special Python methods such as __init__ or __repr__) should
   always be after other methods.
+- Data attributes should usually be alphabetical, but if they logically fit
+  into subgroups, they should be arranged by subgroup alphabetically (begin
+  each subgroup with a comment stating the subgroup's name) and then
+  alphabetically within each subgroup.
 
 Database Models:
 

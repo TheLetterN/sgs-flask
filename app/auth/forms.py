@@ -77,6 +77,30 @@ class ManageUserForm(Form):
                                      manage the seeds database.
         submit (SubmitField): Submit button.
     """
+    # Account Information
+    email1 = StringField(
+        'New Email',
+        validators=[Email(), Length(1, 254)])
+    email2 = StringField(
+        'Confirm Email',
+        validators=[EqualTo('email1', message='Email addresses must match!')])
+    password1 = PasswordField(
+        'New Password',
+        validators=[Length(0, 64)])
+    password2 = PasswordField(
+        'Confirm Password',
+        validators=[EqualTo('password1', message='Passwords must match!')])
+    username1 = StringField(
+        'New Username',
+        validators=[
+            Length(1, 64),
+            Regexp('^[A-Za-z0-9][A-Za-z0-9_. ]*$', 0,
+                   'Username must begin with a letter or number,  and may only'
+                   ' contain letters, numbers, spaces, dots, dashes, and'
+                   ' underscores.')])
+    username2 = StringField(
+        'Confirm Username',
+        validators=[EqualTo('username1', message='Usernames must match!')])
     # Permissions
     manage_users = BooleanField('Manage Users')
     manage_seeds = BooleanField('Manage Seeds')

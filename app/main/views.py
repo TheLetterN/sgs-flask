@@ -1,5 +1,16 @@
 from flask import redirect, render_template, url_for
 from . import main
+from app.auth.models import Permission
+
+
+@main.context_processor
+def make_permissions_available():
+    """Make the Permission object available to Jinja templates.
+
+    Returns:
+        dict: The Permission object to use in templates.
+    """
+    return dict(Permission=Permission)
 
 
 @main.route('/')

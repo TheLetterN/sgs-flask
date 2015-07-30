@@ -1,46 +1,56 @@
 {% extends "main/base.html" %}
-{% from "main/form_errors.html" import form_errors %}
-<!-- head needs 2 indents -->
+{% from "includes/form_errors.html" import form_errors %}
+{# HTML within blocks should be indented as follows for consistency: #}
+{# block head: 2 indentations of 4 spaces each. (8 spaces total.) #}
+{# block main: 3 indentations of 4 spaces each. (12 spaces total.) #}
 {% block head %}
         <title>Register</title>
         <meta name="robots" content="noindex, nofollow">
         <link rel="canonical" href="{{ url_for('auth.register', _external=True) }}">
 {% endblock %}
-
-<!-- body needs 2 indents -->
-{% block body %}
-        <h1>Account Registration</h1>
-        <form method="POST" action="{{ url_for('auth.register') }}">
-            {{ form.hidden_tag() }}
-            <ol>
-                <li>
-                     {{ form.username.label }}
-                     {{ form.username }}
-                     {{ form_errors(form.username) }}
-                </li>
-                <li>
-                    {{ form.email.label }}
-                    {{ form.email }}
-                    {{ form_errors(form.email) }}
-                </li>
-                <li>
-                     {{ form.email2.label }}
-                     {{ form.email2 }}
-                     {{ form_errors(form.email2) }}
-                </li>
-                <li>
-                     {{ form.password.label }}
-                     {{ form.password }}
-                     {{ form_errors(form.password) }}
-                </li>
-                <li>
-                     {{ form.password2.label }}
-                     {{ form.password2 }}
-                     {{ form_errors(form.password2) }}
-                </li>
-                <li>
-                     {{ form.submit }}
-                </li>
-            </ol>
-        </form>
+{% block main %}
+            <h1>Account Registration</h1>
+            <form method="POST" action="{{ url_for('auth.register') }}">
+                {{ form.hidden_tag() }}
+                <ol>
+                    <li>
+                         {{ form.username.label }}
+                         {{ form.username }}
+                         {% if form.username.errors|count > 0 %}
+                         {{ form_errors(form.username) }}
+                         {% endif %}
+                    </li>
+                    <li>
+                         {{ form.email.label }}
+                         {{ form.email }}
+                         {% if form.email.errors|count > 0 %}
+                         {{ form_errors(form.email) }}
+                         {% endif %}
+                    </li>
+                    <li>
+                         {{ form.email2.label }}
+                         {{ form.email2 }}
+                         {% if form.email2.errors|count > 0 %}
+                         {{ form_errors(form.email2) }}
+                         {% endif %}
+                    </li>
+                    <li>
+                         {{ form.password.label }}
+                         {{ form.password }}
+                         {% if form.password.errors|count > 0 %}
+                         {{ form_errors(form.password) }}
+                         {% endif %}
+                    </li>
+                    <li>
+                         {{ form.password2.label }}
+                         {{ form.password2 }}
+                         {% if form.password2.errors|count > 0 %}
+                         {{ form_errors(form.password2) }}
+                         {% endif %}
+                    </li>
+                    <li>
+                         {{ form.submit }}
+                    </li>
+                </ol>
+            </form>
 {% endblock %}

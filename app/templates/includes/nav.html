@@ -1,0 +1,34 @@
+{# nav needs 2 indents to fit in with page formatting. #}
+        <nav>
+            <span id="nav_left">
+                <ul id="nav_seeds">
+                    <li>Test text please ignore.</li>
+                </ul>
+            </span>
+            <span id="nav_right">
+                <ul id="nav_auth">
+                    {% if current_user.is_anonymous() %}
+                    <li><a href="{{ url_for('auth.login') }}">Log In</a></li>
+                    <li><a href="{{ url_for('auth.register') }}">Create an Account</a></li>
+                    {% else %}
+                    <li><a href="{{ url_for('auth.edit_user') }}">{{ current_user.name }}</a></li>
+                    {% if current_user.permissions > 0 %}
+                    <li><a href="#nav_manage">Tasks</a></li>
+                    {% endif %}
+                    <li><a href="{{ url_for('auth.logout') }}">Log Out</a></li>
+                    {% endif %}
+                </ul>
+                {% if not current_user.is_anonymous() %}
+                {% if current_user.permissions > 0 %}
+                <div class="nav_under">
+                    <ul id="nav_manage">
+                        {% if current_user.can(Permission.MANAGE_USERS) %}
+                        <li><a href="{{ url_for('auth.manage_user') }}">Manage Users</a></li>
+                        {% endif %}
+                    </ul>
+                </div>
+                {% endif %}
+                {% endif %}
+            </span>
+        </nav>
+

@@ -1,5 +1,5 @@
-from flask import current_app, flash, redirect, render_template, request, \
-    url_for
+from flask import current_app, flash, Markup, redirect, render_template, \
+    request, url_for
 from flask.ext.login import current_user, login_required, login_user, \
     logout_user
 from app import db
@@ -9,6 +9,16 @@ from .forms import EditUserForm, ManageUserForm, LoginForm, RegistrationForm, \
     ResendConfirmationForm, ResetPasswordForm, ResetPasswordRequestForm, \
     SelectUserForm
 from .models import get_user_from_confirmation_token, Permission, User
+
+
+@auth.context_processor
+def make_permissions_available():
+    """Make the Permission object available to Jinja templates.
+
+    Returns:
+        dict: The Permission object to use in templates.
+    """
+    return dict(Permission=Permission)
 
 
 @auth.route('/confirm_account/<token>')
@@ -147,7 +157,10 @@ def login():
                       'or use the form below to get a new confirmation email.')
                 return redirect(url_for('auth.resend_confirmation'))
         else:
-            flash('Error: Username or password is invalid!')
+            reset_url = Markup(
+                '<a href="{0}'.format(url_for('auth.reset_password_request')) +
+                '">Click here if you forgot your password</a>')
+            flash('Error: Wrong username/password! ' + reset_url + '.')
             return redirect(url_for('auth.login'))
     return render_template('auth/login.html', form=form)
 

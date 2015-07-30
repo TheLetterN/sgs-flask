@@ -1,55 +1,64 @@
 {% extends "main/base.html" %}
-{% from "main/form_errors.html" import form_errors %}
-<!-- head and body need 2 indents -->
+{% from "includes/form_errors.html" import form_errors %}
+{# HTML within blocks should be indented as follows for consistency: #}
+{# block head: 2 indentations of 4 spaces each. (8 spaces total.) #}
+{# block main: 3 indentations of 4 spaces each. (12 spaces total.) #}
 {% block head %}
         <title>Edit User</title>
         <meta name="robots" content="noindex, nofollow">
 {% endblock %}
-{% block body %}
-        <h1>Edit User Information</h1>
-        {% include "main/flashed.html" %}
-        <form method="POST" action="{{ url_for('auth.edit_user') }}">
-        {{ form.hidden_tag() }}
-            <ol>
-                <fieldset>
-                    <legend>Change Email Address:</legend>
+{% block main %}
+            <h1>Edit User Information</h1>
+            <form method="POST" action="{{ url_for('auth.edit_user') }}">
+            {{ form.hidden_tag() }}
+                <ol>
+                    <fieldset>
+                        <legend>Change Email Address:</legend>
+                        <li>
+                            {{ form.email1.label }}
+                            {{ form.email1 }}
+                            {% if form.email1.errors|count > 0 %}
+                            {{ form_errors(form.email1) }}
+                            {% endif %}
+                        </li>
+                        <li>
+                            {{ form.email2.label }}
+                            {{ form.email2 }}
+                            {% if form.email2.errors|count > 0 %}
+                            {{ form_errors(form.email2) }}
+                            {% endif %}
+                        </li>
+                    </fieldset>
+                    <fieldset>
+                        <legend>Change Password:</legend>
+                        <li>
+                            {{ form.new_password1.label }}
+                            {{ form.new_password1 }}
+                            {% if form.new_password1.errors|count > 0 %}
+                            {{ form_errors(form.new_password1) }}
+                            {% endif %}
+                        </li>
+                        <li>
+                            {{ form.new_password2.label }}
+                            {{ form.new_password2 }}
+                            {% if form.new_password2.errors|count > 0 %}
+                            {{ form_errors(form.new_password2) }}
+                            {% endif %}
+                        </li>
+                    </fieldset>
+                    <fieldset>
+                        <legend>Enter Current Password to Confirm Changes:</legend>
+                        <li>
+                            {{ form.current_password.label }}
+                            {{ form.current_password }}
+                            {% if form.current_password.errors|count > 0 %}
+                            {{ form_errors(form.current_password) }}
+                            {% endif %}
+                        </li>
+                    </fieldset>
                     <li>
-                        {{ form.email1.label }}
-                        {{ form.email1 }}
-                        {{ form_errors(form.email1) }}
+                        {{ form.submit }}
                     </li>
-                    <li>
-                        {{ form.email2.label }}
-                        {{ form.email2 }}
-                        {{ form_errors(form.email2) }}
-                    </li>
-                </fieldset>
-                <fieldset>
-                    <legend>Change Password:</legend>
-                    <li>
-                        {{ form.new_password1.label }}
-                        {{ form.new_password1 }}
-                        {{ form_errors(form.new_password1) }}
-                    </li>
-                    <li>
-                        {{ form.new_password2.label }}
-                        {{ form.new_password2 }}
-                        {{ form_errors(form.new_password2) }}
-                    </li>
-                </fieldset>
-                <fieldset>
-                    <legend>Enter Current Password to Confirm Changes:</legend>
-                    <li>
-                        {{ form.current_password.label }}
-                        {{ form.current_password }}
-                        {{ form_errors(form.current_password) }}
-                    </li>
-                </fieldset>
-                <li>
-                    {{ form.submit }}
-                </li>
-            </ol>
-        </form>
+                </ol>
+            </form>
 {% endblock %}
-
-

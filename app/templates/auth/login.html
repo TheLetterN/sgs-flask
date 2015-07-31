@@ -14,10 +14,10 @@
                 <ol>
                     <li>
                         {{ form.hidden_tag() }}
-                        {{ form.username.label }}
-                        {{ form.username }}
-                        {% if form.username.errors|count > 0 %}
-                        {{ form_errors(form.username) }}
+                        {{ form.login.label }}
+                        {{ form.login }}
+                        {% if form.login.errors|count > 0 %}
+                        {{ form_errors(form.login) }}
                         {% endif %}
                     </li>
                     <li>

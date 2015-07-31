@@ -62,8 +62,8 @@ class LoginForm(Form):
         validators=[InputRequired()])
     remember_me = BooleanField('Remember Me')
     submit = SubmitField('Log In')
-    username = StringField(
-        'User Name',
+    login = StringField(
+        'Username or Email',
         validators=[InputRequired(), Length(1, 64)])
 
 

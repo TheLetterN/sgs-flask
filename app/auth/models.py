@@ -1,9 +1,41 @@
+from datetime import datetime, timedelta
 from flask import current_app
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from werkzeug import generate_password_hash, check_password_hash
 from flask.ext.login import UserMixin
 from app import db, login_manager
 from app.email import send_email
+
+
+class EmailRequest(db.Model):
+    """Table for tracking email requests.
+
+    The primary use of this table is to keep track of various email requests
+    in order to prevent malicious use of functionalities that send emails to
+    users, such as spamming confirmation or password reset requests.
+
+    Attributes:
+        id (int): Primary key for an EmailRequest object.
+        sender (str): A string representing what functionality is requesting
+                      to send an email, such as 'confirm account'.
+        time (datetime): The datetime when this request was made.
+        user_id (int): ID of the user this request belongs to.
+    """
+    __tablename__ = 'email_requests'
+    id = db.Column(db.Integer, primary_key=True)
+    sender = db.Column(db.String(32))
+    time = db.Column(db.DateTime)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+
+    def __init__(self, sender, time=None):
+        if time is None:
+            time = datetime.utcnow()
+        self.sender = sender
+        self.time = time
+
+    def __repr__(self):
+        return '<{0} \'{1}\'>'.format(self.__class__.__name__,
+                                      self.sender)
 
 
 class Permission(object):
@@ -37,6 +69,7 @@ class User(UserMixin, db.Model):
                   database.
         confirmed (bool): Whether or not the user's account is confirmed.
         email (str): The user's email address.
+        email_requests (relationship): EmailRequest entries for this user.
         name (str): The name or nickname the user will be represented by on
                     the website.
         password_hash (str): A one-way hashed version of the user's password.
@@ -47,6 +80,7 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     confirmed = db.Column(db.Boolean, default=False)
     email = db.Column(db.String(254), unique=True)
+    email_requests = db.relationship('EmailRequest', lazy='dynamic')
     name = db.Column(db.String(64), unique=True)
     password_hash = db.Column(db.String(128))
     permissions = db.Column(db.Integer, default=0)
@@ -109,6 +143,58 @@ class User(UserMixin, db.Model):
         else:
             self.email = data.get('new_email')
             return True
+
+    def email_request_too_many(self, sender, days=None, maximum=None):
+        """Check if too many requests have been within days.
+
+        Args:
+            sender (str): String representing the functionality trying to send
+                          the email, such as 'confirm account'.
+            days (int): Number of days before request in which requests count
+                        towards the limit.
+            maximum (int): Maximum number of requests to allow over duration
+                           specified by days.
+
+        Returns:
+            bool: True if number of requests has already hit max for the given
+                  duration.
+            bool: False if number of requests is below max for given duration.
+        """
+        if days is None:
+            days = current_app.config['ERFP_DAYS_TO_TRACK']
+        if maximum is None:
+            maximum = current_app.config['ERFP_MAX_REQUESTS']
+        reqs = self.email_requests.filter_by(sender=sender).all()
+        if len(reqs) <= maximum:
+            return True
+        else:
+            self.prune_email_requests(sender=sender, days=days)
+            reqs = self.email_requests.filter_by(sender=sender).all()
+            if len(reqs) <= maximum:
+                return True
+            else:
+                return False
+
+    def email_request_too_soon(self, sender, minutes=None):
+        """Check if request to send email is too soon after previous one.
+
+        Args:
+            sender (str): String representing the functionality trying to send
+                          the email, such as 'confirm account'.
+            minutes (int): How many minutes must pass between request.
+
+        Returns:
+            bool: True if less time has passed than specified by minutes.
+            bool: False if more time has passed than specified by minutes.
+        """
+        if minutes is None:
+            minutes = current_app.config['ERFP_MINUTES_BETWEEN_REQUESTS']
+        sender_query = self.email_requests.filter_by(sender='confirm account')
+        latest = sender_query.order_by(db.desc(EmailRequest.time)).first()
+        if datetime.utcnow() - latest.time < timedelta(minutes=minutes):
+            return True
+        else:
+            return False
 
     def generate_account_confirmation_token(self, expiration=3600):
         """Create an encrypted token for account verification.
@@ -189,6 +275,24 @@ class User(UserMixin, db.Model):
             password (str): The password to hash and store in password_hash.
         """
         self.set_password(password)
+
+    def prune_email_requests(self, sender, days=None):
+        """Clear out old email requests.
+
+        Args:
+            sender (str): String representing the functionality requesting to
+                          send an email.
+            days (int): Number of days to store logged requests.
+        """
+        now = datetime.utcnow()
+        reqs = self.email_requests.filter_by(sender=sender).all()
+        pruned = False
+        for req in reqs:
+            if now - req.time > timedelta(days=days):
+                pruned = True
+                db.session.delete(req)
+        if pruned:
+            db.session.commit()
 
     def reset_password(self, token, password):
         """Set a new password if given a valid token.

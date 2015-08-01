@@ -26,8 +26,21 @@ class TestConfirmAccountWithDB(unittest.TestCase):
         self.assertFalse(user.confirmed)
         token = user.generate_account_confirmation_token()
         self.tc.get(url_for('auth.confirm_account', token=token))
-        user2 = User.query.get(user.id)
-        self.assertTrue(user2.confirmed)
+        self.assertTrue(user.confirmed)
+
+    def test_confirm_account_automatically_promotes_administrator(self):
+        """Permission to manage users is granted if user email in admin list.
+
+        The list is in <app>.config['ADMINISTRATORS']
+        """
+        user = make_dummy_user()
+        db.session.add(user)
+        db.session.commit()
+        self.assertFalse(user.can(Permission.MANAGE_USERS))
+        token = user.generate_account_confirmation_token()
+        self.app.config['ADMINISTRATORS'].append(user.email)
+        self.tc.get(url_for('auth.confirm_account', token=token))
+        self.assertTrue(user.can(Permission.MANAGE_USERS))
 
 
 class TestConfirmNewEmailWithDB(unittest.TestCase):
@@ -65,10 +78,7 @@ class TestConfirmNewEmailWithDB(unittest.TestCase):
         new_email = 'azurediamond@bash.org'
         token = user.generate_new_email_token(new_email)
         with self.app.test_client() as tc:
-            tc.post('auth/login', data=dict(
-                username=user.name,
-                password='hunter2'
-                ), follow_redirects=True)
+            login(user.name, 'hunter2', tc=tc)
             tc.get(url_for('auth.confirm_new_email', token=token))
         user2 = User.query.get(user.id)
         self.assertEqual(new_email, user2.email)
@@ -153,15 +163,15 @@ class TestLoginWithDB(unittest.TestCase):
     def test_login_bad_data(self):
         """login should flash an error message if login is incorrect."""
         rv = login('not', 'themama', tc=self.tc)
-        self.assertTrue('Error: Username or password' in str(rv.data))
+        self.assertTrue('Error: Incorrect username/password' in str(rv.data))
         user = make_dummy_user()
         user.confirmed = True
         db.session.add(user)
         db.session.commit()
         rv2 = login(user.name, 'badpassword', tc=self.tc)
-        self.assertTrue('Error: Username or password' in str(rv2.data))
+        self.assertTrue('Error: Incorrect username/password' in str(rv2.data))
         rv3 = login('badusername', 'hunter2', tc=self.tc)
-        self.assertTrue('Error: Username or password' in str(rv3.data))
+        self.assertTrue('Error: Incorrect username/password' in str(rv3.data))
 
     def test_login_not_confirmed(self):
         """login should flash an error message if account isn't confirmed."""
@@ -691,7 +701,7 @@ def login(username, password, tc):
                                  related data) from the login POST.
     """
     return tc.post('/auth/login', data=dict(
-        username=username,
+        login=username,
         password=password
         ), follow_redirects=True)
 

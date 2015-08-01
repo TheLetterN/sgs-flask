@@ -6,15 +6,46 @@ TEMPDIR = gettempdir()
 
 
 class Config(object):
-    """Base config object containing settings common to all app modes."""
+    """Base config object containing settings common to all app modes.
+
+    Note:
+        ERFP = Email Request Flood Protection variables.
+
+    Attributes:
+        ADMINISTRATORS (list): A list of email addresses of site admins.
+        EMAIL_SUBJECT_PREFIX (str): A prefix to use in generated email
+                                    subjects.
+        ERFP_DAYS_TO_TRACK (int): How many days to keep track of email
+                                  requests before deleting them.
+        ERFP_MAX_REQUESTS (int): Maximum number of requests allowed within
+                                 the time span dictated by ERFP_DAYS_TO_TRACK.
+        ERFP_MINUTES_BETWEEN_REQUESTS (int): Number of minutes to prevent
+                                             additional requests after one has
+                                             already been made.
+        INFO_EMAIL (str): Email address to send information with.
+        SECRET_KEY (str): Key used by Flask and extensions for encryption.
+        SQLALCHEMY_COMMIT_ON_TEARDOWN (bool): Whether or not to commit
+                                              changes to database on
+                                              teardown.
+    """
+    try:
+        ADMINISTRATORS = os.environ.get('SGS_ADMINISTRATORS').split(', ')
+    except AttributeError:
+        ADMINISTRATORS = []
+    ERFP_DAYS_TO_TRACK = os.environ.get('SGS_ERFP_DAYS_TO_TRACK') or 14
+    ERFP_DAYS_TO_TRACK = int(ERFP_DAYS_TO_TRACK)
+    ERFP_MAX_REQUESTS = os.environ.get('SGS_ERFP_MAX_REQUESTS') or 12
+    ERFP_MAX_REQUESTS = int(ERFP_MAX_REQUESTS)
+    ERFP_MINUTES_BETWEEN_REQUESTS = os.environ.get(
+        'SGS_ERFP_MINUTES_BETWEEN_REQUESTS') or 5
+    ERFP_MINUTES_BETWEEN_REQUESTS = int(ERFP_MINUTES_BETWEEN_REQUESTS)
+    EMAIL_SUBJECT_PREFIX = os.environ.get('SGS_EMAIL_SUBJECT_PREFIX') or \
+        'Swallowtail Garden Seeds - '
+    INFO_EMAIL = os.environ.get('SGS_INFO_EMAIL') or \
+        'nicholasp@localhost'   # TODO: Change this address!
     SECRET_KEY = os.environ.get('SGS_SECRET_KEY') or \
         '\xbdc@:b\xac\xfa\xfa\xd1z[\xa3=\xd1\x9a\x0b&\xe3\x1d5\xe9\x84(\xda'
     SQLALCHEMY_COMMIT_ON_TEARDOWN = True
-    ADMINISTRATORS = os.environ.get('SGS_ADMINISTRATORS')
-    INFO_EMAIL = os.environ.get('SGS_INFO_EMAIL') or \
-        'nicholasp@localhost'   # TODO: Change this address!
-    EMAIL_SUBJECT_PREFIX = os.environ.get('SGS_EMAIL_SUBJECT_PREFIX') or \
-        'Swallowtail Garden Seeds - '
 
     @staticmethod
     def init_app(app):

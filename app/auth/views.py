@@ -41,6 +41,8 @@ def confirm_account(token):
             user = get_user_from_confirmation_token(token)
             if user.confirm_account(token):
                 user.confirmed = True
+                if user.email in current_app.config['ADMINISTRATORS']:
+                    user.grant_permission(Permission.MANAGE_USERS)
                 db.session.add(user)
                 db.session.commit()
                 flash('Account confirmed, '
@@ -161,7 +163,7 @@ def login():
             reset_url = Markup(
                 '<a href="{0}'.format(url_for('auth.reset_password_request')) +
                 '">Click here if you forgot your password</a>')
-            flash('Error: Wrong username/password! ' + reset_url + '.')
+            flash('Error: Incorrect username/password! ' + reset_url + '.')
             return redirect(url_for('auth.login'))
     return render_template('auth/login.html', form=form)
 

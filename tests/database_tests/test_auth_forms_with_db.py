@@ -27,7 +27,7 @@ class TestEditUserFormWithDB(unittest.TestCase):
         db.session.commit()
         with self.app.test_client() as tc:
             tc.post('/auth/login', data=dict(
-                username=user.name,
+                login=user.name,
                 password='hunter2'
                 ), follow_redirects=True)
             form = EditUserForm()

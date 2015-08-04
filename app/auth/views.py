@@ -163,7 +163,7 @@ def login():
             reset_url = Markup(
                 '<a href="{0}'.format(url_for('auth.reset_password_request')) +
                 '">Click here if you forgot your password</a>')
-            flash('Error: Incorrect username/password! ' + reset_url + '.')
+            flash('Error: Login information is incorrect! ' + reset_url + '.')
             return redirect(url_for('auth.login'))
     return render_template('auth/login.html', form=form)
 
@@ -335,8 +335,28 @@ def resend_confirmation():
             # will not validate if the user is already confirmed.
             flash('Error: Account already confirmed!')
             return redirect(url_for('main.index'))
+        if user.email_request_too_soon('confirm account'):
+            mbr = current_app.config['ERFP_MINUTES_BETWEEN_REQUESTS']
+            # TODO Make it easy for the user to contact support.
+            flash('Error: A confirmation email has already been sent' +
+                  ' within the last {0} minutes.'.format(mbr) +
+                  ' If you did not recieve it, it may have been marked as' +
+                  ' spam, so please check your spam folder/filter, and try' +
+                  ' again in {0} minutes if needed.'.format(mbr))  # tmp
+            return redirect(url_for('main.index'))
+        if user.email_request_too_many('confirm account'):
+            # TODO Make it easy for the user to contact support.
+            flash('Error: Too many requests have been made to resend a' +
+                  ' confirmation email to this address. For your protection,' +
+                  ' we have temporarily blocked all requests to send a' +
+                  ' confirmation email to this account. We apologize for' +
+                  ' the inconvenience, and would be happy to assist you' +
+                  ' with getting your account confirmed. Please contact us' +
+                  ' at: support@swallowtailgardenseeds.com.')  # tmp
+            return redirect(url_for('main.index'))
         if current_app.config['TESTING'] is False:  # pragma: no cover
             user.send_account_confirmation_email()
+        user.log_email_request('confirm account')
         flash('Confirmation email sent to {0}.'.format(form.email.data))
         return redirect(url_for('main.index'))
     return render_template('auth/resend_confirmation.html', form=form)
@@ -388,8 +408,29 @@ def reset_password_request():
     form = ResetPasswordRequestForm()
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data).first()
+        if user.email_request_too_soon('reset password'):
+            mbr = current_app.config['ERFP_MINUTES_BETWEEN_REQUESTS']
+            # TODO Make it easy for the user to contact support.
+            flash('Error: A request to reset your password has already been' +
+                  ' made within the last {0} minutes.'.format(mbr) +
+                  ' If you did not recieve a confirmation email, it may' +
+                  ' have been marked as spam, so please check your spam' +
+                  ' folder/filter, and try again in {0}'.format(mbr) +
+                  ' minutes if needed.')  # tmp
+            return redirect(url_for('main.index'))
+        if user.email_request_too_many('reset password'):
+            # TODO Make it easy for the user to contact support.
+            flash('Error: Too many requests have been made to reset the' +
+                  ' password for your account. For your protection,' +
+                  ' we have temporarily blocked all requests to reset your' +
+                  ' password. We apologize for the inconvenience, and would' +
+                  ' be happy to assist you with getting your account' +
+                  ' confirmed. Please contact us at:' +
+                  ' support@swallowtailgardenseeds.com.')  # tmp
+            return redirect(url_for('main.index'))
         if current_app.config['TESTING'] is False:  # pragma: no cover
             user.send_reset_password_email()
+        user.log_email_request('reset password')
         flash('An email with instructions for resetting your password has ' +
               'been sent to {0}.'.format(form.email.data))
         return redirect(url_for('main.index'))

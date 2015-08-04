@@ -28,6 +28,13 @@ class EmailRequest(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
 
     def __init__(self, sender, time=None):
+        """Create an EmailRequest record.
+
+        Args:
+            sender (str): A string representing the functionality requesting
+                          to send an email.
+            time (datetime): The time in UTC at which the request was made.
+        """
         if time is None:
             time = datetime.utcnow()
         self.sender = sender
@@ -166,14 +173,14 @@ class User(UserMixin, db.Model):
             maximum = current_app.config['ERFP_MAX_REQUESTS']
         reqs = self.email_requests.filter_by(sender=sender).all()
         if len(reqs) <= maximum:
-            return True
+            return False
         else:
             self.prune_email_requests(sender=sender, days=days)
             reqs = self.email_requests.filter_by(sender=sender).all()
             if len(reqs) <= maximum:
-                return True
-            else:
                 return False
+            else:
+                return True
 
     def email_request_too_soon(self, sender, minutes=None):
         """Check if request to send email is too soon after previous one.
@@ -189,8 +196,10 @@ class User(UserMixin, db.Model):
         """
         if minutes is None:
             minutes = current_app.config['ERFP_MINUTES_BETWEEN_REQUESTS']
-        sender_query = self.email_requests.filter_by(sender='confirm account')
+        sender_query = self.email_requests.filter_by(sender=sender)
         latest = sender_query.order_by(db.desc(EmailRequest.time)).first()
+        if latest is None:
+            return False
         if datetime.utcnow() - latest.time < timedelta(minutes=minutes):
             return True
         else:
@@ -250,6 +259,18 @@ class User(UserMixin, db.Model):
                               be a constant from the Permission class.
         """
         self.permissions |= permission
+
+    def log_email_request(self, sender, time=None):
+        """Append a record of an email request to User.email_requests
+
+        Args:
+            sender (str): A string representing the functionality that
+                          requested to send an email.
+            time (datetime): The time in UTC at which the request was sent.
+        """
+        if time is None:
+            time = datetime.utcnow()
+        self.email_requests.append(EmailRequest(sender, time))
 
     @property
     def password(self):

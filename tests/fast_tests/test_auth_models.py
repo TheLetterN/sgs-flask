@@ -1,6 +1,22 @@
 import unittest
 from app import create_app
-from app.auth.models import User
+from app.auth.models import EmailRequest, User
+
+
+class TestEmailRequest(unittest.TestCase):
+    """Unit tests for the User class in app/auth/models"""
+    def setUp(self):
+        self.app = create_app('testing')
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+
+    def tearDown(self):
+        self.app_context.pop()
+
+    def test_repr(self):
+        """Returns a string formatted '<<class name> '<sender>'>'"""
+        req = EmailRequest('test request')
+        self.assertEqual(str(req), '<EmailRequest \'test request\'>')
 
 
 class TestUser(unittest.TestCase):

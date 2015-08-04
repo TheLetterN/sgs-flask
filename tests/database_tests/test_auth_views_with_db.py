@@ -1,4 +1,5 @@
 import unittest
+from datetime import datetime, timedelta
 from flask import url_for
 from app import create_app, db
 from app.auth.models import Permission, User
@@ -163,15 +164,15 @@ class TestLoginWithDB(unittest.TestCase):
     def test_login_bad_data(self):
         """login should flash an error message if login is incorrect."""
         rv = login('not', 'themama', tc=self.tc)
-        self.assertTrue('Error: Incorrect username/password' in str(rv.data))
+        self.assertTrue('Error: Login information' in str(rv.data))
         user = make_dummy_user()
         user.confirmed = True
         db.session.add(user)
         db.session.commit()
         rv2 = login(user.name, 'badpassword', tc=self.tc)
-        self.assertTrue('Error: Incorrect username/password' in str(rv2.data))
+        self.assertTrue('Error: Login information' in str(rv2.data))
         rv3 = login('badusername', 'hunter2', tc=self.tc)
-        self.assertTrue('Error: Incorrect username/password' in str(rv3.data))
+        self.assertTrue('Error: Login information' in str(rv3.data))
 
     def test_login_not_confirmed(self):
         """login should flash an error message if account isn't confirmed."""
@@ -533,6 +534,36 @@ class TestResendConfirmationWithDB(unittest.TestCase):
         db.drop_all()
         self.app_context.pop()
 
+    def test_resend_confirmation_email_request_too_many(self):
+        """Flash an error if too many requests have been made."""
+        self.app.config['ERFP_MAX_REQUESTS'] = 10
+        self.app.config['ERFP_MINUTES_BETWEEN_REQUESTS'] = 5
+        user = make_dummy_user()
+        time = datetime.utcnow() - timedelta(minutes=6)
+        for i in range(0, 11):
+            user.log_email_request('confirm account', time=time)
+        db.session.add(user)
+        db.session.commit()
+        rv = self.tc.post('/auth/resend_confirmation',
+                          data=dict(email=user.email),
+                          follow_redirects=True)
+        self.assertTrue('Error: Too many requests have been made' in
+                        str(rv.data))
+
+    def test_resend_confirmation_email_request_too_soon(self):
+        """Flash an errror if request made too soon after previous one."""
+        self.app.config['ERFP_MINUTES_BETWEEN_REQUESTS'] = 5
+        user = make_dummy_user()
+        db.session.add(user)
+        db.session.commit()
+        user.log_email_request('confirm account')
+        data = dict(email=user.email)
+        rv = self.tc.post('/auth/resend_confirmation',
+                          data=data,
+                          follow_redirects=True)
+        self.assertTrue('Error: A confirmation email has already been sent' in
+                        str(rv.data))
+
     def test_resend_confirmation_logged_in_user(self):
         """resend_confirmation flashes an error if user is logged in.
 
@@ -590,6 +621,35 @@ class TestResetPasswordWithDB(unittest.TestCase):
                            data=data1,
                            follow_redirects=True)
         self.assertTrue('Error: wrong email address!' in str(rv1.data))
+
+    def test_reset_password_email_request_too_many(self):
+        """Flash an error if too many requests have been made."""
+        self.app.config['ERFP_MAX_REQUESTS'] = 10
+        self.app.config['ERFP_MINUTES_BETWEEN_REQUESTS'] = 5
+        user = make_dummy_user()
+        time = datetime.utcnow() - timedelta(minutes=6)
+        for i in range(0, 11):
+            user.log_email_request('reset password', time=time)
+        db.session.add(user)
+        db.session.commit()
+        rv = self.tc.post('/auth/reset_password',
+                          data=dict(email=user.email),
+                          follow_redirects=True)
+        self.assertTrue('Error: Too many requests have been made to reset' in
+                        str(rv.data))
+
+    def test_reset_password_email_request_too_soon(self):
+        """Flash an error if request made too soon after previous one."""
+        self.app.config['ERFP_MINUTES_BETWEEN_REQUESTS'] = 5
+        user = make_dummy_user()
+        user.log_email_request('reset password')
+        db.session.add(user)
+        db.session.commit()
+        rv = self.tc.post('/auth/reset_password',
+                          data=dict(email=user.email),
+                          follow_redirects=True)
+        self.assertTrue('Error: A request to reset your password has' in
+                        str(rv.data))
 
     def test_reset_password_resets_password(self):
         """reset_password resets the user's password with valid submission."""

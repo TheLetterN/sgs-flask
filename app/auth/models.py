@@ -435,7 +435,7 @@ def get_user_from_confirmation_token(token):
         raise ValueError('Token is malformed or invalid!')
     if 'confirm' in data:
         user = User.query.filter_by(id=data['confirm']).first()
-        if user.confirmed is True:
+        if user.confirmed:
             raise ValueError('The user for this token is already confirmed!')
         else:
             return user

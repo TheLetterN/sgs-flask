@@ -44,6 +44,91 @@ class TestConfirmAccountWithDB(unittest.TestCase):
         self.assertTrue(user.can(Permission.MANAGE_USERS))
 
 
+class TestDeleteUserWithDB(unittest.TestCase):
+    """Test the confirm_account route in the auth module."""
+    def setUp(self):
+        self.app = create_app('testing')
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+        self.tc = self.app.test_client()
+        db.create_all()
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
+
+    def test_delete_user_delete_self(self):
+        """Flash an error when user tries to delete their own account."""
+        user = make_smart_user()
+        db.session.add(user)
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.get(url_for('auth.delete_user', uid=user.id),
+                        follow_redirects=True)
+            self.assertTrue('Error: You cannot delete yourself!' in
+                            str(rv.data))
+
+    def test_delete_user_malformed_uid(self):
+        """Flash an error when uid is not an integer."""
+        user = make_smart_user()
+        db.session.add(user)
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.get(url_for('auth.delete_user', uid='frogs'),
+                        follow_redirects=True)
+            self.assertTrue('Error: Invalid or malformed user ID!' in
+                            str(rv.data))
+
+    def test_delete_user_nonexistent(self):
+        """Flash an error if user does not exist."""
+        user = make_smart_user()
+        db.session.add(user)
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.get(url_for('auth.delete_user', uid=42),
+                        follow_redirects=True)
+            self.assertTrue('Error: No user exists with that ID number!' in
+                            str(rv.data))
+
+    def test_delete_user_renders_page(self):
+        """The page for deleting a user is presented if uid is valid."""
+        user = make_smart_user()
+        cavy = make_guinea_pig()
+        db.session.add(cavy)
+        db.session.add(user)
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.get(url_for('auth.delete_user', uid=cavy.id),
+                        follow_redirects=True)
+            self.assertTrue('THIS CANNOT BE UNDONE' in str(rv.data))
+
+    def test_delete_user_success(self):
+        """Delete a user and flash a message if given valid form data."""
+        user = make_smart_user()
+        cavy = make_guinea_pig()
+        db.session.add(user)
+        db.session.add(cavy)
+        db.session.commit()
+        self.assertEqual(len(User.query.all()), 2)
+        self.assertTrue(User.query.filter_by(name='Mister Squeals').first() is
+                        not None)
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.post(url_for('auth.delete_user', uid=cavy.id),
+                         data=dict(confirmation='THIS CANNOT BE UNDONE',
+                                   password='hunter2'),
+                         follow_redirects=True)
+            self.assertTrue('Mister Squeals has been deleted!' in str(rv.data))
+        self.assertEqual(len(User.query.all()), 1)
+        self.assertTrue(User.query.filter_by(name='Mister Squeals').first() is
+                        None)
+
+
 class TestConfirmNewEmailWithDB(unittest.TestCase):
     """Test the confirm_new_email route in the auth module."""
     def setUp(self):
@@ -66,7 +151,8 @@ class TestConfirmNewEmailWithDB(unittest.TestCase):
         db.session.commit()
         with self.app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
-            retval = tc.get('/auth/confirm_new_email/badtoken',
+            retval = tc.get(url_for('auth.confirm_new_email',
+                                    token='badtoken'),
                             follow_redirects=True)
         self.assertTrue('Error: could not change email' in str(retval.data))
 
@@ -111,7 +197,9 @@ class TestEditUserWithDB(unittest.TestCase):
                 email1='fool@bar.com',
                 email2='fool@bar.com',
                 current_password='hunter2')
-            rv = tc.post('/auth/edit_user', data=data, follow_redirects=True)
+            rv = tc.post(url_for('auth.edit_user'),
+                         data=data,
+                         follow_redirects=True)
         self.assertTrue('sent to fool@bar.com' in str(rv.data))
 
     def test_edit_user_changed_password(self):
@@ -128,7 +216,9 @@ class TestEditUserWithDB(unittest.TestCase):
                 new_password1='password1',
                 new_password2='password1',
                 current_password='hunter2')
-            rv = tc.post('/auth/edit_user', data=data, follow_redirects=True)
+            rv = tc.post(url_for('auth.edit_user'),
+                         data=data,
+                         follow_redirects=True)
         self.assertTrue('changed your password' in str(rv.data))
 
     def test_edit_user_no_changes(self):
@@ -143,7 +233,9 @@ class TestEditUserWithDB(unittest.TestCase):
                 email1=user.email,
                 email2=user.email,
                 current_password='hunter2')
-            rv = tc.post('/auth/edit_user', data=data, follow_redirects=True)
+            rv = tc.post(url_for('auth.edit_user'),
+                         data=data,
+                         follow_redirects=True)
         self.assertTrue('No changes have been made' in str(rv.data))
 
 
@@ -215,7 +307,7 @@ class TestLogoutWithDB(unittest.TestCase):
         db.session.commit()
         with self.app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
-            rv = tc.get('/auth/logout', follow_redirects=True)
+            rv = tc.get(url_for('auth.logout'), follow_redirects=True)
         self.assertTrue('You have been logged out.' in str(rv.data))
 
 
@@ -235,6 +327,7 @@ class TestManageUserWithDB(unittest.TestCase):
 
     @staticmethod
     def make_form_data(user,
+                       confirmed=None,
                        email=None,
                        manage_users=None,
                        manage_seeds=None,
@@ -248,6 +341,7 @@ class TestManageUserWithDB(unittest.TestCase):
 
         Args:
             user (User): The user whose data is being edited in the test.
+            confirmed (bool): Whether or not the account should be confirmed.
             email (str): A new email address, if any.
             manage_users (bool): Whether or not the user can manage users.
             manage_seeds (bool): Whether or not the user can manage the seeds
@@ -259,17 +353,25 @@ class TestManageUserWithDB(unittest.TestCase):
             dict: Data for a simulated POST to /auth/manage_user/<id>
         """
         data = dict()
-        if email is not None:
-            data['email1'] = email
-            data['email2'] = email
+        if confirmed is not None:
+            if confirmed:
+                data['confirmed'] = True
+            elif not confirmed:
+                data['confirmed'] = None    # Unchecked box submits no data.
+            else:
+                raise ValueError('confirmed bust be True, False, or None!')
         else:
-            data['email1'] = user.email
-            data['email2'] = user.email
+            if user.confirmed:
+                data['confirmed'] = True
+            else:
+                data['confirmed'] = None
+        data['email1'] = email
+        data['email2'] = email
         if manage_users is not None:
-            if manage_users is True:
+            if manage_users:
                 data['manage_users'] = True
-            elif manage_users is False:
-                data['manage_users'] = None    # Unchecked box submits no data.
+            elif not manage_users:
+                data['manage_users'] = None
             else:
                 raise ValueError('manage_users must be True, False, or None!')
         else:
@@ -278,9 +380,9 @@ class TestManageUserWithDB(unittest.TestCase):
             else:
                 data['manage_users'] = None
         if manage_seeds is not None:
-            if manage_seeds is True:
+            if manage_seeds:
                 data['manage_seeds'] = True
-            elif manage_seeds is False:
+            elif not manage_seeds:
                 data['manage_seeds'] = None
             else:
                 raise ValueError('manage_seeds must be True, False, or None!')
@@ -289,18 +391,10 @@ class TestManageUserWithDB(unittest.TestCase):
                 data['manage_seeds'] = True
             else:
                 data['manage_seeds'] = None
-        if password is not None:
-            data['password1'] = password
-            data['password2'] = password
-        else:
-            data['password1'] = None
-            data['password1'] = None
-        if username is not None:
-            data['username1'] = username
-            data['username2'] = username
-        else:
-            data['username1'] = user.name
-            data['username2'] = user.name
+        data['password1'] = password
+        data['password2'] = password
+        data['username1'] = username
+        data['username2'] = username
         return data
 
     def test_manage_user_change_email_address(self):
@@ -312,7 +406,7 @@ class TestManageUserWithDB(unittest.TestCase):
         data = self.make_form_data(user, email=new_email)
         with self.app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
-            tc.post('/auth/manage_user/{0}'.format(user.id),
+            tc.post(url_for('auth.manage_user', user_id=user.id),
                     data=data,
                     follow_redirects=True)
             self.assertEqual(user.email, new_email)
@@ -330,12 +424,12 @@ class TestManageUserWithDB(unittest.TestCase):
         with self.app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
             data1 = self.make_form_data(user, password='hunter2')
-            rv1 = tc.post('/auth/manage_user/{0}'.format(user.id),
+            rv1 = tc.post(url_for('auth.manage_user', user_id=user.id),
                           data=data1,
                           follow_redirects=True)
             self.assertTrue('password has been changed' in str(rv1.data))
             data2 = self.make_form_data(user, password='hunter3')
-            rv2 = tc.post('/auth/manage_user/{0}'.format(user.id),
+            rv2 = tc.post(url_for('auth.manage_user', user_id=user.id),
                           data=data2,
                           follow_redirects=True)
             self.assertTrue('password has been changed' in str(rv2.data))
@@ -348,10 +442,44 @@ class TestManageUserWithDB(unittest.TestCase):
         with self.app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
             data = self.make_form_data(user, username='BlueZirconia')
-            tc.post('/auth/manage_user/{0}'.format(user.id),
+            tc.post(url_for('auth.manage_user', user_id=user.id),
                     data=data,
                     follow_redirects=True)
             self.assertEqual(user.name, 'BlueZirconia')
+
+    def test_manage_user_confirmed_false_to_true(self):
+        """Set User.confirmed to True if it was false and box is checked."""
+        user = make_smart_user()
+        cavy = make_guinea_pig()
+        cavy.confirmed = False
+        db.session.add(user)
+        db.session.add(cavy)
+        db.session.commit()
+        self.assertFalse(cavy.confirmed)
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            data = self.make_form_data(cavy, confirmed=True)
+            tc.post(url_for('auth.manage_user', user_id=cavy.id),
+                    data=data,
+                    follow_redirects=True)
+            self.assertTrue(cavy.confirmed)
+
+    def test_manage_user_confirmed_true_to_false(self):
+        """Set User.confirmed to False if it was true and box is unchecked."""
+        user = make_smart_user()
+        cavy = make_guinea_pig()
+        cavy.confirmed = True
+        db.session.add(user)
+        db.session.add(cavy)
+        db.session.commit()
+        self.assertTrue(cavy.confirmed)
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            data = self.make_form_data(cavy, confirmed=False)
+            tc.post(url_for('auth.manage_user', user_id=cavy.id),
+                    data=data,
+                    follow_redirects=True)
+        self.assertFalse(cavy.confirmed)
 
     def test_manage_user_current_user_lacks_permission(self):
         """manage_user aborts with a 403 error if user w/o permission visits.
@@ -367,10 +495,24 @@ class TestManageUserWithDB(unittest.TestCase):
         db.session.commit()
         with self.app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
-            rv = tc.get('/auth/manage_user', follow_redirects=False)
+            rv = tc.get(url_for('auth.manage_user'), follow_redirects=False)
             self.assertEqual(rv.status_code, 403)
 
-    def test_manage_user_prevents_lockout(self):
+    def test_manage_user_prevents_confirmed_lockout(self):
+        """Flash error if user tries to revoke own account confirmation."""
+        user = make_smart_user()
+        db.session.add(user)
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            data = self.make_form_data(user, confirmed=False)
+            rv = tc.post(url_for('auth.manage_user', user_id=user.id),
+                         data=data,
+                         follow_redirects=True)
+        self.assertTrue(user.confirmed)
+        self.assertTrue('Error: You cannot revoke your own' in str(rv.data))
+
+    def test_manage_user_prevents_manage_users_lockout(self):
         """Flash error if user tries to revoke their own MANAGE_USERS perm."""
         user = make_smart_user()
         db.session.add(user)
@@ -378,9 +520,10 @@ class TestManageUserWithDB(unittest.TestCase):
         with self.app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
             data = self.make_form_data(user, manage_users=False)
-            rv = tc.post('/auth/manage_user/{0}'.format(user.id),
+            rv = tc.post(url_for('auth.manage_user', user_id=user.id),
                          data=data,
                          follow_redirects=True)
+        self.assertTrue(user.can(Permission.MANAGE_USERS))
         self.assertTrue('Error: Please do not try to remove' in str(rv.data))
 
     def test_manage_user_prevents_change_to_email_of_other_user(self):
@@ -393,7 +536,7 @@ class TestManageUserWithDB(unittest.TestCase):
         with self.app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
             data = self.make_form_data(cavy, email=user.email)
-            rv = tc.post('/auth/manage_user/{0}'.format(cavy.id),
+            rv = tc.post(url_for('auth.manage_user', user_id=cavy.id),
                          data=data,
                          follow_redirects=True)
             self.assertTrue('Error: Email address already in' in str(rv.data))
@@ -407,7 +550,7 @@ class TestManageUserWithDB(unittest.TestCase):
         with self.app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
             data = self.make_form_data(cavy, username=user.name)
-            rv = tc.post('/auth/manage_user/{0}'.format(cavy.id),
+            rv = tc.post(url_for('auth.manage_user', user_id=cavy.id),
                          data=data,
                          follow_redirects=True)
             self.assertTrue('Error: Username is already' in str(rv.data))
@@ -420,7 +563,7 @@ class TestManageUserWithDB(unittest.TestCase):
         data = self.make_form_data(user)
         with self.app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
-            rv = tc.post('/auth/manage_user/{0}'.format(user.id),
+            rv = tc.post(url_for('auth.manage_user', user_id=user.id),
                          data=data,
                          follow_redirects=True)
         self.assertTrue('No changes made' in str(rv.data))
@@ -432,7 +575,7 @@ class TestManageUserWithDB(unittest.TestCase):
         db.session.commit()
         with self.app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
-            rv = tc.get('/auth/manage_user', follow_redirects=False)
+            rv = tc.get(url_for('auth.manage_user'), follow_redirects=False)
             print(rv.data)
         self.assertTrue('/auth/select_user' in str(rv.location))
 
@@ -443,7 +586,8 @@ class TestManageUserWithDB(unittest.TestCase):
         db.session.commit()
         with self.app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
-            rv = tc.get('/auth/manage_user/999', follow_redirects=True)
+            rv = tc.get(url_for('auth.manage_user', user_id=999),
+                        follow_redirects=True)
         self.assertTrue('Error: No user exists with' in str(rv.data))
 
     def test_manage_user_update_permissions(self):
@@ -457,7 +601,7 @@ class TestManageUserWithDB(unittest.TestCase):
             login(user.name, 'hunter2', tc=tc)
             self.assertFalse(cavy.can(Permission.MANAGE_SEEDS))
             data1 = self.make_form_data(cavy, manage_seeds=True)
-            tc.post('/auth/manage_user/{0}'.format(cavy.id),
+            tc.post(url_for('auth.manage_user', user_id=cavy.id),
                     data=data1,
                     follow_redirects=True)
             self.assertTrue(cavy.can(Permission.MANAGE_SEEDS))
@@ -465,7 +609,7 @@ class TestManageUserWithDB(unittest.TestCase):
             data2 = self.make_form_data(cavy,
                                         manage_users=True,
                                         manage_seeds=False)
-            tc.post('/auth/manage_user/{0}'.format(cavy.id),
+            tc.post(url_for('auth.manage_user', user_id=cavy.id),
                     data=data2,
                     follow_redirects=True)
             self.assertTrue(cavy.can(Permission.MANAGE_USERS))
@@ -478,7 +622,8 @@ class TestManageUserWithDB(unittest.TestCase):
         db.session.commit()
         with self.app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
-            rv = tc.get('/auth/manage_user/3d', follow_redirects=True)
+            rv = tc.get(url_for('auth.manage_user', user_id='3d'),
+                        follow_redirects=True)
         self.assertTrue('Error: User id must be an integer!' in str(rv.data))
 
 
@@ -504,7 +649,9 @@ class TestRegisterWithDB(unittest.TestCase):
             password='hunter2',
             password2='hunter2',
             username='AzureDiamond')
-        self.tc.post('/auth/register', data=data, follow_redirects=True)
+        self.tc.post(url_for('auth.register'),
+                     data=data,
+                     follow_redirects=True)
         user = User.query.filter_by(name='AzureDiamond').first()
         self.assertEqual(user.email, 'gullible@bash.org')
 
@@ -516,7 +663,9 @@ class TestRegisterWithDB(unittest.TestCase):
             password='hunter2',
             password2='hunter2',
             username='AzureDiamond')
-        rv = self.tc.post('/auth/register', data=data, follow_redirects=True)
+        rv = self.tc.post(url_for('auth.register'),
+                          data=data,
+                          follow_redirects=True)
         self.assertTrue('A confirmation email has been sent' in str(rv.data))
 
 
@@ -544,7 +693,7 @@ class TestResendConfirmationWithDB(unittest.TestCase):
             user.log_email_request('confirm account', time=time)
         db.session.add(user)
         db.session.commit()
-        rv = self.tc.post('/auth/resend_confirmation',
+        rv = self.tc.post(url_for('auth.resend_confirmation'),
                           data=dict(email=user.email),
                           follow_redirects=True)
         self.assertTrue('Error: Too many requests have been made' in
@@ -558,7 +707,7 @@ class TestResendConfirmationWithDB(unittest.TestCase):
         db.session.commit()
         user.log_email_request('confirm account')
         data = dict(email=user.email)
-        rv = self.tc.post('/auth/resend_confirmation',
+        rv = self.tc.post(url_for('auth.resend_confirmation'),
                           data=data,
                           follow_redirects=True)
         self.assertTrue('Error: A confirmation email has already been sent' in
@@ -576,7 +725,7 @@ class TestResendConfirmationWithDB(unittest.TestCase):
         db.session.commit()
         with self.app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
-            rv = tc.get('/auth/resend_confirmation',
+            rv = tc.get(url_for('auth.resend_confirmation'),
                         follow_redirects=True)
             self.assertTrue('Error: Your account is already' in str(rv.data))
 
@@ -586,7 +735,7 @@ class TestResendConfirmationWithDB(unittest.TestCase):
         user.confirmed = False
         db.session.add(user)
         db.session.commit()
-        rv = self.tc.post('/auth/resend_confirmation',
+        rv = self.tc.post(url_for('auth.resend_confirmation'),
                           data=dict(email=user.email),
                           follow_redirects=True)
         self.assertTrue('Confirmation email sent to' in str(rv.data))
@@ -621,35 +770,6 @@ class TestResetPasswordWithDB(unittest.TestCase):
                            data=data1,
                            follow_redirects=True)
         self.assertTrue('Error: wrong email address!' in str(rv1.data))
-
-    def test_reset_password_email_request_too_many(self):
-        """Flash an error if too many requests have been made."""
-        self.app.config['ERFP_MAX_REQUESTS'] = 10
-        self.app.config['ERFP_MINUTES_BETWEEN_REQUESTS'] = 5
-        user = make_dummy_user()
-        time = datetime.utcnow() - timedelta(minutes=6)
-        for i in range(0, 11):
-            user.log_email_request('reset password', time=time)
-        db.session.add(user)
-        db.session.commit()
-        rv = self.tc.post('/auth/reset_password',
-                          data=dict(email=user.email),
-                          follow_redirects=True)
-        self.assertTrue('Error: Too many requests have been made to reset' in
-                        str(rv.data))
-
-    def test_reset_password_email_request_too_soon(self):
-        """Flash an error if request made too soon after previous one."""
-        self.app.config['ERFP_MINUTES_BETWEEN_REQUESTS'] = 5
-        user = make_dummy_user()
-        user.log_email_request('reset password')
-        db.session.add(user)
-        db.session.commit()
-        rv = self.tc.post('/auth/reset_password',
-                          data=dict(email=user.email),
-                          follow_redirects=True)
-        self.assertTrue('Error: A request to reset your password has' in
-                        str(rv.data))
 
     def test_reset_password_resets_password(self):
         """reset_password resets the user's password with valid submission."""
@@ -706,6 +826,50 @@ class TestResetPasswordWithDB(unittest.TestCase):
                           follow_redirects=True)
         self.assertTrue('Error: Given token is invalid' in str(rv.data))
 
+
+class TestResetPasswordRequestWithDB(unittest.TestCase):
+    """Test reset_password_request route in the auth module."""
+    def setUp(self):
+        self.app = create_app('testing')
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+        self.tc = self.app.test_client()
+        db.create_all()
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
+
+    def test_reset_password_request_email_request_too_many(self):
+        """Flash an error if too many requests have been made."""
+        self.app.config['ERFP_MAX_REQUESTS'] = 10
+        self.app.config['ERFP_MINUTES_BETWEEN_REQUESTS'] = 5
+        user = make_dummy_user()
+        time = datetime.utcnow() - timedelta(minutes=6)
+        for i in range(0, 11):
+            user.log_email_request('reset password', time=time)
+        db.session.add(user)
+        db.session.commit()
+        rv = self.tc.post(url_for('auth.reset_password_request'),
+                          data=dict(email=user.email),
+                          follow_redirects=True)
+        self.assertTrue('Error: Too many requests have been made to reset' in
+                        str(rv.data))
+
+    def test_reset_password_request_email_request_too_soon(self):
+        """Flash an error if request made too soon after previous one."""
+        self.app.config['ERFP_MINUTES_BETWEEN_REQUESTS'] = 5
+        user = make_dummy_user()
+        user.log_email_request('reset password')
+        db.session.add(user)
+        db.session.commit()
+        rv = self.tc.post(url_for('auth.reset_password_request'),
+                          data=dict(email=user.email),
+                          follow_redirects=True)
+        self.assertTrue('Error: A request to reset your password has' in
+                        str(rv.data))
+
     def test_reset_password_request_success_message(self):
         """reset_password_request flashes a success message on success."""
         user = make_dummy_user()
@@ -713,7 +877,7 @@ class TestResetPasswordWithDB(unittest.TestCase):
         db.session.add(user)
         db.session.commit()
         data = dict(email=user.email)
-        rv = self.tc.post('/auth/reset_password',
+        rv = self.tc.post(url_for('auth.reset_password_request'),
                           data=data,
                           follow_redirects=True)
         self.assertTrue('An email with instructions' in str(rv.data))
@@ -740,10 +904,10 @@ class TestSelectUserWithDB(unittest.TestCase):
         db.session.commit()
         with self.app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
-            rv = self.tc.post(
-                '/auth/select_user?target_route=auth.manage_user',
-                data=dict(select_user=1),
-                follow_redirects=False)
+            rv = self.tc.post(url_for('auth.select_user',
+                                      target_route='auth.manage_user'),
+                              data=dict(select_user=1),
+                              follow_redirects=False)
             self.assertEqual(rv.location, url_for('auth.manage_user',
                                                   user_id=1,
                                                   _external=True))
@@ -760,7 +924,7 @@ def login(username, password, tc):
         flask.wrappers.Response: Response object (generated web page and
                                  related data) from the login POST.
     """
-    return tc.post('/auth/login', data=dict(
+    return tc.post(url_for('auth.login'), data=dict(
         login=username,
         password=password
         ), follow_redirects=True)

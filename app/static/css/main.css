@@ -81,7 +81,6 @@ h1 {
     color: #060;
     border-bottom: 0.3em solid #4f4;
     padding-bottom: 0.2em;
-    margin-bottom: 0.4em;
     font-size: 1.5em;
 }
 
@@ -156,8 +155,8 @@ nav ul#nav_auth, nav ul#nav_manage {
     background-color: #66cc66;
 }
 
-nav ul#nav_auth li {
-    display: inline;
+nav ul li {
+    display: inline-block;
 }
 
 nav ul#nav_auth li+li {
@@ -169,10 +168,6 @@ nav ul#nav_manage {
     margin-top: 0.4em;
 }
 
-nav ul#nav_manage li {
-    display: inline;
-}
-
 nav ul#nav_manage li+li {
     border-left: 1px solid #ffa;
 }
@@ -182,22 +177,6 @@ nav ul#nav_manage:target {
 }
 
 /* END horizontal nav */
-
-a.registration_link {
-    color: #000000;
-    display: inline-block;
-    background-color: #ccffcc;
-    border: 1px solid #aaddaa;
-    font-size: 0.8em;
-    padding: 0.4em;
-    text-decoration: none;
-}
-
-a.registration_link:hover {
-    text-decoration: underline;
-    background-color: #ccccff;
-    border-color: #aaaadd;
-}
 
 /* BEGIN flashed messages */
 .flashed_message, .flashed_error {
@@ -224,37 +203,96 @@ a.registration_link:hover {
 }
 /* END flashed messages */
 
-/* form elements */
+/* BEGIN buttons */
+input[type=submit], a.button {
+    color: #ffffff;
+    text-decoration: none;
+    text-shadow: 1px 1px 1px #223322;
+    border-style: solid;
+    border-width: 1px;
+    border-color: #339933;
+    border-radius: 0.4em;
+    background-color: #55cc55;
+    margin-top: 0.5em;
+    margin-bottom: 0.5em;
+    padding-top: 0.5em;
+    padding-bottom: 0.5em;
+    padding-left: 1em;
+    padding-right: 1em;
+    box-sizing: border-box;
+}
+
+input[type=submit]:hover, a.button:hover {
+    background-color: #77dd77;
+    border-color: #55bb55;
+}
+
+input[type=submit]:active, a.button:active {
+    border-style: inset;
+    text-shadow: -1px -1px 1px #223322;
+}
+
+a#delete_user {
+    background-color: #cc5555;
+    border-color: #993333;
+    text-shadow: 1px 1px 1px #332222;
+    float: left;
+}
+
+a#delete_user:hover {
+    background-color: #dd7777;
+    border-color: #bb5555;
+}
+
+a#delete_user:active {
+    text-shadow: -1px -1px 1px #3322;
+}
+/* END buttons */
+
+/* BEGIN forms */
+form {
+    clear: both;
+    display: block;
+    margin-top: 0.5em;
+    margin-bottom: 0.5em;
+}
 form li {
     display: block;
+    margin-bottom: 1em;
 }
+
 form fieldset {
+    display: inline-block;
     border-style: solid;
     border-width: 1px;
     border-color: #99ff99;
-    margin-top: 1em;
-    margin-bottom: 1em;
+    margin-bottom: 0.5em;
     padding: 0.5em;
-    width: 100%;
-    max-width: fit-content;
-    max-width: -moz-fit-content;
-    max-width: -webkit-fit-content;
+    vertical-align: top;
 }
+
 fieldset legend {
     border: 1px solid #00dd00;
     padding: 0.25em;
 }
 
 label {
-    display: inline-block;
-    margin-right: 0.5em;
-    width: 10em;
-    max-width: 80%;
-    text-align: right;
+    text-align: left;
 }
-input {
-    display: inline-block;
+
+label + input {
+    display: block;
+    margin-top: 0.2em;
 }
+
+label + input[type=checkbox] {
+    display: inline;
+}
+
+input[type=checkbox] + label {
+    display: inline;
+}
+
 input[type=text], input[type=password], textarea {
     min-width: 200px;
     width: 20%;
@@ -262,64 +300,28 @@ input[type=text], input[type=password], textarea {
     color: black;
     background-color: white;
     border: 1px solid #888;
-    margin-top: 2px;
 }
+
 input[type=text]:focus, input[type=password]:focus, textarea:focus {
     background-color: #ffff99;
 }
+
 input[type=text]:hover, input[type=password]:hover, textarea:hover {
     border: 1px solid #88f;
     background-color: #ddf;
 }
-input[type=submit] {
-    margin-top: 0.5em;
-    margin-left: 13em;
-}
+
 label:after {
     content: ": ";
 }
+
 .form_error {
     background-color: #faa;
-    padding-left: 0.2em;
-    padding-right: 0.2em;
+    padding-left: 0.4em;
+    padding-right: 0.4em;
+    padding-top: 0.3em;
+    padding-bottom: 0.3em;
     margin: 0.2em;
     display: inline-block;
 }
-
-@media (max-width: 800px) {
-    input[type=submit] {
-        margin-left: 0;
-    }
-    input {
-        display: block;
-        margin-bottom: 0.5em;
-    }
-    label {
-        display: block;
-        text-align: left;
-        margin-top: 0.5em;
-    }
-    .form_error:before {
-        content: "^ ";
-    }
-}
-
-/* form tooltips */
-span.tooltip {
-    margin-right: 50px;     /* This should = margin-right + padding-right of body */
-    z-index: 10;
-    background-color: #ddf;
-    color: #000;
-    padding: 3px 6px 3px 6px;
-    border: 1px solid #99b;
-    margin-left: 1em;
-    border-radius: 3px;
-    box-shadow: 3px 3px 4px #668;
-}
-input + span.tooltip, textarea + span.tooltip {
-    display: none;
-}
-input:hover + span.tooltip, textarea:hover + span.tooltip {
-    display: inline;
-    position: absolute;
-}
+/* END forms */

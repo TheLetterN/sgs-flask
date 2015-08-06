@@ -9,12 +9,22 @@
         <link rel="canonical" href="{{ url_for('auth.manage_user', _external=True) }}">
 {% endblock %}
 {% block main %}
-            <h1>Manage User: {{ username }}</h1>
+            <h1>Manage User: {{ user.name }}</h1>
+            <a class="button" id="delete_user" href="{{ url_for('auth.delete_user', uid=user.id) }}">Delete {{ user.name }}'s Account</a>
             <form method="POST">
                 {{ form.hidden_tag() }}
                 <ol>
                     <fieldset>
-                        <legend>Change {{ username }}'s Email Address:</legend>
+                        <legend>Change {{ user.name }}'s Account Status:</legend>
+                        <li>
+                            {{ form.confirmed.label }}
+                            {{ form.confirmed }}
+                            {% if form.confirmed.errors|count > 0 %}
+                            {{ form_errors(form.confirmed) }}
+                            {% endif %}
+                    </fieldset>
+                    <fieldset>
+                        <legend>Change {{ user.name }}'s Email Address:</legend>
                         <li>
                             {{ form.email1.label }}
                             {{ form.email1 }}
@@ -31,7 +41,7 @@
                         </li>
                     </fieldset>
                     <fieldset>
-                        <legend>Change {{ username }}'s Password:</legend>
+                        <legend>Change {{ user.name }}'s Password:</legend>
                         <li>
                             {{ form.password1.label }}
                             {{ form.password1 }}
@@ -48,7 +58,7 @@
                         </li>
                     </fieldset>
                     <fieldset>
-                        <legend>Change {{ username }}'s Username:</legend>
+                        <legend>Change {{ user.name }}'s Username:</legend>
                         <li>
                             {{ form.username1.label }}
                             {{ form.username1 }}
@@ -65,7 +75,7 @@
                         </li>
                     </fieldset>
                     <fieldset>
-                        <legend>Change {{ username }}'s Permissions</legend>
+                        <legend>Change {{ user.name }}'s Permissions</legend>
                         <li>
                             {{ form.manage_users.label }}
                             {{ form.manage_users }}
@@ -76,6 +86,9 @@
                         <li>
                             {{ form.manage_seeds.label }}
                             {{ form.manage_seeds }}
+                            {% if form.manage_seeds.errors|count > 0 %}
+                            {{ form_errors(form.manage_seeds) }}
+                            {% endif %}
                         </li>
                     </fieldset>
                     <li>

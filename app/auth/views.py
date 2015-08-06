@@ -5,9 +5,9 @@ from flask.ext.login import current_user, login_required, login_user, \
 from app import db
 from app.decorators import permission_required
 from . import auth
-from .forms import EditUserForm, ManageUserForm, LoginForm, RegistrationForm, \
-    ResendConfirmationForm, ResetPasswordForm, ResetPasswordRequestForm, \
-    SelectUserForm
+from .forms import DeleteUserForm, EditUserForm, ManageUserForm, LoginForm, \
+    RegistrationForm, ResendConfirmationForm, ResetPasswordForm, \
+    ResetPasswordRequestForm, SelectUserForm
 from .models import get_user_from_confirmation_token, Permission, User
 
 
@@ -85,6 +85,52 @@ def confirm_new_email(token):
         return redirect(url_for('auth.edit_user'))
 
 
+@auth.route('/delete_user/<uid>', methods=['GET', 'POST'])
+@login_required
+@permission_required(Permission.MANAGE_USERS)
+def delete_user(uid=None):
+    """Allow a user with MANAGE_USERS permission to delete another user.
+
+    Args:
+        uid (int): The id number of a user in the database.
+
+    Returns:
+        function: Redirect to auth.manage_user with error message if active
+                  user tries to delete their own account.
+        function: Redirect to auth.manage_user with error message if uid is
+                  not an integer.
+        function: Redirect to auth.manage_user with error message if no user
+                  exists with the id number given.
+        function: Redirect to auth.manage_user with success message if user is
+                  deleted successfully.
+        function: Render auth/delete_user.html template if uid is valid and no
+                  form data has been submitted.
+    """
+    try:
+        if int(uid) == current_user.id:
+            flash('Error: You cannot delete yourself! If you really wish to ' +
+                  'have your account deleted, please ask another ' +
+                  'administrator.')
+            return redirect(url_for('auth.manage_user'))
+    except:
+        flash('Error: Invalid or malformed user ID!')
+        return redirect(url_for('auth.manage_user'))
+    user = User.query.get(uid)
+    if user is None:
+        flash('Error: No user exists with that ID number!')
+        return redirect(url_for('auth.manage_user'))
+    form = DeleteUserForm()
+    if form.validate_on_submit():
+        # flash message first so we can use user data in it.
+        flash('User {0}: {1} has been deleted!'.format(user.id, user.name))
+        db.session.delete(user)
+        db.session.commit()
+        return redirect(url_for('auth.manage_user'))
+    return render_template('auth/delete_user.html',
+                           form=form,
+                           user=user)
+
+
 @auth.route('/edit_user', methods=['GET', 'POST'])
 @login_required
 def edit_user():
@@ -103,7 +149,7 @@ def edit_user():
         try:
             if form.email1.data is not None and len(form.email1.data) > 0 and \
                     form.email1.data != current_user.email:
-                if current_app.config['TESTING'] is False:  # pragma: no cover
+                if not current_app.config['TESTING']:  # pragma: no cover
                     current_user.send_new_email_confirmation(form.email1.data)
                 flash('A confirmation email has been sent to ' +
                       '{0}.'.format(form.email1.data) + ' Please check your ' +
@@ -121,13 +167,11 @@ def edit_user():
             # if we are to use them, so we can safely do nothing if len()
             # raises a TypeError.
             pass
-        if user_edited is True:
+        if user_edited:
             return redirect(url_for('main.index'))
         else:
             flash('No changes have been made to your account.')
             return redirect(url_for('auth.edit_user'))
-    form.email1.data = current_user.email
-    form.email2.data = current_user.email
     return render_template('auth/edit_user.html', form=form)
 
 
@@ -223,7 +267,22 @@ def manage_user(user_id=None):
     form = ManageUserForm()
     if form.validate_on_submit():
         user_info_changed = False
-        if form.email1.data != user.email:
+        if not user.confirmed and form.confirmed.data:
+            flash('{0}\'s account is now confirmed.'.format(user.name))
+            user.confirmed = True
+            user_info_changed = True
+        if user.confirmed and not form.confirmed.data:
+            if current_user.id == user.id:
+                flash('Error: You cannot revoke your own account\'s' +
+                      ' confirmed status! If you really wish to do this, ' +
+                      ' please ask another administrator to do it for you.')
+            else:
+                flash('{0}\'s account is no'.format(user.name) +
+                      ' longer confirmed.')
+                user.confirmed = False
+                user_info_changed = True
+        if form.email1.data is not None and len(form.email1.data) > 0 and \
+                form.email1.data != user.email:
             if User.query.filter_by(email=form.email1.data).first() is None:
                 user.email = form.email1.data
                 flash('{0}\'s email address'.format(user.name) +
@@ -232,14 +291,16 @@ def manage_user(user_id=None):
             else:
                 flash('Error: Email address already in use by another user!')
         if form.password1.data is not None and len(form.password1.data) > 0:
-            if user.verify_password(form.password1.data) is False:
+            if not user.verify_password(form.password1.data):
                 # Just in case an admin tries to guess a password created by
                 # the user for nefarious purposes, even though they'd have to
                 # get it right on the first try to know they got it right.
                 user.set_password(form.password1.data)
             flash('{0}\'s password has been changed.'.format(user.name))
             user_info_changed = True
-        if form.username1.data != user.name:
+        if form.username1.data is not None and \
+                len(form.username1.data) > 0 and \
+                form.username1.data != user.name:
             if User.query.filter_by(name=form.username1.data).first() is \
                     None:
                 flash('{0}\'s username'.format(user.name) +
@@ -248,7 +309,7 @@ def manage_user(user_id=None):
                 user_info_changed = True
             else:
                 flash('Error: Username is already in use by someone else!')
-        if form.manage_users.data is False and user.id == current_user.id:
+        if not form.manage_users.data and user.id == current_user.id:
             flash('Error: Please do not try to remove permission to manage'
                   ' users from yourself! If you really need the permission'
                   ' revoked, ask another administrator to do it.')
@@ -271,17 +332,15 @@ def manage_user(user_id=None):
             flash('No changes made to {0}\'s account.'.format(user.name))
         return redirect(url_for('auth.manage_user', user_id=user_id))
     # Populate form with existing data:
-    form.email1.data = user.email
-    form.email2.data = user.email
-    form.username1.data = user.name
-    form.username2.data = user.name
+    if user.confirmed:
+        form.confirmed.data = True
     if user.can(Permission.MANAGE_USERS):
         form.manage_users.data = True
     if user.can(Permission.MANAGE_SEEDS):
         form.manage_seeds.data = True
     return render_template('auth/manage_user.html',
                            form=form,
-                           username=user.name)
+                           user=user)
 
 
 @auth.route('/register', methods=['GET', 'POST'])
@@ -300,7 +359,7 @@ def register():
         user.set_password(form.password.data)
         db.session.add(user)
         db.session.commit()
-        if current_app.config['TESTING'] is False:  # pragma: no cover
+        if not current_app.config['TESTING']:  # pragma: no cover
             user.send_account_confirmation_email()
         flash('A confirmation email has been sent to ' + form.email.data +
               ', please check your email for further instructions.')
@@ -330,31 +389,33 @@ def resend_confirmation():
     form = ResendConfirmationForm()
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data).first()
-        if user.confirmed is True:  # pragma: no cover
+        if user.confirmed:  # pragma: no cover
             # This is here just in case; it should never be needed, as the form
             # will not validate if the user is already confirmed.
             flash('Error: Account already confirmed!')
             return redirect(url_for('main.index'))
         if user.email_request_too_soon('confirm account'):
             mbr = current_app.config['ERFP_MINUTES_BETWEEN_REQUESTS']
-            # TODO Make it easy for the user to contact support.
             flash('Error: A confirmation email has already been sent' +
                   ' within the last {0} minutes.'.format(mbr) +
                   ' If you did not recieve it, it may have been marked as' +
                   ' spam, so please check your spam folder/filter, and try' +
-                  ' again in {0} minutes if needed.'.format(mbr))  # tmp
+                  ' again in {0} minutes if needed.'.format(mbr) +
+                  ' If the problem persists or you would like help, please ' +
+                  support_mailto_address('contact support',
+                                         'Trouble Confirming Account') + '.')
             return redirect(url_for('main.index'))
         if user.email_request_too_many('confirm account'):
-            # TODO Make it easy for the user to contact support.
             flash('Error: Too many requests have been made to resend a' +
                   ' confirmation email to this address. For your protection,' +
                   ' we have temporarily blocked all requests to send a' +
                   ' confirmation email to this account. We apologize for' +
-                  ' the inconvenience, and would be happy to assist you' +
-                  ' with getting your account confirmed. Please contact us' +
-                  ' at: support@swallowtailgardenseeds.com.')  # tmp
+                  ' the inconvenience, please ' +
+                  support_mailto_address('contact support',
+                                         'Trouble Confirming Account') +
+                  ' for help confirming your account.')
             return redirect(url_for('main.index'))
-        if current_app.config['TESTING'] is False:  # pragma: no cover
+        if not current_app.config['TESTING']:  # pragma: no cover
             user.send_account_confirmation_email()
         user.log_email_request('confirm account')
         flash('Confirmation email sent to {0}.'.format(form.email.data))
@@ -410,25 +471,26 @@ def reset_password_request():
         user = User.query.filter_by(email=form.email.data).first()
         if user.email_request_too_soon('reset password'):
             mbr = current_app.config['ERFP_MINUTES_BETWEEN_REQUESTS']
-            # TODO Make it easy for the user to contact support.
             flash('Error: A request to reset your password has already been' +
                   ' made within the last {0} minutes.'.format(mbr) +
                   ' If you did not recieve a confirmation email, it may' +
                   ' have been marked as spam, so please check your spam' +
                   ' folder/filter, and try again in {0}'.format(mbr) +
-                  ' minutes if needed.')  # tmp
+                  ' minutes if needed. If you would like help resetting' +
+                  ' your password, please ' +
+                  support_mailto_address('contact support',
+                                         'Trouble Resetting Password') + '.')
             return redirect(url_for('main.index'))
         if user.email_request_too_many('reset password'):
-            # TODO Make it easy for the user to contact support.
             flash('Error: Too many requests have been made to reset the' +
                   ' password for your account. For your protection,' +
                   ' we have temporarily blocked all requests to reset your' +
-                  ' password. We apologize for the inconvenience, and would' +
-                  ' be happy to assist you with getting your account' +
-                  ' confirmed. Please contact us at:' +
-                  ' support@swallowtailgardenseeds.com.')  # tmp
+                  ' password. We apologize for the inconvenience, please ' +
+                  support_mailto_address('contact support',
+                                         'Trouble Resetting Password') +
+                  ' for help resetting your password.')
             return redirect(url_for('main.index'))
-        if current_app.config['TESTING'] is False:  # pragma: no cover
+        if not current_app.config['TESTING']:  # pragma: no cover
             user.send_reset_password_email()
         user.log_email_request('reset password')
         flash('An email with instructions for resetting your password has ' +
@@ -463,6 +525,25 @@ def select_user():
                            target_route=target_route)
 
 
+def support_mailto_address(link_text, subject=None):
+    """Return a mailto link to the support email address, usable in flashes.
+
+    Args:
+        link_text (str): The text to display as the mailto link.
+        subject (str): Optional subject to include in mailto link.
+
+    Returns:
+        Markup: A mailto link for use in flashed messages.
+    """
+    if subject is None:
+        uri = 'mailto:{0}'.format(current_app.config['SUPPORT_EMAIL'])
+    else:
+        uri = 'mailto:{0}?subject={1}'.format(
+            current_app.config['SUPPORT_EMAIL'],
+            subject)
+    return Markup('<a href="{0}">{1}</a>'.format(uri, link_text))
+
+
 def update_permission(user, permission, permission_from_form, permission_name):
     """Update a permission if it has been changed in the submitted form.
 
@@ -479,14 +560,14 @@ def update_permission(user, permission, permission_from_form, permission_name):
         bool: True if the permission has changed, False if it is unchanged.
     """
     if user.can(permission):
-        if permission_from_form is False:
+        if not permission_from_form:
             user.revoke_permission(permission)
             flash('{0} may no longer {1}.'.format(user.name, permission_name))
             return True
         else:
             return False
     else:
-        if permission_from_form is True:
+        if permission_from_form:
             user.grant_permission(permission)
             flash('{0} may now {1}.'.format(user.name, permission_name))
             return True

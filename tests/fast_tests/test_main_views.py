@@ -1,4 +1,5 @@
 import unittest
+from flask import url_for
 from app import create_app
 
 
@@ -15,7 +16,7 @@ class TestMainRoutes(unittest.TestCase):
 
     def test_index_returns_valid_page(self):
         """If the index page breaks due to code changes, we want to know."""
-        retval = self.tc.get('/')
+        retval = self.tc.get(url_for('main.index'))
         self.assertEqual(retval.status_code, 200)
 
     def test_other_index_pages_redirect_to_main_index(self):

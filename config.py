@@ -27,6 +27,7 @@ class Config(object):
         SQLALCHEMY_COMMIT_ON_TEARDOWN (bool): Whether or not to commit
                                               changes to database on
                                               teardown.
+        SUPPORT_EMAIL (str): Email address for users to contact support.
     """
     try:
         ADMINISTRATORS = os.environ.get('SGS_ADMINISTRATORS').split(', ')
@@ -42,10 +43,12 @@ class Config(object):
     EMAIL_SUBJECT_PREFIX = os.environ.get('SGS_EMAIL_SUBJECT_PREFIX') or \
         'Swallowtail Garden Seeds - '
     INFO_EMAIL = os.environ.get('SGS_INFO_EMAIL') or \
-        'nicholasp@localhost'   # TODO: Change this address!
+        'info@swallowtailgardenseeds.com'
     SECRET_KEY = os.environ.get('SGS_SECRET_KEY') or \
         '\xbdc@:b\xac\xfa\xfa\xd1z[\xa3=\xd1\x9a\x0b&\xe3\x1d5\xe9\x84(\xda'
     SQLALCHEMY_COMMIT_ON_TEARDOWN = True
+    SUPPORT_EMAIL = os.environ.get('SGS_SUPPORT_EMAIL') or \
+        'support@swallowtailgardenseeds.com'
 
     @staticmethod
     def init_app(app):

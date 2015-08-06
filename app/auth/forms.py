@@ -2,8 +2,31 @@ from flask.ext.login import current_user
 from flask.ext.wtf import Form
 from wtforms import BooleanField, PasswordField, StringField, SelectField, \
     SubmitField, ValidationError
-from wtforms.validators import Email, EqualTo, InputRequired, Length, Regexp
+from wtforms.validators import AnyOf, Email, EqualTo, InputRequired, Length,\
+    Optional, Regexp
 from app.auth.models import User
+
+
+class DeleteUserForm(Form):
+    """Form to confirm deleting a user from the database.
+
+    Attributes:
+        confirmation (StringField): Field requiring active user type in a
+                                    string confirming they want to delete
+                                    the user.
+        password (PasswordField): Active user's password as extra security
+                                  to avoid malicious attempts to delete users.
+        submit (SubmitField): Submit button.
+    """
+    confirmation = StringField(
+        'Type "THIS CANNOT BE UNDONE" to confirm',
+        validators=[AnyOf(values=['THIS CANNOT BE UNDONE'],
+                          message='You must type "THIS CANNOT BE UNDONE" ' +
+                                  '(without the "") in this field to delete ' +
+                                  'this user!')])
+    password = PasswordField('Enter Your Password',
+                             validators=[InputRequired()])
+    submit = SubmitField('Delete User')
 
 
 class EditUserForm(Form):
@@ -20,16 +43,16 @@ class EditUserForm(Form):
         submit (SubmitField): Submit button.
     """
     email1 = StringField(
-        'New Email',
-        validators=[Email(), Length(1, 254)])
+        'New Email Address',
+        validators=[Email(), Length(1, 254), Optional()])
     email2 = StringField(
-        'Confirm Email',
+        'Confirm New Email Address',
         validators=[EqualTo('email1', message="Email addresses must match!")])
     new_password1 = PasswordField(
         'New Password',
-        validators=[Length(0, 64)])
+        validators=[Length(1, 64), Optional()])
     new_password2 = PasswordField(
-        'Confirm Password',
+        'Confirm New Password',
         validators=[EqualTo('new_password1', message='Passwords must match!')])
     current_password = PasswordField(
         'Current Password',
@@ -71,22 +94,31 @@ class ManageUserForm(Form):
     """Form to allow user with MANAGE_USERS permission to edit user data.
 
     Attributes:
+        confirmed (BooleanField): Field to check whether or not the user's
+                                  account is confirmed.
+        email1 (StringField): Field for new email address.
+        email2 (StringField): Field to re-type new email address in.
         manage_permissions (BooleanField): Whether or not user is allowed to
                                            change users' permissions.
         manage_seeds (BooleanField): Whether or not the user is allowed to
                                      manage the seeds database.
+        password1 (PasswordField): Field for new password.
+        password2 (PasswordField): Field to re-type new password in.
         submit (SubmitField): Submit button.
+        username1 (StringField): Field for new username.
+        username2 (StringField): Field to re-type new username in.
     """
     # Account Information
+    confirmed = BooleanField('Confirmed')
     email1 = StringField(
-        'New Email',
-        validators=[Email(), Length(1, 254)])
+        'New Email Address',
+        validators=[Email(), Length(1, 254), Optional()])
     email2 = StringField(
-        'Confirm Email',
+        'Confirm New Email Address',
         validators=[EqualTo('email1', message='Email addresses must match!')])
     password1 = PasswordField(
         'New Password',
-        validators=[Length(0, 64)])
+        validators=[Length(1, 64), Optional()])
     password2 = PasswordField(
         'Confirm Password',
         validators=[EqualTo('password1', message='Passwords must match!')])
@@ -97,7 +129,7 @@ class ManageUserForm(Form):
             Regexp('^[A-Za-z0-9][A-Za-z0-9_. ]*$', 0,
                    'Username must begin with a letter or number,  and may only'
                    ' contain letters, numbers, spaces, dots, dashes, and'
-                   ' underscores.')])
+                   ' underscores.'), Optional()])
     username2 = StringField(
         'Confirm Username',
         validators=[EqualTo('username1', message='Usernames must match!')])
@@ -188,7 +220,7 @@ class ResendConfirmationForm(Form):
         if user is None:
             raise ValidationError('There is no account associated with this '
                                   'email address!')
-        elif user.confirmed is True:
+        elif user.confirmed:
             raise ValidationError('The account associated with this email '
                                   'address has already been confirmed!')
 

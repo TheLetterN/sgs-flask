@@ -171,13 +171,11 @@ class User(UserMixin, db.Model):
             days = current_app.config['ERFP_DAYS_TO_TRACK']
         if maximum is None:
             maximum = current_app.config['ERFP_MAX_REQUESTS']
-        reqs = self.email_requests.filter_by(sender=sender).all()
-        if len(reqs) <= maximum:
+        if self.email_requests.filter_by(sender=sender).count() <= maximum:
             return False
         else:
             self.prune_email_requests(sender=sender, days=days)
-            reqs = self.email_requests.filter_by(sender=sender).all()
-            if len(reqs) <= maximum:
+            if self.email_requests.filter_by(sender=sender).count() <= maximum:
                 return False
             else:
                 return True

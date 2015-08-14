@@ -1,6 +1,6 @@
 import unittest
 from app import create_app, db
-from app.seeds.models import Packet, UnitType
+from app.seeds.models import BotanicalName, Packet, Seed, UnitType
 
 
 class TestPacketWithDB(unittest.TestCase):
@@ -46,6 +46,126 @@ class TestPacketWithDB(unittest.TestCase):
         pkt3.unit_type = ('oz')
         db.session.add(pkt3)
         self.assertIsNot(pkt.unit_type, pkt3.unit_type)
+
+
+class TestSeedWithDB(unittest.TestCase):
+    """Test Seed model methods that require database access."""
+    def setUp(self):
+        self.app = create_app('testing')
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+        db.create_all()
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
+
+    def test_add_botanical_name_no_duplicates(self):
+        """There should only be one of each botanical name in the db."""
+        seed1 = Seed()
+        seed1.add_botanical_name('Asclepias incarnata')
+        db.session.add(seed1)
+        db.session.commit()
+        seed2 = Seed()
+        seed2.add_botanical_name('Asclepias incarnata')
+        db.session.add(seed2)
+        self.assertEqual(BotanicalName.query.count(), 1)
+        self.assertIs(seed1._botanical_names.first(),
+                      seed2._botanical_names.first())
+        seed1.add_botanical_name('Echinacea purpurea')
+        db.session.add(seed1)
+        self.assertEqual(seed1._botanical_names.count(), 2)
+        self.assertEqual(seed2._botanical_names.count(), 1)
+
+    def test_add_botanical_name_new(self):
+        """Adds a new botanical name if not already in db."""
+        seed = Seed()
+        seed.add_botanical_name('Asclepias incarnata')
+        db.session.add(seed)
+        self.assertEqual(BotanicalName.query.count(), 1)
+        print(seed._botanical_names.first().botanical_name)
+        self.assertEqual(seed._botanical_names.filter_by(
+            _botanical_name='Asclepias incarnata').count(), 1)
+        seed.add_botanical_name('Echinacea purpurea')
+        db.session.add(seed)
+        self.assertEqual(BotanicalName.query.count(), 2)
+        self.assertEqual(seed._botanical_names.count(), 2)
+        self.assertEqual(seed._botanical_names.filter_by(
+            _botanical_name='Echinacea purpurea').count(), 1)
+
+    def test_botanical_names_getter_returns_list_of_strings(self):
+        """Returns a list of strings from BotanicalName.botanical_name."""
+        seed = Seed()
+        seed.add_botanical_name('Asclepias incarnata')
+        seed.add_botanical_name('Echinacea purpurea')
+        seed.add_botanical_name('Canis lupus')  # Totally a seed!
+        db.session.add(seed)
+        bns = seed.botanical_names
+        self.assertTrue(isinstance(bns, list))
+        self.assertIn('Asclepias incarnata', bns)
+        self.assertIn('Echinacea purpurea', bns)
+        self.assertIn('Canis lupus', bns)
+
+    def test_botanical_names_setter_bad_type(self):
+        """Raise a TypeError if given data that isn't a list or a string."""
+        seed = Seed()
+        with self.assertRaises(TypeError):
+            seed.botanical_names = 42
+        with self.assertRaises(TypeError):
+            seed.botanical_names = ('four', 'two', 'eleventy')
+
+    def test_botanical_names_setter_list(self):
+        """Clear _botanical_names and add assigned list of names to it."""
+        seed = Seed()
+        seed.add_botanical_name('Canis lupus')  # Well, maybe it's a seed.
+        db.session.add(seed)
+        bn_list = ['Asclepias incarnata',
+                   'Echinacea purpurea',
+                   'Digitalis lanata']
+        seed.botanical_names = bn_list
+        self.assertNotIn('Canis lupus', seed.botanical_names)
+        self.assertEqual(seed.botanical_names, bn_list)
+
+    def test_botanical_names_setter_string(self):
+        """Clear _botanical_names and add the name assigned."""
+        seed = Seed()
+        seed.add_botanical_name('Asclepias incarnata')
+        db.session.add(seed)
+        seed.botanical_names = 'Echinacea purpurea'
+        self.assertIn('Echinacea purpurea', seed.botanical_names)
+        self.assertNotIn('Asclepias incarnata', seed.botanical_names)
+
+    def test_clear_botanical_names_removes_names(self):
+        """Remove all botanical names from seed and return # of removed."""
+        seed = Seed()
+        seed.add_botanical_name('Asclepias incarnata')
+        seed.add_botanical_name('Echinacea purpurea')
+        seed.add_botanical_name('Digitalis lanata')
+        db.session.add(seed)
+        self.assertEqual(seed.clear_botanical_names(), 3)
+        self.assertEqual(seed._botanical_names.count(), 0)
+        self.assertEqual(BotanicalName.query.count(), 3)
+
+    def test_remove_botanical_name_not_in_database(self):
+        """Returns false if the botanical name is not in _botanical_names."""
+        seed = Seed()
+        db.session.add(seed)
+        self.assertFalse(seed.remove_botanical_name('Asclepias incarnata'))
+
+    def test_remove_botanical_name_succeeds(self):
+        """Returns true and removes name from _botanical_names on success.
+
+        It also should not delete the botanical name from the database.
+        """
+        seed = Seed()
+        seed.add_botanical_name('Asclepias incarnata')
+        seed.add_botanical_name('Canis lupus')  # Okay, not really a seed.
+        db.session.add(seed)
+        self.assertTrue(seed.remove_botanical_name('Canis lupus'))
+        self.assertNotIn('Canis Lupus', seed.botanical_names)
+        self.assertIn('Canis lupus',
+                      [bn.botanical_name for bn in BotanicalName.query.all()])
 
 
 if __name__ == '__main__':

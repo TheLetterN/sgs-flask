@@ -13,7 +13,10 @@ General:
 Classes:
 
 - Magic methods (special Python methods such as __init__ or __repr__) should
-  always be after other methods.
+  always be before other methods.
+- Properties should come directly after magic methods.
+- Static methods and class methods come after properties.
+- Normal methods come last.
 - Data attributes should usually be alphabetical, but if they logically fit
   into subgroups, they should be arranged by subgroup alphabetically (begin
   each subgroup with a comment stating the subgroup's name) and then
@@ -21,7 +24,9 @@ Classes:
 
 Database Models:
 
-- Local data attributes come first, followed by relationships and foreign keys.
+- The primary key should always be the first attribute.
+- Relationships should follow the rules of class attributes.
+- Backrefs should be documented in the docstrings of classes they point to.
 - Association tables should end with _association.
 
 Tests:

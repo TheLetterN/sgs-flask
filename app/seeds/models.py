@@ -1,6 +1,14 @@
 from app import db
 
 
+categories_to_seeds = db.Table(
+    'categories_to_seeds',
+    db.Model.metadata,
+    db.Column('categories_id', db.Integer, db.ForeignKey('categories.id')),
+    db.Column('seeds_id', db.Integer, db.ForeignKey('seeds.id'))
+)
+
+
 seeds_to_botanical_names = db.Table(
     'seeds_to_botanical_names',
     db.Model.metadata,
@@ -8,6 +16,14 @@ seeds_to_botanical_names = db.Table(
     db.Column('botanical_names_id',
               db.Integer,
               db.ForeignKey('botanical_names.id'))
+)
+
+
+seeds_to_packets = db.Table(
+    'seeds_to_packets',
+    db.Model.metadata,
+    db.Column('seeds_id', db.Integer, db.ForeignKey('seeds.id')),
+    db.Column('packets_id', db.Integer, db.ForeignKey('packets.id'))
 )
 
 
@@ -32,7 +48,7 @@ class BotanicalName(db.Model):
                         ValueError if not.
 
     Backrefs:
-        _seeds: Backref to seeds table to allow us to look up seeds by
+       _ seeds: Backref to seeds table to allow us to look up seeds by
                 botanical name.
     """
     __tablename__ = 'botanical_names'
@@ -84,7 +100,6 @@ class BotanicalName(db.Model):
 
         Returns:
             bool: True if botanical_name's first two words constitute a
-                  a validly formatted binomen.
             bool: False if there are formatting errors in the first two words.
             bool: False if botanical_name.split() raises an exception, usually
                   due to botanical_name not being a string.
@@ -119,8 +134,12 @@ class Category(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     category = db.Column(db.String(64), unique=True)
     description = db.Column(db.Text)
+    _seeds = db.relationship('Seed',
+                             secondary=categories_to_seeds,
+                             lazy='dynamic',
+                             backref=db.backref('_categories', lazy='dynamic'))
 
-    def __init__(self, category, description=None):
+    def __init__(self, category=None, description=None):
         """__init__ for Category.
 
         Args:
@@ -132,6 +151,11 @@ class Category(db.Model):
         """
         self.category = category
         self.description = description
+
+    def __repr__(self):
+        """Return representation of Category in human-readable format."""
+        return '<{0} \'{1}\'>'.format(self.__class__.__name__,
+                                      self.category)
 
 
 class Packet(db.Model):
@@ -221,8 +245,8 @@ class Packet(db.Model):
         if '.' in price:
             parts = price.split('.')
             if len(parts) != 2:
-                raise ValueError('Price must be a string containing only a'
-                                 ' 2-point precision decimal number!')
+                raise ValueError('Price must be a string containing only '
+                                 'a 2-point precision decimal number!')
             if not parts[0].isdigit() or not parts[1].isdigit():
                 raise ValueError('Price contains invalid characters!')
             if len(parts[1]) > 2:
@@ -363,6 +387,10 @@ class Seed(db.Model):
     """
     __tablename__ = 'seeds'
     id = db.Column(db.Integer, primary_key=True)
+    botanical_name_id = db.Column(db.Integer,
+                                  db.ForeignKey('botanical_names.id'))
+    _botanical_name = db.relationship('BotanicalName',
+                                      foreign_keys=[botanical_name_id])
     _botanical_names = db.relationship('BotanicalName',
                                        secondary=seeds_to_botanical_names,
                                        lazy='dynamic',
@@ -372,6 +400,45 @@ class Seed(db.Model):
     dropped = db.Column(db.Boolean)
     in_stock = db.Column(db.Boolean)
     name = db.Column(db.String(64), unique=True)
+
+    def __repr__(self):
+        """Return representation of Seed in human-readable format."""
+        return '<{0} \'{1}\'>'.format(self.__class__.__name__,
+                                      self.name)
+
+    @property
+    def botanical_name(self):
+        """Return a single string botanical name for this seed.
+
+        This is the primary botanical name for the seed.
+
+        Returns:
+            string: Botanical name for this seed.
+        """
+        return self._botanical_name.botanical_name
+
+    @botanical_name.setter
+    def botanical_name(self, name):
+        """Set _botanical_name from string to new or existing BotanicalName.
+
+        Args:
+            name (str): The botanical name to set.
+
+        Raises:
+            TypeError: If name is not a string.
+        """
+        if isinstance(name, str):
+            bn = BotanicalName.query.filter_by(_botanical_name=name).first()
+            if bn is not None:
+                self._botanical_name = bn
+            elif name in self.botanical_names:
+                for bn in self._botanical_names.all():
+                    if bn.botanical_name == name:
+                        self._botanical_name = bn
+            else:
+                self._botanical_name = BotanicalName(name)
+        else:
+            raise TypeError('Botanical name must be a string!')
 
     @property
     def botanical_names(self):
@@ -388,22 +455,32 @@ class Seed(db.Model):
 
     @botanical_names.setter
     def botanical_names(self, names):
-        """Clear _botanical_names and set it from given list or string.
+        """Clear _botanical_names and set it from given string or iterable.
 
         Args:
             names (list, str): A list of strings containing
                                botanical names, or a single string
                                containing a botanical name.
+
+        Raises:
+            TypeError: If names is iterable and contains non-strings.
+            TypeError: If names is not a string or an iterable.
         """
-        self.clear_botanical_names()
         if isinstance(names, str):
+            self.clear_botanical_names()
             self.add_botanical_name(names)
-        elif isinstance(names, list):
-            for bn in names:
-                self.add_botanical_name(bn)
         else:
-            raise TypeError('botanical_names can only be set with a list of'
-                            ' strings or a single botanical name string.')
+            try:
+                if all(isinstance(bn, str) for bn in names):
+                    self.clear_botanical_names()
+                    for bn in names:
+                        self.add_botanical_name(bn)
+                else:
+                    raise TypeError('An iterable passed to botanical_names '
+                                    'can only contain strings!')
+            except TypeError:
+                raise TypeError('botanical_names can only be '
+                                'a string or an iterable!')
 
     def add_botanical_name(self, name):
         """Add a botanical name to _botanical_names.
@@ -414,6 +491,10 @@ class Seed(db.Model):
         bn = BotanicalName.query.filter_by(_botanical_name=name).first()
         if bn is not None:
             self._botanical_names.append(bn)
+        elif self._botanical_name is not None and self.botanical_name == name:
+            self._botanical_names.append(self._botanical_name)
+        elif name in self.botanical_names:
+            pass
         else:
             self._botanical_names.append(BotanicalName(name))
 
@@ -427,8 +508,8 @@ class Seed(db.Model):
             int: The number of botanical names removed.
         """
         count = 0
-        for bn in self.botanical_names:
-            self.remove_botanical_name(bn)
+        for bn in self._botanical_names:
+            self._botanical_names.remove(bn)
             count += 1
         return count
 
@@ -549,3 +630,8 @@ class UnitType(db.Model):
                              'seeds', 'oz', 'grams'.
         """
         self.unit_type = unit_type
+
+    def __repr__(self):
+        """Return representation of UnitType in human-readable format."""
+        return '<{0} \'{1}\'>'.format(self.__class__.__name__,
+                                      self.unit_type)

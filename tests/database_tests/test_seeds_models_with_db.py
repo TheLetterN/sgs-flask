@@ -61,7 +61,14 @@ class TestSeedWithDB(unittest.TestCase):
         db.drop_all()
         self.app_context.pop()
 
-    def test_add_botanical_name_no_duplicates(self):
+    def test_add_botanical_name_same_as_botanical_name(self):
+        """Use the same instance as _botanical_name if name is the same."""
+        seed = Seed()
+        seed.botanical_name = 'Asclepias incarnata'
+        seed.add_botanical_name('Asclepias incarnata')
+        self.assertIn(seed._botanical_name, seed._botanical_names.all())
+
+    def test_add_botanical_name_no_duplicates_in_db(self):
         """There should only be one of each botanical name in the db."""
         seed1 = Seed()
         seed1.add_botanical_name('Asclepias incarnata')
@@ -77,6 +84,21 @@ class TestSeedWithDB(unittest.TestCase):
         db.session.add(seed1)
         self.assertEqual(seed1._botanical_names.count(), 2)
         self.assertEqual(seed2._botanical_names.count(), 1)
+
+    def test_add_botanical_name_no_duplicates_in_botanical_names(self):
+        """If botanical_names has not been comitted, don't add duplicates.
+
+        Adding multiples of the same botanical name to a seed that has not
+        yet been committed to the database should not cause an attempt to
+        add duplicates to the database.
+        """
+        seed = Seed()
+        seed.add_botanical_name('Asclepias incarnata')
+        seed.add_botanical_name('Asclepias incarnata')
+        seed.add_botanical_name('Echinacea purpurea')
+        seed.add_botanical_name('Echinacea purpurea')
+        db.session.add(seed)
+        self.assertEqual(seed._botanical_names.count(), 2)
 
     def test_add_botanical_name_new(self):
         """Adds a new botanical name if not already in db."""
@@ -94,6 +116,39 @@ class TestSeedWithDB(unittest.TestCase):
         self.assertEqual(seed._botanical_names.filter_by(
             _botanical_name='Echinacea purpurea').count(), 1)
 
+    def test_botanical_name_does_not_clash_with_botanical_names(self):
+        """Use the same instance if same name is in both.
+
+        It should not be possible to cause a UNIQUE constraint failure
+        by setting botanical_name and botanical_names in the same session.
+        """
+        seed = Seed()
+        seed.botanical_name = 'Asclepias incarnata'
+        seed.add_botanical_name('Asclepias incarnata')
+        db.session.add(seed)
+        db.session.commit()
+        seed1 = Seed()
+        seed1.add_botanical_name('Echinacea purpurea')
+        seed1.botanical_name = 'Echinacea purpurea'
+        db.session.add(seed1)
+        db.session.commit()
+
+    def test_botanical_name_setter_already_in_db(self):
+        """Set botanical_name to existing instance if present."""
+        bn = BotanicalName('Asclepias incarnata')
+        db.session.add(bn)
+        seed = Seed()
+        seed.botanical_name = 'Asclepias incarnata'
+        self.assertIs(seed._botanical_name, bn)
+
+    def test_botanical_name_setter_new_entry(self):
+        """Set botanical_name to new instance if not present in db."""
+        seed = Seed()
+        seed.botanical_name = 'Asclepias incarnata'
+        self.assertEqual(BotanicalName.query.count(), 0)
+        db.session.add(seed)
+        self.assertEqual(BotanicalName.query.count(), 1)
+
     def test_botanical_names_getter_returns_list_of_strings(self):
         """Returns a list of strings from BotanicalName.botanical_name."""
         seed = Seed()
@@ -106,14 +161,6 @@ class TestSeedWithDB(unittest.TestCase):
         self.assertIn('Asclepias incarnata', bns)
         self.assertIn('Echinacea purpurea', bns)
         self.assertIn('Canis lupus', bns)
-
-    def test_botanical_names_setter_bad_type(self):
-        """Raise a TypeError if given data that isn't a list or a string."""
-        seed = Seed()
-        with self.assertRaises(TypeError):
-            seed.botanical_names = 42
-        with self.assertRaises(TypeError):
-            seed.botanical_names = ('four', 'two', 'eleventy')
 
     def test_botanical_names_setter_list(self):
         """Clear _botanical_names and add assigned list of names to it."""
@@ -162,7 +209,9 @@ class TestSeedWithDB(unittest.TestCase):
         seed.add_botanical_name('Asclepias incarnata')
         seed.add_botanical_name('Canis lupus')  # Okay, not really a seed.
         db.session.add(seed)
+        db.session.commit()
         self.assertTrue(seed.remove_botanical_name('Canis lupus'))
+        db.session.commit()
         self.assertNotIn('Canis Lupus', seed.botanical_names)
         self.assertIn('Canis lupus',
                       [bn.botanical_name for bn in BotanicalName.query.all()])

@@ -1,5 +1,6 @@
 from flask import render_template
 from . import seeds
+from .models import Seed
 from app.auth.models import Permission
 
 

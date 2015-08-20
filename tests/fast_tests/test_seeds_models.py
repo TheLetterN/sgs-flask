@@ -1,6 +1,6 @@
 import unittest
 from app import create_app
-from app.seeds.models import BotanicalName, Packet
+from app.seeds.models import BotanicalName, Packet, Seed
 
 
 class TestBotanicalName(unittest.TestCase):
@@ -210,6 +210,42 @@ class TestPacket(unittest.TestCase):
         self.assertEqual(Packet.quantity_int_from_str('4'), 40)
         self.assertEqual(Packet.quantity_int_from_str('1234567890'),
                          12345678900)
+
+
+class TestSeed(unittest.TestCase):
+    """Test methods of Seed in the seeds model."""
+    def setUp(self):
+        self.app = create_app('testing')
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+
+    def tearDown(self):
+        self.app_context.pop()
+
+    def test_botanical_name_getter_returns_string(self):
+        """Return a string containing the botanical name for the seed."""
+        seed = Seed()
+        seed._botanical_name = BotanicalName('Asclepias incarnata')
+        self.assertEqual(seed.botanical_name, 'Asclepias incarnata')
+
+    def test_botanical_name_setter_bad_type(self):
+        """Raise a TypeError given non-string data."""
+        seed = Seed()
+        with self.assertRaises(TypeError):
+            seed.botanical_name = 42
+        with self.assertRaises(TypeError):
+            seed.botanical_name = ['Asclepias incarnata', 'Echinacea purpurea']
+
+    def test_botanical_names_setter_bad_type(self):
+        """Raise a type error given data that is not a string or an iterable.
+
+        If it is an iterable, it must contain only strings.
+        """
+        seed = Seed()
+        with self.assertRaises(TypeError):
+            seed.botanical_names = 42
+        with self.assertRaises(TypeError):
+            seed.botanical_names = ('Asclepias incarnata', 42)
 
 
 if __name__ == '__main__':

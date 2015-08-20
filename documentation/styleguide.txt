@@ -27,7 +27,7 @@ Database Models:
 - The primary key should always be the first attribute.
 - Relationships should follow the rules of class attributes.
 - Backrefs should be documented in the docstrings of classes they point to.
-- Association tables should end with _association.
+- Association tables should come before database models.
 
 Tests:
 

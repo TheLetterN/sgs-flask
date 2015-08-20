@@ -76,7 +76,7 @@ class TestingConfig(Config):
     TESTING = True
     WTF_CSRF_ENABLED = False
     SQLALCHEMY_DATABASE_URI = os.environ.get('SGS_TEST_DATABASE_URI') or \
-        'sqlite:///' + os.path.join(TEMPDIR, 'testing.db')
+        'sqlite:///:memory:'
 
 
 class ProductionConfig(Config):

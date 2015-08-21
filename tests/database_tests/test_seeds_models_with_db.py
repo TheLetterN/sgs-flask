@@ -16,6 +16,13 @@ class TestPacketWithDB(unittest.TestCase):
         db.drop_all()
         self.app_context.pop()
 
+    def test_unit_type_expression(self):
+        """unit_type should be usable in queries."""
+        pkt = Packet()
+        pkt.unit_type = 'frogs'
+        db.session.add(pkt)
+        self.assertIs(Packet.query.filter_by(unit_type='frogs').first(), pkt)
+
     def test_unit_type_getter(self):
         """Packet.unit_type returns Packet._unit_type.unit_type"""
         pkt = Packet()
@@ -132,6 +139,14 @@ class TestSeedWithDB(unittest.TestCase):
         seed1.botanical_name = 'Echinacea purpurea'
         db.session.add(seed1)
         db.session.commit()
+
+    def test_botanical_name_expression(self):
+        """botanical_name should be queryable."""
+        seed = Seed()
+        seed.botanical_name = 'Asclepias incarnata'
+        db.session.add(seed)
+        self.assertIs(Seed.query.filter_by(
+            botanical_name='Asclepias incarnata').first(), seed)
 
     def test_botanical_name_setter_already_in_db(self):
         """Set botanical_name to existing instance if present."""

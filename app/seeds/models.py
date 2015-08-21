@@ -1,3 +1,4 @@
+from sqlalchemy.ext.hybrid import hybrid_property
 from app import db
 
 
@@ -70,7 +71,7 @@ class BotanicalName(db.Model):
         return '<{0} \'{1}\'>'.format(self.__class__.__name__,
                                       self.botanical_name)
 
-    @property
+    @hybrid_property
     def botanical_name(self):
         """Get _botanical_name as-is."""
         return self._botanical_name
@@ -201,8 +202,11 @@ class Packet(db.Model):
     _quantity = db.Column(db.Integer)
     unit_type_id = db.Column(db.Integer, db.ForeignKey('unit_types.id'))
     _unit_type = db.relationship('UnitType', backref='_packets')
+    __table_args__ = (db.UniqueConstraint('_price',
+                                          '_quantity',
+                                          'unit_type_id'),)
 
-    @property
+    @hybrid_property
     def price(self):
         """Get price converted from int to a string decimal value.
 
@@ -272,6 +276,24 @@ class Packet(db.Model):
         str_price = str(price)
         return str_price[:-2] + '.' + str_price[-2:]
 
+    @hybrid_property
+    def quantity(self):
+        """Get quantity converted to human-readable format.
+
+        Returns:
+            str: Quantity in human readable format.
+        """
+        return self.quantity_str_from_int(self._quantity)
+
+    @quantity.setter
+    def quantity(self, quantity):
+        """Set a string containing a valid quantity to an int in _quantity.
+
+        Args:
+            quantity (str): A string containing a validly formatted quantity.
+        """
+        self._quantity = self.quantity_int_from_str(quantity)
+
     @staticmethod
     def quantity_int_from_str(quantity):
         """Convert a string representing a quantity into an integer for db.
@@ -339,7 +361,44 @@ class Packet(db.Model):
             else:
                 raise ValueError('quantity must be a number!')
 
-    @property
+    @staticmethod
+    def quantity_str_from_int(quantity):
+        """Convert an int in db storage format to a readable string.
+
+        Args:
+            quantity (int): An integer presumably from the database that
+                            represents a quantity as stored in the db.
+
+        Returns:
+            str: A string containing the quantity in a human-readable format.
+        """
+        if isinstance(quantity, int):
+            if quantity > 0:
+                decimal = quantity % 10
+                if decimal == 0:
+                    return str(quantity)[:-1]
+                else:
+                    return str(quantity)[:-1 - decimal] + \
+                        '.' + str(quantity)[-1 - decimal:-1]
+            else:
+                quantity = quantity * -1
+                fractional = quantity % 10
+                if fractional == 0:
+                    raise ValueError('quantity represents a fraction, '
+                                     'but the denominator has no digits!')
+                else:
+                    numerator = quantity // 10**(1 + fractional)
+                    denominator = (quantity % 10**(1 + fractional) // 10)
+                    if numerator < denominator:
+                        return str(numerator) + '/' + str(denominator)
+                    else:
+                        return str(numerator // denominator) + ' ' + \
+                            str(numerator % denominator) + '/' + \
+                            str(denominator)
+        else:
+            raise TypeError('quantity must be an integer!')
+
+    @hybrid_property
     def unit_type(self):
         """Get the unit_type column from the UnitType object in _unit_type.
 
@@ -347,6 +406,12 @@ class Packet(db.Model):
             str: UnitType.unit_type associated with this packet.
         """
         return self._unit_type.unit_type
+
+    @unit_type.expression
+    def unit_type(cls):
+        return db.select([UnitType.unit_type]).\
+            where(cls.unit_type_id == UnitType.id).\
+            label('unit_type')
 
     @unit_type.setter
     def unit_type(self, unit_type):
@@ -406,7 +471,7 @@ class Seed(db.Model):
         return '<{0} \'{1}\'>'.format(self.__class__.__name__,
                                       self.name)
 
-    @property
+    @hybrid_property
     def botanical_name(self):
         """Return a single string botanical name for this seed.
 
@@ -416,6 +481,12 @@ class Seed(db.Model):
             string: Botanical name for this seed.
         """
         return self._botanical_name.botanical_name
+
+    @botanical_name.expression
+    def botanical_name(cls):
+        return db.select([BotanicalName._botanical_name]).\
+            where(cls.botanical_name_id == BotanicalName.id).\
+            label('botanical_name')
 
     @botanical_name.setter
     def botanical_name(self, name):
@@ -440,7 +511,7 @@ class Seed(db.Model):
         else:
             raise TypeError('Botanical name must be a string!')
 
-    @property
+    @hybrid_property
     def botanical_names(self):
         """Return a list of the botanical names associated with this seed.
 

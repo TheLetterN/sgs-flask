@@ -1,6 +1,7 @@
 import unittest
 from app import create_app
-from app.seeds.models import BotanicalName, Category, Packet, Seed, UnitType
+from app.seeds.models import BotanicalName, Category, CommonName, Packet, \
+    Seed, UnitType
 
 
 class TestBotanicalName(unittest.TestCase):
@@ -81,6 +82,22 @@ class TestCategory(unittest.TestCase):
         category = Category()
         category.category = 'vegetable'
         self.assertEqual(category.__repr__(), '<Category \'vegetable\'>')
+
+
+class TestCommonName(unittest.TestCase):
+    """Test methods of CommonName in the seeds model."""
+    def setUp(self):
+        self.app = create_app('testing')
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+
+    def tearDown(self):
+        self.app_context.pop()
+
+    def test_repr(self):
+        """Return string formatted <CommonName '<name>'>"""
+        cn = CommonName(name='Coleus')
+        self.assertEqual(cn.__repr__(), '<CommonName \'Coleus\'>')
 
 
 class TestPacket(unittest.TestCase):
@@ -308,6 +325,14 @@ class TestSeed(unittest.TestCase):
     def tearDown(self):
         self.app_context.pop()
 
+    def test_add_common_name_bad_type(self):
+        """Raise a TypeError given non-string data."""
+        seed = Seed()
+        with self.assertRaises(TypeError):
+            seed.add_common_name(42)
+        with self.assertRaises(TypeError):
+            seed.add_common_name(['Coleus', 'Tomato'])
+
     def test_botanical_name_getter_returns_string(self):
         """Return a string containing the botanical name for the seed."""
         seed = Seed()
@@ -332,6 +357,16 @@ class TestSeed(unittest.TestCase):
             seed.botanical_names = 42
         with self.assertRaises(TypeError):
             seed.botanical_names = ('Asclepias incarnata', 42)
+
+    def test_common_name_setter_bad_type(self):
+        """Raise a TypeError given non-string data."""
+        seed = Seed()
+        with self.assertRaises(TypeError):
+            seed.common_name = 42
+        with self.assertRaises(TypeError):
+            seed.common_name = ['Tomato', 'Coleus']
+        with self.assertRaises(TypeError):
+            seed.common_name = CommonName('Coleus')
 
     def test_repr(self):
         """Return a string formatted <Seed '<name>'>"""

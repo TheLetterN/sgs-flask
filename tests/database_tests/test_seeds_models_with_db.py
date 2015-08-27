@@ -1,6 +1,6 @@
 import unittest
 from app import create_app, db
-from app.seeds.models import BotanicalName, Packet, Seed, UnitType
+from app.seeds.models import BotanicalName, CommonName, Packet, Seed, UnitType
 
 
 class TestPacketWithDB(unittest.TestCase):
@@ -19,22 +19,22 @@ class TestPacketWithDB(unittest.TestCase):
     def test_unit_type_expression(self):
         """unit_type should be usable in queries."""
         pkt = Packet()
-        pkt.unit_type = 'frogs'
         db.session.add(pkt)
+        pkt.unit_type = 'frogs'
         self.assertIs(Packet.query.filter_by(unit_type='frogs').first(), pkt)
 
     def test_unit_type_getter(self):
-        """Packet.unit_type returns Packet._unit_type.unit_type"""
+        """.unit_type returns ._unit_type.unit_type"""
         pkt = Packet()
-        pkt._unit_type = UnitType('seeds')
         db.session.add(pkt)
+        pkt._unit_type = UnitType('seeds')
         self.assertEqual(pkt.unit_type, 'seeds')
 
     def test_unit_type_setter_new_type(self):
         """create a new UnitType in the database if not already there."""
         pkt = Packet()
-        pkt.unit_type = 'seeds'
         db.session.add(pkt)
+        pkt.unit_type = 'seeds'
         db.session.commit()
         self.assertEqual(UnitType.query.filter_by(unit_type='seeds').count(),
                          1)
@@ -42,16 +42,16 @@ class TestPacketWithDB(unittest.TestCase):
     def test_unit_type_setter_existing_type(self):
         """Set the packet's unit_type to type from database if it exists."""
         pkt = Packet()
+        db.session.add(pkt)
         pkt.unit_type = 'seeds'
-        db.session.add(pkt)
         pkt2 = Packet()
+        db.session.add(pkt2)
         pkt2.unit_type = 'seeds'
-        db.session.add(pkt)
         self.assertIsNot(pkt, pkt2)
         self.assertIs(pkt.unit_type, pkt2.unit_type)
         pkt3 = Packet()
-        pkt3.unit_type = ('oz')
         db.session.add(pkt3)
+        pkt3.unit_type = ('oz')
         self.assertIsNot(pkt.unit_type, pkt3.unit_type)
 
 
@@ -68,60 +68,97 @@ class TestSeedWithDB(unittest.TestCase):
         db.drop_all()
         self.app_context.pop()
 
-    def test_add_botanical_name_same_as_botanical_name(self):
+    def test_add_botanical_name_already_in_botanical_name(self):
         """Use the same instance as _botanical_name if name is the same."""
         seed = Seed()
+        db.session.add(seed)
         seed.botanical_name = 'Asclepias incarnata'
         seed.add_botanical_name('Asclepias incarnata')
-        self.assertIn(seed._botanical_name, seed._botanical_names.all())
+        self.assertIn(seed._botanical_name, seed._botanical_names)
 
-    def test_add_botanical_name_no_duplicates_in_db(self):
-        """There should only be one of each botanical name in the db."""
-        seed1 = Seed()
-        seed1.add_botanical_name('Asclepias incarnata')
-        db.session.add(seed1)
-        db.session.commit()
-        seed2 = Seed()
-        seed2.add_botanical_name('Asclepias incarnata')
-        db.session.add(seed2)
-        self.assertEqual(BotanicalName.query.count(), 1)
-        self.assertIs(seed1._botanical_names.first(),
-                      seed2._botanical_names.first())
-        seed1.add_botanical_name('Echinacea purpurea')
-        db.session.add(seed1)
-        self.assertEqual(seed1._botanical_names.count(), 2)
-        self.assertEqual(seed2._botanical_names.count(), 1)
-
-    def test_add_botanical_name_no_duplicates_in_botanical_names(self):
-        """If botanical_names has not been comitted, don't add duplicates.
-
-        Adding multiples of the same botanical name to a seed that has not
-        yet been committed to the database should not cause an attempt to
-        add duplicates to the database.
-        """
+    def test_add_botanical_name_already_in_botanical_names(self):
+        """If botanical_names has not been comitted, don't add duplicates."""
         seed = Seed()
-        seed.add_botanical_name('Asclepias incarnata')
-        seed.add_botanical_name('Asclepias incarnata')
-        seed.add_botanical_name('Echinacea purpurea')
-        seed.add_botanical_name('Echinacea purpurea')
         db.session.add(seed)
-        self.assertEqual(seed._botanical_names.count(), 2)
+        seed.add_botanical_name('Asclepias incarnata')
+        self.assertEqual(len(seed._botanical_names), 1)
+        seed.add_botanical_name('Asclepias incarnata')
+        self.assertEqual(len(seed._botanical_names), 1)
+        seed.add_botanical_name('Echinacea purpurea')
+        self.assertEqual(len(seed._botanical_names), 2)
+        seed.add_botanical_name('Echinacea purpurea')
+        self.assertEqual(len(seed._botanical_names), 2)
+
+    def test_add_botanical_name_already_in_db(self):
+        """Add botanical name from DB to ._botanical_names if present."""
+        bn = BotanicalName('Asclepias incarnata')
+        db.session.add(bn)
+        db.session.commit()
+        self.assertIn(bn, BotanicalName.query.all())
+        seed = Seed()
+        db.session.add(seed)
+        seed.add_botanical_name('Asclepias incarnata')
+        db.session.commit()
+        self.assertIn(bn, seed._botanical_names)
+        self.assertEqual(BotanicalName.query.count(), 1)
 
     def test_add_botanical_name_new(self):
         """Adds a new botanical name if not already in db."""
         seed = Seed()
-        seed.add_botanical_name('Asclepias incarnata')
         db.session.add(seed)
+        seed.add_botanical_name('Asclepias incarnata')
         self.assertEqual(BotanicalName.query.count(), 1)
-        print(seed._botanical_names.first().botanical_name)
-        self.assertEqual(seed._botanical_names.filter_by(
-            _botanical_name='Asclepias incarnata').count(), 1)
+        self.assertEqual(seed._botanical_names[0]._botanical_name,
+                         'Asclepias incarnata')
         seed.add_botanical_name('Echinacea purpurea')
         db.session.add(seed)
         self.assertEqual(BotanicalName.query.count(), 2)
-        self.assertEqual(seed._botanical_names.count(), 2)
-        self.assertEqual(seed._botanical_names.filter_by(
-            _botanical_name='Echinacea purpurea').count(), 1)
+        self.assertEqual(len(seed._botanical_names), 2)
+        self.assertEqual(seed._botanical_names[1]._botanical_name,
+                         'Echinacea purpurea')
+
+    def test_add_common_name_already_in_common_name(self):
+        """Set to same instance as ._common_name if the same name."""
+        seed = Seed()
+        db.session.add(seed)
+        seed.common_name = 'Coleus'
+        seed.add_common_name('Coleus')
+        self.assertIn(seed._common_name, seed._common_names)
+
+    def test_add_common_name_already_in_common_names(self):
+        """Don't add a common name if it's already in ._common_names."""
+        seed = Seed()
+        db.session.add(seed)
+        seed.add_common_name('Coleus')
+        self.assertEqual(len(seed._common_names), 1)
+        seed.add_common_name('Coleus')
+        print(seed._common_names)
+        self.assertEqual(len(seed._common_names), 1)
+        seed.add_common_name('Tomato')
+        self.assertEqual(len(seed._common_names), 2)
+        seed.add_common_name('Tomato')
+        self.assertEqual(len(seed._common_names), 2)
+
+    def test_add_common_name_already_in_db(self):
+        """Add common name from DB to ._common_names if already present."""
+        cn = CommonName(name='Coleus')
+        db.session.add(cn)
+        db.session.commit()
+        self.assertIn(cn, CommonName.query.all())
+        seed = Seed()
+        seed.add_common_name(name='Coleus')
+        db.session.add(seed)
+        db.session.commit()
+        self.assertIn(cn, seed._common_names)
+        self.assertEqual(CommonName.query.count(), 1)
+
+    def test_add_common_name_new(self):
+        """Add a new common name if not already present."""
+        seed = Seed()
+        db.session.add(seed)
+        self.assertEqual(CommonName.query.count(), 0)
+        seed.add_common_name('Coleus')
+        self.assertEqual(CommonName.query.count(), 1)
 
     def test_botanical_name_does_not_clash_with_botanical_names(self):
         """Use the same instance if same name is in both.
@@ -141,7 +178,7 @@ class TestSeedWithDB(unittest.TestCase):
         db.session.commit()
 
     def test_botanical_name_expression(self):
-        """botanical_name should be queryable."""
+        """botanical_name should be usable in queries."""
         seed = Seed()
         seed.botanical_name = 'Asclepias incarnata'
         db.session.add(seed)
@@ -189,7 +226,7 @@ class TestSeedWithDB(unittest.TestCase):
         self.assertNotIn('Canis lupus', seed.botanical_names)
         self.assertEqual(seed.botanical_names, bn_list)
 
-    def test_botanical_names_setter_string(self):
+    def test_botanical_names_setter_string_no_commas(self):
         """Clear _botanical_names and add the name assigned."""
         seed = Seed()
         seed.add_botanical_name('Asclepias incarnata')
@@ -198,16 +235,132 @@ class TestSeedWithDB(unittest.TestCase):
         self.assertIn('Echinacea purpurea', seed.botanical_names)
         self.assertNotIn('Asclepias incarnata', seed.botanical_names)
 
-    def test_clear_botanical_names_removes_names(self):
-        """Remove all botanical names from seed and return # of removed."""
+    def test_botanical_names_setter_string_with_commas(self):
+        """Split names into a list if commas are present, and add each."""
         seed = Seed()
+        seed.botanical_names = 'Asclepias incarnata, Echinacea purpurea, ' + \
+            'Digitalis lanata, Canis lupus'
+        self.assertEqual(seed.botanical_names.sort(),
+                         ['Asclepias incarnata', 'Echinacea purpurea',
+                          'Digitalis lanata', 'Canis lupus'].sort())
+
+    def test_common_name_expression(self):
+        """.common_name should be usable in queries."""
+        seed = Seed()
+        db.session.add(seed)
+        seed.common_name = 'Coleus'
+        self.assertIs(seed, Seed.query.filter_by(common_name='Coleus').first())
+
+    def test_common_name_getter(self):
+        """Return ._common_name.name."""
+        seed = Seed()
+        seed._common_name = CommonName(name='Coleus')
+        self.assertEqual(seed.common_name, 'Coleus')
+
+    def test_common_name_setter_already_in_db(self):
+        """Set _common_name to loaded CommonName from db if it exists."""
+        cn = CommonName(name='Coleus')
+        db.session.add(cn)
+        db.session.commit()
+        seed = Seed()
+        seed.common_name = 'Coleus'
+        self.assertIs(seed._common_name, cn)
+
+    def test_common_name_setter_already_in_common_names(self):
+        """Set _common_name to object from _common_names if present."""
+        cn = CommonName(name='Coleus')
+        seed = Seed()
+        seed._common_names.append(cn)
+        seed._common_names.append(CommonName('Tomato'))
+        seed.common_name = 'Coleus'
+        self.assertIs(seed._common_name, cn)
+
+    def test_common_name_setter_new_entry(self):
+        """Create a new CommonName object if it doesn't exist already."""
+        seed = Seed()
+        self.assertEqual(CommonName.query.filter_by(name='Coleus').count(), 0)
+        seed.common_name = 'Coleus'
+        db.session.add(seed)
+        db.session.commit()
+        self.assertEqual(CommonName.query.filter_by(name='Coleus').count(), 1)
+
+    def test_common_names_setter_iterable_containing_non_strings(self):
+        """Raise a TypeError if iterable contains any non-string data."""
+        seed = Seed()
+        db.session.add(seed)
+        with self.assertRaises(TypeError):
+            seed.common_names = ['Coleus', 'Tomato', 42]
+        with self.assertRaises(TypeError):
+            seed.common_names = ('Coleus', 'Tomato', 41)
+
+    def test_common_names_setter_iterable_containing_strings(self):
+        """Given an iterable containing strings, set them to .common_names."""
+        seed = Seed()
+        db.session.add(seed)
+        seed.common_names = ['Coleus', 'Tomato', 'Cabbage']
+        self.assertEqual(seed.common_names.sort(),
+                         ['Coleus', 'Tomato', 'Cabbage'].sort())
+        seed.common_names = ('Carrot', 'Sage', 'Grass')
+        self.assertEqual(seed.common_names.sort(),
+                         ['Carrot', 'Sage', 'Grass'].sort())
+
+    def test_common_names_setter_not_iterable_or_string(self):
+        """Raise a TypeError given data that is not str or iterable."""
+        seed = Seed()
+        db.session.add(seed)
+        with self.assertRaises(TypeError):
+            seed.common_names = 42
+        with self.assertRaises(TypeError):
+            seed.common_names = CommonName('Coleus')
+
+    def test_common_names_setter_str_no_commas(self):
+        """Given a string with no commas, set the string to .common_names."""
+        seed = Seed()
+        db.session.add(seed)
+        seed.common_names = 'Coleus'
+        self.assertEqual(seed.common_names, ['Coleus'])
+        seed.common_names = 'Tomato'
+        self.assertEqual(seed.common_names, ['Tomato'])
+
+    def test_common_names_setter_str_with_commas(self):
+        """Split a string with commas into a list and add each element."""
+        seed = Seed()
+        db.session.add(seed)
+        seed.common_names = 'Coleus, Tomato, Cabbage'
+        self.assertEqual(seed.common_names.sort(),
+                         ['Coleus', 'Tomato', 'Cabbage'].sort())
+
+    def test_clear_botanical_names(self):
+        """Remove all botanical names from seed and return of removed.
+
+        This should not remove them from the database!
+        """
+        seed = Seed()
+        db.session.add(seed)
         seed.add_botanical_name('Asclepias incarnata')
         seed.add_botanical_name('Echinacea purpurea')
         seed.add_botanical_name('Digitalis lanata')
-        db.session.add(seed)
+        self.assertEqual(len(seed._botanical_names), 3)
         self.assertEqual(seed.clear_botanical_names(), 3)
-        self.assertEqual(seed._botanical_names.count(), 0)
+        self.assertEqual(len(seed._botanical_names), 0)
+        db.session.commit()
         self.assertEqual(BotanicalName.query.count(), 3)
+
+    def test_clear_common_names(self):
+        """Remove all common names from seed and return # removed.
+
+        This should not remove them from the database!
+        """
+        seed = Seed()
+        db.session.add(seed)
+        seed.add_common_name('Coleus')
+        seed.add_common_name('Tomato')
+        seed.add_common_name('Sunflower')
+        self.assertEqual(len(seed._common_names), 3)
+        self.assertEqual(seed.clear_common_names(), 3)
+        self.assertEqual(len(seed._common_names), 0)
+        db.session.commit()
+        self.assertEqual(CommonName.query.count(), 3)
 
     def test_remove_botanical_name_not_in_database(self):
         """Returns false if the botanical name is not in _botanical_names."""

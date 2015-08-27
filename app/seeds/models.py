@@ -20,6 +20,16 @@ seeds_to_botanical_names = db.Table(
 )
 
 
+seeds_to_common_names = db.Table(
+    'seeds_to_common_names',
+    db.Model.metadata,
+    db.Column('seeds_id', db.Integer, db.ForeignKey('seeds.id')),
+    db.Column('common_names_id',
+              db.Integer,
+              db.ForeignKey('common_names.id'))
+)
+
+
 seeds_to_packets = db.Table(
     'seeds_to_packets',
     db.Model.metadata,
@@ -157,6 +167,34 @@ class Category(db.Model):
         """Return representation of Category in human-readable format."""
         return '<{0} \'{1}\'>'.format(self.__class__.__name__,
                                       self.category)
+
+
+class CommonName(db.Model):
+    """Table for common names.
+
+    A CommonName is the next tier below Category in how we divide up our seeds
+    for display on the site. Common names include coleus, sunflower, acanthus,
+    butterfly weed.
+
+    Attributes:
+        __tablename__ (str): Name of the table: 'seed_types'
+        id (int): Auto-incremented ID # for use as primary_key.
+        description (str): A description of the seed type for display on that
+                           seed type's page.
+        name (str): The name of the seed type.
+    """
+    __tablename__ = 'common_names'
+    id = db.Column(db.Integer, primary_key=True)
+    description = db.Column(db.Text)
+    name = db.Column(db.String(64), unique=True)
+
+    def __init__(self, name=None, description=None):
+        self.name = name
+        self.description = description
+
+    def __repr__(self):
+        """Return representation of CommonName in human-readable format."""
+        return '<{0} \'{1}\'>'.format(self.__class__.__name__, self.name)
 
 
 class Packet(db.Model):
@@ -458,13 +496,20 @@ class Seed(db.Model):
                                       foreign_keys=[botanical_name_id])
     _botanical_names = db.relationship('BotanicalName',
                                        secondary=seeds_to_botanical_names,
-                                       lazy='dynamic',
-                                       backref=db.backref('seeds',
-                                                          lazy='dynamic'))
+                                       backref='_seeds')
+    common_name_id = db.Column(db.Integer, db.ForeignKey('common_names.id'))
+    _common_name = db.relationship('CommonName',
+                                   foreign_keys=[common_name_id])
+    _common_names = db.relationship('CommonName',
+                                    secondary=seeds_to_common_names,
+                                    backref='_seeds')
     description = db.Column(db.Text)
     dropped = db.Column(db.Boolean)
     in_stock = db.Column(db.Boolean)
     name = db.Column(db.String(64), unique=True)
+    _packets = db.relationship('Packet',
+                               secondary=seeds_to_packets,
+                               backref='_seeds')
 
     def __repr__(self):
         """Return representation of Seed in human-readable format."""
@@ -484,9 +529,8 @@ class Seed(db.Model):
 
     @botanical_name.expression
     def botanical_name(cls):
-        return db.select([BotanicalName._botanical_name]).\
-            where(cls.botanical_name_id == BotanicalName.id).\
-            label('botanical_name')
+        """Make botanical_name property usable in Seed.query."""
+        return BotanicalName._botanical_name
 
     @botanical_name.setter
     def botanical_name(self, name):
@@ -503,7 +547,7 @@ class Seed(db.Model):
             if bn is not None:
                 self._botanical_name = bn
             elif name in self.botanical_names:
-                for bn in self._botanical_names.all():
+                for bn in self._botanical_names:
                     if bn.botanical_name == name:
                         self._botanical_name = bn
             else:
@@ -516,13 +560,10 @@ class Seed(db.Model):
         """Return a list of the botanical names associated with this seed.
 
         Returns:
-            list: A list of strings containing botanical names gotten from
-                  BotanicalName.botanical_name.
+            list: A list of strings containing botanical names associated with
+                  this seed.
         """
-        bn_list = []
-        for bn in self._botanical_names.all():
-            bn_list.append(bn.botanical_name)
-        return bn_list
+        return [bn.botanical_name for bn in self._botanical_names]
 
     @botanical_names.setter
     def botanical_names(self, names):
@@ -539,7 +580,11 @@ class Seed(db.Model):
         """
         if isinstance(names, str):
             self.clear_botanical_names()
-            self.add_botanical_name(names)
+            if ',' in names:
+                for bn in names.split(','):
+                    self.add_botanical_name(bn.strip())
+            else:
+                self.add_botanical_name(names)
         else:
             try:
                 if all(isinstance(bn, str) for bn in names):
@@ -553,21 +598,120 @@ class Seed(db.Model):
                 raise TypeError('botanical_names can only be '
                                 'a string or an iterable!')
 
+    @hybrid_property
+    def common_name(self):
+        """Return the primary common name associated with this seed.
+
+        Returns:
+            str: Common name for this seed.
+        """
+        return self._common_name.name
+
+    @common_name.expression
+    def common_name(cls):
+        """Make common_name property usable in Seed.query."""
+        return CommonName.name
+
+    @common_name.setter
+    def common_name(self, name):
+        """Set ._common_name to a new or existing CommonName.
+
+        Args:
+            name (str): The common name to set.
+        Raises:
+            TypeError: If name is not a string.
+        """
+        if isinstance(name, str):
+            cn = CommonName.query.filter_by(name=name).first()
+            if cn is not None:
+                self._common_name = cn
+            elif name in self.common_names:
+                for cn in self._common_names:
+                    if cn.name == name:
+                        self._common_name = cn
+            else:
+                self._common_name = CommonName(name=name)
+        else:
+            raise TypeError('Common name must be a string!')
+
+    @hybrid_property
+    def common_names(self):
+        """Return a list of common names associated with this seed as strs.
+
+        Returns:
+            list: A list of strings containing common names associated with
+                  this seed.
+        """
+        return [cn.name for cn in self._common_names]
+
+    @common_names.setter
+    def common_names(self, names):
+        """Set a string or iterable of strings to .common_names.
+
+        Args:
+            names (str, iterable): The name or names to set.
+        """
+        if isinstance(names, str):
+            self.clear_common_names()
+            if ',' in names:
+                for cn in names.split(','):
+                    self.add_common_name(cn.strip())
+            else:
+                self.add_common_name(names)
+        else:
+            try:
+                if all(isinstance(cn, str) for cn in names):
+                    self.clear_common_names()
+                    for cn in names:
+                        self.add_common_name(cn)
+                else:
+                    raise TypeError('An iterable passed to common_names '
+                                    'may only contain strings!')
+            except TypeError:
+                raise TypeError('common_names can only be set '
+                                'with a string or an iterable!')
+
     def add_botanical_name(self, name):
         """Add a botanical name to _botanical_names.
 
         Args:
             name (str): A botanical name to add to _botanical_names.
         """
-        bn = BotanicalName.query.filter_by(_botanical_name=name).first()
-        if bn is not None:
-            self._botanical_names.append(bn)
-        elif self._botanical_name is not None and self.botanical_name == name:
-            self._botanical_names.append(self._botanical_name)
-        elif name in self.botanical_names:
-            pass
+        if name not in self.botanical_names:
+            if self._botanical_name is not None and \
+                    self.botanical_name == name:
+                self._botanical_names.append(self._botanical_name)
+            else:
+                bn = BotanicalName.query.filter_by(_botanical_name=name).\
+                    first()
+                if bn is not None:
+                    self._botanical_names.append(bn)
+                else:
+                    self._botanical_names.append(BotanicalName(name))
+        # Do nothing if name is in self.botanical_names already.
+
+    def add_common_name(self, name):
+        """Add a common name to ._common_names.
+
+        Args:
+            name (str): A common name to add to _common_names.
+
+        Raises:
+            TypeError: If name is not a string.
+        """
+        if isinstance(name, str):
+            if name not in self.common_names:
+                if self._common_name is not None and self.common_name == name:
+                    self._common_names.append(self._common_name)
+                else:
+                    cn = CommonName.query.filter_by(name=name).first()
+                    if cn is not None:
+                        self._common_names.append(cn)
+                    else:
+                        self._common_names.append(CommonName(name=name))
+            # Do nothing if name is in self.common_names already.
         else:
-            self._botanical_names.append(BotanicalName(name))
+            raise TypeError('Common name must be a string!')
 
     def clear_botanical_names(self):
         """Clear _botanical_names without deleting them from the database.
@@ -579,8 +723,23 @@ class Seed(db.Model):
             int: The number of botanical names removed.
         """
         count = 0
-        for bn in self._botanical_names:
-            self._botanical_names.remove(bn)
+        while len(self._botanical_names) > 0:
+            self._botanical_names.remove(self._botanical_names[0])
+            count += 1
+        return count
+
+    def clear_common_names(self):
+        """Clear ._common_names without deleting them from the database.
+
+        This only unlinks them from ._common_names. To delete them from the
+        database, use Seed._common_names.delete()
+
+        Returns:
+            int: The number of common names removed.
+        """
+        count = 0
+        while len(self._common_names) > 0:
+            self._common_names.remove(self._common_names[0])
             count += 1
         return count
 
@@ -597,50 +756,15 @@ class Seed(db.Model):
             bool: False if name is not in _botanical_names.
             bool: True if name was in _botanical_names and has been removed.
         """
-        bn = self._botanical_names.filter_by(_botanical_name=name).first()
+        bn = None
+        for bot_name in self._botanical_names:
+            if bot_name._botanical_name == name:
+                bn = bot_name
         if bn is None:
             return False
         else:
             self._botanical_names.remove(bn)
             return True
-
-
-class SeedSubtype(db.Model):
-    """"Table for seed subtypes.
-
-    Some seeds fall under subtypes for further categorization. For example,
-    strawberries are divided up into **strawberry** and **alpine strawberry**,
-    and cosmos are divided into **dwarf cosmos**, **cosmos for cut flowers**,
-    and **sulphur cosmos**.
-
-    Attributes:
-        __tablename__ (str): Name of the table: 'seed_subtypes'
-        id (int): Auto-incremended ID # for use as primary key.
-        label (str): The name of the seed subtype.
-    """
-    __tablename__ = 'seed_subtypes'
-    id = db.Column(db.Integer, primary_key=True)
-    label = db.Column(db.String(64), unique=True)
-
-
-class SeedType(db.Model):
-    """Table for seed types.
-
-    A SeedType is the next tier below Category in how we divide up our seeds
-    for display on the site. The SeedType is usually the seed's common name,
-    such as coleus, sunflower, cucumber, or tomato.
-
-    Attributes:
-        __tablename__ (str): Name of the table: 'seed_types'
-        id (int): Auto-incremented ID # for use as primary_key.
-        description (str): A description of the seed type for display on that
-                           seed type's page.
-        label (str): The name of the seed type.
-    """
-    __tablename__ = 'seed_types'
-    id = db.Column(db.Integer, primary_key=True)
-    description = db.Column(db.Text)
-    label = db.Column(db.String(64), unique=True)
 
 
 class Series(db.Model):

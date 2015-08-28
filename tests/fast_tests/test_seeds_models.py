@@ -14,30 +14,30 @@ class TestBotanicalName(unittest.TestCase):
     def tearDown(self):
         self.app_context.pop()
 
-    def test_botanical_name_getter(self):
-        """BotanicalName.botanical_name is the same as _botanical_name."""
+    def test_name_getter(self):
+        """.name is the same as ._name."""
         bn = BotanicalName()
-        bn._botanical_name = 'Asclepias incarnata'
-        self.assertEqual(bn.botanical_name, 'Asclepias incarnata')
+        bn._name = 'Asclepias incarnata'
+        self.assertEqual(bn.name, 'Asclepias incarnata')
 
-    def test_botanical_name_setter_valid_input(self):
-        """set BotanicalName._botanical_name if valid."""
+    def test_name_setter_valid_input(self):
+        """set ._name if valid."""
         bn = BotanicalName()
-        bn.botanical_name = 'Asclepias incarnata'
-        self.assertEqual(bn._botanical_name, 'Asclepias incarnata')
+        bn.name = 'Asclepias incarnata'
+        self.assertEqual(bn._name, 'Asclepias incarnata')
 
     def test_init_invalid_botanical_name(self):
         with self.assertRaises(ValueError):
-            BotanicalName('Richard M. Nixon')
+            BotanicalName(name='Richard M. Nixon')
 
     def test_init_valid_botanical_name(self):
         """Sets the BotanicalName.botanical_name to given value."""
-        bn = BotanicalName('Asclepias incarnata')
-        self.assertEqual(bn.botanical_name, 'Asclepias incarnata')
+        bn = BotanicalName(name='Asclepias incarnata')
+        self.assertEqual(bn.name, 'Asclepias incarnata')
 
     def test_repr(self):
         """Return a string in format <BotanicalName '<botanical_name>'>"""
-        bn = BotanicalName('Asclepias incarnata')
+        bn = BotanicalName(name='Asclepias incarnata')
         self.assertEqual('<BotanicalName \'Asclepias incarnata\'>',
                          bn.__repr__())
 
@@ -325,6 +325,68 @@ class TestSeed(unittest.TestCase):
     def tearDown(self):
         self.app_context.pop()
 
+    def test_add_botanical_name_already_in_botanical_name(self):
+        """Use the same instance as _botanical_name if name is the same."""
+        seed = Seed()
+        seed._botanical_name = BotanicalName(name='Asclepias incarnata')
+        seed.add_botanical_name('Asclepias incarnata')
+        self.assertIs(seed._botanical_name, seed._botanical_names[0])
+
+    def test_add_botanical_name_already_in_botanical_names(self):
+        """If botanical_names has not been comitted, don't add duplicates."""
+        seed = Seed()
+        seed._botanical_names.append(BotanicalName('Asclepias incarnata'))
+        self.assertEqual(len(seed._botanical_names), 1)
+        seed.add_botanical_name('Asclepias incarnata')
+        self.assertEqual(len(seed._botanical_names), 1)
+        seed._botanical_names.append(BotanicalName('Echinacea purpurea'))
+        self.assertEqual(len(seed._botanical_names), 2)
+        seed.add_botanical_name('Echinacea purpurea')
+        self.assertEqual(len(seed._botanical_names), 2)
+
+    def test_add_category_bad_type(self):
+        """Raise a TypeError if category is not a string."""
+        seed = Seed()
+        with self.assertRaises(TypeError):
+            seed.add_category(42)
+        with self.assertRaises(TypeError):
+            seed.add_category(['Herb', 'Vegetable'])
+
+    def test_add_category_already_in_categories(self):
+        """Do not add a category already in categories."""
+        seed = Seed()
+        seed._categories.append(Category(category='Vegetable'))
+        seed._categories.append(Category(category='Herb'))
+        self.assertEqual(len(seed._categories), 2)
+        seed.add_category('Herb')
+        self.assertEqual(len(seed._categories), 2)
+
+    def test_add_category_already_in_category(self):
+        """Set to same instance as ._category if the same category."""
+        seed = Seed()
+        seed._category = Category(category='Vegetable')
+        seed.add_category('Vegetable')
+        self.assertIs(seed._category, seed._categories[0])
+
+    def test_add_common_name_already_in_common_name(self):
+        """Set to same instance as ._common_name if the same name."""
+        seed = Seed()
+        seed._common_name = CommonName(name='Coleus')
+        seed.add_common_name('Coleus')
+        self.assertIs(seed._common_name, seed._common_names[0])
+
+    def test_add_common_name_already_in_common_names(self):
+        """Don't add a common name if it's already in ._common_names."""
+        seed = Seed()
+        seed._common_names.append(CommonName('Coleus'))
+        self.assertEqual(len(seed._common_names), 1)
+        seed.add_common_name('Coleus')
+        self.assertEqual(len(seed._common_names), 1)
+        seed._common_names.append(CommonName('Tomato'))
+        self.assertEqual(len(seed._common_names), 2)
+        seed.add_common_name('Tomato')
+        self.assertEqual(len(seed._common_names), 2)
+
     def test_add_common_name_bad_type(self):
         """Raise a TypeError given non-string data."""
         seed = Seed()
@@ -333,7 +395,7 @@ class TestSeed(unittest.TestCase):
         with self.assertRaises(TypeError):
             seed.add_common_name(['Coleus', 'Tomato'])
 
-    def test_botanical_name_getter_returns_string(self):
+    def test_botanical_name_getter(self):
         """Return a string containing the botanical name for the seed."""
         seed = Seed()
         seed._botanical_name = BotanicalName('Asclepias incarnata')
@@ -347,8 +409,19 @@ class TestSeed(unittest.TestCase):
         with self.assertRaises(TypeError):
             seed.botanical_name = ['Asclepias incarnata', 'Echinacea purpurea']
 
+    def test_botanical_names_getter(self):
+        """Returns a list of strings from BotanicalName.botanical_name."""
+        seed = Seed()
+        seed._botanical_names.append(BotanicalName('Asclepias incarnata'))
+        seed._botanical_names.append(BotanicalName('Echinacea purpurea'))
+        seed._botanical_names.append(BotanicalName('Canis lupus'))
+        self.assertEqual(seed.botanical_names.sort(),
+                         ['Asclepias incarnata',
+                          'Echinacea purpurea',
+                          'Canis lupus'].sort())
+
     def test_botanical_names_setter_bad_type(self):
-        """Raise a type error given data that is not a string or an iterable.
+        """Raise a TypeError given data that is not a string or an iterable.
 
         If it is an iterable, it must contain only strings.
         """
@@ -357,6 +430,46 @@ class TestSeed(unittest.TestCase):
             seed.botanical_names = 42
         with self.assertRaises(TypeError):
             seed.botanical_names = ('Asclepias incarnata', 42)
+
+    def test_categories_getter(self):
+        """Return a list of ._categories.category strings."""
+        seed = Seed()
+        seed._categories.append(Category('Annual Flower'))
+        seed._categories.append(Category('Vegetable'))
+        seed._categories.append(Category('Herb'))
+        self.assertEqual(seed.categories.sort(),
+                         ['Annual Flower', 'Vegetable', 'Herb'].sort())
+
+    def test_categories_setter_bad_type(self):
+        """Raise a TypeError if given data that is not a string or iterable.
+
+        If it is an iterable, it must contain only strings.
+        """
+        seed = Seed()
+        with self.assertRaises(TypeError):
+            seed.categories = 42
+        with self.assertRaises(TypeError):
+            seed.categories = ['Herb', 42]
+
+    def test_category_getter(self):
+        """Return ._category.category."""
+        seed = Seed()
+        seed._category = Category(category='Annual Flower')
+        self.assertEqual(seed.category, 'Annual Flower')
+
+    def test_category_setter_bad_type(self):
+        """Raise a TypeError given non-string data."""
+        seed = Seed()
+        with self.assertRaises(TypeError):
+            seed.category = 42
+        with self.assertRaises(TypeError):
+            seed.category = ['Herb', 'Perennial Flower']
+
+    def test_common_name_getter(self):
+        """Return ._common_name.name."""
+        seed = Seed()
+        seed._common_name = CommonName(name='Coleus')
+        self.assertEqual(seed.common_name, 'Coleus')
 
     def test_common_name_setter_bad_type(self):
         """Raise a TypeError given non-string data."""
@@ -368,11 +481,27 @@ class TestSeed(unittest.TestCase):
         with self.assertRaises(TypeError):
             seed.common_name = CommonName('Coleus')
 
+    def test_common_names_setter_iterable_containing_non_strings(self):
+        """Raise a TypeError if iterable contains any non-string data."""
+        seed = Seed()
+        with self.assertRaises(TypeError):
+            seed.common_names = ['Coleus', 'Tomato', 42]
+        with self.assertRaises(TypeError):
+            seed.common_names = ('Coleus', 'Tomato', 41)
+
     def test_repr(self):
         """Return a string formatted <Seed '<name>'>"""
         seed = Seed()
         seed.name = 'Soulmate'
         self.assertEqual(seed.__repr__(), '<Seed \'Soulmate\'>')
+
+    def test_common_names_setter_not_iterable_or_string(self):
+        """Raise a TypeError given data that is not str or iterable."""
+        seed = Seed()
+        with self.assertRaises(TypeError):
+            seed.common_names = 42
+        with self.assertRaises(TypeError):
+            seed.common_names = CommonName('Coleus')
 
 
 class TestUnitType(unittest.TestCase):

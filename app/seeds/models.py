@@ -48,55 +48,53 @@ class BotanicalName(db.Model):
     Attributes:
         __tablename__ (str): Name of the table: 'botanical_names'
         id (int): Auto-incremented ID # for use as a primary key.
-        _botanical_name (str): A botanical name associated with one or more
-                              seeds. Get and set via the botanical_name
-                              property.
+        _name (str): A botanical name associated with one or more
+                     seeds. Get and set via the name property.
 
     Properties:
-        botanical_name: Getter returns _botanical_name.
+        name: Getter returns _name.
                         Setter checks validity of botanical name and assigns
-                        it to _botanical_name if valid, or raises a
-                        ValueError if not.
+                        it to _name if valid, or raises a ValueError if not.
 
     Backrefs:
-       _ seeds: Backref to seeds table to allow us to look up seeds by
-                botanical name.
+       _seeds: Backref to seeds table to allow us to look up seeds by
+               botanical name.
     """
     __tablename__ = 'botanical_names'
     id = db.Column(db.Integer, primary_key=True)
-    _botanical_name = db.Column(db.String(64), unique=True)
+    _name = db.Column(db.String(64), unique=True)
 
-    def __init__(self, botanical_name=None):
+    def __init__(self, name=None):
         """__init__ for BotanicalName.
 
         Args:
-            botanical_name (str): A botanical name for a species
+            name (str): A botanical name for a species
                                   of plant.
         """
-        if botanical_name is not None:
-            self.botanical_name = botanical_name
+        if name is not None:
+            self.name = name
 
     def __repr__(self):
         """Return representation of BotanicalName in human-readable format."""
         return '<{0} \'{1}\'>'.format(self.__class__.__name__,
-                                      self.botanical_name)
+                                      self.name)
 
     @hybrid_property
-    def botanical_name(self):
-        """Get _botanical_name as-is."""
-        return self._botanical_name
+    def name(self):
+        """Get _name as-is."""
+        return self._name
 
-    @botanical_name.setter
-    def botanical_name(self, botanical_name):
-        """Set _botanical_name if botanical_name is valid.
+    @name.setter
+    def name(self, name):
+        """Set _name if name is valid.
 
         Args:
-            botanical_name (str): The botanical name to set.
+            name (str): The botanical name to set.
         """
-        if self.validate(botanical_name):
-            self._botanical_name = botanical_name
+        if self.validate(name):
+            self._name = name
         else:
-            raise ValueError('botanical_name must be a valid binomen!')
+            raise ValueError('Botanical name must be a valid binomen!')
 
     @staticmethod
     def validate(botanical_name):
@@ -147,14 +145,13 @@ class Category(db.Model):
     description = db.Column(db.Text)
     _seeds = db.relationship('Seed',
                              secondary=categories_to_seeds,
-                             lazy='dynamic',
-                             backref=db.backref('_categories', lazy='dynamic'))
+                             backref='_categories')
 
     def __init__(self, category=None, description=None):
         """__init__ for Category.
 
         Args:
-            category (str): A category name.
+            category (Optional[str]): A category name.
             description (Optional[str]): A description for this category.
                                          Should be set at some point, but is
                                          not needed during creation of a
@@ -479,14 +476,31 @@ class Seed(db.Model):
     Attributes:
         __tablename__ (str): Name of the table: 'seeds'
         id (int): Auto-incremented ID # for use as primary key.
+        botanical_name_id (int): Foreign key for BotanicalName.
+        _botanical_name (relationship): MtO relationship with BotanicalName.
         _botanical_names (relationship): MtM relationship with BotanicalName.
-                                         Accessed via the botanical_names
-                                         property.
+        common_name_id (int): Foreign key for CommonName
+        _common_name (relationship): MtO relationship with CommonName.
+        _common_names (relationship): MtM relationship with CommonName.
         description (str): Product description in HTML format.
         dropped (bool): False if the seed will be re-stocked when low, False
                         if it will be discontinued when low.
         in_stock (bool): True if a seed is in stock, False if not.
         name (str): The name of the seed (cultivar); the main product name.
+        _packets (relationship): MtM relationship with Packet.
+
+    Backrefs:
+        _categories: MtM backref fron Category.
+
+    Properties:
+        botanical_name: Used to interface with the ._botanical_name MtO
+                        relationship.
+        botanical_names: Used to interface with the ._botanical_names MtM
+                         relationship.
+        common_name: Used to interface with the ._common_name MtO
+                     relationship.
+        common_names: Used to interface with the ._common_names MtM
+                      relationship.
     """
     __tablename__ = 'seeds'
     id = db.Column(db.Integer, primary_key=True)
@@ -497,6 +511,8 @@ class Seed(db.Model):
     _botanical_names = db.relationship('BotanicalName',
                                        secondary=seeds_to_botanical_names,
                                        backref='_seeds')
+    category_id = db.Column(db.Integer, db.ForeignKey('categories.id'))
+    _category = db.relationship('Category', foreign_keys=[category_id])
     common_name_id = db.Column(db.Integer, db.ForeignKey('common_names.id'))
     _common_name = db.relationship('CommonName',
                                    foreign_keys=[common_name_id])
@@ -525,12 +541,12 @@ class Seed(db.Model):
         Returns:
             string: Botanical name for this seed.
         """
-        return self._botanical_name.botanical_name
+        return self._botanical_name.name
 
     @botanical_name.expression
     def botanical_name(cls):
         """Make botanical_name property usable in Seed.query."""
-        return BotanicalName._botanical_name
+        return BotanicalName._name
 
     @botanical_name.setter
     def botanical_name(self, name):
@@ -543,15 +559,15 @@ class Seed(db.Model):
             TypeError: If name is not a string.
         """
         if isinstance(name, str):
-            bn = BotanicalName.query.filter_by(_botanical_name=name).first()
+            bn = BotanicalName.query.filter_by(_name=name).first()
             if bn is not None:
                 self._botanical_name = bn
             elif name in self.botanical_names:
                 for bn in self._botanical_names:
-                    if bn.botanical_name == name:
+                    if bn.name == name:
                         self._botanical_name = bn
             else:
-                self._botanical_name = BotanicalName(name)
+                self._botanical_name = BotanicalName(name=name)
         else:
             raise TypeError('Botanical name must be a string!')
 
@@ -563,7 +579,7 @@ class Seed(db.Model):
             list: A list of strings containing botanical names associated with
                   this seed.
         """
-        return [bn.botanical_name for bn in self._botanical_names]
+        return [bn.name for bn in self._botanical_names]
 
     @botanical_names.setter
     def botanical_names(self, names):
@@ -597,6 +613,82 @@ class Seed(db.Model):
             except TypeError:
                 raise TypeError('botanical_names can only be '
                                 'a string or an iterable!')
+
+    @hybrid_property
+    def categories(self):
+        """Return a list of ._categories.category.
+
+        Returns:
+            list: A list of strings containing categories associated with this
+                  seed.
+        """
+        return [cat.category for cat in self._categories]
+
+    @categories.setter
+    def categories(self, categories):
+        """Clear ._categories and set from a string or iterable.
+
+        categories can either be a string containing a list with commas, a
+        string containing a single category, or an iterable containing
+        strings.
+
+        Args:
+            categories (str, iterable): A list of categories.
+        """
+        if isinstance(categories, str):
+            self.clear_categories()
+            if ',' in categories:
+                for cat in categories.split(','):
+                    self.add_category(cat.strip())
+            else:
+                self.add_category(categories)
+        else:
+            try:
+                if all(isinstance(cat, str) for cat in categories):
+                    self.clear_categories()
+                    for cat in categories:
+                        self.add_category(cat)
+                else:
+                    raise TypeError('Iterables set to categories '
+                                    'must only contain strings!')
+            except TypeError:
+                raise TypeError('categories can only be set with a string '
+                                'or an iterable containing strings!')
+
+    @hybrid_property
+    def category(self):
+        """Return the primary category associated with this seed.
+
+        Returns:
+            str: Category for this seed.
+        """
+        return self._category.category
+
+    @category.expression
+    def category(cls):
+        """Make the .category property usable in Seed.query."""
+        return Category.category
+
+    @category.setter
+    def category(self, category):
+        """Set ._category to a new or existing Category.
+
+        Args:
+            category (str): The primary category for this seed.
+        """
+        if isinstance(category, str):
+            if category in self.categories:
+                for cat in self._categories:
+                    if cat.category == category:
+                        self._category = cat
+            else:
+                cat = Category.query.filter_by(category=category).first()
+                if cat is not None:
+                    self._category = cat
+                else:
+                    self._category = Category(category=category)
+        else:
+            raise TypeError('.category must be a string!')
 
     @hybrid_property
     def common_name(self):
@@ -682,13 +774,36 @@ class Seed(db.Model):
                     self.botanical_name == name:
                 self._botanical_names.append(self._botanical_name)
             else:
-                bn = BotanicalName.query.filter_by(_botanical_name=name).\
+                bn = BotanicalName.query.filter_by(name=name).\
                     first()
                 if bn is not None:
                     self._botanical_names.append(bn)
                 else:
-                    self._botanical_names.append(BotanicalName(name))
+                    self._botanical_names.append(BotanicalName(name=name))
         # Do nothing if name is in self.botanical_names already.
+
+    def add_category(self, category):
+        """Add a category to ._categories.
+
+        Args:
+            category (str): A category to add to ._categories.
+
+        Raises:
+            TypeError: If category is not a string.
+        """
+        if isinstance(category, str):
+            if category not in self.categories:
+                if self._category is not None and self.category == category:
+                    self._categories.append(self._category)
+                else:
+                    cat = Category.query.filter_by(category=category).first()
+                    if cat is not None:
+                        self._categories.append(cat)
+                    else:
+                        self._categories.append(Category(category=category))
+            # Do nothing if category is already in self.categories.
+        else:
+            raise TypeError('Category must be a string!')
 
     def add_common_name(self, name):
         """Add a common name to ._common_names.
@@ -716,8 +831,7 @@ class Seed(db.Model):
     def clear_botanical_names(self):
         """Clear _botanical_names without deleting them from the database.
 
-        This does not actually delete them because other seeds may still use
-        them. To delete them, use Seed._botanical_names.delete().
+        To delete them from the database, use Seed._botanical_names.delete().
 
         Returns:
             int: The number of botanical names removed.
@@ -725,6 +839,20 @@ class Seed(db.Model):
         count = 0
         while len(self._botanical_names) > 0:
             self._botanical_names.remove(self._botanical_names[0])
+            count += 1
+        return count
+
+    def clear_categories(self):
+        """Clear ._categories without deleting them from the database.
+
+        To delete them from the database, use Seed._categories.delete().
+
+        Returns:
+            int: The number of categories removed.
+        """
+        count = 0
+        while len(self._categories) > 0:
+            self._categories.remove(self._categories[0])
             count += 1
         return count
 
@@ -758,7 +886,7 @@ class Seed(db.Model):
         """
         bn = None
         for bot_name in self._botanical_names:
-            if bot_name._botanical_name == name:
+            if bot_name._name == name:
                 bn = bot_name
         if bn is None:
             return False

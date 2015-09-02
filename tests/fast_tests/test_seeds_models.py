@@ -1,7 +1,8 @@
 import unittest
+from decimal import Decimal
 from app import create_app
 from app.seeds.models import BotanicalName, Category, CommonName, Packet, \
-    Seed, UnitType
+    Seed, Unit
 
 
 class TestBotanicalName(unittest.TestCase):
@@ -110,56 +111,52 @@ class TestPacket(unittest.TestCase):
     def tearDown(self):
         self.app_context.pop()
 
-    def test_price_getter_and_setter(self):
-        """The setter stores price as an int, getter returns a str."""
-        pkt = Packet()
-        pkt.price = '2.99'
-        self.assertEqual(pkt._price, 299)
-        self.assertEqual(pkt.price, '2.99')
+    def test_price_getter(self):
+        """Gets ._price as a Decimal quantized to 2 decimal places."""
+        packet = Packet()
+        packet._price = Decimal('2.99')
+        self.assertEqual(packet.price, Decimal('2.99'))
+        packet._price = Decimal('1')
+        self.assertEqual(str(packet.price), '1.00')
 
-    def test_price_int_from_str_bad_string_with_dot(self):
-        """Raise a ValueError if given data is not decimal number."""
+    def test_price_setter(self):
+        """Set ._price if given an int, float, str, or Decimal."""
+        packet = Packet()
+        packet.price = 1
+        self.assertEqual(packet._price, Decimal('1.00'))
+        packet.price = 2.99
+        self.assertEqual(packet._price, Decimal('2.99'))
+        packet.price = '3.99'
+        self.assertEqual(packet._price, Decimal('3.99'))
+        packet.price = Decimal('4.99')
+        self.assertEqual(packet._price, Decimal('4.99'))
+
+    def test_price_to_decimal_bad_string(self):
+        """Raise a ValueError if string contains invalid chars."""
         with self.assertRaises(ValueError):
-            Packet.price_int_from_str('$4.99')
-        with self.assertRaises(ValueError):
-            Packet.price_int_from_str('4.99USD')
+            Packet.price_to_decimal('$1.99')
 
-    def test_price_int_from_str_correctly_formats_data(self):
-        """Convert numbers to integers w fractional parts as lowest digits."""
-        self.assertEqual(Packet.price_int_from_str('2.99'), 299)
-        self.assertEqual(Packet.price_int_from_str('4.5'), 450)
-        self.assertEqual(Packet.price_int_from_str('42'), 4200)
-
-    def test_price_int_from_str_not_a_number(self):
-        with self.assertRaises(ValueError):
-            Packet.price_int_from_str('a brazilian dollars')
-
-    def test_price_int_from_str_not_a_string(self):
-        """Raise a TypeError if given data not of the string type."""
+    def test_price_to_decimal_bad_type(self):
+        """Raise a TypeError if given data of the wrong type."""
         with self.assertRaises(TypeError):
-            Packet.price_int_from_str(4.99)
+            Packet.price_to_decimal(['2.99'])
         with self.assertRaises(TypeError):
-            Packet.price_int_from_str(5)
+            Packet.price_to_decimal(('432', '3.22'))
 
-    def test_price_int_from_str_too_many_decimal_places(self):
-        """Raise a ValueError if more than 2 digits exist to right of dot."""
-        with self.assertRaises(ValueError):
-            Packet.price_int_from_str('4.225')
-        with self.assertRaises(ValueError):
-            Packet.price_int_from_str('342.5555')
+    def test_price_to_decimal_Decimal(self):
+        """Return same Decimal if given a Decimal."""
+        self.assertEqual(Packet.price_to_decimal(Decimal('2.99')),
+                         Decimal('2.99'))
 
-    def test_price_int_from_str_too_many_dots(self):
-        """Raise a ValueError if there are too many dots in price."""
-        with self.assertRaises(ValueError):
-            Packet.price_int_from_str('4.3.2')
-        with self.assertRaises(ValueError):
-            Packet.price_int_from_str('127.0.0.1')
+    def test_price_to_decimal_int(self):
+        """Return a Decimal if given an int."""
+        self.assertEqual(Packet.price_to_decimal(1), Decimal('1.00'))
 
-    def test_price_str_from_int_returns_decimal_string(self):
-        """Convert an int price to a string containing a decimal."""
-        self.assertEqual(Packet.price_str_from_int(299), '2.99')
-        self.assertEqual(Packet.price_str_from_int(450), '4.50')
-        self.assertEqual(Packet.price_str_from_int(4200), '42.00')
+    def test_price_to_decimal_str(self):
+        """Return a Decimal if given a valid string containing a number."""
+        self.assertEqual(Packet.price_to_decimal('2.99'), Decimal('2.99'))
+        # The following is okay, as price is automatically truncated in db:
+        self.assertEqual(Packet.price_to_decimal('3.1415'), Decimal('3.1415'))
 
     def test_quantity_getter(self):
         """Gets _quantity and returns it in readable format."""
@@ -168,7 +165,7 @@ class TestPacket(unittest.TestCase):
         self.assertEqual(packet.quantity, '1/4')
         packet2 = Packet()
         packet2._quantity = -531
-        self.assertEqual(packet2.quantity, '1 2/3')
+        self.assertEqual(packet2.quantity, '5/3')
         packet3 = Packet()
         packet3._quantity = 12342
         self.assertEqual(packet3.quantity, '12.34')
@@ -286,12 +283,6 @@ class TestPacket(unittest.TestCase):
         self.assertEqual(Packet.quantity_str_from_int(12553), '1.255')
         self.assertEqual(Packet.quantity_str_from_int(11234567899),
                          '1.123456789')
-
-    def test_quantity_str_from_int_fraction_big_numerator(self):
-        """Return a str of fraction in parts if given int is - and n > d."""
-        self.assertEqual(Packet.quantity_str_from_int(-24951), '49 4/5')
-        self.assertEqual(Packet.quantity_str_from_int(-34112), '3 1/11')
-        self.assertEqual(Packet.quantity_str_from_int(-2501013), '2 48/101')
 
     def test_quantity_str_from_int_fraction_small_numerator(self):
         """Return a str of a fraction if given int is - and num < denom."""
@@ -504,8 +495,8 @@ class TestSeed(unittest.TestCase):
             seed.common_names = CommonName('Coleus')
 
 
-class TestUnitType(unittest.TestCase):
-    """Test methods of UnitType in the seeds model."""
+class TestUnit(unittest.TestCase):
+    """Test methods of Unit in the seeds model."""
     def setUp(self):
         self.app = create_app('testing')
         self.app_context = self.app.app_context()
@@ -515,10 +506,10 @@ class TestUnitType(unittest.TestCase):
         self.app_context.pop()
 
     def test_repr(self):
-        """Return a string formatted <UnitType '<unit_type>'>"""
-        ut = UnitType()
-        ut.unit_type = 'frogs'
-        self.assertEqual(ut.__repr__(), '<UnitType \'frogs\'>')
+        """Return a string formatted <Unit '<unit>'>"""
+        ut = Unit()
+        ut.unit = 'frogs'
+        self.assertEqual(ut.__repr__(), '<Unit \'frogs\'>')
 
 
 if __name__ == '__main__':

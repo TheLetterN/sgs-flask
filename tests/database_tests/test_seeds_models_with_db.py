@@ -1,7 +1,8 @@
 import unittest
+from decimal import Decimal
 from app import create_app, db
 from app.seeds.models import BotanicalName, Category, CommonName, Packet, \
-    Seed, UnitType
+    Seed, Unit
 
 
 class TestPacketWithDB(unittest.TestCase):
@@ -17,43 +18,109 @@ class TestPacketWithDB(unittest.TestCase):
         db.drop_all()
         self.app_context.pop()
 
-    def test_unit_type_expression(self):
-        """unit_type should be usable in queries."""
+    def test_price_comparator_eq(self):
+        """Querying Packet with price == n runs n through .price_to_decimal"""
         pkt = Packet()
         db.session.add(pkt)
-        pkt.unit_type = 'frogs'
-        self.assertIs(Packet.query.filter_by(unit_type='frogs').first(), pkt)
+        pkt.price = '2.99'
+        self.assertIs(Packet.query.filter_by(price='2.99').first(), pkt)
+        self.assertIs(Packet.query.filter_by(price=2.99).first(), pkt)
 
-    def test_unit_type_getter(self):
-        """.unit_type returns ._unit_type.unit_type"""
-        pkt = Packet()
-        db.session.add(pkt)
-        pkt._unit_type = UnitType('seeds')
-        self.assertEqual(pkt.unit_type, 'seeds')
+    def test_price_comparator_gt(self):
+        """Querying Packet with price > n runs n through .price_to_decimal"""
+        pkt1 = Packet()
+        pkt2 = Packet()
+        pkt3 = Packet()
+        db.session.add(pkt1)
+        db.session.add(pkt2)
+        db.session.add(pkt3)
+        pkt1.price = '4.99'
+        pkt2.price = '3.99'
+        pkt3.price = '1.99'
+        self.assertEqual([pkt2, pkt1],
+                         Packet.query.filter(Packet.price > '3.00').all())
+        self.assertEqual([pkt2, pkt1],
+                         Packet.query.filter(Packet.price > 3).all())
+        self.assertEqual([pkt2, pkt1],
+                         Packet.query.filter(Packet.price > 3.00).all())
+        self.assertNotIn(pkt3, Packet.query.filter(Packet.price > 3).all())
+        self.assertEqual([pkt3, pkt2, pkt1],
+                         Packet.query.filter(Packet.price > 1).all())
+        self.assertIn(pkt3, Packet.query.filter(Packet.price > 1).all())
 
-    def test_unit_type_setter_new_type(self):
-        """create a new UnitType in the database if not already there."""
-        pkt = Packet()
-        db.session.add(pkt)
-        pkt.unit_type = 'seeds'
+    def test_price_comparator_lt(self):
+        """Querying Packet with price < n runs n through .price_to_decimal"""
+        pkt1 = Packet()
+        pkt2 = Packet()
+        pkt3 = Packet()
+        db.session.add(pkt1)
+        db.session.add(pkt2)
+        db.session.add(pkt3)
+        pkt1.price = '1.99'
+        pkt2.price = '2.99'
+        pkt3.price = '4.99'
+        self.assertEqual([pkt1, pkt2],
+                         Packet.query.filter(Packet.price < '3.00').all())
+        self.assertEqual([pkt1, pkt2],
+                         Packet.query.filter(Packet.price < 3).all())
+        self.assertEqual([pkt1, pkt2],
+                         Packet.query.filter(Packet.price < 3.00).all())
+        self.assertNotIn(pkt3, Packet.query.filter(Packet.price < 3).all())
+        self.assertEqual([pkt1, pkt2, pkt3],
+                         Packet.query.filter(Packet.price < 42).all())
+        self.assertIn(pkt3, Packet.query.filter(Packet.price < 42).all())
+
+    def test_price_setter_truncates(self):
+        """._price only stores decimals with a scale of 2.
+
+        No rounding should occur, it should simply chop off the excess.
+        """
+        packet = Packet()
+        db.session.add(packet)
+        packet.price = '3.14159'
         db.session.commit()
-        self.assertEqual(UnitType.query.filter_by(unit_type='seeds').count(),
+        self.assertEqual(Packet.query.first()._price, Decimal('3.14'))
+        packet.price = '2.999'
+        db.session.commit()
+        self.assertEqual(Packet.query.first()._price, Decimal('2.99'))
+
+    def test_unit_expression(self):
+        """unit should be usable in queries."""
+        pkt = Packet()
+        db.session.add(pkt)
+        pkt.unit = 'frogs'
+        self.assertIs(Packet.query.filter_by(unit='frogs').first(), pkt)
+
+    def test_unit_getter(self):
+        """.unit returns ._unit.unit"""
+        pkt = Packet()
+        db.session.add(pkt)
+        pkt._unit = Unit('seeds')
+        self.assertEqual(pkt.unit, 'seeds')
+
+    def test_unit_setter_new_type(self):
+        """create a new Unit in the database if not already there."""
+        pkt = Packet()
+        db.session.add(pkt)
+        pkt.unit = 'seeds'
+        db.session.commit()
+        self.assertEqual(Unit.query.filter_by(unit='seeds').count(),
                          1)
 
-    def test_unit_type_setter_existing_type(self):
-        """Set the packet's unit_type to type from database if it exists."""
+    def test_unit_setter_existing_type(self):
+        """Set the packet's unit to type from database if it exists."""
         pkt = Packet()
         db.session.add(pkt)
-        pkt.unit_type = 'seeds'
+        pkt.unit = 'seeds'
         pkt2 = Packet()
         db.session.add(pkt2)
-        pkt2.unit_type = 'seeds'
+        pkt2.unit = 'seeds'
         self.assertIsNot(pkt, pkt2)
-        self.assertIs(pkt.unit_type, pkt2.unit_type)
+        self.assertIs(pkt.unit, pkt2.unit)
         pkt3 = Packet()
         db.session.add(pkt3)
-        pkt3.unit_type = ('oz')
-        self.assertIsNot(pkt.unit_type, pkt3.unit_type)
+        pkt3.unit = ('oz')
+        self.assertIsNot(pkt.unit, pkt3.unit)
 
 
 class TestSeedWithDB(unittest.TestCase):

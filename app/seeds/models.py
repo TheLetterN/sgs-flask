@@ -1,6 +1,29 @@
-from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy.ext.hybrid import Comparator, hybrid_property
+from decimal import Decimal
 from app import db
 
+
+class USDInt(db.TypeDecorator):
+    """Type to store US dollar amounts in the database as integers.
+
+    Since we don't know for sure how the database will handle decimal numbers,
+    it is safer to store our dollar amounts as integers to avoid the risk of
+    floating point errors leading to incorrect data.
+
+    A USDInt column will store a value of 2.99 as 299 in the database, and
+    return it as 2.99 when retrieved.
+    """
+    impl = db.Integer
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        return int(value * 10**2)
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        return Decimal(value) / 10**2
 
 categories_to_seeds = db.Table(
     'categories_to_seeds',
@@ -42,73 +65,90 @@ class BotanicalName(db.Model):
     """Table for botanical (scientific) names of seeds.
 
     The botanical name is the scientific name of the species a seed belongs
-    to. Examples include *Asclepias incarnata* (swamp milkweed) and
-    *Echinacea purpurea*.
+    to. A correctly-formatted botanical name begins with a genus and species
+    in binomial name format, or at least a genus followed by a descriptive
+    comment.
 
     Attributes:
         __tablename__ (str): Name of the table: 'botanical_names'
         id (int): Auto-incremented ID # for use as a primary key.
-        _name (str): A botanical name associated with one or more
-                     seeds. Get and set via the name property.
-
-    Properties:
-        name: Getter returns _name.
-                        Setter checks validity of botanical name and assigns
-                        it to _name if valid, or raises a ValueError if not.
-
-    Backrefs:
-       _seeds: Backref to seeds table to allow us to look up seeds by
-               botanical name.
+        _name (str): A botanical name associated with one or more seeds. Get
+            and set via the name property.
+        _seeds (backref): Backref from seeds table to allow us to look up seeds
+            by botanical name.
     """
     __tablename__ = 'botanical_names'
     id = db.Column(db.Integer, primary_key=True)
     _name = db.Column(db.String(64), unique=True)
 
     def __init__(self, name=None):
-        """__init__ for BotanicalName.
+        """Construct an instance of BotanicalName.
 
         Args:
-            name (str): A botanical name for a species
-                                  of plant.
+            name (Optional[str]): A botanical name for a species of plant.
         """
         if name is not None:
             self.name = name
 
     def __repr__(self):
-        """Return representation of BotanicalName in human-readable format."""
+        """Return representation of BotanicalName in human-readable format.
+
+        Returns:
+            str: Representation formatted <BotanicalName '<.name>'> for
+                 example: <BotanicalName 'Asclepias incarnata'>
+        """
         return '<{0} \'{1}\'>'.format(self.__class__.__name__,
                                       self.name)
 
     @hybrid_property
     def name(self):
-        """Get _name as-is."""
+        """str: The botanical name stored in ._name.
+
+        Setter:
+            Run data through .validate() and set ._name to it if valid.
+            Raise a ValueError if data is not valid.
+        """
         return self._name
 
     @name.setter
     def name(self, name):
-        """Set _name if name is valid.
-
-        Args:
-            name (str): The botanical name to set.
-        """
         if self.validate(name):
             self._name = name
         else:
-            raise ValueError('Botanical name must be a valid binomen!')
+            raise ValueError('Botanical name must begin with two words in '
+                             'the format of a binomen/scientific name!')
 
     @staticmethod
     def validate(botanical_name):
         """Return True if botanical_name is a validly formatted binomen.
 
         Valid within reason; some may contain more than 2 words, so we only
-        check the first two words.
+        check the first two words. This check is mostly to make it easier to
+        avoid capitalization issues.
+
+        Examples:
+            >>> BotanicalName.validate('Asclepias incarnata')
+            True
+
+            >>> BotanicalName.validate('asclepias incarnata')
+            False
+
+            >>> BotanicalName.validate('ASCLEPIAS INCARNATA')
+            False
+
+            >>> BotanicalName.validate('Asclepias Incarnata')
+            False
+
+            >>> BotanicalName.validate('Digitalis interspecies hybrid')
+            True
 
         Args:
             botanical_name (str): A string containing a botanical name to
                                   check for valid formatting.
 
         Returns:
-            bool: True if botanical_name's first two words constitute a
+            bool: True if botanical_name's first word looks like a valid genus
+                  and the second word is all lowercase.
             bool: False if there are formatting errors in the first two words.
             bool: False if botanical_name.split() raises an exception, usually
                   due to botanical_name not being a string.
@@ -128,16 +168,17 @@ class BotanicalName(db.Model):
 class Category(db.Model):
     """Table for seed categories.
 
-    Categories are the next subdivision below the all-encompasing "seeds"
-    label. The category a seed falls under is usually based on what type of
-    plant it is (herb, vegetable) or its life cycle. (perennial flower, annual
-    flower)
+    Categories are the first/broadest divisions we use to sort seeds. The
+    category a seed falls under is usually based on what type of plant it is
+    (herb, vegetable) or its life cycle. (perennial flower, annual flower)
 
     Attributes:
         __tablename__ (str): Name of the table: 'categories'
         id (int): Auto-incremented ID # for use as primary key.
-        category (str): The name of the category.
-        description(str): HTML description information for the category.
+        category (str): The label for the category itself, such as 'Herb'
+                        or 'Perennial Flower'.
+        description (str): HTML description information for the category.
+        _seeds (relationship): MtM relationship with Seed.
     """
     __tablename__ = 'categories'
     id = db.Column(db.Integer, primary_key=True)
@@ -148,20 +189,17 @@ class Category(db.Model):
                              backref='_categories')
 
     def __init__(self, category=None, description=None):
-        """__init__ for Category.
+        """Construct an instance of Category.
 
         Args:
             category (Optional[str]): A category name.
             description (Optional[str]): A description for this category.
-                                         Should be set at some point, but is
-                                         not needed during creation of a
-                                         category.
+                This should be in raw HTML to allow for special formatting.
         """
         self.category = category
         self.description = description
 
     def __repr__(self):
-        """Return representation of Category in human-readable format."""
         return '<{0} \'{1}\'>'.format(self.__class__.__name__,
                                       self.category)
 
@@ -169,16 +207,17 @@ class Category(db.Model):
 class CommonName(db.Model):
     """Table for common names.
 
-    A CommonName is the next tier below Category in how we divide up our seeds
-    for display on the site. Common names include coleus, sunflower, acanthus,
-    butterfly weed.
+    A CommonName is the next subdivision below Category in how we sort seeds.
+    It is usually the common name for the species or group of species a seed
+    belongs to.
 
     Attributes:
         __tablename__ (str): Name of the table: 'seed_types'
         id (int): Auto-incremented ID # for use as primary_key.
-        description (str): A description of the seed type for display on that
-                           seed type's page.
-        name (str): The name of the seed type.
+        description (str): An optional description for the species/group
+            of species with the given common name.
+        name (str): The common name of a seed. Examples: Coleus, Tomato,
+            Lettuce, Zinnia.
     """
     __tablename__ = 'common_names'
     id = db.Column(db.Integer, primary_key=True)
@@ -186,11 +225,17 @@ class CommonName(db.Model):
     name = db.Column(db.String(64), unique=True)
 
     def __init__(self, name=None, description=None):
+        """Construct an instance of CommonName
+
+        Args:
+            name (Optional[str]): The common name for a seed or group of seeds.
+            description (Optional[str]): An optional description for use on
+            pages listing seeds of a given common name.
+        """
         self.name = name
         self.description = description
 
     def __repr__(self):
-        """Return representation of CommonName in human-readable format."""
         return '<{0} \'{1}\'>'.format(self.__class__.__name__, self.name)
 
 
@@ -205,129 +250,129 @@ class Packet(db.Model):
     Attributes:
         __tablename__ (str): Name of the table: 'packets'
         id (int): Auto-incremented ID # for use as a primary key.
-        _price (str): Price (in US dollars) for this packet. Accessed via the
-                      price property.
-        _quantity (str): Amount of seeds in packet. Accessed via the quantity
-                         property.
-        unit_type_id (int): ForeignKey for associated UnitType.
-        _unit_type (relationship): MtO relationship with UnitType. Accessed
-                                   via the unit_type property.
-
-    Properties:
-        price: Getter returns a string representation of a decimal monetary
-               value, converted from the integer value stored in _price.
-               Setter takes a string containing a decimal number and converts
-               it to a database-friendly integer before storing it in _price.
-        unit_type: Getter returns the value of the UnitType.unit_type stored
-                   in _unit_type.
-                   Setter takes a string meant for UnitType.unit_type and
-                   checks to see if the same UnitType already exists in the
-                   database, and assigns it to _unit_type if it exists,
-                   otherwise a new UnitType is created and assigned to
-                   _unit_type.
-        quantity: Getter returns a string representing the quantity converted
-                  from the integer stored in _quantity.
-                  Setter converts a string representing a quantity which may
-                  contain fractional parts into an integer for storage in the
-                  database.
+        _price (str): Price (in US dollars) for this packet.
+        _quantity (str): Amount of seeds in packet.
+        unit_id (int): ForeignKey for associated Unit.
+        _unit (relationship): MtO relationship with Unit.
     """
     __tablename__ = 'packets'
     id = db.Column(db.Integer, primary_key=True)
-    _price = db.Column(db.Integer)
+    _price = db.Column(USDInt)
     _quantity = db.Column(db.Integer)
-    unit_type_id = db.Column(db.Integer, db.ForeignKey('unit_types.id'))
-    _unit_type = db.relationship('UnitType', backref='_packets')
+    unit_id = db.Column(db.Integer, db.ForeignKey('units.id'))
+    _unit = db.relationship('Unit', backref='_packets')
     __table_args__ = (db.UniqueConstraint('_price',
                                           '_quantity',
-                                          'unit_type_id'),)
+                                          'unit_id'),)
 
     @hybrid_property
     def price(self):
-        """Get price converted from int to a string decimal value.
+        """Decimal: The value of ._price.
 
-        Returns:
-            str: a string containing a decimal number derived from
-                 Packet.price
+        Setter:
+            Check type of data, set it as a Decimal if it's Decimal, int, or
+            str, and raise a TypeError if not.
         """
-        return self.price_str_from_int(self._price)
+        return self._price.quantize(Decimal('1.00'))
+
+    class PriceComparator(Comparator):
+        """Allow Packets to be queried by price without needing to use Decimals.
+
+        Without this comparator, to get all packets with a price of 2.99 you
+        would need to query:
+
+        Packet.query.filter_by(price=Decimal('2.99')).all()
+        """
+        def __eq__(self, other):
+            return self.__clause_element__() == Packet.price_to_decimal(other)
+
+        def __lt__(self, other):
+            return self.__clause_element__() < Packet.price_to_decimal(other)
+
+        def __gt__(self, other):
+            return self.__clause_element__() > Packet.price_to_decimal(other)
+
+    @price.comparator
+    def price(cls):
+        return Packet.PriceComparator(cls._price)
 
     @price.setter
     def price(self, price):
-        """Set price as an int from a string representing a decimal value.
-
-        Args:
-            price (str): A string containing a decimal version of price.
-        """
-        self._price = self.price_int_from_str(price)
-
-    @staticmethod
-    def price_int_from_str(price):
-        """Convert a string price to an integer.
-
-        The lowest two digits of the integer represent the fractional part.
-        Therefore, 10.25 = 1025, 1.5 = 150, 12 = 1200, etc.
-
-        Due to potential issues with converting to and from float, price
-        data should only accepted in string format. Since the price will
-        nearly always come from web forms, it makes sense to default to
-        that format.
-
-        Args:
-            price (str): A string representing a decimal price value.
-
-        Returns:
-            int: An integer with the lowest 2 digits representing the
-                 fractional part.
-        """
-        if not isinstance(price, str):
-            raise TypeError('Price must be given as a string!')
-        if '.' in price:
-            parts = price.split('.')
-            if len(parts) != 2:
-                raise ValueError('Price must be a string containing only '
-                                 'a 2-point precision decimal number!')
-            if not parts[0].isdigit() or not parts[1].isdigit():
-                raise ValueError('Price contains invalid characters!')
-            if len(parts[1]) > 2:
-                raise ValueError('Price must contain only 2 decimal places!')
-            if len(parts[1]) == 1:
-                parts[1] += '0'
-            return int(parts[0]) * 100 + int(parts[1])
-        else:
-            if not price.isdigit():
-                raise ValueError('Price must be a number!')
-            return int(price) * 100
-
-    @staticmethod
-    def price_str_from_int(price):
-        """Convert an integer price to a decimal value in a string.
-
-        Args:
-            price (int): A price in integer form, as stored in the db.
-
-        Returns:
-            str: A string containing the decimal representation of price.
-        """
-        str_price = str(price)
-        return str_price[:-2] + '.' + str_price[-2:]
+        self._price = Packet.price_to_decimal(price)
 
     @hybrid_property
     def quantity(self):
-        """Get quantity converted to human-readable format.
+        """str: ._quantity in human readable format.
 
-        Returns:
-            str: Quantity in human readable format.
+        See .quantity_str_from_int() and .quantity_int_from_str() for more
+        details.
+
+        Setter:
+            Converts a string containing a quantity to an integer and sets
+            ._quantity to it.
         """
         return self.quantity_str_from_int(self._quantity)
 
     @quantity.setter
     def quantity(self, quantity):
-        """Set a string containing a valid quantity to an int in _quantity.
-
-        Args:
-            quantity (str): A string containing a validly formatted quantity.
-        """
         self._quantity = self.quantity_int_from_str(quantity)
+
+    @hybrid_property
+    def unit(self):
+        """str: The unit of measure associated with .quantity.
+
+        Setter:
+            Set ._unit with a Unit from the database if it exists, or a new
+            Unit of not.
+        """
+        return self._unit.unit
+
+    @unit.expression
+    def unit(cls):
+        return Unit.unit
+
+    @unit.setter
+    def unit(self, unit):
+        uom = Unit.query.filter_by(unit=unit).first()  # uom = Unit of Measure
+        if uom is not None:
+            self._unit = uom
+        else:
+            self._unit = Unit(unit=unit)
+
+    @staticmethod
+    def price_to_decimal(price):
+        """Convert an integer, float, or string to a Decimal value.
+
+        Examples:
+            >>> Packet.price_to_decimal(1)
+            Decimal('1')
+
+            >>> Packet.price_to_decimal(2.99)
+            Decimal('2.99')
+
+            >>> Packet.price_to_decimal('2.99')
+            Decimal('2.99')
+
+        Returns:
+            Decimal: Decimal value of price.
+
+        Raises:
+            ValueError: If given a string containing invalid characters.
+            TypeError: If given data that is not an int, float, string, or
+                Decimal.
+        """
+        if isinstance(price, Decimal):
+            return price
+        elif isinstance(price, int) or isinstance(price, str):
+            try:
+                return Decimal(price)
+            except:
+                raise ValueError('Could not convert price to a Decimal value,'
+                                 ' perhaps it contains invalid characters?')
+        elif isinstance(price, float):
+            return Decimal(str(price))
+        else:
+            raise TypeError('price must be a Decimal, str, int, or float!')
 
     @staticmethod
     def quantity_int_from_str(quantity):
@@ -342,35 +387,45 @@ class Packet(db.Model):
         If the fractional part is a fraction, the resulting integer will be
         negative.
 
+        Examples:
+            >>> Packet.quantity_int_from_str('100')
+            1000
+
+            >>> Packet.quantity_int_from_str('1/4')
+            -141
+
+            >>> Packet.quantity_int_from_str('3.14159265')
+            3141592658
+
         Args:
             quantity (str): The size/quantity of a packet.
+
+        Returns:
+            int: The converted integer value for use in the database.
 
         Raises:
             TypeError: If quantity is not a string.
             ValueError: If quantity contains both . and /.
             ValueError: If quantity is decimal and contains a fractional
-                        part with more than 9 digits.
+                part with more than 9 digits.
             ValueError: If quantity can't be parsed as a valid number.
             ValueError: If quantity contains more than one decimal.
             ValueError: If quantity is a fraction and contains a denominator
-                        with more than 9 digits.
+                with more than 9 digits.
             ValueError: If quantity contains more than one forward slash.
-
-        Returns:
-            int: The converted integer value for use in the database.
         """
         if not isinstance(quantity, str):
             raise TypeError('quantity must be a string!')
         quantity = quantity.replace(' ', '')
         if '.' in quantity and '/' in quantity:
-            raise ValueError('quantity must be a decimal or fraction,'
-                             ' not both!')
+            raise ValueError('quantity must be a decimal '
+                             'or fraction, not both!')
         if '.' in quantity:
             parts = quantity.split('.')
             if len(parts) == 2:
                 if len(parts[1]) > 9:
-                        raise ValueError('quantity can only hold up to 9'
-                                         ' decimal places!')
+                        raise ValueError('quantity can only hold '
+                                         'up to 9 decimal places!')
                 if parts[0].isdigit() and parts[1].isdigit():
                     return int(''.join(parts)) * 10 + len(parts[1])
                 else:
@@ -381,15 +436,15 @@ class Packet(db.Model):
             parts = quantity.split('/')
             if len(parts) == 2:
                 if len(parts[1]) > 9:
-                    raise ValueError('quantity can only have a denominator'
-                                     ' of up to 9 digits!')
+                    raise ValueError('quantity can only have a denominator '
+                                     'of up to 9 digits!')
                 if parts[0].isdigit() and parts[1].isdigit():
                     return -(int(''.join(parts)) * 10 + len(parts[1]))
                 else:
                     raise ValueError('quantity must be a number!')
             else:
-                raise ValueError('quantity can only contain one forward'
-                                 ' slash!')
+                raise ValueError('quantity can only contain '
+                                 'one forward slash!')
         else:
             if quantity.isdigit():
                 return int(quantity) * 10
@@ -400,12 +455,31 @@ class Packet(db.Model):
     def quantity_str_from_int(quantity):
         """Convert an int in db storage format to a readable string.
 
+        The lowest digit of the int represents the number of digits in the
+        fractional part, and the integer is positive if it represents a
+        decimal value, negative if it represents a fraction.
+
+        Examples:
+            >>> Packet.quantity_str_from_int(1000)
+            '100'
+
+            >>> Packet.quantity_str_from_int(-141)
+            '1/4'
+
+            >>> Packet.quantity_str_from_int(3141592658)
+            '3.14159265'
+
         Args:
             quantity (int): An integer presumably from the database that
-                            represents a quantity as stored in the db.
+                represents a quantity as stored in the db.
 
         Returns:
             str: A string containing the quantity in a human-readable format.
+
+        Raises:
+            ValueError: Negative integers ending in 0 cannot be converted, as
+                they would result in a fraction with no denominator.
+            TypeError: If given non-int data.
         """
         if isinstance(quantity, int):
             if quantity > 0:
@@ -419,51 +493,14 @@ class Packet(db.Model):
                 quantity = quantity * -1
                 fractional = quantity % 10
                 if fractional == 0:
-                    raise ValueError('quantity represents a fraction, '
-                                     'but the denominator has no digits!')
+                    raise ValueError('The fraction generated by this '
+                                     'number would have no denominator!')
                 else:
                     numerator = quantity // 10**(1 + fractional)
                     denominator = (quantity % 10**(1 + fractional) // 10)
-                    if numerator < denominator:
-                        return str(numerator) + '/' + str(denominator)
-                    else:
-                        return str(numerator // denominator) + ' ' + \
-                            str(numerator % denominator) + '/' + \
-                            str(denominator)
+                    return str(numerator) + '/' + str(denominator)
         else:
             raise TypeError('quantity must be an integer!')
-
-    @hybrid_property
-    def unit_type(self):
-        """Get the unit_type column from the UnitType object in _unit_type.
-
-        Returns:
-            str: UnitType.unit_type associated with this packet.
-        """
-        return self._unit_type.unit_type
-
-    @unit_type.expression
-    def unit_type(cls):
-        return db.select([UnitType.unit_type]).\
-            where(cls.unit_type_id == UnitType.id).\
-            label('unit_type')
-
-    @unit_type.setter
-    def unit_type(self, unit_type):
-        """Set the unit type for this seed packet.
-
-        If the unit_type submitted corresponds to a pre-existing unit type,
-        it will load that one and associate it with the packet, otherwise it
-        will create a new one.
-
-        Args:
-            unit_type (str): The unit type to set.
-        """
-        ut = UnitType.query.filter_by(unit_type=unit_type).first()
-        if ut is not None:
-            self._unit_type = ut
-        else:
-            self._unit_type = UnitType(unit_type)
 
 
 class Seed(db.Model):
@@ -926,35 +963,36 @@ class SeriesDesc(db.Model):
     content = db.Column(db.Text)
 
 
-class UnitType(db.Model):
-    """Table for unit types for packets.
-
-    Units correspond to the quantity of seeds in a packet, labeling what
-    units the quantity is in, e.g. seeds, grams, ounces.
+class Unit(db.Model):
+    """Table for units of measure.
 
     Attributes:
-        __tablename__ (str): Name of the table: 'unit_types'
+        __tablename__ (str): Name of the table: 'units'
         id (int): Auto-incremented ID # for use as primary key.
-        unit_type (str): The unit of measurement for a packet's quantity.
+        unit (str): The unit of measurement for a packet's quantity.
 
     Backrefs:
         _packets: backref from Packet to allow us to look up packets
-                  by unit type.
+                  by unit.
     """
-    __tablename__ = 'unit_types'
+    __tablename__ = 'units'
     id = db.Column(db.Integer, primary_key=True)
-    unit_type = db.Column(db.String(32), unique=True)
+    unit = db.Column(db.String(32), unique=True)
 
-    def __init__(self, unit_type=None):
-        """__init__ for UnitType.
+    def __init__(self, unit=None):
+        """Construct an instance of Unit.
 
         Args:
-            unit_type (str): A unit of measure for use in a Packet. Examples:
-                             'seeds', 'oz', 'grams'.
+            unit (str): A unit of measure for use in a Packet. Examples:
+                'count', 'oz', 'grams'.
         """
-        self.unit_type = unit_type
+        self.unit = unit
 
     def __repr__(self):
-        """Return representation of UnitType in human-readable format."""
         return '<{0} \'{1}\'>'.format(self.__class__.__name__,
-                                      self.unit_type)
+                                      self.unit)
+
+
+if __name__ == '__main__':  # pragma: no cover
+    import doctest
+    doctest.testmod()

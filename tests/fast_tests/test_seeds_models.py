@@ -1,8 +1,406 @@
 import unittest
 from decimal import Decimal
+from fractions import Fraction
 from app import create_app
-from app.seeds.models import BotanicalName, Category, CommonName, Packet, \
-    Seed, Unit
+from app.seeds.models import BotanicalName, Category, CommonName, is_480th, \
+    is_decimal, is_fraction, is_int, Packet, QtyDecimal, QtyFraction, \
+    QtyInteger, Quantity480th, QuantityDecimal, Seed, Unit, USDInt
+
+
+class TestModuleFunctions(unittest.TestCase):
+    """Class to test top-level functions in the seeds model."""
+    def setUp(self):
+        self.app = create_app('testing')
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+
+    def tearDown(self):
+        self.app_context.pop()
+
+    def test_is_480th_bad_fraction_verify_fraction_off(self):
+        """Carry on if given a bad fraction with verify_fraction off.
+
+        There should never be a case where we actually want to accept a bad
+        fraction, this is just to test that it runs without checking
+        is_fraction() if verify_fraction = False. Realistically is_480th
+        should never be run on a value that hasn't been verified by
+        is_fraction(), there's just no sense in running is_fraction() again
+        if we need to run is_480th() in a block that only runs after
+        is_fraction() has evaluated to True.
+        """
+        self.assertTrue(is_480th('1 and 1/4', verify_fraction=False))
+        self.assertTrue(is_480th('1/2/4', verify_fraction=False))
+
+    def test_is_480th_bad_fraction_verify_fraction_on(self):
+        """Return False if verify_fraction is on when given bad fraction."""
+        self.assertFalse(is_480th('1 and 1/4'))
+        self.assertFalse(is_480th('1/2/4'))
+
+    def test_is_480th_bad_fraction(self):
+        """Return False if given a Fraction with an invalid denominator."""
+        self.assertFalse(is_480th(Fraction(6, 7)))
+        self.assertFalse(is_480th(Fraction(8, 9)))
+        self.assertFalse(is_480th(Fraction(10, 11)))
+        self.assertFalse(is_480th(Fraction(12, 13)))
+        self.assertFalse(is_480th(Fraction(13, 14)))
+
+    def test_is_480th_bad_str(self):
+        """Return False if str contains fraction w/ invalid denom."""
+        self.assertFalse(is_480th('6/7'))
+        self.assertFalse(is_480th('1 3/9'))
+        self.assertFalse(is_480th('9/11'))
+        self.assertFalse(is_480th('4/13'))
+        self.assertFalse(is_480th('81/14'))
+
+    def test_is_480th_bad_type(self):
+        """Return False if given data that is not a Fraction or str."""
+        self.assertFalse(is_480th(3.10, verify_fraction=False))
+        self.assertFalse(is_480th(Decimal('1.25'), verify_fraction=False))
+        self.assertFalse(is_480th(42, verify_fraction=False))
+
+    def test_is_480th_valid_fraction(self):
+        """Return True if given a Fraction with a valid denominator."""
+        self.assertTrue(is_480th(Fraction(1, 2)))
+        self.assertTrue(is_480th(Fraction(2, 3)))
+        self.assertTrue(is_480th(Fraction(3, 4)))
+        self.assertTrue(is_480th(Fraction(5, 6)))
+        self.assertTrue(is_480th(Fraction(7, 8)))
+        self.assertTrue(is_480th(Fraction(9, 10)))
+        self.assertTrue(is_480th(Fraction(11, 12)))
+        self.assertTrue(is_480th(Fraction(14, 15)))
+        self.assertTrue(is_480th(Fraction(15, 16)))
+
+    def test_is_480th_valid_str(self):
+        """Return True if given a str containing fraction w/ valid denom."""
+        self.assertTrue(is_480th('1/2'))
+        self.assertTrue(is_480th('1 1/3'))
+        self.assertTrue(is_480th('1/4'))
+        self.assertTrue(is_480th('43 1/6'))
+        self.assertTrue(is_480th('1/8'))
+        self.assertTrue(is_480th('41/12'))
+        self.assertTrue(is_480th('2/15'))
+        self.assertTrue(is_480th('1 3/16'))
+
+    def test_is_decimal_bad_str(self):
+        """Return false if string contains invalid data."""
+        self.assertFalse(is_decimal('$2.99'))
+        self.assertFalse(is_decimal('43.44usd'))
+        self.assertFalse(is_decimal('3.4.5'))
+        self.assertFalse(is_decimal('3. 4'))
+        self.assertFalse(is_decimal('3 .4'))
+        self.assertFalse(is_decimal('1'))
+        self.assertFalse(is_decimal('1/3'))
+        self.assertFalse(is_decimal('1 2/3'))
+
+    def test_is_decimal_bad_type(self):
+        """Return false if type is not float, Decimal, or str."""
+        self.assertFalse(is_decimal(12))
+        self.assertFalse(is_decimal(Fraction(3, 4)))
+        self.assertFalse(is_decimal([3.4, 4.5]))
+
+    def test_is_decimal_decimal_or_float(self):
+        """Return True given a Decimal or float type."""
+        self.assertTrue(is_decimal(3.14))
+        self.assertTrue(is_decimal(Decimal('3.14')))
+
+    def test_is_decimal_str_valid(self):
+        """Return True if string contains a valid decimal number."""
+        self.assertTrue(is_decimal('3.14'))
+        self.assertTrue(is_decimal(' 42.24 '))
+
+    def test_is_fraction_bad_str(self):
+        """Return False if string is not a valid fraction."""
+        self.assertFalse(is_fraction('1 a2/4'))
+        self.assertFalse(is_fraction('1 3/g44'))
+        self.assertFalse(is_fraction('a 1/2'))
+        self.assertFalse(is_fraction('1 1 3/2'))
+        self.assertFalse(is_fraction('x/3'))
+        self.assertFalse(is_fraction('2/y'))
+        self.assertFalse(is_fraction('1/2/3'))
+        self.assertFalse(is_fraction('12'))
+        self.assertFalse(is_fraction('3.14'))
+
+    def test_is_fraction_bad_type(self):
+        """Return False if given data of a type other than str or Fraction."""
+        self.assertFalse(is_fraction(12))
+        self.assertFalse(is_fraction(3.14))
+        self.assertFalse(is_fraction(['4/3', '1/2']))
+
+    def test_is_fraction_fraction(self):
+        """Return True given a Fraction object."""
+        self.assertTrue(is_fraction(Fraction(1, 3)))
+        self.assertTrue(is_fraction(Fraction(5, 2)))
+        self.assertTrue(is_fraction(Fraction(12, 131)))
+
+    def test_is_fraction_str_fraction(self):
+        """Return True if given a string containing a valid fraction."""
+        self.assertTrue(is_fraction('1/2'))
+        self.assertTrue(is_fraction('3/4'))
+        self.assertTrue(is_fraction('234/113'))
+
+    def test_is_fraction_str_mixed(self):
+        """Return True if given a string containing a valid mixed number."""
+        self.assertTrue(is_fraction('1 1/2'))
+        self.assertTrue(is_fraction('2 3/4'))
+        self.assertTrue(is_fraction('243 5/44'))
+
+    def test_is_fraction_zero_denominator(self):
+        """Return False if string contains fraction with denom of 0."""
+        self.assertFalse(is_fraction('1/0'))
+        self.assertFalse(is_fraction('1 3/0'))
+        self.assertFalse(is_fraction('43434/0'))
+
+    def test_is_int_bad_str(self):
+        """Return False if str does not contain a valid int."""
+        self.assertFalse(is_int('1/3'))
+        self.assertFalse(is_int('1 1/4'))
+        self.assertFalse(is_int('3.14'))
+        self.assertFalse(is_int('1a'))
+
+    def test_is_int_bad_type(self):
+        """Return False if given a type that isn't int or str."""
+        self.assertFalse(is_int(3.14))
+        self.assertFalse(is_int(Decimal('3.14')))
+        self.assertFalse(is_int(Fraction(3, 4)))
+
+    def test_is_int_int(self):
+        """Return True if value is of type int."""
+        self.assertTrue(is_int(12))
+        self.assertTrue(is_int(42))
+
+    def test_is_int_str_valid(self):
+        """Return true if value is a str containing a valid int."""
+        self.assertTrue(is_int('12'))
+        self.assertTrue(is_int(' 42 '))
+
+
+class TestQuantity480th(unittest.TestCase):
+    """Test methods of the Quantity480th TypeDecorator in the seeds model."""
+    def setUp(self):
+        self.app = create_app('testing')
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+
+    def tearDown(self):
+        self.app_context.pop()
+
+    def test_from_480ths_valid_ints(self):
+        """Return a Fraction given a valid int."""
+        self.assertEqual(Quantity480th.from_480ths(240), Fraction(1, 2))
+        self.assertEqual(Quantity480th.from_480ths(400), Fraction(5, 6))
+        self.assertEqual(Quantity480th.from_480ths(6180), Fraction(103, 8))
+
+    def test_from_480ths_bad_type(self):
+        """Raise a TypeError given non-int data."""
+        with self.assertRaises(TypeError):
+            Quantity480th.from_480ths(3.14)
+        with self.assertRaises(TypeError):
+            Quantity480th.from_480ths(Decimal('1000.0'))
+        with self.assertRaises(TypeError):
+            Quantity480th.from_480ths('240')
+        with self.assertRaises(TypeError):
+            Quantity480th.from_480ths(Fraction(1, 4))
+
+    def test_process_bind_param(self):
+        """Return result of .to_480ths() for value, None if no value."""
+        qty = Quantity480th()
+        self.assertEqual(qty.process_bind_param('1/2', None), 240)
+        self.assertIs(qty.process_bind_param(None, None), None)
+
+    def test_process_result_value(self):
+        """Return result of .from_480ths() for value, None if no value."""
+        qty = Quantity480th()
+        self.assertEqual(qty.process_result_value(240, None), Fraction(1, 2))
+        self.assertIs(qty.process_result_value(None, None), None)
+
+    def test_to_480ths_bad_denominator(self):
+        """Raise a ValueError if 480 not divisible by denominator."""
+        with self.assertRaises(ValueError):
+            Quantity480th.to_480ths('1/7')
+        with self.assertRaises(ValueError):
+            Quantity480th.to_480ths('1/9')
+        with self.assertRaises(ValueError):
+            Quantity480th.to_480ths('1/11')
+        with self.assertRaises(ValueError):
+            Quantity480th.to_480ths('1/13')
+        with self.assertRaises(ValueError):
+            Quantity480th.to_480ths('1/14')
+
+    def test_to_480ths_bad_type(self):
+        """Raise a TypeError if given data that is not a str or Fraction."""
+        with self.assertRaises(TypeError):
+            Quantity480th.to_480ths([1, 3])
+        with self.assertRaises(TypeError):
+            Quantity480th.to_480ths((1, 4))
+        with self.assertRaises(TypeError):
+            Quantity480th.to_480ths({'numerator': 1, 'denominator': 4})
+
+    def test_to_480ths_string_bad_format(self):
+        """Raise a ValueError if string can't be parsed."""
+        with self.assertRaises(ValueError):
+            Quantity480th.to_480ths('1/2 1')
+        with self.assertRaises(ValueError):
+            Quantity480th.to_480ths('one fourth')
+        with self.assertRaises(ValueError):
+            Quantity480th.to_480ths('1 1//2')
+        with self.assertRaises(ValueError):
+            Quantity480th.to_480ths('1/2/3')
+        with self.assertRaises(ValueError):
+            Quantity480th.to_480ths('1/n')
+
+    def test_to_480ths_string_fraction(self):
+        """Return an int given a string containing a valid fraction."""
+        self.assertEqual(Quantity480th.to_480ths('1/2'), 240)
+        self.assertEqual(Quantity480th.to_480ths('5/6'), 400)
+        self.assertEqual(Quantity480th.to_480ths('15/16'), 450)
+
+    def test_to_480ths_string_with_space(self):
+        """Return an int given a valid mixed number in a string."""
+        self.assertEqual(Quantity480th.to_480ths('1 1/2'), 720)
+        self.assertEqual(Quantity480th.to_480ths('12 7/8'), 6180)
+
+    def test_to_480ths_valid_fractions(self):
+        """Return an int given a valid Fraction."""
+        self.assertEqual(Quantity480th.to_480ths(Fraction(1, 2)), 240)
+        self.assertEqual(Quantity480th.to_480ths(Fraction(2, 3)), 320)
+        self.assertEqual(Quantity480th.to_480ths(Fraction(3, 4)), 360)
+        self.assertEqual(Quantity480th.to_480ths(Fraction(4, 5)), 384)
+        self.assertEqual(Quantity480th.to_480ths(Fraction(5, 6)), 400)
+        self.assertEqual(Quantity480th.to_480ths(Fraction(7, 8)), 420)
+        self.assertEqual(Quantity480th.to_480ths(Fraction(9, 10)), 432)
+        self.assertEqual(Quantity480th.to_480ths(Fraction(11, 12)), 440)
+        self.assertEqual(Quantity480th.to_480ths(Fraction(14, 15)), 448)
+        self.assertEqual(Quantity480th.to_480ths(Fraction(15, 16)), 450)
+        self.assertEqual(Quantity480th.to_480ths(Fraction(3, 2)), 720)
+        self.assertEqual(Quantity480th.to_480ths(Fraction(103, 8)), 6180)
+
+
+class TestQuantityDecimal(unittest.TestCase):
+    """Test methods of the QuantityDecimal TypeDecorator in seeds model."""
+    def setUp(self):
+        self.app = create_app('testing')
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+
+    def tearDown(self):
+        self.app_context.pop()
+
+    def test_decimal_to_int_invalid_data(self):
+        """Raise a ValueError given data that can't be coerced to Decimal."""
+        with self.assertRaises(ValueError):
+            QuantityDecimal.decimal_to_int('4.3.32')
+        with self.assertRaises(ValueError):
+            QuantityDecimal.decimal_to_int('$4.32')
+        with self.assertRaises(ValueError):
+            QuantityDecimal.decimal_to_int('4.4a')
+        with self.assertRaises(ValueError):
+            QuantityDecimal.decimal_to_int(['4.2', '4.4'])
+        with self.assertRaises(ValueError):
+            QuantityDecimal.decimal_to_int({'quantity': '42.4'})
+
+    def test_decimal_to_int_valid_decimals(self):
+        """Return an int given data that is or can be converted to Decimal."""
+        self.assertEqual(QuantityDecimal.decimal_to_int(Decimal('1.4')), 14000)
+        self.assertEqual(QuantityDecimal.decimal_to_int('3.14159'), 31415)
+        self.assertEqual(QuantityDecimal.decimal_to_int(234.1), 2341000)
+
+    def test_int_to_decimal_not_int(self):
+        """Raise a TypeError given non-int data."""
+        with self.assertRaises(TypeError):
+            QuantityDecimal.int_to_decimal('14000')
+        with self.assertRaises(TypeError):
+            QuantityDecimal.int_to_decimal(400.243)
+        with self.assertRaises(TypeError):
+            QuantityDecimal.int_to_decimal(Decimal('10000'))
+
+    def test_int_to_decimal_valid_ints(self):
+        """Return a Decimal the db int represented."""
+        self.assertEqual(QuantityDecimal.int_to_decimal(3), Decimal('0.0003'))
+        self.assertEqual(QuantityDecimal.int_to_decimal(14000), Decimal('1.4'))
+        self.assertEqual(QuantityDecimal.int_to_decimal(31415),
+                         Decimal('3.1415'))
+
+    def test_process_bind_param(self):
+        """Return result of .decimal_to_int() for value, None if None."""
+        qty = QuantityDecimal()
+        self.assertEqual(qty.process_bind_param(Decimal('1.4'), None), 14000)
+        self.assertIs(qty.process_bind_param(None, None), None)
+
+    def test_process_result_value(self):
+        """Return result of .int_to_decimal() for value, None if None."""
+        qty = QuantityDecimal()
+        self.assertEqual(qty.process_result_value(14000, None), Decimal('1.4'))
+        self.assertIs(qty.process_result_value(None, None), None)
+
+
+class TestUSDInt(unittest.TestCase):
+    """Test methods of the USDInt TypeDecorator in the seeds model."""
+    def setUp(self):
+        self.app = create_app('testing')
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+
+    def tearDown(self):
+        self.app_context.pop()
+
+    def test_int_to_usd(self):
+        """Return a Decimal USD value given an integer."""
+        self.assertEqual(USDInt.int_to_usd(100), Decimal('1.00'))
+        self.assertEqual(USDInt.int_to_usd(299), Decimal('2.99'))
+        self.assertEqual(USDInt.int_to_usd(350), Decimal('3.50'))
+
+    def test_int_to_usd_bad_type(self):
+        """Raise a TypeError given non-int data."""
+        with self.assertRaises(TypeError):
+            USDInt.int_to_usd(3.14)
+        with self.assertRaises(TypeError):
+            USDInt.int_to_usd('400')
+        with self.assertRaises(TypeError):
+            USDInt.int_to_usd(Decimal('100'))
+
+    def test_int_to_usd_two_decimal_places(self):
+        """Always return a Decimal with 2 decimal places."""
+        self.assertEqual(str(USDInt.int_to_usd(100)), '1.00')
+        self.assertEqual(str(USDInt.int_to_usd(350)), '3.50')
+        self.assertEqual(str(USDInt.int_to_usd(1000)), '10.00')
+
+    def test_usd_to_int_bad_string(self):
+        """Raise a ValueError given a string that can't be parsed."""
+        with self.assertRaises(ValueError):
+            USDInt.usd_to_int('2 99')
+        with self.assertRaises(ValueError):
+            USDInt.usd_to_int('$ 2.99 US')
+        with self.assertRaises(ValueError):
+            USDInt.usd_to_int('tree fiddy')
+
+    def test_usd_to_int_bad_type(self):
+        """Raise a TypeError given a value that can't be coerced to int."""
+        with self.assertRaises(TypeError):
+            USDInt.usd_to_int(Fraction(1, 4))
+        with self.assertRaises(TypeError):
+            USDInt.usd_to_int(['2.99', '1.99'])
+        with self.assertRaises(TypeError):
+            USDInt.usd_to_int({'price': '$2.99'})
+
+    def test_usd_to_int_valid_non_strings(self):
+        """Return an int given a valid non-string type."""
+        self.assertEqual(USDInt.usd_to_int(1), 100)
+        self.assertEqual(USDInt.usd_to_int(2.99), 299)
+        self.assertEqual(USDInt.usd_to_int(3.999), 399)
+        self.assertEqual(USDInt.usd_to_int(Decimal('1.99')), 199)
+        self.assertEqual(USDInt.usd_to_int(3.14159265), 314)
+
+    def test_usd_to_int_valid_string(self):
+        """Return an int given a valid string containing a dollar amount."""
+        self.assertEqual(USDInt.usd_to_int('$2.99'), 299)
+        self.assertEqual(USDInt.usd_to_int('3.00'), 300)
+        self.assertEqual(USDInt.usd_to_int('2.50$'), 250)
+        self.assertEqual(USDInt.usd_to_int('$ 1.99'), 199)
+        self.assertEqual(USDInt.usd_to_int('4.99 $'), 499)
+        self.assertEqual(USDInt.usd_to_int(' 3.50 '), 350)
+        self.assertEqual(USDInt.usd_to_int('4'), 400)
+        self.assertEqual(USDInt.usd_to_int('5.3'), 530)
+        self.assertEqual(USDInt.usd_to_int('3.9999'), 399)
 
 
 class TestBotanicalName(unittest.TestCase):
@@ -112,198 +510,113 @@ class TestPacket(unittest.TestCase):
         self.app_context.pop()
 
     def test_price_getter(self):
-        """Gets ._price as a Decimal quantized to 2 decimal places."""
-        packet = Packet()
-        packet._price = Decimal('2.99')
-        self.assertEqual(packet.price, Decimal('2.99'))
-        packet._price = Decimal('1')
-        self.assertEqual(str(packet.price), '1.00')
+        """Return ._price."""
+        pkt = Packet()
+        pkt._price = Decimal('2.99')
+        self.assertEqual(pkt.price, Decimal('2.99'))
 
-    def test_price_setter(self):
-        """Set ._price if given an int, float, str, or Decimal."""
-        packet = Packet()
-        packet.price = 1
-        self.assertEqual(packet._price, Decimal('1.00'))
-        packet.price = 2.99
-        self.assertEqual(packet._price, Decimal('2.99'))
-        packet.price = '3.99'
-        self.assertEqual(packet._price, Decimal('3.99'))
-        packet.price = Decimal('4.99')
-        self.assertEqual(packet._price, Decimal('4.99'))
-
-    def test_price_to_decimal_bad_string(self):
-        """Raise a ValueError if string contains invalid chars."""
+    def test_quantity_equals_not_480th(self):
+        """Raise a ValueError given a denominator 480 isn't divisible by."""
+        pkt = Packet()
         with self.assertRaises(ValueError):
-            Packet.price_to_decimal('$1.99')
-
-    def test_price_to_decimal_bad_type(self):
-        """Raise a TypeError if given data of the wrong type."""
-        with self.assertRaises(TypeError):
-            Packet.price_to_decimal(['2.99'])
-        with self.assertRaises(TypeError):
-            Packet.price_to_decimal(('432', '3.22'))
-
-    def test_price_to_decimal_Decimal(self):
-        """Return same Decimal if given a Decimal."""
-        self.assertEqual(Packet.price_to_decimal(Decimal('2.99')),
-                         Decimal('2.99'))
-
-    def test_price_to_decimal_int(self):
-        """Return a Decimal if given an int."""
-        self.assertEqual(Packet.price_to_decimal(1), Decimal('1.00'))
-
-    def test_price_to_decimal_str(self):
-        """Return a Decimal if given a valid string containing a number."""
-        self.assertEqual(Packet.price_to_decimal('2.99'), Decimal('2.99'))
-        # The following is okay, as price is automatically truncated in db:
-        self.assertEqual(Packet.price_to_decimal('3.1415'), Decimal('3.1415'))
-
-    def test_quantity_getter(self):
-        """Gets _quantity and returns it in readable format."""
-        packet = Packet()
-        packet._quantity = -141
-        self.assertEqual(packet.quantity, '1/4')
-        packet2 = Packet()
-        packet2._quantity = -531
-        self.assertEqual(packet2.quantity, '5/3')
-        packet3 = Packet()
-        packet3._quantity = 12342
-        self.assertEqual(packet3.quantity, '12.34')
-        packet4 = Packet()
-        packet4._quantity = 12340
-        self.assertEqual(packet4.quantity, '1234')
-
-    def test_quantity_setter(self):
-        """Sets _quantity from a string format quantity translated to int."""
-        packet = Packet()
-        packet.quantity = '1/4'
-        self.assertEqual(packet._quantity, -141)
-        packet2 = Packet()
-        packet2.quantity = '5/3'
-        self.assertEqual(packet2._quantity, -531)
-        packet3 = Packet()
-        packet3.quantity = '12.34'
-        self.assertEqual(packet3._quantity, 12342)
-        packet4 = Packet()
-        packet4.quantity = '1234'
-        self.assertEqual(packet4._quantity, 12340)
-
-    def test_quantity_int_from_str_decimal_contains_invalid_chars(self):
-        """Raise a valueError if non-numeric characters are in decimal."""
+            pkt.quantity_equals(Fraction(1, 7))
         with self.assertRaises(ValueError):
-            Packet.quantity_int_from_str('e3.32')
+            pkt.quantity_equals('3/11')
+
+    def test_quantity_getter_too_many_qty(self):
+        """Raise a RuntimeError if more than one ._qty_x set."""
+        pkt = Packet()
+        pkt._qty_decimal = QtyDecimal(Decimal('3.14'))
+        self.assertEqual(pkt.quantity, Decimal('3.14'))
+        pkt._qty_fraction = QtyFraction(Fraction(1, 2))
+        with self.assertRaises(RuntimeError):
+            pkt.quantity
+        pkt._qty_integer = QtyInteger(100)
+        with self.assertRaises(RuntimeError):
+            pkt.quantity
+        pkt._qty_decimal = None
+        with self.assertRaises(RuntimeError):
+            pkt.quantity
+        pkt._qty_fraction = None
+        self.assertEqual(pkt.quantity, 100)
+
+    def test_quantity_setter_bad_data(self):
+        """Raise a ValueError if data could not be determined to be valid."""
         with self.assertRaises(ValueError):
-            Packet.quantity_int_from_str('4.25oz')
-
-    def test_quantity_int_from_str_fraction_contains_invalid_chars(self):
-        """Raise a ValueError if non-numeric characters are in fraction."""
+            pkt = Packet()
+            pkt.quantity = '$2.99'
         with self.assertRaises(ValueError):
-            Packet.quantity_int_from_str('1/4oz')
+            pkt = Packet()
+            pkt.quantity = 'tree fiddy'
         with self.assertRaises(ValueError):
-            Packet.quantity_int_from_str('e3/4')
+            pkt = Packet()
+            pkt.quantity = [1, 2, 3, 4]
 
-    def test_quantity_int_from_str_integer_contains_invalid_chars(self):
-        """Raise a ValueError if non-numeric characters are in integer."""
+    def test_quantity_setter_fraction_not_480th(self):
+        """Raise a ValueError if 480 is not divisible by denominator."""
         with self.assertRaises(ValueError):
-            Packet.quantity_int_from_str('f47b47')
-            Packet.quantity_int_from_str('14oz')
-            Packet.quantity_int_from_str('f12')
-
-    def test_quantity_int_from_str_dot_and_slash(self):
-        """Raise a ValueError if quantity contains both . and /."""
+            pkt = Packet()
+            pkt.quantity = Fraction(3, 7)
         with self.assertRaises(ValueError):
-            Packet.quantity_int_from_str('4.9/3')
-
-    def test_quantity_int_from_str_not_string(self):
-        """Raise a TypeError if argument passed is not a string."""
-        with self.assertRaises(TypeError):
-            Packet.quantity_int_from_str(4.99)
-        with self.assertRaises(TypeError):
-            Packet.quantity_int_from_str(5)
-
-    def test_quantity_int_from_str_removes_spaces(self):
-        """Spaces should automatically be removed."""
-        self.assertEqual(Packet.quantity_int_from_str('1 / 4'), -141)
-        self.assertEqual(Packet.quantity_int_from_str(' 10.5 '), 1051)
-
-    def test_quantity_int_from_str_too_many_decimal_digits(self):
-        """Raise a ValueError if more than 9 digits to right of decimal."""
+            pkt = Packet()
+            pkt.quantity = Fraction(5, 9)
         with self.assertRaises(ValueError):
-            Packet.quantity_int_from_str('3.1415926535')
-
-    def test_quantity_int_from_str_too_many_denominator_digits(self):
-        """Raise a ValueError if fraction has more than 9 digits in denom."""
+            pkt = Packet()
+            pkt.quantity = Fraction(9, 11)
         with self.assertRaises(ValueError):
-            Packet.quantity_int_from_str('1/1234567890')
-
-    def test_quantity_int_from_str_too_many_dots(self):
-        """Raise a ValueError if quantity has more than one . in it."""
+            pkt = Packet()
+            pkt.quantity = Fraction(10, 13)
         with self.assertRaises(ValueError):
-            Packet.quantity_int_from_str('2.3.4')
-        with self.assertRaises(ValueError):
-            Packet.quantity_int_from_str('127.0.0.1')
+            pkt = Packet()
+            pkt.quantity = Fraction(11, 14)
 
-    def test_quantity_int_from_str_too_many_slashes(self):
-        """Raise a ValueError if too many forward slashes in quantity."""
-        with self.assertRaises(ValueError):
-            Packet.quantity_int_from_str('7/8/9')
-        with self.assertRaises(ValueError):
-            Packet.quantity_int_from_str('4//9')
 
-    def test_quantity_int_from_str_valid_decimal(self):
-        """Return an integer in correct format if given a valid decimal."""
-        self.assertEqual(Packet.quantity_int_from_str('4.99'), 4992)
-        self.assertEqual(Packet.quantity_int_from_str('1.255'), 12553)
-        self.assertEqual(Packet.quantity_int_from_str('1.123456789'),
-                         11234567899)
+class TestQtyDecimal(unittest.TestCase):
+    """Test methods of QtyDecimal in the seeds model."""
+    def setUp(self):
+        self.app = create_app('testing')
+        self.app_context = self.app.app_context()
+        self.app_context.push()
 
-    def test_quantity_int_from_str_valid_fraction(self):
-        """Return an integer in correct format given a valid fraction."""
-        self.assertEqual(Packet.quantity_int_from_str('1/4'), -141)
-        self.assertEqual(Packet.quantity_int_from_str('3/16'), -3162)
-        self.assertEqual(Packet.quantity_int_from_str('249/5'), -24951)
-        self.assertEqual(Packet.quantity_int_from_str('1/123456789'),
-                         -11234567899)
+    def tearDown(self):
+        self.app_context.pop()
 
-    def test_quantity_int_from_str_valid_integer(self):
-        """Return an integer in correct format given a valid integer."""
-        self.assertEqual(Packet.quantity_int_from_str('100'), 1000)
-        self.assertEqual(Packet.quantity_int_from_str('4'), 40)
-        self.assertEqual(Packet.quantity_int_from_str('1234567890'),
-                         12345678900)
+    def test_repr(self):
+        """Return a string formatted <QtyDecimal '<value>'>."""
+        qty = QtyDecimal(3.1415)
+        self.assertEqual(qty.__repr__(), '<QtyDecimal \'3.1415\'>')
 
-    def test_quantity_str_from_int_fraction_has_no_denominator(self):
-        """Raise a ValueError if given a negative number ending in 0."""
-        with self.assertRaises(ValueError):
-            Packet.quantity_str_from_int(-1230)
 
-    def test_quantity_str_from_int_decimal(self):
-        """Return a str of a decimal if given int is positive and ends > 0."""
-        self.assertEqual(Packet.quantity_str_from_int(4992), '4.99')
-        self.assertEqual(Packet.quantity_str_from_int(12553), '1.255')
-        self.assertEqual(Packet.quantity_str_from_int(11234567899),
-                         '1.123456789')
+class TestQtyFraction(unittest.TestCase):
+    """Test methods of QtyFraction in the seeds model."""
+    def setUp(self):
+        self.app = create_app('testing')
+        self.app_context = self.app.app_context()
+        self.app_context.push()
 
-    def test_quantity_str_from_int_fraction_small_numerator(self):
-        """Return a str of a fraction if given int is - and num < denom."""
-        self.assertEqual(Packet.quantity_str_from_int(-141), '1/4')
-        self.assertEqual(Packet.quantity_str_from_int(-3162), '3/16')
-        self.assertEqual(Packet.quantity_str_from_int(-11234567899),
-                         '1/123456789')
+    def tearDown(self):
+        self.app_context.pop()
 
-    def test_quantity_str_from_int_no_decimal_or_fraction(self):
-        """Return a string containing an integer if given + int ends w/ 0."""
-        self.assertEqual(Packet.quantity_str_from_int(1000), '100')
-        self.assertEqual(Packet.quantity_str_from_int(40), '4')
-        self.assertEqual(Packet.quantity_str_from_int(12345678900),
-                         '1234567890')
+    def test_repr(self):
+        """Return a string formatted <QtyFraction '<value>'>."""
+        qty = QtyFraction('3/4')
+        self.assertEqual(qty.__repr__(), '<QtyFraction \'3/4\'>')
 
-    def test_quantity_str_from_int_not_integer(self):
-        """Raise a TypeError if given non-int data."""
-        with self.assertRaises(TypeError):
-            Packet.quantity_str_from_int('1231')
-        with self.assertRaises(TypeError):
-            Packet.quantity_str_from_int(3.1415)
+
+class TestQtyInteger(unittest.TestCase):
+    """Test methods of QtyInteger in the seeds model."""
+    def setUp(self):
+        self.app = create_app('testing')
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+
+    def tearDown(self):
+        self.app_context.pop()
+
+    def test_repr(self):
+        """Return a string formatted <QtyInteger '<value>'>."""
+        qty = QtyInteger('100')
+        self.assertEqual(qty.__repr__(), '<QtyInteger \'100\'>')
 
 
 class TestSeed(unittest.TestCase):

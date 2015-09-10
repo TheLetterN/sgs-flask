@@ -1,29 +1,136 @@
-from sqlalchemy.ext.hybrid import Comparator, hybrid_property
 from decimal import Decimal
+from fractions import Fraction
+from sqlalchemy.ext.hybrid import Comparator, hybrid_property
 from app import db
 
 
-class USDInt(db.TypeDecorator):
-    """Type to store US dollar amounts in the database as integers.
+def is_480th(value, verify_fraction=True):
+    """Test whether or not a fraction can be converted to 480ths.
 
-    Since we don't know for sure how the database will handle decimal numbers,
-    it is safer to store our dollar amounts as integers to avoid the risk of
-    floating point errors leading to incorrect data.
+    Args:
+        value: Value to test whether or not can be converted to 480ths.
+        verify_fraction (optional[bool]): Whether or not to run is_fraction()
+            during execution. Defaults to True, but can be turned off so we
+            don't unnecessarily run is_fraction() again when running is_480th()
+            in a block after is_fraction() has been run.
 
-    A USDInt column will store a value of 2.99 as 299 in the database, and
-    return it as 2.99 when retrieved.
+    Returns:
+        True: If value can be converted to 480ths.
+        False: If value cannot be converted to 480ths.
     """
-    impl = db.Integer
+    if verify_fraction:
+        if not is_fraction(value):
+            return False
+    if isinstance(value, Fraction):
+        if 480 % value.denominator == 0:
+            return True
+        else:
+            return False
+    elif isinstance(value, str):
+        parts = value.strip().split('/')
+        if 480 % int(parts[1]) == 0:
+            return True
+        else:
+            return False
+    else:
+        return False
 
-    def process_bind_param(self, value, dialect):
-        if value is None:
-            return None
-        return int(value * 10**2)
 
-    def process_result_value(self, value, dialect):
-        if value is None:
-            return None
-        return Decimal(value) / 10**2
+def is_decimal(value):
+    """Test whether or not a value explicitly represents a decimal number.
+
+    Note:
+        Even though integers are valid decimal numbers, they should return
+        False because we want to be able to differentiate between integers
+        and decimal numbers.
+
+    Args:
+        value: A value to test type and contents of to determine whether or
+            not it is a decimal number.
+
+    Returns:
+        True: If value represents a valid decimal number.
+        False: If value does not represent a valid decimal number.
+    """
+    if isinstance(value, Decimal) or isinstance(value, float):
+        return True
+    elif isinstance(value, str):
+        if value.count('.') == 1:
+            parts = value.strip().split('.')
+            if parts[0].isdigit() and parts[1].isdigit():
+                return True
+            else:
+                return False
+        else:
+            return False
+    else:
+        return False
+
+
+def is_fraction(value):
+    """Test whether or not a value represents a fraction.
+
+    Args:
+        value: A value to test type and contents of to determine whether
+            or not it is a fraction.
+    Returns:
+        True: If value represents a valid fraction.
+        False: If value does not represent a valid fraction.
+    """
+    if isinstance(value, Fraction):
+        return True
+    elif isinstance(value, str):
+        if value.count('/') == 1:
+            if ' ' in value:
+                if value.strip().count(' ') == 1:
+                    mixed = value.strip().split(' ')
+                    if mixed[0].isdigit():
+                        parts = mixed[1].split('/')
+                        if parts[0].isdigit() and parts[1].isdigit():
+                            if int(parts[1]) != 0:
+                                return True
+                            else:
+                                return False
+                        else:
+                            return False
+                    else:
+                        return False
+                else:
+                    return False
+            else:
+                parts = value.split('/')
+                if parts[0].isdigit() and parts[1].isdigit():
+                    if int(parts[1]) != 0:
+                        return True
+                    else:
+                        return False
+        else:
+            return False
+    else:
+        return False
+
+
+def is_int(value):
+    """Test whether or not a value is or contains an integer.
+
+    Args:
+        value: A value to test the type and contents of to determine whether
+            or not it is/contains and integer.
+
+    Returns:
+        True: If value represents a valid integer.
+        False: If value does not represent a valid integer.
+    """
+    if isinstance(value, int):
+        return True
+    elif isinstance(value, str):
+        if value.strip().isdigit():
+            return True
+        else:
+            return False
+    else:
+        return False
+
 
 categories_to_seeds = db.Table(
     'categories_to_seeds',
@@ -59,6 +166,279 @@ seeds_to_packets = db.Table(
     db.Column('seeds_id', db.Integer, db.ForeignKey('seeds.id')),
     db.Column('packets_id', db.Integer, db.ForeignKey('packets.id'))
 )
+
+
+class Quantity480th(db.TypeDecorator):
+    """Type to store fractional quantities that can be converted to x/480.
+
+    This covers every denominator between 1-16 except 7, 9, 11, 13, 14, which
+    includes the most commonly used quantity denominators. It covers anything
+    480 is divisible by in addition, though it's unlikely any denominators
+    greater than 16 will be used in the context of seed quantities.
+
+    Attributes:
+        impl (Integer): The column type to decorate.
+    """
+    impl = db.Integer
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        else:
+            return Quantity480th.to_480ths(value)
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        else:
+            return Quantity480th.from_480ths(value)
+
+    @staticmethod
+    def from_480ths(value):
+        """Convert an int representing 480ths to a Fraction.
+
+        Examples:
+            >>> Quantity480th.from_480ths(240)
+            Fraction(1, 2)
+
+            >>> Quantity480th.from_480ths(400)
+            Fraction(5, 6)
+
+            >>> Quantity480th.from_480ths(6180)
+            Fraction(103, 8)
+
+        Args:
+            value (int): An int representing 480ths.
+
+        Returns:
+            Fraction: A fraction with value as the numerator and 480 as the
+                denominator.
+
+        Raises:
+            TypeError: if value is not an int.
+        """
+        if isinstance(value, int):
+            return Fraction(value, 480)
+        else:
+            raise TypeError('value must be an int!')
+
+    @staticmethod
+    def to_480ths(value):
+        """Convert a fraction to an int representing 480ths.
+
+        We need to convert fractions to the lcd of 480 and store their
+        numerators as integers in the database to maintain their relative
+        sizes, thus allowing queries based on < or > to work correctly.
+
+        Examples:
+            >>> Quantity480th.to_480ths(Fraction(1, 2))
+            240
+
+            >>> Quantity480th.to_480ths('5/6')
+            400
+
+            >>> Quantity480th.to_480ths('12 7/8')
+            6180
+
+        Args:
+            value: String representing a fraction, or a Fraction.
+
+        Returns:
+            int: Value converted to an int representing 480ths.
+
+        Raises:
+            ValueError: If value is a string that can't be parsed into a
+                fraction.
+            ValueError: If 480 is not divisible by value's denominator.
+            TypeError: If value is not a Fraction or str.
+        """
+        if isinstance(value, str):
+            if value.count('/') == 1 and value.count(' ') <= 1:
+                if ' ' in value:
+                    parts = value.split(' ')
+                    frac = parts[1].split('/')
+                    try:
+                        num = int(parts[0]) * int(frac[1]) + int(frac[0])
+                        den = int(frac[1])
+                        value = Fraction(num, den)
+                    except:
+                        raise ValueError('string does not contain'
+                                         ' a valid fraction!')
+                else:
+                    try:
+                        parts = value.split('/')
+                        value = Fraction(int(parts[0]), int(parts[1]))
+                    except:
+                        raise ValueError('string does not contain'
+                                         ' a valid fraction!')
+            else:
+                raise ValueError('string does not contain a valid fraction!')
+        if isinstance(value, Fraction):
+            if 480 % value.denominator == 0:
+                return value.numerator * (480 // value.denominator)
+            else:
+                raise ValueError('480 must be divisible by denominator!')
+        raise TypeError('value must be a Fraction or a string!')
+
+
+class QuantityDecimal(db.TypeDecorator):
+    """Type to store decimal quantities as integers in the database.
+
+    Since it is extremely unlikely we will ever need to represent a quantity
+    as a decimal number with more than 4 digits to the right of the decimal,
+    we just need to multiply all decimals by 10**4 and int them to store, and
+    do the reverse to retrieve.
+
+    Attributes:
+        impl (Integer): Column type to decorate.
+    """
+    impl = db.Integer
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        else:
+            return QuantityDecimal.decimal_to_int(value)
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        else:
+            return QuantityDecimal.int_to_decimal(value)
+
+    @staticmethod
+    def decimal_to_int(value):
+        """Convert a decimal number to an int for use in the db.
+
+        Anything past 4 digits to the right of the decimal will be truncated.
+
+        Examples:
+        >>> QuantityDecimal.decimal_to_int(Decimal('1.025'))
+        10250
+
+        >>> QuantityDecimal.decimal_to_int('1.4')
+        14000
+
+        >>> QuantityDecimal.decimal_to_int(3.14159256)
+        31415
+
+        Args:
+            value: A Decimal or type that can be coerced to Decimal.
+
+        Returns:
+            int: Value as it should be stored in the database.
+
+        Raises:
+            ValueError: If value could not be coerced to Decimal.
+        """
+        if not isinstance(value, Decimal):
+            # Prevent unexpected results from Decimal(float) conversion.
+            if isinstance(value, float):
+                value = str(value)
+            try:
+                value = Decimal(value)
+            except:
+                raise ValueError('value could not be parsed'
+                                 ' as a decimal number!')
+        return int(value * 10**4)
+
+    @staticmethod
+    def int_to_decimal(value):
+        """Convert an int used in the db to a Decimal.
+
+        Args:
+            value (int): An int from the db to be converted back to a Decimal.
+
+        Returns:
+            Decimal: The decimal number the db int represents.
+
+        Raises:
+            TypeError: If value is not an int.
+        """
+        if isinstance(value, int):
+            return Decimal(value) / 10**4
+        else:
+            raise TypeError('value can only be an int!')
+
+
+class USDInt(db.TypeDecorator):
+    """Type to store US dollar amounts in the database as integers.
+
+    Since we don't know for sure how the database will handle decimal numbers,
+    it is safer to store our dollar amounts as integers to avoid the risk of
+    floating point errors leading to incorrect data.
+
+    A USDInt column will store a value of 2.99 as 299 in the database, and
+    return it as 2.99 when retrieved.
+    """
+    impl = db.Integer
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        return USDInt.usd_to_int(value)
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        return USDInt.int_to_usd(value)
+
+    @staticmethod
+    def int_to_usd(amount):
+        """Convert a db int to a Decimal representing a US dollar amount.
+
+        Args:
+            amount (int): The amount to convert from cents (int) to US
+                dollars (Decimal).
+
+        Returns:
+            Decimal: US cents converted to US dollars and quantized to
+                always have two digits to the right of the decimal.
+
+        Raises:
+            TypeError: If amount is not an integer.
+        """
+        if isinstance(amount, int):
+            return (Decimal(amount) / 10**2).\
+                quantize(Decimal('1.00'))
+        else:
+            raise TypeError('amount must be an integer!')
+
+    @staticmethod
+    def usd_to_int(amount):
+        """Convert a dollar value to db int.
+
+        Examples:
+
+        Args:
+            amount: Amount in US dollars to convert to an int (cents) for
+                storage in db. Valid types are strings which appear to contain
+                a dollar amount, or any type that can be converted to int.
+
+        Returns:
+            int: US dollar amount conveted to US cents so it can be stored in
+                the database as an integer.
+
+        Raises:
+            ValueError: If given a string that can't be parsed as an amount in
+                US dollars.
+            TypeError: If given a non-string that can't be converted to int.
+        """
+        if isinstance(amount, str):
+            try:
+                amt = Decimal(amount.replace('$', '').strip())
+                return int(amt * 10**2)
+            except:
+                raise ValueError('amount contains invalid '
+                                 'characters or formatting!')
+        elif isinstance(amount, Fraction):
+            raise TypeError('amount must be a decimal or integer!')
+        else:
+            try:
+                return int(amount * 10**2)
+            except:
+                raise TypeError('amount is of a type that could'
+                                ' not be converted to int!')
 
 
 class BotanicalName(db.Model):
@@ -178,15 +558,15 @@ class Category(db.Model):
         category (str): The label for the category itself, such as 'Herb'
                         or 'Perennial Flower'.
         description (str): HTML description information for the category.
-        _seeds (relationship): MtM relationship with Seed.
+        seeds (relationship): MtM relationship with Seed.
     """
     __tablename__ = 'categories'
     id = db.Column(db.Integer, primary_key=True)
     category = db.Column(db.String(64), unique=True)
     description = db.Column(db.Text)
-    _seeds = db.relationship('Seed',
-                             secondary=categories_to_seeds,
-                             backref='_categories')
+    seeds = db.relationship('Seed',
+                            secondary=categories_to_seeds,
+                            backref='_categories')
 
     def __init__(self, category=None, description=None):
         """Construct an instance of Category.
@@ -250,19 +630,25 @@ class Packet(db.Model):
     Attributes:
         __tablename__ (str): Name of the table: 'packets'
         id (int): Auto-incremented ID # for use as a primary key.
-        _price (str): Price (in US dollars) for this packet.
-        _quantity (str): Amount of seeds in packet.
+        _price (USDInt): Price (in US dollars) for this packet.
+        _qty_decimal (relationship): MtO relationship with QtyDecimal.
+        _qty_fraction (relationship): MtO relationship with QtyFraction.
+        _qty_integer (relationship): MtO relationship with QtyInteger.
         unit_id (int): ForeignKey for associated Unit.
         _unit (relationship): MtO relationship with Unit.
     """
     __tablename__ = 'packets'
     id = db.Column(db.Integer, primary_key=True)
     _price = db.Column(USDInt)
-    _quantity = db.Column(db.Integer)
+    qty_decimal_id = db.Column(db.Integer, db.ForeignKey('qty_decimals.id'))
+    _qty_decimal = db.relationship('QtyDecimal', backref='_packets')
+    qty_fraction_id = db.Column(db.Integer, db.ForeignKey('qty_fractions.id'))
+    _qty_fraction = db.relationship('QtyFraction', backref='_packets')
+    qty_integer_id = db.Column(db.Integer, db.ForeignKey('qty_integers.id'))
+    _qty_integer = db.relationship('QtyInteger', backref='_packets')
     unit_id = db.Column(db.Integer, db.ForeignKey('units.id'))
     _unit = db.relationship('Unit', backref='_packets')
     __table_args__ = (db.UniqueConstraint('_price',
-                                          '_quantity',
                                           'unit_id'),)
 
     @hybrid_property
@@ -273,49 +659,88 @@ class Packet(db.Model):
             Check type of data, set it as a Decimal if it's Decimal, int, or
             str, and raise a TypeError if not.
         """
-        return self._price.quantize(Decimal('1.00'))
+        return self._price
 
-    class PriceComparator(Comparator):
-        """Allow Packets to be queried by price without needing to use Decimals.
-
-        Without this comparator, to get all packets with a price of 2.99 you
-        would need to query:
-
-        Packet.query.filter_by(price=Decimal('2.99')).all()
-        """
-        def __eq__(self, other):
-            return self.__clause_element__() == Packet.price_to_decimal(other)
-
-        def __lt__(self, other):
-            return self.__clause_element__() < Packet.price_to_decimal(other)
-
-        def __gt__(self, other):
-            return self.__clause_element__() > Packet.price_to_decimal(other)
-
-    @price.comparator
+    @price.expression
     def price(cls):
-        return Packet.PriceComparator(cls._price)
+        return cls._price
 
     @price.setter
     def price(self, price):
-        self._price = Packet.price_to_decimal(price)
+        self._price = price
 
     @hybrid_property
     def quantity(self):
-        """str: ._quantity in human readable format.
-
-        See .quantity_str_from_int() and .quantity_int_from_str() for more
-        details.
+        """int/Decimal/Fraction: the quantity for this packet.
 
         Setter:
-            Converts a string containing a quantity to an integer and sets
-            ._quantity to it.
+            Check type of data, set to ._qty_decimal, ._qty_fraction,
+            or ._qty_decimal if possible, if not raise a ValueError.
         """
-        return self.quantity_str_from_int(self._quantity)
+        retqty = None
+        for qty in [self._qty_decimal, self._qty_fraction, self._qty_integer]:
+            if qty is not None:
+                if retqty is None:
+                    retqty = qty
+                else:
+                    raise RuntimeError('More than one type of quantity'
+                                       ' was detected for this packet. Only'
+                                       ' one type of quantity may be set!')
+        return retqty.value
 
+# TODO: Get this working or scrap it.
+
+#    class QuantityComparator(Comparator):
+#        """Allow queries to search for quantities with the .quantity property.
+#        """
+#        def __init__(self, qty_decimal, qty_fraction, qty_integer):
+#            self.qty_decimal = qty_decimal
+#            self.qty_fraction = qty_fraction
+#            self.qty_integer = qty_integer
+#
+#        def __eq__(self, other):
+#            if is_decimal(other):
+#                return self.qty_decimal.value == other
+#            elif is_fraction(other):
+#                if is_480th(other):
+#                    return self.qty_fraction.value == other
+#                else:
+#                    raise ValueError('Cannot query using a fraction with a '
+#                                     'denominator 480 is not divisible by!')
+#            elif is_int(other):
+#                return self.qty_fraction.value == other
+#            else:
+#                raise ValueError('Could not parse query value'
+#                                 ' as a valid quantity!')
+#
+#    @quantity.comparator
+#    def quantity(self):
+#        return self.QuantityComparator(self._qty_decimal,
+#                                        self._qty_fraction,
+#                                        self._qty_integer)
+#
     @quantity.setter
-    def quantity(self, quantity):
-        self._quantity = self.quantity_int_from_str(quantity)
+    def quantity(self, value):
+        if is_decimal(value):
+            self.clear_quantity()
+            self._qty_decimal = QtyDecimal.query.filter_by(value=value).\
+                first() or QtyDecimal(value)
+        elif is_fraction(value):
+            if is_480th(value):
+                self.clear_quantity()
+                self._qty_fraction = QtyFraction.query.filter_by(value=value).\
+                    first() or QtyFraction(value)
+            else:
+                raise ValueError('Fractions must have denominators'
+                                 ' 480 is divisible by!')
+        elif is_int(value):
+            self.clear_quantity()
+            self._qty_integer = QtyInteger.query.filter_by(value=value).\
+                first() or QtyInteger(value)
+        else:
+            raise ValueError('Could not determine appropriate type for '
+                             'quantity! Please make sure it is a integer, '
+                             'decimal number, or fraction.')
 
     @hybrid_property
     def unit(self):
@@ -339,168 +764,112 @@ class Packet(db.Model):
         else:
             self._unit = Unit(unit=unit)
 
-    @staticmethod
-    def price_to_decimal(price):
-        """Convert an integer, float, or string to a Decimal value.
+    def clear_quantity(self):
+        """Remove all quantities if any exist.
 
-        Examples:
-            >>> Packet.price_to_decimal(1)
-            Decimal('1')
-
-            >>> Packet.price_to_decimal(2.99)
-            Decimal('2.99')
-
-            >>> Packet.price_to_decimal('2.99')
-            Decimal('2.99')
+        Quantities are in ._quantity_decimal, ._quantity_fraction, or
+        ._quantity_integer.
 
         Returns:
-            Decimal: Decimal value of price.
-
-        Raises:
-            ValueError: If given a string containing invalid characters.
-            TypeError: If given data that is not an int, float, string, or
-                Decimal.
+            int: Number of quantities removed. Should always return 1 or 0 if
+                quantities are being used correctly.
         """
-        if isinstance(price, Decimal):
-            return price
-        elif isinstance(price, int) or isinstance(price, str):
-            try:
-                return Decimal(price)
-            except:
-                raise ValueError('Could not convert price to a Decimal value,'
-                                 ' perhaps it contains invalid characters?')
-        elif isinstance(price, float):
-            return Decimal(str(price))
-        else:
-            raise TypeError('price must be a Decimal, str, int, or float!')
+        count = 0
+        if self._qty_decimal is not None:
+            self._qty_decimal = None
+            count += 1
+        if self._qty_fraction is not None:
+            self._qty_fraction = None
+            count += 1
+        if self._qty_integer is not None:
+            self._qty_integer = None
+            count += 1
+        return count
 
     @staticmethod
-    def quantity_int_from_str(quantity):
-        """Convert a string representing a quantity into an integer for db.
-
-        The lowest digit  of the integer represents how many digits are to
-        the right of the . or the / in the number if it contains a fractional
-        part.
-
-        If the fractional part is decimal, the resulting integer will be
-        positive.
-        If the fractional part is a fraction, the resulting integer will be
-        negative.
-
-        Examples:
-            >>> Packet.quantity_int_from_str('100')
-            1000
-
-            >>> Packet.quantity_int_from_str('1/4')
-            -141
-
-            >>> Packet.quantity_int_from_str('3.14159265')
-            3141592658
+    def quantity_equals(value):
+        """Return a query that selects packets where .quantity = value.
 
         Args:
-            quantity (str): The size/quantity of a packet.
+            value: The value to detect the type of and run an appropriate
+                query for the type.
 
         Returns:
-            int: The converted integer value for use in the database.
-
-        Raises:
-            TypeError: If quantity is not a string.
-            ValueError: If quantity contains both . and /.
-            ValueError: If quantity is decimal and contains a fractional
-                part with more than 9 digits.
-            ValueError: If quantity can't be parsed as a valid number.
-            ValueError: If quantity contains more than one decimal.
-            ValueError: If quantity is a fraction and contains a denominator
-                with more than 9 digits.
-            ValueError: If quantity contains more than one forward slash.
+            Query: A Query object of the appropriate ._qty column where value
+                = qty_<type>.value.
         """
-        if not isinstance(quantity, str):
-            raise TypeError('quantity must be a string!')
-        quantity = quantity.replace(' ', '')
-        if '.' in quantity and '/' in quantity:
-            raise ValueError('quantity must be a decimal '
-                             'or fraction, not both!')
-        if '.' in quantity:
-            parts = quantity.split('.')
-            if len(parts) == 2:
-                if len(parts[1]) > 9:
-                        raise ValueError('quantity can only hold '
-                                         'up to 9 decimal places!')
-                if parts[0].isdigit() and parts[1].isdigit():
-                    return int(''.join(parts)) * 10 + len(parts[1])
-                else:
-                    raise ValueError('quantity must be a number!')
+        if is_decimal(value):
+            return Packet.query.join(Packet._qty_decimal).\
+                filter(QtyDecimal.value == value)
+        elif is_fraction(value):
+            if is_480th(value):
+                return Packet.query.join(Packet._qty_fraction).\
+                    filter(QtyFraction.value == value)
             else:
-                raise ValueError('quantity can only contain one decimal!')
-        elif '/' in quantity:
-            parts = quantity.split('/')
-            if len(parts) == 2:
-                if len(parts[1]) > 9:
-                    raise ValueError('quantity can only have a denominator '
-                                     'of up to 9 digits!')
-                if parts[0].isdigit() and parts[1].isdigit():
-                    return -(int(''.join(parts)) * 10 + len(parts[1]))
-                else:
-                    raise ValueError('quantity must be a number!')
-            else:
-                raise ValueError('quantity can only contain '
-                                 'one forward slash!')
-        else:
-            if quantity.isdigit():
-                return int(quantity) * 10
-            else:
-                raise ValueError('quantity must be a number!')
+                raise ValueError('Fraction could not be converted to 480ths!')
+        elif is_int(value):
+            return Packet.query.join(Packet._qty_integer).\
+                filter(QtyInteger.value == value)
 
-    @staticmethod
-    def quantity_str_from_int(quantity):
-        """Convert an int in db storage format to a readable string.
 
-        The lowest digit of the int represents the number of digits in the
-        fractional part, and the integer is positive if it represents a
-        decimal value, negative if it represents a fraction.
+class QtyDecimal(db.Model):
+    """Table for quantities as decimals.
 
-        Examples:
-            >>> Packet.quantity_str_from_int(1000)
-            '100'
+    Attributes:
+        __tablename__ (str): Name of the table: 'qty_decimals'
+        id (int): Auto-incremented ID # used as primary key.
+        value (int): The quantity decimal stored as an integer in the db.
+    """
+    __tablename__ = 'qty_decimals'
+    id = db.Column(db.Integer, primary_key=True)
+    value = db.Column(QuantityDecimal, unique=True)
 
-            >>> Packet.quantity_str_from_int(-141)
-            '1/4'
+    def __init__(self, value=None):
+        if value is not None:
+            self.value = value
 
-            >>> Packet.quantity_str_from_int(3141592658)
-            '3.14159265'
+    def __repr__(self):
+        return '<{0} \'{1}\'>'.format(self.__class__.__name__, self.value)
 
-        Args:
-            quantity (int): An integer presumably from the database that
-                represents a quantity as stored in the db.
 
-        Returns:
-            str: A string containing the quantity in a human-readable format.
+class QtyFraction(db.Model):
+    """Table for quantities as fractions.
 
-        Raises:
-            ValueError: Negative integers ending in 0 cannot be converted, as
-                they would result in a fraction with no denominator.
-            TypeError: If given non-int data.
-        """
-        if isinstance(quantity, int):
-            if quantity > 0:
-                decimal = quantity % 10
-                if decimal == 0:
-                    return str(quantity)[:-1]
-                else:
-                    return str(quantity)[:-1 - decimal] + \
-                        '.' + str(quantity)[-1 - decimal:-1]
-            else:
-                quantity = quantity * -1
-                fractional = quantity % 10
-                if fractional == 0:
-                    raise ValueError('The fraction generated by this '
-                                     'number would have no denominator!')
-                else:
-                    numerator = quantity // 10**(1 + fractional)
-                    denominator = (quantity % 10**(1 + fractional) // 10)
-                    return str(numerator) + '/' + str(denominator)
-        else:
-            raise TypeError('quantity must be an integer!')
+    Attributes:
+        __tablename__ (str): Name of the table: 'qty_fractions'
+        id (int): Auto-incremented ID # used as primary key.
+        value (int): The quantity fraction stored as an integer in the db.
+    """
+    __tablename__ = 'qty_fractions'
+    id = db.Column(db.Integer, primary_key=True)
+    value = db.Column(Quantity480th, unique=True)
+
+    def __init__(self, value=None):
+        if value is not None:
+            self.value = value
+
+    def __repr__(self):
+        return '<{0} \'{1}\'>'.format(self.__class__.__name__, self.value)
+
+
+class QtyInteger(db.Model):
+    """Table for quantities as integers.
+
+    Attributes:
+        __tablename__ (str): Name of the table: 'qty_integers'
+        id (int): Auto-incremented ID # used as primary key.
+        value (int): The quantity integer to store in db.
+    """
+    __tablename__ = 'qty_integers'
+    id = db.Column(db.Integer, primary_key=True)
+    value = db.Column(db.Integer, unique=True)
+
+    def __init__(self, value=None):
+        if value is not None:
+            self.value = value
+
+    def __repr__(self):
+        return '<{0} \'{1}\'>'.format(self.__class__.__name__, self.value)
 
 
 class Seed(db.Model):
@@ -560,9 +929,9 @@ class Seed(db.Model):
     dropped = db.Column(db.Boolean)
     in_stock = db.Column(db.Boolean)
     name = db.Column(db.String(64), unique=True)
-    _packets = db.relationship('Packet',
-                               secondary=seeds_to_packets,
-                               backref='_seeds')
+    packets = db.relationship('Packet',
+                              secondary=seeds_to_packets,
+                              backref='seeds')
 
     def __repr__(self):
         """Return representation of Seed in human-readable format."""

@@ -1,6 +1,7 @@
-from flask import redirect, render_template, url_for
+from flask import current_app, redirect, render_template, url_for
 from . import main
 from app.auth.models import Permission
+from app.seeds.models import Category
 
 
 @main.context_processor
@@ -11,6 +12,20 @@ def make_permissions_available():
         dict: The Permission object to use in templates.
     """
     return dict(Permission=Permission)
+
+
+@main.context_processor
+def make_categories_available():
+    """Make categories available to Jinja templates.
+
+    Returns:
+        dict: A list of all Category objects loaded from the database.
+    """
+    if not current_app.config.get('TESTING'):
+        categories = Category.query.all()
+    else:
+        categories = None
+    return dict(categories=categories)
 
 
 @main.route('/')

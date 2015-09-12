@@ -1,6 +1,7 @@
 import unittest
 from decimal import Decimal
 from fractions import Fraction
+from slugify import slugify
 from app import create_app
 from app.seeds.models import BotanicalName, Category, CommonName, is_480th, \
     is_decimal, is_fraction, is_int, Packet, QtyDecimal, QtyFraction, \
@@ -475,6 +476,19 @@ class TestCategory(unittest.TestCase):
 
     def tearDown(self):
         self.app_context.pop()
+
+    def test_category_getter(self):
+        """Return ._category."""
+        category = Category()
+        category._category = 'Perennial Flower'
+        self.assertEqual(category.category, 'Perennial Flower')
+
+    def test_category_setter(self):
+        """Set ._category and .slug."""
+        category = Category()
+        category.category = 'Annual Flower'
+        self.assertEqual(category._category, 'Annual Flower')
+        self.assertEqual(category.slug, slugify('Annual Flower'))
 
     def test_repr(self):
         """Return string formatted <Category '<category>'>"""

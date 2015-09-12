@@ -1,0 +1,18 @@
+{% extends "main/base.html" %}
+{# HTML within blocks should be indented as follows for consistency: #}
+{# block head: 2 indentations of 4 spaces each. (8 spaces total.) #}
+{# block main: 3 indentations of 4 spaces each. (12 spaces total.) #}
+{% block head %}
+        <title>Manage Seeds</title>
+        <meta name="robots" content="noindex, nofollow">
+        <link rel="canonical" href="{{ url_for('seeds.index', _external=True) }}">
+{% endblock %}
+{% block main %}
+            <h1>Manage Seeds</h1>
+            <h2>Add:</h2>
+            <a href="{{ url_for('seeds.add_category') }}">Category</a>
+            <h2>Edit:</h2>
+            <a href="{{ url_for('seeds.edit_category') }}">Category</a>
+            <h2>Remove:</h2>
+            <a href="{{ url_for('seeds.remove_category') }}">Category</a>
+{% endblock %}

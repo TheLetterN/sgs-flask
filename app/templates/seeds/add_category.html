@@ -1,0 +1,34 @@
+{% extends "main/base.html" %}
+{% from "includes/form_errors.html" import form_errors %}
+{# HTML within blocks should be indented as follows for consistency: #}
+{# block head: 2 indentations of 4 spaces each. (8 spaces total.) #}
+{# block main: 3 indentations of 4 spaces each. (12 spaces total.) #}
+{% block head %}
+        <title>Add Category</title>
+        <link rel="canonical" href="{{ url_for('seeds.add_category', _external=True) }}">
+{% endblock %}
+{% block main %}
+            <h1>Add a Category:</h1>
+            <form method="POST" action="{{ url_for('seeds.add_category') }}">
+                {{ form.hidden_tag() }}
+                <ol>
+                    <li>
+                        {{ form.category.label }}
+                        {{ form.category }}
+                        {% if form.category.errors|count > 0 %}
+                        {{ form_errors(form.category) }}
+                        {% endif %}
+                    </li>
+                    <li>
+                        {{ form.description.label }}
+                        {{ form.description }}
+                        {% if form.description.errors|count > 0 %}
+                        {{ form_errors(form.description) }}
+                        {% endif %}
+                    </li>
+                    <li>
+                        {{ form.submit }}
+                    </li>
+                </ol>
+            </form>
+{% endblock %}

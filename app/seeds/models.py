@@ -1,5 +1,6 @@
 from decimal import Decimal
 from fractions import Fraction
+from slugify import slugify
 from sqlalchemy.ext.hybrid import Comparator, hybrid_property
 from app import db
 
@@ -555,18 +556,20 @@ class Category(db.Model):
     Attributes:
         __tablename__ (str): Name of the table: 'categories'
         id (int): Auto-incremented ID # for use as primary key.
-        category (str): The label for the category itself, such as 'Herb'
-                        or 'Perennial Flower'.
+        _category (str): The label for the category itself, such as 'Herb'
+            or 'Perennial Flower'.
         description (str): HTML description information for the category.
         seeds (relationship): MtM relationship with Seed.
+        slug (str): URL-friendly version of the category label.
     """
     __tablename__ = 'categories'
     id = db.Column(db.Integer, primary_key=True)
-    category = db.Column(db.String(64), unique=True)
+    _category = db.Column(db.String(64), unique=True)
     description = db.Column(db.Text)
     seeds = db.relationship('Seed',
                             secondary=categories_to_seeds,
                             backref='_categories')
+    slug = db.Column(db.String(64), unique=True)
 
     def __init__(self, category=None, description=None):
         """Construct an instance of Category.
@@ -582,6 +585,28 @@ class Category(db.Model):
     def __repr__(self):
         return '<{0} \'{1}\'>'.format(self.__class__.__name__,
                                       self.category)
+
+    @hybrid_property
+    def category(self):
+        """str: contents of ._category.
+
+        Setter:
+            Sets ._category, and generates a slugified version and sets .slug
+            to it.
+        """
+        return self._category
+
+    @category.expression
+    def category(cls):
+        return cls._category
+
+    @category.setter
+    def category(self, category):
+        self._category = category
+        if self._category is not None:
+            self.slug = slugify(category)
+        else:
+            self.slug = None
 
 
 class CommonName(db.Model):
@@ -885,28 +910,21 @@ class Seed(db.Model):
         botanical_name_id (int): Foreign key for BotanicalName.
         _botanical_name (relationship): MtO relationship with BotanicalName.
         _botanical_names (relationship): MtM relationship with BotanicalName.
+        category_id (int): Foreign key for Category.
+        _category (relationship): MtO relationship with Category.
         common_name_id (int): Foreign key for CommonName
         _common_name (relationship): MtO relationship with CommonName.
         _common_names (relationship): MtM relationship with CommonName.
         description (str): Product description in HTML format.
         dropped (bool): False if the seed will be re-stocked when low, False
-                        if it will be discontinued when low.
+            if it will be discontinued when low.
         in_stock (bool): True if a seed is in stock, False if not.
         name (str): The name of the seed (cultivar); the main product name.
-        _packets (relationship): MtM relationship with Packet.
+        packets (relationship): MtM relationship with Packet.
+        sku (int): Product SKU.
 
     Backrefs:
         _categories: MtM backref fron Category.
-
-    Properties:
-        botanical_name: Used to interface with the ._botanical_name MtO
-                        relationship.
-        botanical_names: Used to interface with the ._botanical_names MtM
-                         relationship.
-        common_name: Used to interface with the ._common_name MtO
-                     relationship.
-        common_names: Used to interface with the ._common_names MtM
-                      relationship.
     """
     __tablename__ = 'seeds'
     id = db.Column(db.Integer, primary_key=True)
@@ -932,6 +950,7 @@ class Seed(db.Model):
     packets = db.relationship('Packet',
                               secondary=seeds_to_packets,
                               backref='seeds')
+    sku = db.Column(db.Integer, unique=True)
 
     def __repr__(self):
         """Return representation of Seed in human-readable format."""

@@ -81,7 +81,15 @@ h1 {
     color: #060;
     border-bottom: 0.3em solid #4f4;
     padding-bottom: 0.2em;
-    font-size: 1.5em;
+    font-size: 1.6em;
+}
+
+h2 {
+    color: #060;
+    text-decoration: underline;
+    text-decoration-color: #4f4;
+    padding-bottom: 0.2em;
+    font-size: 1.4em;
 }
 
 p {
@@ -93,6 +101,14 @@ p {
 
 p + p {
     padding-top: 0;
+}
+
+strong {
+    font-weight: bold;
+}
+
+p.description {
+    padding: 0.4em;
 }
 /* END defaults for most page elements */
 
@@ -109,7 +125,6 @@ nav {
     padding-right: 1.5em;
     position: relative;
 }
-
 
 nav ul {
     display: inline-block;
@@ -146,7 +161,11 @@ nav div.nav_under {
     display: block;
 }
 
-nav ul#nav_auth, nav ul#nav_manage {
+nav span#nav_home {
+    display: inline-block;
+}
+
+nav ul#nav_auth, nav ul#nav_manage, nav ul#nav_seeds, nav span#nav_home {
     padding-top: 0.3em;
     padding-bottom: 0.3em;
     padding-left: 0.4em;
@@ -159,7 +178,7 @@ nav ul li {
     display: inline-block;
 }
 
-nav ul#nav_auth li+li {
+nav ul#nav_auth li+li, nav ul#nav_seeds li+li {
     border-left: 1px solid #afa;
 }
 nav ul#nav_manage {
@@ -177,6 +196,15 @@ nav ul#nav_manage:target {
 }
 
 /* END horizontal nav */
+
+/* BEGIN categories */
+div.category {
+    border: 1px solid #afa;
+    margin-top: 0.2em;
+    margin-bottom: 0.2em;
+    padding: 0.2em;
+}
+/* END categories */
 
 /* BEGIN flashed messages */
 .flashed_message, .flashed_error {
@@ -280,7 +308,7 @@ label {
     text-align: left;
 }
 
-label + input {
+label + input, label + textarea {
     display: block;
     margin-top: 0.2em;
 }

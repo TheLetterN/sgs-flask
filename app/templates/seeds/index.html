@@ -7,6 +7,11 @@
     <link rel="canonical" href="{{ url_for('seeds.index', _external=True) }}">
 {% endblock %}
 {% block main %}
-        <h1>In Soviet Russia, seed plants YOU!</h1>
-        <p>Nothing but dirt here so far.</p>
+        <h1>Seeds</h1>
+        {% for category in categories %}
+        <div class="category">
+            <h2>{{ category.category }}</h2>
+            <p class="description">{{ category.description|safe }}</p>
+        </div>
+        {% endfor %}
 {% endblock %}

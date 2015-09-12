@@ -28,6 +28,37 @@ class TestBotanicalNameWithDB(unittest.TestCase):
                       filter_by(name='Asclepias incarnata').first(), bn)
 
 
+class TestCategoryWithDB(unittest.TestCase):
+    """Test Category model methods that require database access."""
+    def setUp(self):
+        self.app = create_app('testing')
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+        db.create_all()
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
+
+    def test_category_expression(self):
+        """.category should be usable in filters."""
+        cat1 = Category()
+        cat2 = Category()
+        cat3 = Category()
+        db.session.add_all([cat1, cat2, cat3])
+        cat1.category = 'Annual Flower'
+        cat2.category = 'Perennial Flower'
+        cat3.category = 'Rock'
+        db.session.commit()
+        self.assertIs(Category.query.filter_by(category='Annual Flower').
+                      first(), cat1)
+        self.assertIs(Category.query.filter_by(category='Perennial Flower').
+                      first(), cat2)
+        self.assertIs(Category.query.filter_by(category='Rock').
+                      first(), cat3)
+
+
 class TestPacketWithDB(unittest.TestCase):
     """Test Packet model methods that require database access."""
     def setUp(self):

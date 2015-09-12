@@ -1,8 +1,14 @@
 {# nav needs 2 indents to fit in with page formatting. #}
         <nav>
             <span id="nav_left">
+                <span id="nav_home"><a href="{{ url_for('main.index') }}">Home</a></span>
                 <ul id="nav_seeds">
-                    <li>Test text please ignore.</li>
+                    <li><a href="{{ url_for('seeds.index') }}">Seeds</a></li>
+                    {% if categories is not none %}
+                    {% for nav_cat in categories %}
+                    <li><a href="{{ url_for('seeds.category', category_slug=nav_cat.slug)}}">{{ nav_cat.category }}</a></li>
+                    {% endfor %}
+                    {% endif %}
                 </ul>
             </span>
             <span id="nav_right">
@@ -24,6 +30,9 @@
                     <ul id="nav_manage">
                         {% if current_user.can(Permission.MANAGE_USERS) %}
                         <li><a href="{{ url_for('auth.manage_user') }}">Manage Users</a></li>
+                        {% endif %}
+                        {% if current_user.can(Permission.MANAGE_SEEDS) %}
+                        <li><a href="{{ url_for('seeds.manage') }}">Manage Seeds</a></li>
                         {% endif %}
                     </ul>
                 </div>

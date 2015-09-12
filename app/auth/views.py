@@ -9,6 +9,7 @@ from .forms import DeleteUserForm, EditUserForm, ManageUserForm, LoginForm, \
     RegistrationForm, ResendConfirmationForm, ResetPasswordForm, \
     ResetPasswordRequestForm, SelectUserForm
 from .models import get_user_from_confirmation_token, Permission, User
+from app.seeds.models import Category
 
 
 @auth.context_processor
@@ -19,6 +20,20 @@ def make_permissions_available():
         dict: The Permission object to use in templates.
     """
     return dict(Permission=Permission)
+
+
+@auth.context_processor
+def make_categories_available():
+    """Make categories available to Jinja templates.
+
+    Returns:
+        dict: A list of all Category objects loaded from the database.
+    """
+    if not current_app.config.get('TESTING'):
+        categories = Category.query.all()
+    else:
+        categories = None
+    return dict(categories=categories)
 
 
 @auth.route('/confirm_account/<token>')

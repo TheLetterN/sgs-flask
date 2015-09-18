@@ -29,7 +29,7 @@ def make_categories_available():
     Returns:
         dict: A list of all Category objects loaded from the database.
     """
-    if not current_app.config.get('TESTING'):
+    if not current_app.config.get('TESTING'):  # pragma: no cover
         categories = Category.query.all()
     else:
         categories = None

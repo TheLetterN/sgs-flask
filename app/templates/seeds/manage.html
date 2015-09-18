@@ -11,8 +11,14 @@
             <h1>Manage Seeds</h1>
             <h2>Add:</h2>
             <a href="{{ url_for('seeds.add_category') }}">Category</a>
+            <a href="{{ url_for('seeds.add_common_name') }}">Common Name</a>
+            <a href="{{ url_for('seeds.add_botanical_name') }}">Botanical Name</a>
             <h2>Edit:</h2>
             <a href="{{ url_for('seeds.edit_category') }}">Category</a>
+            <a href="{{ url_for('seeds.edit_common_name') }}">Common Name</a>
+            <a href="{{ url_for('seeds.edit_botanical_name') }}">Botanical Name</a>
             <h2>Remove:</h2>
             <a href="{{ url_for('seeds.remove_category') }}">Category</a>
+            <a href="{{ url_for('seeds.remove_common_name') }}">Common Name</a>
+            <a href="{{ url_for('seeds.remove_botanical_name') }}">Botanical Name</a>
 {% endblock %}

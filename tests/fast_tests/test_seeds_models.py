@@ -512,6 +512,19 @@ class TestCommonName(unittest.TestCase):
         cn = CommonName(name='Coleus')
         self.assertEqual(cn.__repr__(), '<CommonName \'Coleus\'>')
 
+    def test_name_getter(self):
+        """Return contents of ._name"""
+        cn = CommonName()
+        cn._name = 'Coleus'
+        self.assertEqual(cn.name, 'Coleus')
+
+    def test_name_setter(self):
+        """Set ._name and .slug using passed value."""
+        cn = CommonName()
+        cn.name = 'Butterfly Weed'
+        self.assertEqual(cn._name, 'Butterfly Weed')
+        self.assertEqual(cn.slug, slugify('Butterfly Weed'))
+
 
 class TestPacket(unittest.TestCase):
     """Test methods of Packet in the seeds model."""

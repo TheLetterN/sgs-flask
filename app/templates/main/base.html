@@ -10,6 +10,9 @@
     </head>
     <body>
         {% include "includes/nav.html" %}
+        {% if crumbs %}
+        {% include "includes/breadcrumbs.html" %}
+        {% endif %}
         {% include "includes/flashed.html" %}
         <main>
             {% block main %}

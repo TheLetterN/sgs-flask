@@ -1,7 +1,7 @@
 from decimal import Decimal
 from fractions import Fraction
 from slugify import slugify
-from sqlalchemy.ext.hybrid import Comparator, hybrid_property
+from sqlalchemy.ext.hybrid import hybrid_property
 from app import db
 
 
@@ -133,11 +133,31 @@ def is_int(value):
         return False
 
 
+botanical_names_to_common_names = db.Table(
+    'botanical_names_to_common_names',
+    db.Model.metadata,
+    db.Column('botanical_names_id',
+              db.Integer,
+              db.ForeignKey('botanical_names.id')),
+    db.Column('common_names_id', db.Integer, db.ForeignKey('common_names.id'))
+)
+
+
 categories_to_seeds = db.Table(
     'categories_to_seeds',
     db.Model.metadata,
     db.Column('categories_id', db.Integer, db.ForeignKey('categories.id')),
     db.Column('seeds_id', db.Integer, db.ForeignKey('seeds.id'))
+)
+
+
+common_names_to_categories = db.Table(
+    'common_names_to_categories',
+    db.Model.metadata,
+    db.Column('common_names_id',
+              db.Integer,
+              db.ForeignKey('common_names.id')),
+    db.Column('categories_id', db.Integer, db.ForeignKey('categories.id'))
 )
 
 
@@ -453,6 +473,7 @@ class BotanicalName(db.Model):
     Attributes:
         __tablename__ (str): Name of the table: 'botanical_names'
         id (int): Auto-incremented ID # for use as a primary key.
+        common_names (relationship): MtM relatinship with CommonName.
         _name (str): A botanical name associated with one or more seeds. Get
             and set via the name property.
         _seeds (backref): Backref from seeds table to allow us to look up seeds
@@ -460,6 +481,9 @@ class BotanicalName(db.Model):
     """
     __tablename__ = 'botanical_names'
     id = db.Column(db.Integer, primary_key=True)
+    common_names = db.relationship('CommonName',
+                                   secondary=botanical_names_to_common_names,
+                                   backref='botanical_names')
     _name = db.Column(db.String(64), unique=True)
 
     def __init__(self, name=None):
@@ -626,8 +650,12 @@ class CommonName(db.Model):
     """
     __tablename__ = 'common_names'
     id = db.Column(db.Integer, primary_key=True)
+    categories = db.relationship('Category',
+                                 secondary=common_names_to_categories,
+                                 backref='_common_names')
     description = db.Column(db.Text)
-    name = db.Column(db.String(64), unique=True)
+    _name = db.Column(db.String(64), unique=True)
+    slug = db.Column(db.String(64), unique=True)
 
     def __init__(self, name=None, description=None):
         """Construct an instance of CommonName
@@ -642,6 +670,27 @@ class CommonName(db.Model):
 
     def __repr__(self):
         return '<{0} \'{1}\'>'.format(self.__class__.__name__, self.name)
+
+    @hybrid_property
+    def name(self):
+        """str: Return ._name
+
+        Setter:
+            Set ._name, and set .slug to a slugified version of ._name.
+        """
+        return self._name
+
+    @name.expression
+    def name(cls):
+        return cls._name
+
+    @name.setter
+    def name(self, name):
+        self._name = name
+        if name is not None:
+            self.slug = slugify(name)
+        else:
+            self.slug = None
 
 
 class Packet(db.Model):

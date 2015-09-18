@@ -1,0 +1,55 @@
+{% extends "main/base.html" %}
+{% from "includes/form_errors.html" import form_errors %}
+{# HTML within blocks should be indented as follows for consistency: #}
+{# block head: 2 indentations of 4 spaces each. (8 spaces total.) #}
+{# block main: 3 indentations of 4 spaces each. (12 spaces total.) #}
+{% block head %}
+        <title>Add Common Name</title>
+        <meta name="robots" content="noindex, nofollow">
+        <link rel="canonical" href="{{ url_for('seeds.add_common_name', _external=True) }}">
+{% endblock %}
+{% block main %}
+            <h1>Add a Common Name:</h1>
+            <form method="POST">
+                {{ form.hidden_tag() }}
+                <ol>
+                    <fieldset>
+                        <legend>Select/Add Categories</legend>
+                        <li>
+                            {{ form.categories.label }}
+                            {{ form.categories }}
+                            {% if form.categories.errors|count > 0 %}
+                            {{ form_errors(form.categories) }}
+                            {% endif %}
+                        </li>
+                        <li>
+                            {{ form.additional_categories.label }}
+                            {{ form.additional_categories }}
+                            {% if form.additional_categories.errors|count > 0 %}
+                            {{ form_errors(form.additional_categories) }}
+                            {% endif %}
+                        </li>
+                    </fieldset>
+                    <fieldset>
+                        <legend>Add Common Name</legend>
+                        <li>
+                            {{ form.name.label }}
+                            {{ form.name }}
+                            {% if form.name.errors|count > 0 %}
+                            {{ form_errors(form.name) }}
+                            {% endif %}
+                        </li>
+                        <li>
+                            {{ form.description.label }}
+                            {{ form.description }}
+                            {% if form.description.errors|count > 0 %}
+                            {{ form_errors(form.description) }}
+                            {% endif %}
+                        </li>
+                    </fieldset>
+                    <li>
+                        {{ form.submit }}
+                    </li>
+                </ol>
+            </form>
+{% endblock %}

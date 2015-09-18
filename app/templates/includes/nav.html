@@ -3,10 +3,10 @@
             <span id="nav_left">
                 <span id="nav_home"><a href="{{ url_for('main.index') }}">Home</a></span>
                 <ul id="nav_seeds">
-                    <li><a href="{{ url_for('seeds.index') }}">Seeds</a></li>
+                    <li><a href="{{ url_for('seeds.index') }}">All Seeds</a></li>
                     {% if categories is not none %}
                     {% for nav_cat in categories %}
-                    <li><a href="{{ url_for('seeds.category', category_slug=nav_cat.slug)}}">{{ nav_cat.category }}</a></li>
+                    <li><a href="{{ url_for('seeds.category', category_slug=nav_cat.slug)}}">{{ nav_cat.category }} Seeds</a></li>
                     {% endfor %}
                     {% endif %}
                 </ul>

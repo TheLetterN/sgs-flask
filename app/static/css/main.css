@@ -308,7 +308,7 @@ label {
     text-align: left;
 }
 
-label + input, label + textarea {
+label + input, label + textarea, label + select[multiple] {
     display: block;
     margin-top: 0.2em;
 }

@@ -21,6 +21,26 @@ login_manager.session_protection = 'strong'
 login_manager.login_view = 'auth.login'
 
 
+def make_breadcrumbs(*args):
+    """Create a 'trail of breadcrumbs' to include in pages.
+
+    Args:
+        args (tuple): A tuple containing tuples in the format (route, title)
+
+    Returns:
+        list: A list containing
+    """
+    if all(isinstance(arg, tuple) and len(arg) == 2 for arg in args):
+        trail = list()
+        for arg in args:
+            trail.append('<a href="{0}">{1}</a>'.
+                         format(arg[0], arg[1]))
+        return trail
+    else:
+        raise ValueError('Could not parse arguments. Please make sure your '
+                         'arguments are tuples formatted (route, page title)!')
+
+
 def create_app(config_name):
     """Create a Flask instance based on a Config subclass.
 

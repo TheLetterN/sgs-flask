@@ -1,0 +1,5 @@
+            <div id="breadcrumbs">
+                {% for crumb in crumbs %}
+                {{ crumb|safe }}{{ ' > ' if not loop.last }}
+                {% endfor %}
+            </div>

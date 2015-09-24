@@ -1,9 +1,0 @@
-{% extends "layout.html" %}
-{% block content %}
-{% with flashes = get_flashed_messages() %}
-{% for flash in flashes %}
-<div class="flash">{{ flash }}</div>
-{% endfor %}
-{% endwith %}
-<a href="{{ url_for('manage', action='addseed') }}">Add Seed</a>
-{% endblock %}

@@ -92,6 +92,9 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(128))
     permissions = db.Column(db.Integer, default=0)
 
+    def __init__(self):
+        self.permissions = 0
+
     def can(self, permission):
         """Verify if a user has a permission.
 

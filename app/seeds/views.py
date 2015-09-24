@@ -13,7 +13,7 @@ from app.auth.models import Permission
 
 
 @seeds.context_processor
-def make_permissions_available():
+def make_permissions_available():  # pragma: no cover
     """Make the Permission object available to Jinja templates.
 
     Returns:
@@ -23,13 +23,13 @@ def make_permissions_available():
 
 
 @seeds.context_processor
-def make_categories_available():
+def make_categories_available():  # pragma: no cover
     """Make categories available to Jinja templates.
 
     Returns:
         dict: A list of all Category objects loaded from the database.
     """
-    if not current_app.config.get('TESTING'):  # pragma: no cover
+    if not current_app.config.get('TESTING'):
         categories = Category.query.all()
     else:
         categories = None
@@ -130,7 +130,7 @@ def add_common_name():
 
 
 @seeds.route('/<category_slug>')
-def category(category_slug):
+def category(category_slug=None):
     """Display a category."""
     category = Category.query.filter_by(slug=category_slug).first()
     if category is not None:
@@ -237,8 +237,6 @@ def edit_category(category_id=None):
                   .format(category.category, form.category.data.title()))
             category.category = form.category.data.title()
             edited = True
-        if len(form.description.data) < 1:
-            form.description.data = None
         if form.description.data != category.description:
             flash('{0} description changed to \'{1}\'.'
                   .format(form.category.data.title(), form.description.data))
@@ -343,49 +341,6 @@ def manage():
     return render_template('seeds/manage.html')
 
 
-@seeds.route('/remove_category', methods=['GET', 'POST'])
-@seeds.route('/remove_category/<category_id>', methods=['GET', 'POST'])
-@login_required
-@permission_required(Permission.MANAGE_SEEDS)
-def remove_category(category_id=None):
-    """Remove a category from the database."""
-    if category_id is None:
-        return redirect(url_for('seeds.select_category',
-                                dest='seeds.remove_category'))
-    if not category_id.isdigit():
-        flash('Error: Category id must be an integer! '
-              'Please select a category from the list:')
-        return redirect(url_for('seeds.select_category',
-                                dest='seeds.remove_category'))
-    category = Category.query.get(category_id)
-    if category is None:
-        flash('Error: No such category exists. '
-              'Please select one from the list:')
-        return redirect(url_for('seeds.select_category',
-                                dest='seeds.remove_category'))
-    form = RemoveCategoryForm()
-    if form.validate_on_submit():
-        if form.verify_removal.data:
-            flash('Category {0}: \'{1}\' has been removed from the database.'.
-                  format(category.id, category.category))
-            db.session.delete(category)
-            return redirect(url_for('seeds.manage'))
-        else:
-            flash('No changes made. Check the box labeled \'Yes\''
-                  ' if you want to remove this category.')
-            return redirect(url_for('seeds.remove_category',
-                                    category_id=category_id))
-    crumbs = make_breadcrumbs(
-        (url_for('seeds.manage'), 'Manage Seeds'),
-        (url_for('seeds.remove_category', category_id=category_id),
-         'Remove Category')
-    )
-    return render_template('seeds/remove_category.html',
-                           crumbs=crumbs,
-                           form=form,
-                           category=category)
-
-
 @seeds.route('/remove_botanical_name', methods=['GET', 'POST'])
 @seeds.route('/remove_botanical_name/<bn_id>', methods=['GET', 'POST'])
 @login_required
@@ -427,6 +382,49 @@ def remove_botanical_name(bn_id=None):
                            bn=bn,
                            crumbs=crumbs,
                            form=form)
+
+
+@seeds.route('/remove_category', methods=['GET', 'POST'])
+@seeds.route('/remove_category/<category_id>', methods=['GET', 'POST'])
+@login_required
+@permission_required(Permission.MANAGE_SEEDS)
+def remove_category(category_id=None):
+    """Remove a category from the database."""
+    if category_id is None:
+        return redirect(url_for('seeds.select_category',
+                                dest='seeds.remove_category'))
+    if not category_id.isdigit():
+        flash('Error: Category id must be an integer! '
+              'Please select a category from the list:')
+        return redirect(url_for('seeds.select_category',
+                                dest='seeds.remove_category'))
+    category = Category.query.get(category_id)
+    if category is None:
+        flash('Error: No such category exists. '
+              'Please select one from the list:')
+        return redirect(url_for('seeds.select_category',
+                                dest='seeds.remove_category'))
+    form = RemoveCategoryForm()
+    if form.validate_on_submit():
+        if form.verify_removal.data:
+            flash('Category {0}: \'{1}\' has been removed from the database.'.
+                  format(category.id, category.category))
+            db.session.delete(category)
+            return redirect(url_for('seeds.manage'))
+        else:
+            flash('No changes made. Check the box labeled \'Yes\''
+                  ' if you want to remove this category.')
+            return redirect(url_for('seeds.remove_category',
+                                    category_id=category_id))
+    crumbs = make_breadcrumbs(
+        (url_for('seeds.manage'), 'Manage Seeds'),
+        (url_for('seeds.remove_category', category_id=category_id),
+         'Remove Category')
+    )
+    return render_template('seeds/remove_category.html',
+                           crumbs=crumbs,
+                           form=form,
+                           category=category)
 
 
 @seeds.route('/remove_common_name', methods=['GET', 'POST'])

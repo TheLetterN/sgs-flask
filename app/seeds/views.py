@@ -20,11 +20,12 @@ from flask import abort, current_app, flash, redirect, render_template, \
     request, url_for
 from flask.ext.login import login_required
 from . import seeds
-from .models import BotanicalName, Category, CommonName
+from .models import BotanicalName, Category, CommonName, Seed
 from .forms import AddBotanicalNameForm, AddCategoryForm, AddCommonNameForm, \
-    EditBotanicalNameForm, EditCategoryForm, EditCommonNameForm, \
-    RemoveBotanicalNameForm, RemoveCategoryForm, RemoveCommonNameForm, \
-    SelectBotanicalNameForm, SelectCategoryForm, SelectCommonNameForm
+    AddPacketForm, AddSeedForm, EditBotanicalNameForm, EditCategoryForm, \
+    EditCommonNameForm, RemoveBotanicalNameForm, RemoveCategoryForm, \
+    RemoveCommonNameForm, SelectBotanicalNameForm, SelectCategoryForm, \
+    SelectCommonNameForm
 from app import db, make_breadcrumbs
 from app.decorators import permission_required
 from app.auth.models import Permission
@@ -145,6 +146,71 @@ def add_common_name():
     )
     return render_template('seeds/add_common_name.html', crumbs=crumbs,
                            form=form)
+
+
+@seeds.route('/add_packet', methods=['GET', 'POST'])
+@seeds.route('/add_packet/<seed_id>', methods=['GET', 'POST'])
+@login_required
+@permission_required(Permission.MANAGE_SEEDS)
+def add_packet(seed_id=None):
+    """Add a packet to the database."""
+    if seed_id is None:
+        return redirect(url_for('seeds.select_seed', dest='seeds.add_packet'))
+    form = AddPacketForm()
+    if seed_id:
+        seed = Seed.query.get(seed_id)
+    else:
+        seed = None
+    if form.validate_on_submit():
+        packet = Packet()
+    crumbs = make_breadcrumbs(
+        (url_for('seeds.manage'), 'Manage Seeds'),
+        (url_for('seeds.add_packet'), 'Add Packet')
+        )
+    return render_template('seeds/add_packet.html',
+                           crumbs=crumbs,
+                           form=form,
+                           seed=seed)
+
+    
+@seeds.route('/add_seed', methods=['GET', 'POST'])
+@login_required
+@permission_required(Permission.MANAGE_SEEDS)
+def add_seed():
+    """Add a seed to the database."""
+    form = AddSeedForm()
+    form.set_selects()
+    if form.validate_on_submit():
+        seed = Seed()
+        db.session.add(seed)
+        if form.botanical_names.data:
+            for bn_id in form.botanical_names.data:
+                bn = BotanicalName.query.get(bn_id)
+                flash('\'{0}\' added to botanical names for {1}.'.
+                      format(bn.name, form.name.data))
+                seed.botanical_names.append(bn)
+        for cat_id in form.categories.data:
+            cat = Category.query.get(cat_id)
+            flash('\'{0}\' added to categories for {1}.'.
+                  format(cat.category, form.name.data))
+            seed.categories.append(cat)
+        for cn_id in form.common_names.data:
+            cn = CommonName.query.get(cn_id)
+            flash('\'{0}\' added to common names for {1}.'.
+                  format(cn.name, form.name.data))
+            seed.common_names.append(cn)
+        seed.name = form.name.data.title()
+        seed.sku = form.sku.data
+        seed.description = form.description.data
+        flash('New seed \'{0}\', SKU: {1}  has been added to the database.'.
+              format(seed.name, seed.sku))
+        db.session.commit()
+        return redirect(url_for('seeds.add_packet', seed_id=seed.id))
+    crumbs = make_breadcrumbs(
+        (url_for('seeds.manage'), 'Manage Seeds'),
+        (url_for('seeds.add_seed'), 'Add Seed')
+    )
+    return render_template('seeds/add_seed.html', crumbs=crumbs, form=form)
 
 
 @seeds.route('/<category_slug>')
@@ -540,7 +606,7 @@ def select_category():
                            form=form)
 
 
-@seeds.route('select_common_name', methods=['GET', 'POST'])
+@seeds.route('/select_common_name', methods=['GET', 'POST'])
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
 def select_common_name():
@@ -562,5 +628,31 @@ def select_common_name():
         (url_for('seeds.select_common_name', dest=dest), 'Select Common Name')
     )
     return render_template('seeds/select_common_name.html',
+                           crumbs=crumbs,
+                           form=form)
+
+
+@seeds.route('/select_seed', methods=['GET', 'POST'])
+@login_required
+@permission_required(Permission.MANAGE_SEEDS)
+def select_seed():
+    """Select a seed to load on another page.
+
+    Request Args:
+        dest (str): The route to redirect to once seed is selected.
+    """
+    dest = request.args.get('dest')
+    if dest is None:
+        flash('Error: No destination page was specified!')
+        return redirect(url_for('seeds.manage'))
+    form = SelectSeedForm()
+    form.set_seeds()
+    if form.validate_on_submit():
+        return redirect(url_for(dest, seed_id=form.seeds.data))
+    crumbs = make_breadcrumbs(
+            (url_for('seeds.manage'), 'Manage Seeds'),
+            (url_for('seeds.select_seed', dest=dest), 'Select Seed')
+    )
+    return render_template('seeds/select_seed.html',
                            crumbs=crumbs,
                            form=form)

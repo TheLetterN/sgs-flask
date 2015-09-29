@@ -17,10 +17,11 @@
 
 
 from flask.ext.wtf import Form
-from wtforms import BooleanField, SelectField, SelectMultipleField, \
-    StringField, SubmitField, TextAreaField, ValidationError
-from wtforms.validators import Length, Optional
-from .models import BotanicalName, Category, CommonName
+from wtforms import BooleanField, DecimalField, SelectField, \
+    SelectMultipleField, StringField, SubmitField, TextAreaField, \
+    ValidationError
+from wtforms.validators import DataRequired, Length, Optional
+from .models import BotanicalName, Category, CommonName, Seed
 
 
 def botanical_name_select_list():
@@ -52,6 +53,17 @@ def common_name_select_list():
             in the database.
     """
     return [(cn.id, cn.name) for cn in CommonName.query.order_by('_name')]
+
+def seed_select_list():
+    """"Generate a list of all Seeds for populating select fields.
+
+    Returns:
+        list: A list of tuples containing the ids and strings containing name
+            and SKU of each seed in the database.
+    """
+    return [(seed.id, '{0}, SKU: {1}'.format(seed.name, seed.sku)) for
+            seed in
+            Seed.query.order_by('name')]
 
 
 class AddBotanicalNameForm(Form):
@@ -184,6 +196,53 @@ class AddCommonNameForm(Form):
                                       'category!')
 
 
+class AddPacketForm(Form):
+    """Form for adding a packet to a seed.
+    """
+    price = DecimalField('Price', places=2)
+    quantity = StringField('Quantity')
+    unit = StringField('Unit of Measure', validators=[Length(1, 32)])
+    again = BooleanField('Add another packet after this.', default='checked')
+
+
+class AddSeedForm(Form):
+    """Form for adding a new seed to the database.
+    """
+    botanical_names = SelectMultipleField('Select Botanical Names', coerce=int)
+    categories = SelectMultipleField('Select Categories',
+                                     coerce=int,
+                                     validators=[DataRequired()])
+    common_names = SelectMultipleField('Select Common Names',
+                                       coerce=int,
+                                       validators=[DataRequired()])
+    description = TextAreaField('Description')
+    name = StringField('Seed Name (Cultivar)', validators=[Length(1, 64)])
+    # TODO: SKU generation.
+    sku = StringField('SKU', validators=[Length(1, 32)])
+    submit = SubmitField('Add Seed')
+
+    def set_selects(self):
+        """Sets botanical_names, categories, and common_names from db."""
+        self.botanical_names.choices = botanical_name_select_list()
+        self.categories.choices = category_select_list()
+        self.common_names.choices = common_name_select_list()
+
+    def validate_name(self, field):
+        """Raise ValidationError if seed exists in db with this name."""
+        seed = Seed.query.filter_by(name=field.data.title()).first()
+        if seed is not None:
+            raise ValidationError('The seed \'{0}\' already exists with SKU: '
+                                  '{1}!'.format(field.data, seed.sku))
+
+    def validate_sku(self, field):
+        """Raise a ValidationError if seed exists in db with this SKU."""
+        seed = Seed.query.filter_by(sku=field.data).first()
+        if seed is not None:
+            raise ValidationError('The SKU {0} is already in use by the seed '
+                                  'named: \'{1}\'!'.format(field.data,
+                                                           seed.name))
+
+
 class EditBotanicalNameForm(Form):
     """Form for editing an existing botanical name in the database.
 
@@ -289,6 +348,16 @@ class SelectCommonNameForm(Form):
     def set_names(self):
         """Populate names with CommonNames from the database."""
         self.names.choices = common_name_select_list()
+
+
+class SelectSeedForm(Form):
+    """Form for selecting a seed."""
+    seeds = SelectField('Select Seed', coerce=int)
+    submit = SubmitField('Submit')
+
+    def set_seeds(self):
+        """Populate seeds with Seeds from the database."""
+        self.seeds.choices = seed_select_list()
 
 
 class RemoveBotanicalNameForm(Form):

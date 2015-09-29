@@ -16,27 +16,29 @@
    Copyright Swallowtail Garden Seeds, Inc 
 #}
 {% extends "main/base.html" %}
+{% from "includes/form_errors.html" import form_errors %}
 {# HTML within blocks should be indented as follows for consistency: #}
 {# block head: 2 indentations of 4 spaces each. (8 spaces total.) #}
 {# block main: 3 indentations of 4 spaces each. (12 spaces total.) #}
 {% block head %}
-        <title>Manage Seeds</title>
+        <title>Select Seed</title>
         <meta name="robots" content="noindex, nofollow">
-        <link rel="canonical" href="{{ url_for('seeds.index', _external=True) }}">
+        <link rel="canonical" href="{{ url_for('seeds.select_seed', _external=True) }}">
 {% endblock %}
 {% block main %}
-            <h1>Manage Seeds</h1>
-            <h2>Add:</h2>
-            <a href="{{ url_for('seeds.add_category') }}">Category</a>
-            <a href="{{ url_for('seeds.add_common_name') }}">Common Name</a>
-            <a href="{{ url_for('seeds.add_botanical_name') }}">Botanical Name</a>
-            <a href="{{ url_for('seeds.add_seed') }}">Seed</a>
-            <h2>Edit:</h2>
-            <a href="{{ url_for('seeds.edit_category') }}">Category</a>
-            <a href="{{ url_for('seeds.edit_common_name') }}">Common Name</a>
-            <a href="{{ url_for('seeds.edit_botanical_name') }}">Botanical Name</a>
-            <h2>Remove:</h2>
-            <a href="{{ url_for('seeds.remove_category') }}">Category</a>
-            <a href="{{ url_for('seeds.remove_common_name') }}">Common Name</a>
-            <a href="{{ url_for('seeds.remove_botanical_name') }}">Botanical Name</a>
+            <h1>Select a Seed</h1>
+            <form method="POST">
+                {{ form.hidden_tag() }}
+                <ol>
+                    <li>
+                        {{ form.seeds }}
+                        {% if form.seeds.errors|count > 0 %}
+                        {{ form_errors(form.seeds) }}
+                        {% endif %}
+                    </li>
+                    <li>
+                        {{ form.submit }}
+                    </li>
+                </ol>
+            </form>
 {% endblock %}

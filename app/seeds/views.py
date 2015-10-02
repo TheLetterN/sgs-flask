@@ -20,12 +20,12 @@ from flask import abort, current_app, flash, redirect, render_template, \
     request, url_for
 from flask.ext.login import login_required
 from . import seeds
-from .models import BotanicalName, Category, CommonName, Seed
+from .models import BotanicalName, Category, CommonName, Packet, Seed, Unit
 from .forms import AddBotanicalNameForm, AddCategoryForm, AddCommonNameForm, \
-    AddPacketForm, AddSeedForm, EditBotanicalNameForm, EditCategoryForm, \
-    EditCommonNameForm, RemoveBotanicalNameForm, RemoveCategoryForm, \
-    RemoveCommonNameForm, SelectBotanicalNameForm, SelectCategoryForm, \
-    SelectCommonNameForm
+    AddPacketForm, AddSeedForm, AddUnitForm, EditBotanicalNameForm, \
+    EditCategoryForm, EditCommonNameForm, RemoveBotanicalNameForm, \
+    RemoveCategoryForm, RemoveCommonNameForm, SelectBotanicalNameForm, \
+    SelectCategoryForm, SelectCommonNameForm
 from app import db, make_breadcrumbs
 from app.decorators import permission_required
 from app.auth.models import Permission
@@ -157,12 +157,12 @@ def add_packet(seed_id=None):
     if seed_id is None:
         return redirect(url_for('seeds.select_seed', dest='seeds.add_packet'))
     form = AddPacketForm()
-    if seed_id:
-        seed = Seed.query.get(seed_id)
-    else:
-        seed = None
+    form.set_selects()
+    seed = Seed.query.get(seed_id)
     if form.validate_on_submit():
         packet = Packet()
+        db.session.add(packet)
+        db.session.rollback()
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
         (url_for('seeds.add_packet'), 'Add Packet')
@@ -200,10 +200,9 @@ def add_seed():
                   format(cn.name, form.name.data))
             seed.common_names.append(cn)
         seed.name = form.name.data.title()
-        seed.sku = form.sku.data
         seed.description = form.description.data
-        flash('New seed \'{0}\', SKU: {1}  has been added to the database.'.
-              format(seed.name, seed.sku))
+        flash('New seed \'{0}\' has been added to the database.'.
+              format(seed.name))
         db.session.commit()
         return redirect(url_for('seeds.add_packet', seed_id=seed.id))
     crumbs = make_breadcrumbs(

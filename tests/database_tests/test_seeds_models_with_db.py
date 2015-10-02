@@ -120,48 +120,6 @@ class TestPacketWithDB(unittest.TestCase):
         self.assertIs(Packet.query.filter_by(price=2.99).first(), pkt)
         self.assertIs(Packet.query.filter(Packet.price == '2.99').first(), pkt)
 
-    def test_price_comparator_gt(self):
-        """Packet can be queried using price can be queried by > filter."""
-        pkt1 = Packet()
-        pkt2 = Packet()
-        pkt3 = Packet()
-        db.session.add(pkt1)
-        db.session.add(pkt2)
-        db.session.add(pkt3)
-        pkt1.price = '4.99'
-        pkt2.price = '3.99'
-        pkt3.price = '1.99'
-        self.assertEqual([pkt2, pkt1],
-                         Packet.query.filter(Packet.price > '3.00').all())
-        self.assertEqual([pkt2, pkt1],
-                         Packet.query.filter(Packet.price > 3).all())
-        self.assertEqual([pkt2, pkt1],
-                         Packet.query.filter(Packet.price > 3.00).all())
-        self.assertNotIn(pkt3, Packet.query.filter(Packet.price > 3).all())
-        self.assertEqual([pkt3, pkt2, pkt1],
-                         Packet.query.filter(Packet.price > 1).all())
-        self.assertIn(pkt3, Packet.query.filter(Packet.price > 1).all())
-
-    def test_price_comparator_lt(self):
-        """Packet can be queried using price in a < filter."""
-        pkt1 = Packet()
-        pkt2 = Packet()
-        pkt3 = Packet()
-        db.session.add_all([pkt1, pkt2, pkt3])
-        pkt1.price = '1.99'
-        pkt2.price = '2.99'
-        pkt3.price = '4.99'
-        self.assertEqual([pkt1, pkt2],
-                         Packet.query.filter(Packet.price < '3.00').all())
-        self.assertEqual([pkt1, pkt2],
-                         Packet.query.filter(Packet.price < 3).all())
-        self.assertEqual([pkt1, pkt2],
-                         Packet.query.filter(Packet.price < 3.00).all())
-        self.assertNotIn(pkt3, Packet.query.filter(Packet.price < 3).all())
-        self.assertEqual([pkt1, pkt2, pkt3],
-                         Packet.query.filter(Packet.price < 42).all())
-        self.assertIn(pkt3, Packet.query.filter(Packet.price < 42).all())
-
     def test_price_setter_truncates(self):
         """._price only stores decimals with a scale of 2.
 
@@ -171,10 +129,10 @@ class TestPacketWithDB(unittest.TestCase):
         db.session.add(packet)
         packet.price = '3.14159'
         db.session.commit()
-        self.assertEqual(Packet.query.first()._price, Decimal('3.14'))
+        self.assertEqual(Packet.query.first().price, Decimal('3.14'))
         packet.price = '2.999'
         db.session.commit()
-        self.assertEqual(Packet.query.first()._price, Decimal('2.99'))
+        self.assertEqual(Packet.query.first().price, Decimal('2.99'))
 
     def test_quantity_getter_success(self):
         """Return quantity if only one type of quantity is set."""

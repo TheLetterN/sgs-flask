@@ -4,7 +4,7 @@ from fractions import Fraction
 from slugify import slugify
 from app import create_app
 from app.seeds.models import BotanicalName, Category, CommonName, is_480th, \
-    is_decimal, is_fraction, is_int, Packet, QtyDecimal, QtyFraction, \
+    is_decimal, is_fraction, is_int, Packet, Price, QtyDecimal, QtyFraction, \
     QtyInteger, Quantity480th, QuantityDecimal, Seed, Unit, USDInt
 
 
@@ -539,7 +539,7 @@ class TestPacket(unittest.TestCase):
     def test_price_getter(self):
         """Return ._price."""
         pkt = Packet()
-        pkt._price = Decimal('2.99')
+        pkt._price = Price(price=Decimal('2.99'))
         self.assertEqual(pkt.price, Decimal('2.99'))
 
     def test_quantity_equals_not_480th(self):

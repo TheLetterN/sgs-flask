@@ -21,7 +21,8 @@ from wtforms import BooleanField, DecimalField, SelectField, \
     SelectMultipleField, StringField, SubmitField, TextAreaField, \
     ValidationError
 from wtforms.validators import DataRequired, Length, Optional
-from .models import BotanicalName, Category, CommonName, Seed
+from .models import BotanicalName, Category, CommonName, Price, QtyDecimal, \
+    QtyFraction, QtyInteger, Seed, Unit
 
 
 def botanical_name_select_list():
@@ -61,9 +62,7 @@ def seed_select_list():
         list: A list of tuples containing the ids and strings containing name
             and SKU of each seed in the database.
     """
-    return [(seed.id, '{0}, SKU: {1}'.format(seed.name, seed.sku)) for
-            seed in
-            Seed.query.order_by('name')]
+    return [(seed.id, seed.name) for seed in Seed.query.order_by('name')]
 
 
 class AddBotanicalNameForm(Form):
@@ -198,11 +197,67 @@ class AddCommonNameForm(Form):
 
 class AddPacketForm(Form):
     """Form for adding a packet to a seed.
+    
+    Attributes:
+        again (BooleanField): Checkbox for whether or not to keep adding
+            packets on submit.
+        price (DecimalField): Field for price in US Dollars.
+        quantity (StringField): Field for amount of seed in a packet.
+        unit (StringField): Unit 
     """
-    price = DecimalField('Price', places=2)
-    quantity = StringField('Quantity')
-    unit = StringField('Unit of Measure', validators=[Length(1, 32)])
     again = BooleanField('Add another packet after this.', default='checked')
+    price = DecimalField('Or enter a price', places=2, validators=[Optional()])
+    prices = SelectField('Select a price', coerce=int)
+    quantities = SelectField('Select a quantity', coerce=str)
+    quantity = StringField('Or enter a quantity')
+    unit = StringField('Or enter a unit of measurement',
+                       validators=[Length(1, 32), Optional()])
+    units = SelectField('Select a unit of measurement', coerce=int)
+    sku = StringField('SKU', validators=[Length(1, 32)])
+    submit = SubmitField('Add Packet')
+
+    def set_selects(self):
+        """Set selects with values loaded from db."""
+        prices = [(0, '---')]
+        prices += [(p.id, '${0}'.format(p.price)) for p in 
+                   Price.query.order_by('price')]
+        self.prices.choices = prices
+        units = [(0, '---')]
+        units += [(u.id, u.unit) for u in
+                 Unit.query.order_by('unit')]
+        self.units.choices = units
+        quantities = [('0', '---')]
+        quantities += [(str(qd.value), str(qd.value)) for qd in
+                       QtyDecimal.query.order_by('value')]
+        quantities += [(str(qf.value), str(qf.value)) for qf in
+                       QtyFraction.query.order_by('value')]
+        quantities += [(str(qi.value), str(qi.value)) for qi in
+                       QtyInteger.query.order_by('value')]
+        self.quantities.choices = quantities
+
+    def validate_prices(self, field):
+        """Raise ValidateError if both or neither prices/price have values.
+        """
+        if field.data is None or field.data < 1:
+            if self.price.data is None:
+                raise ValidationError('No price selected or entered.')
+        else:
+            if self.price.data is not None:
+                price = Price.query.get(field.data)
+                if price.price != self.price.data:
+                    raise ValidationError('Price entered conflicts with price '
+                                          'selected.')
+    def validate_quantities(self, field):
+        """Raise ValueError if both/neither quantities/quantity have values.
+        """
+        if field.data is None or field.data == 'None' or field.data == '0':
+            if self.quantity.data is None:
+                raise ValidationError('No quantity selected or entered.')
+        else:
+            if self.quantity.data is not None:
+                if field.data != self.quantity.data:
+                    raise ValidationError('Quantity entered conflicts with '
+                                          'quantity selected.')
 
 
 class AddSeedForm(Form):
@@ -217,8 +272,6 @@ class AddSeedForm(Form):
                                        validators=[DataRequired()])
     description = TextAreaField('Description')
     name = StringField('Seed Name (Cultivar)', validators=[Length(1, 64)])
-    # TODO: SKU generation.
-    sku = StringField('SKU', validators=[Length(1, 32)])
     submit = SubmitField('Add Seed')
 
     def set_selects(self):
@@ -231,16 +284,22 @@ class AddSeedForm(Form):
         """Raise ValidationError if seed exists in db with this name."""
         seed = Seed.query.filter_by(name=field.data.title()).first()
         if seed is not None:
-            raise ValidationError('The seed \'{0}\' already exists with SKU: '
-                                  '{1}!'.format(field.data, seed.sku))
+            raise ValidationError('The seed \'{0}\' already exists in the '
+                                  'database!'.format(field.data))
 
-    def validate_sku(self, field):
-        """Raise a ValidationError if seed exists in db with this SKU."""
-        seed = Seed.query.filter_by(sku=field.data).first()
-        if seed is not None:
-            raise ValidationError('The SKU {0} is already in use by the seed '
-                                  'named: \'{1}\'!'.format(field.data,
-                                                           seed.name))
+
+class AddUnitForm(Form):
+    """Form for adding a unit of measurement used by packets.
+    """
+    unit = StringField('Unit of Measurement', validators=[Length(1, 32)])
+    submit = SubmitField('Add Unit')
+
+    def validate_unit(self, field):
+        """Raise ValidationError if unit already exists in database."""
+        unit = Unit.query.filter_by(unit=field.data.lower()).first()
+        if unit is not None:
+            raise ValidationError('The unit \'{0}\' already exists in the '
+                                  'database!'.format(unit.unit))
 
 
 class EditBotanicalNameForm(Form):

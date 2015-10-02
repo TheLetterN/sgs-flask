@@ -1,12 +1,16 @@
 import unittest
 from wtforms import ValidationError
+from decimal import Decimal
+from fractions import Fraction
 from app import create_app, db
 from app.seeds.forms import AddBotanicalNameForm, AddCategoryForm, \
-    AddCommonNameForm, botanical_name_select_list, category_select_list, \
+    AddCommonNameForm, AddPacketForm, AddSeedForm, \
+    botanical_name_select_list, category_select_list, \
     common_name_select_list, EditBotanicalNameForm, EditCategoryForm, \
-    EditCommonNameForm, SelectBotanicalNameForm, SelectCategoryForm, \
-    SelectCommonNameForm
-from app.seeds.models import BotanicalName, Category, CommonName
+    EditCommonNameForm, seed_select_list, SelectBotanicalNameForm, \
+    SelectCategoryForm, SelectCommonNameForm
+from app.seeds.models import BotanicalName, Category, CommonName, Price, \
+    QtyDecimal, QtyFraction, QtyInteger, Seed, Unit
 
 
 class TestFunctionsWithDB(unittest.TestCase):
@@ -66,6 +70,21 @@ class TestFunctionsWithDB(unittest.TestCase):
         self.assertIn((cn1.id, cn1.name), cnlist)
         self.assertIn((cn2.id, cn2.name), cnlist)
         self.assertIn((cn3.id, cn3.name), cnlist)
+
+    def test_seed_select_list(self):
+        """Generate correct list of tuples from seeds in db."""
+        sd1 = Seed()
+        sd2 = Seed()
+        sd3 = Seed()
+        db.session.add_all([sd1, sd2, sd3])
+        sd1.name = 'Soulmate'
+        sd2.name = 'Superfine Rainbow'
+        sd3.name = 'Tumbling Tom'
+        db.session.commit()
+        seedlist = seed_select_list()
+        self.assertIn((sd1.id, sd1.name), seedlist)
+        self.assertIn((sd2.id, sd2.name), seedlist)
+        self.assertIn((sd3.id, sd3.name), seedlist)
 
 
 class testAddBotanicalNameFormWithDB(unittest.TestCase):
@@ -180,6 +199,145 @@ class TestAddCommonNameFormWithDB(unittest.TestCase):
         form.name.data = 'Sunflower'
         form.validate_name(form.name)
         form.name.data = 'Coleus'
+        with self.assertRaises(ValidationError):
+            form.validate_name(form.name)
+
+
+class TestAddPacketFormWithDB(unittest.TestCase):
+    """Test custom methods of AddPacketForm."""
+    def setUp(self):
+        self.app = create_app('testing')
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+        db.create_all()
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
+
+    def test_set_selects(self):
+        """Set prices, units, and quantities with values from db."""
+        price = Price()
+        unit = Unit()
+        qtyd = QtyDecimal()
+        qtyf = QtyFraction()
+        qtyi = QtyInteger()
+        db.session.add_all([price, unit, qtyd, qtyf, qtyi])
+        price.price = Decimal('2.99')
+        unit.unit = 'seeds'
+        qtyd.value = Decimal('4.35')
+        qtyf.value = Fraction('1/2')
+        qtyi.value = 200
+        db.session.commit()
+        form = AddPacketForm()
+        form.set_selects()
+        self.assertIn((0, '---'), form.prices.choices)
+        self.assertIn((0, '---'), form.units.choices)
+        # form.quantities is coerced to string, so first value of tuple is str.
+        self.assertIn(('0', '---'), form.quantities.choices)
+        self.assertIn((price.id, '${0}'.format(price.price)),
+                      form.prices.choices)
+        self.assertIn((unit.id, unit.unit), form.units.choices)
+        self.assertIn((str(qtyd.value), str(qtyd.value)),
+                      form.quantities.choices)
+        self.assertIn((str(qtyf.value), str(qtyf.value)),
+                      form.quantities.choices)
+        self.assertIn((str(qtyi.value), str(qtyi.value)),
+                      form.quantities.choices)
+
+    def test_validate_prices_none_submitted(self):
+        """Raise error if prices and price are both unset."""
+        form = AddPacketForm()
+        with self.assertRaises(ValidationError):
+            form.validate_prices(form.prices)
+        form.prices.data = 0
+        with self.assertRaises(ValidationError):
+            form.validate_prices(form.prices)
+
+    def test_validate_prices_same_submitted(self):
+        """Raise no error if prices and price result in same value."""
+        price = Price()
+        db.session.add(price)
+        price.price = Decimal('3.99')
+        db.session.commit()
+        form = AddPacketForm()
+        form.prices.data = price.id
+        form.price.data = Decimal('3.99')
+        form.validate_prices(form.prices)
+        self.assertTrue(True)
+
+    def test_validate_prices_different_submitted(self):
+        """Raise error if prices and price result in different values."""
+        price = Price()
+        db.session.add(price)
+        price.price = Decimal('2.99')
+        db.session.commit()
+        form = AddPacketForm()
+        form.price.data = Decimal('3.99')
+        form.prices.data = price.id
+        with self.assertRaises(ValidationError):
+            form.validate_prices(form.prices)
+
+    def test_validate_quantities_none_submitted(self):
+        """Raise error if no data in quantity or quantities."""
+        form = AddPacketForm()
+        with self.assertRaises(ValidationError):
+            form.validate_quantities(form.quantities)
+
+    def test_validate_quantities_same_submitted(self):
+        """Raise no error if quantities and quantity result in same value."""
+        form = AddPacketForm()
+        form.quantity.data = '100'
+        form.quantities.data = '100'
+        form.validate_quantities(form.quantities)
+
+    def test_validate_quantities_different_submitted(self):
+        """Raise error if quantity and quantities result in diff. values."""
+        form = AddPacketForm()
+        form.quantity.data = '100'
+        form.quantities.data = '200'
+        with self.assertRaises(ValidationError):
+            form.validate_quantities(form.quantities)
+
+
+class TestAddSeedFormWithDB(unittest.TestCase):
+    """Test custom methods of AddSeedForm."""
+    def setUp(self):
+        self.app = create_app('testing')
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+        db.create_all()
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
+
+    def test_set_selects(self):
+        """Selects should be set from database."""
+        bn = BotanicalName()
+        cat = Category()
+        cn = CommonName()
+        db.session.add_all([bn, cat, cn])
+        bn.name = 'Asclepias incarnata'
+        cat.category = 'Perennial Flower'
+        cn.name = 'Butterfly Weed'
+        db.session.commit()
+        form = AddSeedForm()
+        form.set_selects()
+        self.assertIn((bn.id, bn.name), form.botanical_names.choices)
+        self.assertIn((cat.id, cat.category), form.categories.choices)
+        self.assertIn((cn.id, cn.name), form.common_names.choices)
+
+    def test_validate_name(self):
+        """Raise error if name is already in the database."""
+        seed = Seed()
+        db.session.add(seed)
+        seed.name = 'Soulmate'
+        db.session.commit()
+        form = AddSeedForm()
+        form.name.data = 'Soulmate'
         with self.assertRaises(ValidationError):
             form.validate_name(form.name)
 

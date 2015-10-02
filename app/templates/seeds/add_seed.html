@@ -57,12 +57,6 @@
                     <fieldset>
                         <legend>Data:</legend>
                         <li>
-                            {{ form.sku.label }}
-                            {{ form.sku }}
-                            {% if form.sku.errors|count > 0 %}
-                            {{ form_errors(form.sku) }}
-                            {% endif %}
-                        <li>
                             {{ form.name.label }}
                             {{ form.name }}
                             {% if form.name.errors|count > 0 %}

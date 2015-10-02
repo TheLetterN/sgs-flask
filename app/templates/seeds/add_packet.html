@@ -27,38 +27,71 @@
 {% endblock %}
 {% block main %}
 <h1>Add a Packet to: {{ seed.name }}</h1>
-            <div
             <form method="POST">
                 {{ form.hidden_tag() }}
                 <ol>
+                    <fieldset>
+                        <legend>Price</legend>
+                        <li>
+                            {{ form.prices.label }}
+                            {{ form.prices }}
+                            {% if form.prices.errors|count > 0 %}
+                            {{ form_errors(form.prices) }}
+                            {% endif %}
+                        </li>
+                        <li>
+                            {{ form.price.label }}
+                            {{ form.price }}
+                            {% if form.price.errors|count > 0 %}
+                            {{ form_errors(form.price) }}
+                            {% endif %}
+                        </li>
+                    </fieldset>
+                    <fieldset>
+                        <legend>Quantity</legend>
+                        <li>
+                            {{ form.quantities.label }}
+                            {{ form.quantities }}
+                            {% if form.quantities.errors|count > 0 %}
+                            {{ form_errors(form.quantities) }}
+                            {% endif %}
+                        </li>
+                        <li>
+                            {{ form.quantity.label }}
+                            {{ form.quantity }}
+                            {% if form.quantity.errors|count > 0 %}
+                            {{ form_errors(form.quantity) }}
+                            {% endif %}
+                        </li>
+                    </fieldset>
+                    <fieldset>
+                        <legend>Unit of Measurement</legend>
+                        <li>
+                            {{ form.units.label }}
+                            {{ form.units }}
+                            {% if form.units.errors|count > 0 %}
+                            {{ form_errors(form.units) }}
+                            {% endif %}
+                        </li>
+                        <li>
+
+                            {{ form.unit.label }}
+                            {{ form.unit }}
+                            {% if form.unit.errors|count > 0 %}
+                            {{ form_errors(form.unit) }}
+                            {% endif %}
+                        </li>
+                    </fieldset>
                     <li>
-                        {{ form.price.label }}
-                        {{ form.price }}
-                        {% if form.price.errors|count > 0 %}
-                        {{ form_errors(form.price) }}
-                        {% endif %}
-                    </li>
-                    <li>
-                        {{ form.quantity.label }}
-                        {{ form.quantity }}
-                        {% if form.quantity.errors|count > 0 %}
-                        {{ form_errors(form.quantity) }}
-                        {% endif %}
-                    </li>
-                    <li>
-                        {{ form.unit.label }}
-                        {{ form.unit }}
-                        {% if form.unit.errors|count > 0 %}
-                        {{ form_errors(form.unit) }}
+                        {{ form.sku.label }}
+                        {{ form.sku }}
+                        {% if form.sku.errors|count > 0 %}
+                        {{ form_errors(form.sku) }}
                         {% endif %}
                     </li>
                     <li>
                         {{ form.again.label }}
                         {{ form.again }}
-                        {% if form.again.errors|count > 0 %}
-                        {{ form_errors(form.again) }}
-                        {% endif %}
-                    </li>
                     <li>
                         {{ form.submit }}
                     </li>

@@ -171,6 +171,32 @@ class TestAddCommonNameRouteWithDB(unittest.TestCase):
         self.assertIn('Add Common Name', str(rv.data))
 
 
+class TestAddPacketRouteWithDB(unittest.TestCase):
+    """Test seeds.add_packet."""
+    def setUp(self):
+        self.app = create_app('testing')
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+        db.create_all()
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
+
+    def test_add_packet_no_seed_id(self):
+        """Redirect to seeds.select_seed if no seed_id given."""
+        user = seed_manager()
+        db.session.add(user)
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.get(url_for('seeds.add_packet'))
+        self.assertEqual(rv.location, url_for('seeds.select_seed',
+                                              dest='seeds.add_packet',
+                                              _external=True))
+
+
 class TestCategoryRouteWithDB(unittest.TestCase):
     """Test seeds.category."""
     def setUp(self):

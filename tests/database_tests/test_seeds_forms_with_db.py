@@ -1,4 +1,5 @@
 import unittest
+from werkzeug import FileStorage, secure_filename
 from wtforms import ValidationError
 from decimal import Decimal
 from fractions import Fraction
@@ -8,9 +9,9 @@ from app.seeds.forms import AddBotanicalNameForm, AddCategoryForm, \
     botanical_name_select_list, category_select_list, \
     common_name_select_list, EditBotanicalNameForm, EditCategoryForm, \
     EditCommonNameForm, seed_select_list, SelectBotanicalNameForm, \
-    SelectCategoryForm, SelectCommonNameForm
-from app.seeds.models import BotanicalName, Category, CommonName, Price, \
-    QtyDecimal, QtyFraction, QtyInteger, Seed, Unit
+    SelectCategoryForm, SelectCommonNameForm, SelectSeedForm
+from app.seeds.models import BotanicalName, Category, CommonName, Image, \
+    Packet, Price, QtyDecimal, QtyFraction, QtyInteger, Seed, Unit
 
 
 class TestFunctionsWithDB(unittest.TestCase):
@@ -251,7 +252,7 @@ class TestAddPacketFormWithDB(unittest.TestCase):
         form = AddPacketForm()
         with self.assertRaises(ValidationError):
             form.validate_prices(form.prices)
-        form.prices.data = 0
+        form.prices.data = 0  # Check with default selected value.
         with self.assertRaises(ValidationError):
             form.validate_prices(form.prices)
 
@@ -284,6 +285,9 @@ class TestAddPacketFormWithDB(unittest.TestCase):
         form = AddPacketForm()
         with self.assertRaises(ValidationError):
             form.validate_quantities(form.quantities)
+        form.quantities.data = '0'  # Check with default selected value.
+        with self.assertRaises(ValidationError):
+            form.validate_quantities(form.quantities)
 
     def test_validate_quantities_same_submitted(self):
         """Raise no error if quantities and quantity result in same value."""
@@ -299,6 +303,59 @@ class TestAddPacketFormWithDB(unittest.TestCase):
         form.quantities.data = '200'
         with self.assertRaises(ValidationError):
             form.validate_quantities(form.quantities)
+
+    def test_validate_quantity(self):
+        """Raise a ValidationError if field.data can't be used as quantity."""
+        form = AddPacketForm()
+        form.quantity.data = 'Forty-two'
+        with self.assertRaises(ValidationError):
+            form.validate_quantity(form.quantity)
+
+    def test_validate_units_different_submitted(self):
+        """Raise ValidationError if unit and units conflict."""
+        unit = Unit()
+        db.session.add(unit)
+        unit.unit = 'cubits'
+        db.session.commit()
+        form = AddPacketForm()
+        form.unit.data = 'seeds'
+        form.units.data = unit.id
+        with self.assertRaises(ValidationError):
+            form.validate_units(form.units)
+
+    def test_validate_units_none_submitted(self):
+        """Raise error if no data in unit or units."""
+        form = AddPacketForm()
+        with self.assertRaises(ValidationError):
+            form.validate_units(form.units)
+        form.units.data = 0  # Check with default selected value.
+        with self.assertRaises(ValidationError):
+            form.validate_units(form.units)
+
+    def test_validate_units_same_submitted(self):
+        """Do not raise an error if unit and units refer to same value."""
+        unit = Unit()
+        db.session.add(unit)
+        unit.unit = 'seeds'
+        db.session.commit()
+        form = AddPacketForm()
+        form.units.data = unit.id
+        form.unit.data = 'seeds'
+        form.validate_units(form.units)
+
+    def test_validate_sku(self):
+        """Raise ValidationError if SKU already exists in db."""
+        packet = Packet()
+        seed = Seed()
+        db.session.add_all([packet, seed])
+        packet.sku = '8675309'
+        seed.name = 'Jenny'
+        packet.seed = seed
+        db.session.commit()
+        form = AddPacketForm()
+        form.sku.data = '8675309'
+        with self.assertRaises(ValidationError):
+            form.validate_sku(form.sku)
 
 
 class TestAddSeedFormWithDB(unittest.TestCase):
@@ -340,6 +397,18 @@ class TestAddSeedFormWithDB(unittest.TestCase):
         form.name.data = 'Soulmate'
         with self.assertRaises(ValidationError):
             form.validate_name(form.name)
+
+    def test_validate_thumbnail(self):
+        "Raise ValidationError if image already exists with same filename."""
+        image = Image()
+        db.session.add(image)
+        image.filename = secure_filename('frogfacts.png')
+        db.session.commit()
+        form = AddSeedForm()
+        form.thumbnail.data = FileStorage()
+        form.thumbnail.data.filename = 'frogfacts.png'
+        with self.assertRaises(ValidationError):
+            form.validate_thumbnail(form.thumbnail)
 
 
 class TestEditBotanicalNameFormWithDB(unittest.TestCase):
@@ -522,6 +591,36 @@ class TestSelectCommonNameFormWithDB(unittest.TestCase):
         self.assertIn((cn1.id, cn1.name), form.names.choices)
         self.assertIn((cn2.id, cn2.name), form.names.choices)
         self.assertIn((cn3.id, cn3.name), form.names.choices)
+
+
+class TestSelectSeedFormWithDB(unittest.TestCase):
+    """Test custom methods of SelectCommonNameForm."""
+    def setUp(self):
+        self.app = create_app('testing')
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+        db.create_all()
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
+
+    def test_set_seeds(self):
+        """Set select with seeds loaded from database."""
+        sd1 = Seed()
+        sd2 = Seed()
+        sd3 = Seed()
+        db.session.add_all([sd1, sd2, sd3])
+        sd1.name = 'Soulmate'
+        sd2.name = 'Tumbling Tom'
+        sd2.name = 'Foxy'
+        db.session.commit()
+        form = SelectSeedForm()
+        form.set_seeds()
+        self.assertIn((sd1.id, sd1.name), form.seeds.choices)
+        self.assertIn((sd2.id, sd2.name), form.seeds.choices)
+        self.assertIn((sd3.id, sd3.name), form.seeds.choices)
 
 
 if __name__ == '__main__':

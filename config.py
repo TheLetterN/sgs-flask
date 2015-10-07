@@ -60,6 +60,7 @@ class Config(object):
     ERFP_MINUTES_BETWEEN_REQUESTS = int(ERFP_MINUTES_BETWEEN_REQUESTS)
     EMAIL_SUBJECT_PREFIX = os.environ.get('SGS_EMAIL_SUBJECT_PREFIX') or \
         'Swallowtail Garden Seeds - '
+    IMAGES_FOLDER = os.path.join(BASEDIR, 'app', 'static', 'images')
     INFO_EMAIL = os.environ.get('SGS_INFO_EMAIL') or \
         'info@swallowtailgardenseeds.com'
     SECRET_KEY = os.environ.get('SGS_SECRET_KEY') or \

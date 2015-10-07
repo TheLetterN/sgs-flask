@@ -199,14 +199,6 @@ seeds_to_common_names = db.Table(
 )
 
 
-seeds_to_packets = db.Table(
-    'seeds_to_packets',
-    db.Model.metadata,
-    db.Column('seeds_id', db.Integer, db.ForeignKey('seeds.id')),
-    db.Column('packets_id', db.Integer, db.ForeignKey('packets.id'))
-)
-
-
 class Quantity480th(db.TypeDecorator):
     """Type to store fractional quantities that can be converted to x/480.
 
@@ -413,12 +405,12 @@ class USDInt(db.TypeDecorator):
     impl = db.Integer
 
     def process_bind_param(self, value, dialect):
-        if value is None:
+        if value is None:  # pragma: no cover
             return None
         return USDInt.usd_to_int(value)
 
     def process_result_value(self, value, dialect):
-        if value is None:
+        if value is None:  # pragma: no cover
             return None
         return USDInt.int_to_usd(value)
 
@@ -661,10 +653,16 @@ class CommonName(db.Model):
     Attributes:
         __tablename__ (str): Name of the table: 'seed_types'
         id (int): Auto-incremented ID # for use as primary_key.
+        categories (relationship): MtM relationship with Category.
         description (str): An optional description for the species/group
             of species with the given common name.
-        name (str): The common name of a seed. Examples: Coleus, Tomato,
+        _name (str): The common name of a seed. Examples: Coleus, Tomato,
             Lettuce, Zinnia.
+        parent_id (int): Foreign key for parent/children relationship.
+        parent (relationship): OtM relationship with CommonName allowing for
+            subcategories of common name, such as Coleus > Dwarf Coleus
+            
+        
     """
     __tablename__ = 'common_names'
     id = db.Column(db.Integer, primary_key=True)
@@ -673,7 +671,13 @@ class CommonName(db.Model):
                                  backref='_common_names')
     description = db.Column(db.Text)
     _name = db.Column(db.String(64), unique=True)
+    parent_id = db.Column(db.Integer, db.ForeignKey('common_names.id'))
+    parent = db.relationship('CommonName',
+                             backref='children',
+                             remote_side=[id])
     slug = db.Column(db.String(64), unique=True)
+    synonyms_id = db.Column(db.Integer, db.ForeignKey('synonyms.id'))
+    synonyms = db.relationship('Synonym', backref='common_name')
 
     def __init__(self, name=None, description=None):
         """Construct an instance of CommonName
@@ -711,6 +715,26 @@ class CommonName(db.Model):
             self.slug = None
 
 
+class Image(db.Model):
+    """Table for image information.
+
+    Any image uploaded to be used with the seed model should utilize this
+    table for important image data like filename and location.
+    __tablename__ (str): Name of the table: 'images'
+    id (int): Auto-incremended ID # for use as primary key.
+    filename (str): File name of an image.
+    seed_id (int): Foreign key from Seed to allow Seed to have a OtM
+        relationship with Image.
+    """
+    __tablename__ = 'images'
+    id = db.Column(db.Integer, primary_key=True)
+    filename = db.Column(db.String(32))
+    seed_id = db.Column(db.Integer, db.ForeignKey('seeds.id'))
+
+    def __init__(self, filename=None):
+        self.filename = filename
+
+
 class Packet(db.Model):
     """Table for seed packet information.
 
@@ -742,6 +766,7 @@ class Packet(db.Model):
     _qty_integer = db.relationship('QtyInteger', backref='_packets')
     unit_id = db.Column(db.Integer, db.ForeignKey('units.id'))
     _unit = db.relationship('Unit', backref='_packets')
+    seed_id = db.Column(db.Integer, db.ForeignKey('seeds.id'))
     sku = db.Column(db.String(32), unique=True)
 
     @hybrid_property
@@ -972,8 +997,13 @@ class Seed(db.Model):
         dropped (bool): False if the seed will be re-stocked when low, False
             if it will be discontinued when low.
         in_stock (bool): True if a seed is in stock, False if not.
-        name (str): The name of the seed (cultivar); the main product name.
-        packets (relationship): MtM relationship with Packet.
+        images (relationship): OtM relationship with Image.
+        _name (str): The name of the seed (cultivar); the main product name.
+        packets (relationship): OtM relationship with Packet.
+        slug (str): A URL-friendly version of _name.
+        thumbnail_id (int): ForeignKey of Image, used with thumbnail.
+        thumbnail (relationship): MtO relationship with Image for specifying
+            a thumbnail for seed.
 
     Backrefs:
         _categories: MtM backref fron Category.
@@ -983,21 +1013,49 @@ class Seed(db.Model):
     botanical_names = db.relationship('BotanicalName',
                                       secondary=seeds_to_botanical_names,
                                       backref='_seeds')
-    common_names = db.relationship('CommonName',
-                                   secondary=seeds_to_common_names,
-                                   backref='_seeds')
+    common_name_id = db.Column(db.Integer, db.ForeignKey('common_names.id'))
+    common_name = db.relationship('CommonName', backref='seeds')
     description = db.Column(db.Text)
     dropped = db.Column(db.Boolean)
+    images = db.relationship('Image', foreign_keys=Image.seed_id)
     in_stock = db.Column(db.Boolean)
-    name = db.Column(db.String(64), unique=True)
-    packets = db.relationship('Packet',
-                              secondary=seeds_to_packets,
-                              backref='seeds')
+    _name = db.Column(db.String(64), unique=True)
+    packets = db.relationship('Packet', backref='seed')
+    series_id = db.Column(db.Integer, db.ForeignKey('series.id'))
+    series = db.relationship('Series', backref='seeds')
+    slug = db.Column(db.String(64), unique=True)
+    thumbnail_id = db.Column(db.Integer, db.ForeignKey('images.id'))
+    thumbnail = db.relationship('Image', foreign_keys=thumbnail_id)
 
     def __repr__(self):
         """Return representation of Seed in human-readable format."""
         return '<{0} \'{1}\'>'.format(self.__class__.__name__,
                                       self.name)
+
+    @hybrid_property
+    def fullname(self):
+        """str: Cultivar name (._name) and (if it exists) common name."""
+        if self.common_name:
+            return '{0} {1}'.format(self._name, self.common_name.name)
+        else:
+            return self._name
+
+    @hybrid_property
+    def name(self):
+        """str: contents of ._name.
+
+        Setter:
+            Sets ._name, and generates a slug and sets .slug.
+        """
+        return self._name
+
+    @name.setter
+    def name(self, value):
+        self._name = value
+        if value is not None:
+            self.slug = slugify(value)
+        else:
+            self.slug = None
 
 
 class Series(db.Model):
@@ -1011,24 +1069,32 @@ class Series(db.Model):
     Attributes:
         __tablename__ (str): Name of the table: 'series'
         id (int): Auto-incremented ID # for use as primary key.
+        description (str): Column for description of a series.
         label (str): The name of the series.
     """
     __tablename__ = 'series'
     id = db.Column(db.Integer, primary_key=True)
+    description = db.Column(db.Text)
     name = db.Column(db.String(64), unique=True)
 
 
-class SeriesDesc(db.Model):
-    """Table for the optional description for a series.
+class Synonym(db.Model):
+    """Table for synonyms.
 
+    Some names along the chain of names involved in a seed have synonyms, most
+    commonly seen in botanical names and common names. In these cases, the
+    only information we need is the synonym itself, as we just need it to be
+    searchable and displayable. As such, this table can work as a universal
+    target for relationships from tables in need of synonyms.
+    
     Attributes:
-        __tablename__ (str): Name of the table: 'series_desc'
-        id (int): Auto-incremented ID # for use as primary key.
-        content (str): The actual description of the series.
+        __tablename__ (str): Name of the table: 'synonyms'
+        id (int): Auto-incremented ID # used as primary key.
+        name (str): Column for a synonym.
     """
-    __tablename__ = 'series_desc'
+    __tablename__ = 'synonyms'
     id = db.Column(db.Integer, primary_key=True)
-    content = db.Column(db.Text)
+    name = db.Column(db.String(64), unique=True)
 
 
 class Unit(db.Model):

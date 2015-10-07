@@ -16,13 +16,18 @@
 # Copyright Swallowtail Garden Seeds, Inc
 
 
+from werkzeug import secure_filename
 from flask.ext.wtf import Form
+from flask.ext.wtf.file import FileAllowed, FileField
 from wtforms import BooleanField, DecimalField, SelectField, \
     SelectMultipleField, StringField, SubmitField, TextAreaField, \
     ValidationError
 from wtforms.validators import DataRequired, Length, Optional
-from .models import BotanicalName, Category, CommonName, Price, QtyDecimal, \
-    QtyFraction, QtyInteger, Seed, Unit
+from .models import BotanicalName, Category, CommonName, Image, Packet, \
+    Price, QtyDecimal, QtyFraction, QtyInteger, Seed, Unit
+
+
+IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png']
 
 
 def botanical_name_select_list():
@@ -62,7 +67,7 @@ def seed_select_list():
         list: A list of tuples containing the ids and strings containing name
             and SKU of each seed in the database.
     """
-    return [(seed.id, seed.name) for seed in Seed.query.order_by('name')]
+    return [(seed.id, seed.name) for seed in Seed.query.order_by('_name')]
 
 
 class AddBotanicalNameForm(Form):
@@ -236,7 +241,7 @@ class AddPacketForm(Form):
         self.quantities.choices = quantities
 
     def validate_prices(self, field):
-        """Raise ValidateError if both or neither prices/price have values.
+        """Raise ValidationError if both or neither prices/price have values.
         """
         if field.data is None or field.data < 1:
             if self.price.data is None:
@@ -246,10 +251,9 @@ class AddPacketForm(Form):
                 price = Price.query.get(field.data)
                 if price.price != self.price.data:
                     raise ValidationError('Price entered conflicts with price '
-                                          'selected.')
+                                          'selected!')
     def validate_quantities(self, field):
-        """Raise ValueError if both/neither quantities/quantity have values.
-        """
+        """Raise ValidationError if both/neither quantities/quantity set."""
         if field.data is None or field.data == 'None' or field.data == '0':
             if self.quantity.data is None:
                 raise ValidationError('No quantity selected or entered.')
@@ -257,11 +261,52 @@ class AddPacketForm(Form):
             if self.quantity.data is not None:
                 if field.data != self.quantity.data:
                     raise ValidationError('Quantity entered conflicts with '
-                                          'quantity selected.')
+                                          'quantity selected!')
+
+    def validate_quantity(self, field):
+        """Raise ValidationError if quantity cannot be parsed as valid."""
+        if field.data:
+            packet = Packet()
+            try:
+                packet.quantity = field.data
+            except ValueError as e:
+                raise ValidationError(str(e))
+
+    def validate_sku(self, field):
+        """Raise ValidationError if sku already exists in database."""
+        packet = Packet.query.filter_by(sku=field.data).first()
+        if packet is not None:
+            raise ValidationError('The SKU \'{0}\' is already in use by: {1}!'.
+                                  format(packet.sku, packet.seed.fullname))
+
+    def validate_units(self, field):
+        """Raise a ValidationError if both/neither units/unit set."""
+        if field.data is None or field.data < 1:
+            if self.unit.data is None:
+                raise ValidationError('No unit of measure selected or '
+                                      'entered.')
+        else:
+            if self.unit.data is not None:
+                unit = Unit.query.get(field.data)
+                if self.unit.data != unit.unit:
+                    raise ValidationError('Unit of measure entered conflicts '
+                                          'with unit selected!')
 
 
 class AddSeedForm(Form):
     """Form for adding a new seed to the database.
+
+    Attributes:
+        botanical_names (SelectMultipleField): Field for selecting botanical
+            names associated with seed.
+        categories (SelectMultipleField): Field for selecting categories
+            associated with seed.
+        common_names (SelectMultipleField): Field for selecting common names
+            associated with seed.
+        description (TextAreaField): Field for seed product description.
+        name (StringField): The cultivar name of the seed.
+        submit (SubmitField): Submit button.
+        thumbnail (FileField): Field for uploading thumbnail image.
     """
     botanical_names = SelectMultipleField('Select Botanical Names', coerce=int)
     categories = SelectMultipleField('Select Categories',
@@ -273,6 +318,9 @@ class AddSeedForm(Form):
     description = TextAreaField('Description')
     name = StringField('Seed Name (Cultivar)', validators=[Length(1, 64)])
     submit = SubmitField('Add Seed')
+    thumbnail = FileField('Thumbnail Image',
+                          validators=[FileAllowed(IMAGE_EXTENSIONS, 
+                                                  'Images only!')])
 
     def set_selects(self):
         """Sets botanical_names, categories, and common_names from db."""
@@ -287,19 +335,14 @@ class AddSeedForm(Form):
             raise ValidationError('The seed \'{0}\' already exists in the '
                                   'database!'.format(field.data))
 
-
-class AddUnitForm(Form):
-    """Form for adding a unit of measurement used by packets.
-    """
-    unit = StringField('Unit of Measurement', validators=[Length(1, 32)])
-    submit = SubmitField('Add Unit')
-
-    def validate_unit(self, field):
-        """Raise ValidationError if unit already exists in database."""
-        unit = Unit.query.filter_by(unit=field.data.lower()).first()
-        if unit is not None:
-            raise ValidationError('The unit \'{0}\' already exists in the '
-                                  'database!'.format(unit.unit))
+    def validate_thumbnail(self, field):
+        """Raise a ValidationError if file exists with thumbnail's name."""
+        image = Image.query.\
+            filter_by(filename=secure_filename(field.data.filename)).first()
+        if image is not None:
+            raise ValidationError('An image named \'{0}\' already exists! '
+                                  'Please choose a different name.'.\
+                                  format(image.filename))
 
 
 class EditBotanicalNameForm(Form):

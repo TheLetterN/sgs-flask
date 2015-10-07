@@ -27,7 +27,7 @@
 {% endblock %}
 {% block main %}
             <h1>Add a Seed:</h1>
-            <form method="POST">
+            <form method="POST" enctype="multipart/form-data">
                 {{ form.hidden_tag() }}
                 <ol>
                     <fieldset>
@@ -63,6 +63,12 @@
                             {{ form_errors(form.name) }}
                             {% endif %}
                         </li>
+                        <li>
+                            {{ form.thumbnail.label }}
+                            {{ form.thumbnail }}
+                            {% if form.thumbnail.errors|count > 0 %}
+                            {{ form_errors(form.thumbnail) }}
+                            {% endif %}
                         <li>
                             {{ form.description.label }}
                             {{ form.description }}

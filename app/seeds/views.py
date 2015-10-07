@@ -16,16 +16,19 @@
 # Copyright Swallowtail Garden Seeds, Inc
 
 
+import os
 from flask import abort, current_app, flash, redirect, render_template, \
     request, url_for
+from werkzeug import secure_filename
 from flask.ext.login import login_required
 from . import seeds
-from .models import BotanicalName, Category, CommonName, Packet, Seed, Unit
+from .models import BotanicalName, Category, CommonName, Image, Packet, Seed, \
+    Unit
 from .forms import AddBotanicalNameForm, AddCategoryForm, AddCommonNameForm, \
-    AddPacketForm, AddSeedForm, AddUnitForm, EditBotanicalNameForm, \
+    AddPacketForm, AddSeedForm, EditBotanicalNameForm, \
     EditCategoryForm, EditCommonNameForm, RemoveBotanicalNameForm, \
     RemoveCategoryForm, RemoveCommonNameForm, SelectBotanicalNameForm, \
-    SelectCategoryForm, SelectCommonNameForm
+    SelectCategoryForm, SelectCommonNameForm, SelectSeedForm
 from app import db, make_breadcrumbs
 from app.decorators import permission_required
 from app.auth.models import Permission
@@ -162,7 +165,30 @@ def add_packet(seed_id=None):
     if form.validate_on_submit():
         packet = Packet()
         db.session.add(packet)
-        db.session.rollback()
+        if form.price.data:
+            packet.price = form.price.data
+        else:
+            packet._price = Price.query.get(form.prices.data)
+        if form.quantity.data:
+            packet.quantity = form.quantity.data
+        else:
+            packet.quantity = form.quantities.data
+        if form.unit.data:
+            packet.unit = form.unit.data
+        else:
+            packet._unit = Unit.query.get(form.units.data)
+        packet.sku = form.sku.data
+        flash('Packet SKU {0}: ${1} for {2} {3} added to {4}'.
+              format(packet.sku,
+                     packet.price,
+                     packet.quantity, 
+                     packet.unit,
+                     seed.name))
+        db.session.commit()
+        if form.again.data:
+            return redirect(url_for('seeds.add_packet', seed_id=seed_id))
+        else:
+            return redirect(url_for('seeds.manage'))
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
         (url_for('seeds.add_packet'), 'Add Packet')
@@ -200,6 +226,13 @@ def add_seed():
                   format(cn.name, form.name.data))
             seed.common_names.append(cn)
         seed.name = form.name.data.title()
+        if form.thumbnail.data:
+            thumb_name = secure_filename(form.thumbnail.data.filename)
+            upload_path = os.path.join(current_app.config.get('IMAGES_FOLDER'),
+                                       thumb_name)
+            seed.thumbnail = Image(filename=thumb_name)
+            flash('Thumbnail uploaded to: {0}'.format(upload_path))
+            form.thumbnail.data.save(upload_path)
         seed.description = form.description.data
         flash('New seed \'{0}\' has been added to the database.'.
               format(seed.name))

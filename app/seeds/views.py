@@ -22,8 +22,8 @@ from flask import abort, current_app, flash, redirect, render_template, \
 from werkzeug import secure_filename
 from flask.ext.login import login_required
 from . import seeds
-from .models import BotanicalName, Category, CommonName, Image, Packet, Seed, \
-    Unit
+from .models import BotanicalName, Category, CommonName, Image, Price, \
+    Packet, Seed, Unit
 from .forms import AddBotanicalNameForm, AddCategoryForm, AddCommonNameForm, \
     AddPacketForm, AddSeedForm, EditBotanicalNameForm, \
     EditCategoryForm, EditCommonNameForm, RemoveBotanicalNameForm, \
@@ -165,6 +165,7 @@ def add_packet(seed_id=None):
     if form.validate_on_submit():
         packet = Packet()
         db.session.add(packet)
+        packet.seed = seed
         if form.price.data:
             packet.price = form.price.data
         else:
@@ -178,12 +179,13 @@ def add_packet(seed_id=None):
         else:
             packet._unit = Unit.query.get(form.units.data)
         packet.sku = form.sku.data
-        flash('Packet SKU {0}: ${1} for {2} {3} added to {4}'.
+        flash('Packet SKU {0}: ${1} for {2} {3} added to {4} {5}.'.
               format(packet.sku,
                      packet.price,
                      packet.quantity, 
                      packet.unit,
-                     seed.name))
+                     seed.name,
+                     seed.common_name.name))
         db.session.commit()
         if form.again.data:
             return redirect(url_for('seeds.add_packet', seed_id=seed_id))
@@ -220,11 +222,8 @@ def add_seed():
             flash('\'{0}\' added to categories for {1}.'.
                   format(cat.category, form.name.data))
             seed.categories.append(cat)
-        for cn_id in form.common_names.data:
-            cn = CommonName.query.get(cn_id)
-            flash('\'{0}\' added to common names for {1}.'.
-                  format(cn.name, form.name.data))
-            seed.common_names.append(cn)
+        cn = CommonName.query.get(form.common_names.data)
+        seed.common_name = cn
         seed.name = form.name.data.title()
         if form.thumbnail.data:
             thumb_name = secure_filename(form.thumbnail.data.filename)
@@ -232,10 +231,11 @@ def add_seed():
                                        thumb_name)
             seed.thumbnail = Image(filename=thumb_name)
             flash('Thumbnail uploaded to: {0}'.format(upload_path))
-            form.thumbnail.data.save(upload_path)
+            if not current_app.config.get('TESTING'):
+                form.thumbnail.data.save(upload_path)
         seed.description = form.description.data
         flash('New seed \'{0}\' has been added to the database.'.
-              format(seed.name))
+              format(seed.fullname))
         db.session.commit()
         return redirect(url_for('seeds.add_packet', seed_id=seed.id))
     crumbs = make_breadcrumbs(

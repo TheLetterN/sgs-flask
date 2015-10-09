@@ -243,11 +243,11 @@ class AddPacketForm(Form):
     def validate_prices(self, field):
         """Raise ValidationError if both or neither prices/price have values.
         """
-        if field.data is None or field.data < 1:
-            if self.price.data is None:
+        if field.data is None or field.data == 0:
+            if self.price.data is None or self.price.data == '':
                 raise ValidationError('No price selected or entered.')
         else:
-            if self.price.data is not None:
+            if self.price.data is not None and self.price.data != '':
                 price = Price.query.get(field.data)
                 if price.price != self.price.data:
                     raise ValidationError('Price entered conflicts with price '
@@ -255,10 +255,10 @@ class AddPacketForm(Form):
     def validate_quantities(self, field):
         """Raise ValidationError if both/neither quantities/quantity set."""
         if field.data is None or field.data == 'None' or field.data == '0':
-            if self.quantity.data is None:
+            if self.quantity.data is None or self.quantity.data == '':
                 raise ValidationError('No quantity selected or entered.')
         else:
-            if self.quantity.data is not None:
+            if self.quantity.data is not None and self.quantity.data != '':
                 if field.data != self.quantity.data:
                     raise ValidationError('Quantity entered conflicts with '
                                           'quantity selected!')
@@ -281,12 +281,12 @@ class AddPacketForm(Form):
 
     def validate_units(self, field):
         """Raise a ValidationError if both/neither units/unit set."""
-        if field.data is None or field.data < 1:
-            if self.unit.data is None:
+        if field.data is None or field.data == 0:
+            if self.unit.data is None or self.unit.data == '':
                 raise ValidationError('No unit of measure selected or '
                                       'entered.')
         else:
-            if self.unit.data is not None:
+            if self.unit.data is not None and self.unit.data != '':
                 unit = Unit.query.get(field.data)
                 if self.unit.data != unit.unit:
                     raise ValidationError('Unit of measure entered conflicts '
@@ -312,9 +312,9 @@ class AddSeedForm(Form):
     categories = SelectMultipleField('Select Categories',
                                      coerce=int,
                                      validators=[DataRequired()])
-    common_names = SelectMultipleField('Select Common Names',
-                                       coerce=int,
-                                       validators=[DataRequired()])
+    common_names = SelectField('Select Common Name',
+                               coerce=int,
+                               validators=[DataRequired()])
     description = TextAreaField('Description')
     name = StringField('Seed Name (Cultivar)', validators=[Length(1, 64)])
     submit = SubmitField('Add Seed')
@@ -337,12 +337,13 @@ class AddSeedForm(Form):
 
     def validate_thumbnail(self, field):
         """Raise a ValidationError if file exists with thumbnail's name."""
-        image = Image.query.\
-            filter_by(filename=secure_filename(field.data.filename)).first()
-        if image is not None:
-            raise ValidationError('An image named \'{0}\' already exists! '
-                                  'Please choose a different name.'.\
-                                  format(image.filename))
+        if field.data is not None and field.data != '':
+            image = Image.query.\
+                filter_by(filename=secure_filename(field.data.filename)).first()
+            if image is not None:
+                raise ValidationError('An image named \'{0}\' already exists! '
+                                      'Please choose a different name.'.\
+                                      format(image.filename))
 
 
 class EditBotanicalNameForm(Form):

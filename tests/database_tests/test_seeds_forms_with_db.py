@@ -247,27 +247,6 @@ class TestAddPacketFormWithDB(unittest.TestCase):
         self.assertIn((str(qtyi.value), str(qtyi.value)),
                       form.quantities.choices)
 
-    def test_validate_prices_none_submitted(self):
-        """Raise error if prices and price are both unset."""
-        form = AddPacketForm()
-        with self.assertRaises(ValidationError):
-            form.validate_prices(form.prices)
-        form.prices.data = 0  # Check with default selected value.
-        with self.assertRaises(ValidationError):
-            form.validate_prices(form.prices)
-
-    def test_validate_prices_same_submitted(self):
-        """Raise no error if prices and price result in same value."""
-        price = Price()
-        db.session.add(price)
-        price.price = Decimal('3.99')
-        db.session.commit()
-        form = AddPacketForm()
-        form.prices.data = price.id
-        form.price.data = Decimal('3.99')
-        form.validate_prices(form.prices)
-        self.assertTrue(True)
-
     def test_validate_prices_different_submitted(self):
         """Raise error if prices and price result in different values."""
         price = Price()
@@ -280,21 +259,44 @@ class TestAddPacketFormWithDB(unittest.TestCase):
         with self.assertRaises(ValidationError):
             form.validate_prices(form.prices)
 
-    def test_validate_quantities_none_submitted(self):
-        """Raise error if no data in quantity or quantities."""
+    def test_validate_prices_none_submitted(self):
+        """Raise error if prices and price are both unset."""
         form = AddPacketForm()
         with self.assertRaises(ValidationError):
-            form.validate_quantities(form.quantities)
-        form.quantities.data = '0'  # Check with default selected value.
+            form.validate_prices(form.prices)
+        # Now check form submission with no user input.
+        form.prices.data = 0
+        form.price.data = ''
         with self.assertRaises(ValidationError):
-            form.validate_quantities(form.quantities)
+            form.validate_prices(form.prices)
 
-    def test_validate_quantities_same_submitted(self):
-        """Raise no error if quantities and quantity result in same value."""
+    def test_validate_prices_one_or_the_other(self):
+        """Raise no error if only .prices or .price has data."""
+        price = Price()
+        db.session.add(price)
+        price.price = Decimal('3.99')
+        db.session.commit()
         form = AddPacketForm()
-        form.quantity.data = '100'
-        form.quantities.data = '100'
-        form.validate_quantities(form.quantities)
+        form.prices.data = price.id
+        form.validate_prices(form.prices)
+        form.price.data = ''  # Empty input form submission.
+        form.validate_prices(form.prices)
+        form.prices.data = None
+        form.price.data = '2.99'
+        form.validate_prices(form.prices)
+        form.prices.data = 0  # Default select form submission.
+        form.validate_prices(form.prices)
+
+    def test_validate_prices_same_submitted(self):
+        """Raise no error if prices and price result in same value."""
+        price = Price()
+        db.session.add(price)
+        price.price = Decimal('3.99')
+        db.session.commit()
+        form = AddPacketForm()
+        form.prices.data = price.id
+        form.price.data = Decimal('3.99')
+        form.validate_prices(form.prices)
 
     def test_validate_quantities_different_submitted(self):
         """Raise error if quantity and quantities result in diff. values."""
@@ -303,6 +305,37 @@ class TestAddPacketFormWithDB(unittest.TestCase):
         form.quantities.data = '200'
         with self.assertRaises(ValidationError):
             form.validate_quantities(form.quantities)
+
+    def test_validate_quantities_none_submitted(self):
+        """Raise error if no data in quantity or quantities."""
+        form = AddPacketForm()
+        with self.assertRaises(ValidationError):
+            form.validate_quantities(form.quantities)
+        form.quantities.data = '0'  # Default select form submission.
+        with self.assertRaises(ValidationError):
+            form.validate_quantities(form.quantities)
+
+    def test_validate_quantities_one_or_the_other(self):
+        """Raise no error if only .quantities or .quantity has data."""
+        form = AddPacketForm()
+        form.quantities.data = '100'
+        form.validate_quantities(form.quantities)
+        form.quantity.data = ''  # Empty input form submission.
+        form.validate_quantities(form.quantities)
+        form.quantities.data = None
+        form.quantity.data = '100'
+        form.validate_quantities(form.quantities)
+        form.quantities.data = '0'  # Default select form submission.
+        form.validate_quantities(form.quantities)
+        form.quantities.data = 'None'  # Form coerces None to str.
+        form.validate_quantities(form.quantities)
+
+    def test_validate_quantities_same_submitted(self):
+        """Raise no error if quantities and quantity result in same value."""
+        form = AddPacketForm()
+        form.quantity.data = '100'
+        form.quantities.data = '100'
+        form.validate_quantities(form.quantities)
 
     def test_validate_quantity(self):
         """Raise a ValidationError if field.data can't be used as quantity."""
@@ -331,6 +364,24 @@ class TestAddPacketFormWithDB(unittest.TestCase):
         form.units.data = 0  # Check with default selected value.
         with self.assertRaises(ValidationError):
             form.validate_units(form.units)
+
+    def test_validate_units_one_or_the_other(self):
+        """Raise no error if only .units or .unit is set."""
+        unit = Unit()
+        db.session.add(unit)
+        unit.unit = 'bananas'
+        db.session.commit()
+        form = AddPacketForm()
+        form.unit.data = 'hectares'
+        form.validate_units(form.units)
+        form.units.data = 0  # Default select form submission.
+        form.validate_units(form.units)
+        form.unit.data = None
+        form.units.data = unit.id
+        form.validate_units(form.units)
+        form.unit.data = ''  # Empty input form submission.
+        form.validate_units(form.units)
+
 
     def test_validate_units_same_submitted(self):
         """Do not raise an error if unit and units refer to same value."""

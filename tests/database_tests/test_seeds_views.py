@@ -1,8 +1,11 @@
+import io
 import unittest
+from decimal import Decimal
 from flask import url_for
 from app import create_app, db
 from app.auth.models import Permission, User
-from app.seeds.models import BotanicalName, Category, CommonName
+from app.seeds.models import BotanicalName, Category, CommonName, Price, \
+    QtyInteger, Seed, Unit
 from tests.database_tests.test_auth_views_with_db import login
 
 
@@ -195,6 +198,146 @@ class TestAddPacketRouteWithDB(unittest.TestCase):
         self.assertEqual(rv.location, url_for('seeds.select_seed',
                                               dest='seeds.add_packet',
                                               _external=True))
+
+    def test_add_packet_success_redirect_with_again(self):
+        """Redirect to seeds.add_packet w/ same seed_id if again selected."""
+        user = seed_manager()
+        seed = Seed()
+        cn = CommonName()
+        db.session.add_all([user, seed, cn])
+        seed.name = 'Foxy'
+        cn.name = 'Foxglove'
+        seed.common_name = cn
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.post(url_for('seeds.add_packet', seed_id=seed.id),
+                         data=(dict(price='2.99',
+                                    prices=0,
+                                    quantity='100',
+                                    quantities='0',
+                                    unit='seeds',
+                                    units=0,
+                                    sku='8675309',
+                                    again=True)))
+        self.assertEqual(url_for('seeds.add_packet',
+                                 seed_id=seed.id,
+                                 _external=True),
+                         rv.location)
+
+    def test_add_packet_success_with_inputs(self):
+        """Flash a message on successful submission with data in inputs."""
+        user = seed_manager()
+        seed = Seed()
+        cn = CommonName()
+        db.session.add_all([user, seed, cn])
+        seed.name = 'Foxy'
+        cn.name = 'Foxglove'
+        seed.common_name = cn
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.post(url_for('seeds.add_packet', seed_id=seed.id),
+                         data=(dict(price='2.99',
+                                    prices=0,
+                                    quantity='100',
+                                    quantities='0',
+                                    unit='seeds',
+                                    units=0,
+                                    sku='8675309')),
+                         follow_redirects=True)
+        self.assertIn('Packet SKU 8675309', str(rv.data))
+
+    def test_add_packet_success_with_selects(self):
+        """Flash a message on successful submission with data in selects."""
+        user = seed_manager()
+        seed = Seed()
+        cn = CommonName()
+        price = Price()
+        qty = QtyInteger()
+        unit = Unit()
+        db.session.add_all([user, seed, cn, price, qty, unit])
+        seed.name = 'Foxy'
+        cn.name = 'Foxglove'
+        price.price = Decimal('2.99')
+        qty.value = 100
+        unit.unit = 'seeds'
+        seed.common_name = cn
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.post(url_for('seeds.add_packet', seed_id=seed.id),
+                         data=dict(prices=price.id,
+                                   price='',
+                                   quantities='100',
+                                   quantity='',
+                                   units=unit.id,
+                                   unit='',
+                                   sku='8675309'),
+                        follow_redirects=True)
+        self.assertIn('Packet SKU 8675309', str(rv.data))
+
+    def test_add_packet_renders_page(self):
+        """Render form page given a valid seed_id."""
+        user = seed_manager()
+        seed = Seed()
+        db.session.add_all([user, seed])
+        seed.name = 'Foxy'
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.get(url_for('seeds.add_packet', seed_id=seed.id))
+        self.assertIn('Add a Packet', str(rv.data))
+
+
+class TestAddSeedRouteWithDB(unittest.TestCase):
+    """Test seeds.add_seed."""
+    def setUp(self):
+        self.app = create_app('testing')
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+        db.create_all()
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
+
+    def test_add_seed_renders_page(self):
+        """Render form page with no form data submitted."""
+        user = seed_manager()
+        db.session.add(user)
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.get(url_for('seeds.add_seed'))
+        self.assertIn('Add Seed', str(rv.data))
+
+    def test_add_seed_successful_submit(self):
+        user = seed_manager()
+        bn = BotanicalName()
+        cn = CommonName()
+        cat = Category()
+        db.session.add_all([user, bn, cn, cat])
+        bn.name = 'Digitalis purpurea'
+        cn.name = 'Foxglove'
+        cat.category = 'Perennial Flower'
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.post(url_for('seeds.add_seed'),
+                         data=dict(botanical_names=[bn.id],
+                                   categories=[cat.id],
+                                   common_names=cn.id,
+#                                   thumbnail=(io.BytesIO(b'fawks'), 
+#                                              'foxy.jpg'),
+                                   name='Foxy',
+                                  description='Very foxy.'),
+                        follow_redirects=True)
+        self.assertIn('&#39;Digitalis purpurea&#39; added', str(rv.data))
+        self.assertIn('&#39;Perennial Flower&#39; added', str(rv.data))
+#        self.assertIn('Thumbnail uploaded', str(rv.data))
+        self.assertIn('New seed &#39;Foxy Foxglove&#39; has been', str(rv.data))
 
 
 class TestCategoryRouteWithDB(unittest.TestCase):

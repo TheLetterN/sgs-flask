@@ -416,7 +416,7 @@ def resend_confirmation():
         function: Render template auth.resend_confirmation.html if no form
                   data received.
     """
-    if not current_user.is_anonymous():
+    if not current_user.is_anonymous:
         flash('Error: Your account is already confirmed!')
         return redirect(url_for('main.index'))
     form = ResendConfirmationForm()
@@ -533,7 +533,6 @@ def reset_password_request():
 
 
 @auth.route('/select_user', methods=['GET', 'POST'])
-@login_required
 def select_user():
     """Select a user to use with a different page.
 

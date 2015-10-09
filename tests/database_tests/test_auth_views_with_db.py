@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import unittest
 from datetime import datetime, timedelta
 from flask import url_for
@@ -904,10 +905,10 @@ class TestSelectUserWithDB(unittest.TestCase):
         db.session.commit()
         with self.app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
-            rv = self.tc.post(url_for('auth.select_user',
-                                      target_route='auth.manage_user'),
-                              data=dict(select_user=1),
-                              follow_redirects=False)
+            rv = tc.post(url_for('auth.select_user',
+                                 target_route='auth.manage_user'),
+                         data=dict(select_user=1),
+                         follow_redirects=False)
             self.assertEqual(rv.location, url_for('auth.manage_user',
                                                   user_id=1,
                                                   _external=True))

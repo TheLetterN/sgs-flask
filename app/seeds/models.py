@@ -1020,7 +1020,9 @@ class Seed(db.Model):
     images = db.relationship('Image', foreign_keys=Image.seed_id)
     in_stock = db.Column(db.Boolean)
     _name = db.Column(db.String(64), unique=True)
-    packets = db.relationship('Packet', backref='seed')
+    packets = db.relationship('Packet',
+                              cascade='all, delete-orphan',
+                              backref='seed')
     series_id = db.Column(db.Integer, db.ForeignKey('series.id'))
     series = db.relationship('Series', backref='seeds')
     slug = db.Column(db.String(64), unique=True)

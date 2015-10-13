@@ -16,9 +16,13 @@
 # Copyright Swallowtail Garden Seeds, Inc
 
 
+# flake8: noqa
+
+
 from flask import Blueprint
 
 
 main = Blueprint('main', __name__)
+
 
 from . import views

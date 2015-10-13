@@ -60,6 +60,7 @@ def common_name_select_list():
     """
     return [(cn.id, cn.name) for cn in CommonName.query.order_by('_name')]
 
+
 def seed_select_list():
     """"Generate a list of all Seeds for populating select fields.
 
@@ -202,13 +203,13 @@ class AddCommonNameForm(Form):
 
 class AddPacketForm(Form):
     """Form for adding a packet to a seed.
-    
+
     Attributes:
         again (BooleanField): Checkbox for whether or not to keep adding
             packets on submit.
         price (DecimalField): Field for price in US Dollars.
         quantity (StringField): Field for amount of seed in a packet.
-        unit (StringField): Unit 
+        unit (StringField): Unit
     """
     again = BooleanField('Add another packet after this.', default='checked')
     price = DecimalField('Or enter a price', places=2, validators=[Optional()])
@@ -224,12 +225,12 @@ class AddPacketForm(Form):
     def set_selects(self):
         """Set selects with values loaded from db."""
         prices = [(0, '---')]
-        prices += [(p.id, '${0}'.format(p.price)) for p in 
+        prices += [(p.id, '${0}'.format(p.price)) for p in
                    Price.query.order_by('price')]
         self.prices.choices = prices
         units = [(0, '---')]
         units += [(u.id, u.unit) for u in
-                 Unit.query.order_by('unit')]
+                  Unit.query.order_by('unit')]
         self.units.choices = units
         quantities = [('0', '---')]
         quantities += [(str(qd.value), str(qd.value)) for qd in
@@ -252,6 +253,7 @@ class AddPacketForm(Form):
                 if price.price != self.price.data:
                     raise ValidationError('Price entered conflicts with price '
                                           'selected!')
+
     def validate_quantities(self, field):
         """Raise ValidationError if both/neither quantities/quantity set."""
         if field.data is None or field.data == 'None' or field.data == '0':
@@ -319,7 +321,7 @@ class AddSeedForm(Form):
     name = StringField('Seed Name (Cultivar)', validators=[Length(1, 64)])
     submit = SubmitField('Add Seed')
     thumbnail = FileField('Thumbnail Image',
-                          validators=[FileAllowed(IMAGE_EXTENSIONS, 
+                          validators=[FileAllowed(IMAGE_EXTENSIONS,
                                                   'Images only!')])
 
     def set_selects(self):
@@ -339,10 +341,11 @@ class AddSeedForm(Form):
         """Raise a ValidationError if file exists with thumbnail's name."""
         if field.data is not None and field.data != '':
             image = Image.query.\
-                filter_by(filename=secure_filename(field.data.filename)).first()
+                filter_by(filename=secure_filename(field.data.filename)).\
+                first()
             if image is not None:
                 raise ValidationError('An image named \'{0}\' already exists! '
-                                      'Please choose a different name.'.\
+                                      'Please choose a different name.'.
                                       format(image.filename))
 
 

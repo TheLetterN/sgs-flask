@@ -182,7 +182,7 @@ def add_packet(seed_id=None):
         flash('Packet SKU {0}: ${1} for {2} {3} added to {4} {5}.'.
               format(packet.sku,
                      packet.price,
-                     packet.quantity, 
+                     packet.quantity,
                      packet.unit,
                      seed.name,
                      seed.common_name.name))
@@ -200,7 +200,7 @@ def add_packet(seed_id=None):
                            form=form,
                            seed=seed)
 
-    
+
 @seeds.route('/add_seed', methods=['GET', 'POST'])
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
@@ -231,7 +231,7 @@ def add_seed():
                                        thumb_name)
             seed.thumbnail = Image(filename=thumb_name)
             flash('Thumbnail uploaded to: {0}'.format(upload_path))
-            if not current_app.config.get('TESTING'):
+            if not current_app.config.get('TESTING'):  # pragma: no cover
                 form.thumbnail.data.save(upload_path)
         seed.description = form.description.data
         flash('New seed \'{0}\' has been added to the database.'.

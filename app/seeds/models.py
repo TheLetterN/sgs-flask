@@ -19,7 +19,7 @@
 from decimal import Decimal
 from fractions import Fraction
 from slugify import slugify
-from sqlalchemy.ext.hybrid import Comparator, hybrid_property
+from sqlalchemy.ext.hybrid import hybrid_property
 from app import db
 
 
@@ -661,8 +661,6 @@ class CommonName(db.Model):
         parent_id (int): Foreign key for parent/children relationship.
         parent (relationship): OtM relationship with CommonName allowing for
             subcategories of common name, such as Coleus > Dwarf Coleus
-            
-        
     """
     __tablename__ = 'common_names'
     id = db.Column(db.Integer, primary_key=True)
@@ -790,7 +788,6 @@ class Packet(db.Model):
             self._price = pc
         else:
             self._price = Price(price=price)
-        
 
     @hybrid_property
     def quantity(self):
@@ -1088,7 +1085,7 @@ class Synonym(db.Model):
     only information we need is the synonym itself, as we just need it to be
     searchable and displayable. As such, this table can work as a universal
     target for relationships from tables in need of synonyms.
-    
+
     Attributes:
         __tablename__ (str): Name of the table: 'synonyms'
         id (int): Auto-incremented ID # used as primary key.

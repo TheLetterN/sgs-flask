@@ -2,8 +2,8 @@ import unittest
 from decimal import Decimal
 from fractions import Fraction
 from app import create_app, db
-from app.seeds.models import BotanicalName, Category, CommonName, Packet, \
-    Price, QtyDecimal, QtyFraction, QtyInteger, Seed, Unit
+from app.seeds.models import BotanicalName, Category, Packet, Price, \
+    QtyDecimal, QtyFraction, QtyInteger, Unit
 
 
 class TestBotanicalNameWithDB(unittest.TestCase):

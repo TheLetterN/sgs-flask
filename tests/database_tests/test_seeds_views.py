@@ -274,7 +274,7 @@ class TestAddPacketRouteWithDB(unittest.TestCase):
                                    units=unit.id,
                                    unit='',
                                    sku='8675309'),
-                        follow_redirects=True)
+                         follow_redirects=True)
         self.assertIn('Packet SKU 8675309', str(rv.data))
 
     def test_add_packet_renders_page(self):
@@ -326,18 +326,19 @@ class TestAddSeedRouteWithDB(unittest.TestCase):
         with self.app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.add_seed'),
-                         data=dict(botanical_names=[bn.id],
-                                   categories=[cat.id],
-                                   common_names=cn.id,
-#                                   thumbnail=(io.BytesIO(b'fawks'), 
-#                                              'foxy.jpg'),
+                         data=dict(botanical_names=[str(bn.id)],
+                                   categories=[str(cat.id)],
+                                   common_names=str(cn.id),
+                                   thumbnail=(io.BytesIO(b'fawks'),
+                                              'foxy.jpg'),
                                    name='Foxy',
-                                  description='Very foxy.'),
-                        follow_redirects=True)
+                                   description='Very foxy.'),
+                         follow_redirects=True)
         self.assertIn('&#39;Digitalis purpurea&#39; added', str(rv.data))
         self.assertIn('&#39;Perennial Flower&#39; added', str(rv.data))
-#        self.assertIn('Thumbnail uploaded', str(rv.data))
-        self.assertIn('New seed &#39;Foxy Foxglove&#39; has been', str(rv.data))
+        self.assertIn('Thumbnail uploaded', str(rv.data))
+        self.assertIn('New seed &#39;Foxy Foxglove&#39; has been',
+                      str(rv.data))
 
 
 class TestCategoryRouteWithDB(unittest.TestCase):
@@ -1280,6 +1281,55 @@ class TestSelectCommonNameRouteWithDB(unittest.TestCase):
         self.assertEqual(url_for('seeds.edit_common_name',
                                  cn_id=cn.id,
                                  _external=True),
+                         rv.location)
+
+
+class TestSelectSeedRouteWithDB(unittest.TestCase):
+    """Test seeds.select_seed."""
+    def setUp(self):
+        self.app = create_app('testing')
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+        db.create_all()
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
+
+    def test_select_seed_no_dest(self):
+        """Redirect to seeds.manage given no dest."""
+        user = seed_manager()
+        db.session.add(user)
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.get(url_for('seeds.select_seed'))
+        self.assertEqual(rv.location, url_for('seeds.manage', _external=True))
+
+    def test_select_seed_renders_page(self):
+        """Render form page given a dest."""
+        user = seed_manager()
+        db.session.add(user)
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.get(url_for('seeds.select_seed', dest='seeds.add_packet'))
+        self.assertIn('Select Seed', str(rv.data))
+
+    def test_select_seed_successful_submission(self):
+        """Redirect to dest on valid form submission."""
+        user = seed_manager()
+        seed = Seed()
+        db.session.add_all([user, seed])
+        seed.name = 'Foxy'
+        db.session.commit()
+        dest = 'seeds.add_packet'
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.post(url_for('seeds.select_seed', dest=dest),
+                         data=dict(seeds=seed.id))
+        self.assertEqual(url_for(dest, seed_id=str(seed.id), _external=True),
                          rv.location)
 
 

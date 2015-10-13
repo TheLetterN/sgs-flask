@@ -382,7 +382,6 @@ class TestAddPacketFormWithDB(unittest.TestCase):
         form.unit.data = ''  # Empty input form submission.
         form.validate_units(form.units)
 
-
     def test_validate_units_same_submitted(self):
         """Do not raise an error if unit and units refer to same value."""
         unit = Unit()

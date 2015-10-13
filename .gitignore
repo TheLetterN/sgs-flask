@@ -22,3 +22,6 @@ venv2/
 
 # Ignore database migrations.
 migrations/
+
+# Ignore .cache directories.
+.cache

@@ -4,8 +4,8 @@ from decimal import Decimal
 from flask import url_for
 from app import create_app, db
 from app.auth.models import Permission, User
-from app.seeds.models import BotanicalName, Category, CommonName, Price, \
-    QtyInteger, Seed, Unit
+from app.seeds.models import BotanicalName, Category, CommonName, Image, \
+    Price, QtyInteger, Seed, Unit
 from tests.database_tests.test_auth_views_with_db import login
 
 
@@ -715,6 +715,293 @@ class TestEditCommonNameRouteWithDB(unittest.TestCase):
         self.assertIn('added to categories', str(rv.data))
         self.assertIn('removed from categories', str(rv.data))
         self.assertIn('Description changed to', str(rv.data))
+
+
+class TestEditSeedRouteWithDB(unittest.TestCase):
+    """Test seeds.edit_seed."""
+    def setUp(self):
+        self.app = create_app('testing')
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+        db.create_all()
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
+
+    def test_edit_seed_change_botanical_names(self):
+        """Flash messages if botanical names are added or removed."""
+        user = seed_manager()
+        seed = Seed()
+        bn = BotanicalName()
+        bn2 = BotanicalName()
+        cat = Category()
+        cn = CommonName()
+        thumb = Image()
+        db.session.add_all([user, bn, bn2, cat, cn])
+        bn.name = 'Digitalis purpurea'
+        bn2.name = 'Innagada davida'
+        cn.name = 'Foxglove'
+        cat.category = 'Perennial Flower'
+        thumb.filename = 'foxy.jpg'
+        seed.categories.append(cat)
+        seed.botanical_names.append(bn)
+        seed.common_name = cn
+        seed.name = 'Foxy'
+        seed.description = 'Like that Hendrix song.'
+        seed.thumbnail = thumb
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.post(url_for('seeds.edit_seed', seed_id=seed.id),
+                         data=dict(botanical_names=[str(bn2.id)],
+                                   categories=[str(cat.id)],
+                                   common_name=str(cn.id),
+                                   name=seed.name,
+                                   description=seed.description,
+                                   thumbnail=(io.BytesIO(b'fawks'),
+                                              'foxy.jpg')),
+                         follow_redirects=True)
+        self.assertIn('Added botanical name', str(rv.data))
+        self.assertIn('Removed botanical name', str(rv.data))
+        self.assertIn(bn2, seed.botanical_names)
+        self.assertNotIn(bn, seed.botanical_names)
+
+    def test_edit_seed_change_categories(self):
+        """Flash messages if categories added or removed."""
+        user = seed_manager()
+        seed = Seed()
+        bn = BotanicalName()
+        cat = Category()
+        cat2 = Category()
+        cn = CommonName()
+        thumb = Image()
+        db.session.add_all([user, bn, cat, cat2, cn])
+        bn.name = 'Digitalis purpurea'
+        cn.name = 'Foxglove'
+        cat.category = 'Perennial Flower'
+        cat2.category = 'Plant'
+        thumb.filename = 'foxy.jpg'
+        seed.categories.append(cat)
+        seed.botanical_names.append(bn)
+        seed.common_name = cn
+        seed.name = 'Foxy'
+        seed.description = 'Like that Hendrix song.'
+        seed.thumbnail = thumb
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.post(url_for('seeds.edit_seed', seed_id=seed.id),
+                         data=dict(botanical_names=[str(bn.id)],
+                                   categories=[str(cat2.id)],
+                                   common_name=str(cn.id),
+                                   name=seed.name,
+                                   description=seed.description,
+                                   thumbnail=(io.BytesIO(b'fawks'),
+                                              'foxy.jpg')),
+                         follow_redirects=True)
+        self.assertIn('Added category', str(rv.data))
+        self.assertIn('Removed category', str(rv.data))
+        self.assertIn(cat2, seed.categories)
+        self.assertNotIn(cat, seed.categories)
+
+    def test_edit_seed_change_common_name(self):
+        """Flash message if common name changed."""
+        user = seed_manager()
+        seed = Seed()
+        bn = BotanicalName()
+        cat = Category()
+        cn = CommonName()
+        cn2 = CommonName()
+        thumb = Image()
+        db.session.add_all([user, bn, cat, cn, cn2])
+        bn.name = 'Digitalis purpurea'
+        cn.name = 'Foxglove'
+        cn2.name = 'Vulpinemitten'
+        cat.category = 'Perennial Flower'
+        thumb.filename = 'foxy.jpg'
+        seed.categories.append(cat)
+        seed.botanical_names.append(bn)
+        seed.common_name = cn
+        seed.name = 'Foxy'
+        seed.description = 'Like that Hendrix song.'
+        seed.thumbnail = thumb
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.post(url_for('seeds.edit_seed', seed_id=seed.id),
+                         data=dict(botanical_names=[str(bn.id)],
+                                   categories=[str(cat.id)],
+                                   common_name=str(cn2.id),
+                                   name=seed.name,
+                                   description=seed.description,
+                                   thumbnail=(io.BytesIO(b'fawks'),
+                                              'foxy.jpg')),
+                         follow_redirects=True)
+        self.assertIn('Changed common name', str(rv.data))
+        self.assertIs(seed.common_name, cn2)
+        self.assertIsNot(seed.common_name, cn)
+
+    def test_edit_seed_change_description(self):
+        """Flash message if description changed."""
+        user = seed_manager()
+        seed = Seed()
+        bn = BotanicalName()
+        cat = Category()
+        cn = CommonName()
+        thumb = Image()
+        db.session.add_all([user, bn, cat, cn])
+        bn.name = 'Digitalis purpurea'
+        cn.name = 'Foxglove'
+        cat.category = 'Perennial Flower'
+        thumb.filename = 'foxy.jpg'
+        seed.categories.append(cat)
+        seed.botanical_names.append(bn)
+        seed.common_name = cn
+        seed.name = 'Foxy'
+        seed.description = 'Like that Hendrix song.'
+        seed.thumbnail = thumb
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.post(url_for('seeds.edit_seed', seed_id=seed.id),
+                         data=dict(botanical_names=[str(bn.id)],
+                                   categories=[str(cat.id)],
+                                   common_name=str(cn.id),
+                                   name=seed.name,
+                                   description='Like a lady.',
+                                   thumbnail=(io.BytesIO(b'fawks'),
+                                              'foxy.jpg')),
+                         follow_redirects=True)
+        self.assertIn('Changed description', str(rv.data))
+        self.assertEqual(seed.description, 'Like a lady.')
+
+    def test_edit_seed_change_name(self):
+        """Flash message if name changed."""
+        user = seed_manager()
+        seed = Seed()
+        bn = BotanicalName()
+        cat = Category()
+        cn = CommonName()
+        thumb = Image()
+        db.session.add_all([user, bn, cat, cn])
+        bn.name = 'Digitalis purpurea'
+        cn.name = 'Foxglove'
+        cat.category = 'Perennial Flower'
+        thumb.filename = 'foxy.jpg'
+        seed.categories.append(cat)
+        seed.botanical_names.append(bn)
+        seed.common_name = cn
+        seed.name = 'Foxy'
+        seed.description = 'Like that Hendrix song.'
+        seed.thumbnail = thumb
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.post(url_for('seeds.edit_seed', seed_id=seed.id),
+                         data=dict(botanical_names=[str(bn.id)],
+                                   categories=[str(cat.id)],
+                                   common_name=str(cn.id),
+                                   name='Fawksy',
+                                   description=seed.description,
+                                   thumbnail=(io.BytesIO(b'fawks'),
+                                              'foxy.jpg')),
+                         follow_redirects=True)
+        self.assertIn('Changed seed name', str(rv.data))
+        self.assertEqual(seed.name, 'Fawksy')
+
+    def test_edit_seed_change_thumbnail(self):
+        """Flash message if thumbnail changed, and move old one to .images."""
+        user = seed_manager()
+        seed = Seed()
+        bn = BotanicalName()
+        cat = Category()
+        cn = CommonName()
+        thumb = Image()
+        db.session.add_all([user, bn, cat, cn])
+        bn.name = 'Digitalis purpurea'
+        cn.name = 'Foxglove'
+        cat.category = 'Perennial Flower'
+        thumb.filename = 'foxy.jpg'
+        seed.categories.append(cat)
+        seed.botanical_names.append(bn)
+        seed.common_name = cn
+        seed.name = 'Foxy'
+        seed.description = 'Like that Hendrix song.'
+        seed.thumbnail = thumb
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.post(url_for('seeds.edit_seed', seed_id=seed.id),
+                         data=dict(botanical_names=[str(bn.id)],
+                                   categories=[str(cat.id)],
+                                   common_name=str(cn.id),
+                                   name=seed.name,
+                                   description=seed.description,
+                                   thumbnail=(io.BytesIO(b'fawks'),
+                                              'fawksy.jpg')),
+                         follow_redirects=True)
+        self.assertIn('New thumbnail', str(rv.data))
+        self.assertEqual(seed.thumbnail.filename, 'fawksy.jpg')
+        self.assertIn(thumb, seed.images)
+
+    def test_edit_seed_no_changes(self):
+        """Submission with no changes flashes relevant message."""
+        user = seed_manager()
+        seed = Seed()
+        bn = BotanicalName()
+        cat = Category()
+        cn = CommonName()
+        thumb = Image()
+        db.session.add_all([user, bn, cat, cn])
+        bn.name = 'Digitalis purpurea'
+        cn.name = 'Foxglove'
+        cat.category = 'Perennial Flower'
+        thumb.filename = 'foxy.jpg'
+        seed.categories.append(cat)
+        seed.botanical_names.append(bn)
+        seed.common_name = cn
+        seed.name = 'Foxy'
+        seed.description = 'Like that Hendrix song.'
+        seed.thumbnail = thumb
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.post(url_for('seeds.edit_seed', seed_id=seed.id),
+                         data=dict(botanical_names=[str(bn.id)],
+                                   categories=[str(cat.id)],
+                                   common_name=str(cn.id),
+                                   name=seed.name,
+                                   description=seed.description,
+                                   thumbnail=(io.BytesIO(b'fawks'),
+                                              'foxy.jpg')),
+                         follow_redirects=True)
+        self.assertIn('No changes made', str(rv.data))
+
+    def test_edit_seed_no_seed(self):
+        """Redirect to seeds.select_seed if no seed exists with given id."""
+        user = seed_manager()
+        db.session.add(user)
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.get(url_for('seeds.edit_seed', seed_id=42))
+        self.assertEqual(rv.location, url_for('seeds.select_seed',
+                                              dest='seeds.edit_seed',
+                                              _external=True))
+
+    def test_edit_seed_no_seed_id(self):
+        """Redirect to seeds.select_seed if no id given."""
+        user = seed_manager()
+        db.session.add(user)
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.get(url_for('seeds.edit_seed'))
+        self.assertEqual(rv.location, url_for('seeds.select_seed',
+                                              dest='seeds.edit_seed',
+                                              _external=True))
 
 
 class TestIndexRouteWithDB(unittest.TestCase):

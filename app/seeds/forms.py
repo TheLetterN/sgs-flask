@@ -68,7 +68,7 @@ def seed_select_list():
         list: A list of tuples containing the ids and strings containing name
             and SKU of each seed in the database.
     """
-    return [(seed.id, seed.name) for seed in Seed.query.order_by('_name')]
+    return [(seed.id, seed.fullname) for seed in Seed.query.order_by('_name')]
 
 
 class AddBotanicalNameForm(Form):
@@ -424,6 +424,39 @@ class EditCommonNameForm(Form):
         choices = category_select_list()
         self.add_categories.choices = choices
         self.remove_categories.choices = choices
+
+
+class EditSeedForm(Form):
+    """Form for editing an existing seed in the database.
+    """
+    botanical_names = SelectMultipleField('Botanical Names', coerce=int)
+    categories = SelectMultipleField('Categories',
+                                     coerce=int,
+                                     validators=[DataRequired()])
+    common_name = SelectField('Common Name',
+                              coerce=int,
+                              validators=[DataRequired()])
+    description = TextAreaField('Description')
+    name = StringField('Seed Name', validators=[Length(1, 64)])
+    submit = SubmitField('Edit Seed')
+    thumbnail = FileField('Upload New Thumbnail',
+                          validators=[FileAllowed(IMAGE_EXTENSIONS,
+                                                  'Images only!')])
+
+    def set_selects(self):
+        """Set choices for all select fields with values from database."""
+        self.botanical_names.choices = botanical_name_select_list()
+        self.categories.choices = category_select_list()
+        self.common_name.choices = common_name_select_list()
+
+    def populate(self, seed):
+        """Populate form with data from a Seed object."""
+        if seed.botanical_names:
+            self.botanical_names.data = [bn.id for bn in seed.botanical_names]
+        self.categories.data = [cat.id for cat in seed.categories]
+        self.common_name.data = seed.common_name.id
+        self.description.data = seed.description
+        self.name.data = seed.name
 
 
 class SelectBotanicalNameForm(Form):

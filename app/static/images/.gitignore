@@ -1,3 +1,6 @@
 # We want this directory to be in the repository, but not its contents.
 *
 !.gitignore
+
+# We don't want to ignore the default thumbnail image, either.
+!default_thumb.jpg

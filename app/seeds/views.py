@@ -25,8 +25,8 @@ from . import seeds
 from .models import BotanicalName, Category, CommonName, Image, Price, \
     Packet, Seed, Unit
 from .forms import AddBotanicalNameForm, AddCategoryForm, AddCommonNameForm, \
-    AddPacketForm, AddSeedForm, EditBotanicalNameForm, \
-    EditCategoryForm, EditCommonNameForm, RemoveBotanicalNameForm, \
+    AddPacketForm, AddSeedForm, EditBotanicalNameForm, EditCategoryForm, \
+    EditCommonNameForm, EditSeedForm, RemoveBotanicalNameForm, \
     RemoveCategoryForm, RemoveCommonNameForm, SelectBotanicalNameForm, \
     SelectCategoryForm, SelectCommonNameForm, SelectSeedForm
 from app import db, make_breadcrumbs
@@ -441,6 +441,101 @@ def edit_common_name(cn_id=None):
                            crumbs=crumbs,
                            form=form,
                            current_categories=current_categories)
+
+
+@seeds.route('/edit_seed', methods=['GET', 'POST'])
+@seeds.route('/edit_seed/<seed_id>', methods=['GET', 'POST'])
+def edit_seed(seed_id=None):
+    """Edit a seed stored in the database."""
+    if seed_id is None:
+        return redirect(url_for('seeds.select_seed', dest='seeds.edit_seed'))
+    seed = Seed.query.get(seed_id)
+    if seed is None:
+        flash('Error: invalid seed number! Please select a seed:')
+        return redirect(url_for('seeds.select_seed', dest='seeds.edit_seed'))
+    form = EditSeedForm()
+    form.set_selects()
+    if form.validate_on_submit():
+        edited = False
+        if seed.botanical_names:
+            for bn in seed.botanical_names:
+                if bn.id not in form.botanical_names.data:
+                    edited = True
+                    flash('Removed botanical name \'{0}\' from: {1}'.
+                          format(bn.name, seed.fullname))
+                    seed.botanical_names.remove(bn)
+        if form.botanical_names.data:
+            for bn_id in form.botanical_names.data:
+                if bn_id not in [bn.id for bn in seed.botanical_names]:
+                    edited = True
+                    bn = BotanicalName.query.get(bn_id)
+                    flash('Added botanical name \'{0}\' to: {1}'.
+                          format(bn.name, seed.fullname))
+                    seed.botanical_names.append(bn)
+        for cat in seed.categories:
+            if cat.id not in form.categories.data:
+                edited = True
+                flash('Removed category \'{0}\' from: {1}'.
+                      format(cat.category, seed.fullname))
+                seed.categories.remove(cat)
+        for cat_id in form.categories.data:
+            if cat_id not in [cat.id for cat in seed.categories]:
+                edited = True
+                cat = Category.query.get(cat_id)
+                flash('Added category \'{0}\' to: {1}'.
+                      format(cat.category, seed.fullname))
+                seed.categories.append(cat)
+        if form.common_name.data != seed.common_name.id:
+            edited = True
+            cn = CommonName.query.get(form.common_name.data)
+            flash('Changed common name to \'{0}\' for: {1}'.
+                  format(cn.name, seed.fullname))
+            seed.common_name = CommonName.query.get(form.common_name.data)
+        if form.description.data != seed.description:
+            edited = True
+            flash('Changed description for \'{0}\' to: \'{1}\''.
+                  format(seed.fullname, form.description.data))
+            seed.description = form.description.data
+        if form.name.data.title() != seed.name:
+            edited = True
+            flash('Changed seed name from \'{0}\' to \'{1}\''.
+                  format(seed.name, form.name.data.title()))
+            seed.name = form.name.data.title()
+        if form.thumbnail.data:
+            thumb_name = secure_filename(form.thumbnail.data.filename)
+            if seed.thumbnail is None or thumb_name != seed.thumbnail.filename:
+                edited = True
+                flash('New thumbnail for \'{0}\' uploaded as: \'{1}\''.
+                      format(seed.fullname, thumb_name))
+                upload_path = os.path.join(current_app.config.
+                                           get('IMAGES_FOLDER'),
+                                           thumb_name)
+                if seed.thumbnail is not None:
+                    # Do not delete or orphan thumbnail, move to images.
+                    # Do not directly add seed.thumbnail to seed.images, as
+                    # that will cause a CircularDependencyError.
+                    tb = seed.thumbnail
+                    seed.thumbnail = None
+                    seed.images.append(tb)
+                seed.thumbnail = Image(filename=thumb_name)
+                if not current_app.config.get('TESTING'):  # pragma: no cover
+                    form.thumbnail.data.save(upload_path)
+        if edited:
+            db.session.commit()
+            return redirect(url_for('seeds.manage'))
+        else:
+            flash('No changes made to \'{0}\'.'.format(seed.fullname))
+            return redirect(url_for('seeds.edit_seed', seed_id=seed_id))
+
+    form.populate(seed)
+    crumbs = make_breadcrumbs(
+        (url_for('seeds.manage'), 'Manage Seeds'),
+        (url_for('seeds.edit_seed', seed_id=seed_id), 'Edit Seed')
+    )
+    return render_template('seeds/edit_seed.html',
+                           crumbs=crumbs,
+                           form=form,
+                           seed=seed)
 
 
 @seeds.route('/')

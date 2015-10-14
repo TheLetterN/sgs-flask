@@ -2,8 +2,8 @@ import unittest
 from decimal import Decimal
 from fractions import Fraction
 from app import create_app, db
-from app.seeds.models import BotanicalName, Category, Packet, Price, \
-    QtyDecimal, QtyFraction, QtyInteger, Unit
+from app.seeds.models import BotanicalName, Category, Image, Packet, Price, \
+    QtyDecimal, QtyFraction, QtyInteger, Seed, Unit
 
 
 class TestBotanicalNameWithDB(unittest.TestCase):
@@ -356,6 +356,25 @@ class TestSeedWithDB(unittest.TestCase):
         db.session.remove()
         db.drop_all()
         self.app_context.pop()
+
+    def test_thumbnail_path_with_thumbnail(self):
+        """Return path to thumbnail if it exists."""
+        seed = Seed()
+        thumb = Image()
+        db.session.add_all([seed, thumb])
+        seed.name = 'Foxy'
+        thumb.filename = 'hello.jpg'
+        seed.thumbnail = thumb
+        db.session.commit()
+        self.assertEqual(seed.thumbnail_path, 'images/hello.jpg')
+
+    def test_thumbnail_path_no_thumbnail(self):
+        """Return path to defaulth thumbnail if seed has none."""
+        seed = Seed()
+        db.session.add(seed)
+        seed.name = 'Foxy'
+        db.session.commit()
+        self.assertEqual(seed.thumbnail_path, 'images/default_thumb.jpg')
 
 
 if __name__ == '__main__':

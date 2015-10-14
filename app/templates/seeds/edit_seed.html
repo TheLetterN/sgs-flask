@@ -21,12 +21,12 @@
 {# block head: 2 indentations of 4 spaces each. (8 spaces total.) #}
 {# block main: 3 indentations of 4 spaces each. (12 spaces total.) #}
 {% block head %}
-        <title>Add Seed</title>
+        <title>Edit Seed</title>
         <meta name="robots" content="noindex, nofollow">
-        <link rel="canonical" href="{{ url_for('seeds.add_seed', _external=True) }}">
+        <link rel="canonical" href="{{ url_for('seeds.edit_seed', _external=True) }}">
 {% endblock %}
 {% block main %}
-            <h1>Add a Seed:</h1>
+        <h1>Edit Seed: {{ seed.fullname }}</h1>
             <form method="POST" enctype="multipart/form-data">
                 {{ form.hidden_tag() }}
                 <ol>
@@ -40,10 +40,10 @@
                             {% endif %}
                         </li>
                         <li>
-                            {{ form.common_names.label }}
-                            {{ form.common_names }}
-                            {% if form.common_names.errors|count > 0 %}
-                            {{ form_errors(form.common_names) }}
+                            {{ form.common_name.label }}
+                            {{ form.common_name }}
+                            {% if form.common_name.errors|count > 0 %}
+                            {{ form_errors(form.common_name) }}
                             {% endif %}
                         </li>
                         <li>
@@ -64,17 +64,22 @@
                             {% endif %}
                         </li>
                         <li>
-                            {{ form.thumbnail.label }}
-                            {{ form.thumbnail }}
-                            {% if form.thumbnail.errors|count > 0 %}
-                            {{ form_errors(form.thumbnail) }}
-                            {% endif %}
-                        </li>
-                        <li>
                             {{ form.description.label }}
                             {{ form.description }}
                             {% if form.description.errors|count > 0 %}
                             {{ form_errors(form.description) }}
+                            {% endif %}
+                        </li>
+                    </fieldset>
+                    <fieldset>
+                        <legend>Thumbnail:</legend>
+                        <div>Current thumbnail:</div>
+                        <div><img src="{{ url_for('static', filename=seed.thumbnail_path) }}"></div>
+                        <li>
+                            {{ form.thumbnail.label }}
+                            {{ form.thumbnail }}
+                            {% if form.thumbnail.errors|count > 0 %}
+                            {{ form_errors(form.thumbnail) }}
                             {% endif %}
                         </li>
                     </fieldset>

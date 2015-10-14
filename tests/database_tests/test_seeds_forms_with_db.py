@@ -8,8 +8,9 @@ from app.seeds.forms import AddBotanicalNameForm, AddCategoryForm, \
     AddCommonNameForm, AddPacketForm, AddSeedForm, \
     botanical_name_select_list, category_select_list, \
     common_name_select_list, EditBotanicalNameForm, EditCategoryForm, \
-    EditCommonNameForm, seed_select_list, SelectBotanicalNameForm, \
-    SelectCategoryForm, SelectCommonNameForm, SelectSeedForm
+    EditCommonNameForm, EditSeedForm, seed_select_list, \
+    SelectBotanicalNameForm, SelectCategoryForm, SelectCommonNameForm, \
+    SelectSeedForm
 from app.seeds.models import BotanicalName, Category, CommonName, Image, \
     Packet, Price, QtyDecimal, QtyFraction, QtyInteger, Seed, Unit
 
@@ -551,6 +552,60 @@ class TestEditCategoryFormWithDB(unittest.TestCase):
         form.populate(category)
         self.assertEqual(form.category.data, category.category)
         self.assertEqual(form.description.data, category.description)
+
+
+class TestEditSeedFormWithDB(unittest.TestCase):
+    """Test custom methods of EditSeedForm."""
+    def setUp(self):
+        self.app = create_app('testing')
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+        db.create_all()
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
+
+    def test_populate(self):
+        seed = Seed()
+        bn = BotanicalName()
+        cn = CommonName()
+        cat = Category()
+        db.session.add_all([seed, bn, cn, cat])
+        seed.name = 'Foxy'
+        seed.description = 'Like that Hendrix song.'
+        bn.name = 'Digitalis purpurea'
+        cn.name = 'Foxglove'
+        cat.category = 'Perennial Flower'
+        seed.botanical_names.append(bn)
+        seed.categories.append(cat)
+        seed.common_name = cn
+        db.session.commit()
+        form = EditSeedForm()
+        form.set_selects()
+        form.populate(seed)
+        self.assertIn(bn.id, form.botanical_names.data)
+        self.assertIn(cat.id, form.categories.data)
+        self.assertEqual(cn.id, form.common_name.data)
+        self.assertIn(seed.name, form.name.data)
+        self.assertIn(seed.description, form.description.data)
+
+    def test_set_selects(self):
+        """Set selects with values loaded from database."""
+        bn = BotanicalName()
+        cn = CommonName()
+        cat = Category()
+        db.session.add_all([bn, cn, cat])
+        bn.name = 'Digitalis purpurea'
+        cn.name = 'Foxglove'
+        cat.name = 'Foxy'
+        db.session.commit()
+        form = EditSeedForm()
+        form.set_selects()
+        self.assertIn((bn.id, bn.name), form.botanical_names.choices)
+        self.assertIn((cn.id, cn.name), form.common_name.choices)
+        self.assertIn((cat.id, cat.category), form.categories.choices)
 
 
 class TestSelectBotanicalFormWithDB(unittest.TestCase):

@@ -16,6 +16,7 @@
 # Copyright Swallowtail Garden Seeds, Inc
 
 
+import os
 from decimal import Decimal
 from fractions import Fraction
 from slugify import slugify
@@ -1055,6 +1056,15 @@ class Seed(db.Model):
             self.slug = slugify(value)
         else:
             self.slug = None
+
+    @hybrid_property
+    def thumbnail_path(self):
+        """str: The full path to this seed's thumbnail file."""
+        if self.thumbnail:
+            return os.path.join('images',
+                                self.thumbnail.filename)
+        else:
+            return os.path.join('images', 'default_thumb.jpg')
 
 
 class Series(db.Model):

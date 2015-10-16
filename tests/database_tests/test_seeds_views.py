@@ -1,7 +1,9 @@
 import io
+import os
 import unittest
 from decimal import Decimal
-from flask import url_for
+from flask import current_app, url_for
+from unittest import mock
 from app import create_app, db
 from app.auth.models import Permission, User
 from app.seeds.models import BotanicalName, Category, CommonName, Image, \
@@ -313,7 +315,8 @@ class TestAddSeedRouteWithDB(unittest.TestCase):
             rv = tc.get(url_for('seeds.add_seed'))
         self.assertIn('Add Seed', str(rv.data))
 
-    def test_add_seed_successful_submit(self):
+    @mock.patch('werkzeug.FileStorage.save')
+    def test_add_seed_successful_submit(self, mock_save):
         user = seed_manager()
         bn = BotanicalName()
         cn = CommonName()
@@ -339,6 +342,9 @@ class TestAddSeedRouteWithDB(unittest.TestCase):
         self.assertIn('Thumbnail uploaded', str(rv.data))
         self.assertIn('New seed &#39;Foxy Foxglove&#39; has been',
                       str(rv.data))
+        mock_save.assert_called_with(os.path.join(current_app.config.
+                                                  get('IMAGES_FOLDER'),
+                                                  'foxy.jpg'))
 
 
 class TestCategoryRouteWithDB(unittest.TestCase):
@@ -358,7 +364,7 @@ class TestCategoryRouteWithDB(unittest.TestCase):
         """Return the 404 page given a bad slug."""
         with self.app.test_client() as tc:
             rv = tc.get(url_for('seeds.category',
-                                category_slug='bad-slug-no-biscuit'),
+                                cat_slug='bad-slug-no-biscuit'),
                         follow_redirects=True)
             self.assertEqual(rv.status_code, 404)
 
@@ -370,9 +376,80 @@ class TestCategoryRouteWithDB(unittest.TestCase):
         cat.description = 'Not really built to last.'
         db.session.commit()
         with self.app.test_client() as tc:
-            rv = tc.get(url_for('seeds.category', category_slug=cat.slug),
+            rv = tc.get(url_for('seeds.category', cat_slug=cat.slug),
                         follow_redirects=True)
         self.assertIn('Annual Flower', str(rv.data))
+
+
+class TestCommonNameRouteWithDB(unittest.TestCase):
+    """Test seeds.common_name."""
+    def setUp(self):
+        self.app = create_app('testing')
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+        db.create_all()
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
+
+    def test_common_name_bad_cat_slug(self):
+        """Give a 404 page if given a malformed cat_slug."""
+        cn = CommonName()
+        cat = Category()
+        db.session.add_all([cn, cat])
+        cn.name = 'Foxglove'
+        cat.category = 'Perennial Flower'
+        db.session.commit()
+        with self.app.test_client() as tc:
+            rv = tc.get(url_for('seeds.common_name',
+                                cat_slug='pewennial-flower',
+                                cn_slug=cn.slug))
+        self.assertEqual(rv.status_code, 404)
+
+    def test_common_name_bad_cn_slug(self):
+        """Give a 404 page if given a malformed cn_slug."""
+        cn = CommonName()
+        cat = Category()
+        db.session.add_all([cn, cat])
+        cn.name = 'Foxglove'
+        cat.category = 'Perennial Flower'
+        db.session.commit()
+        with self.app.test_client() as tc:
+            rv = tc.get(url_for('seeds.common_name',
+                                cat_slug=cat.slug,
+                                cn_slug='fawksglove'))
+        self.assertEqual(rv.status_code, 404)
+
+    def test_common_name_bad_slugs(self):
+        """Give a 404 page if given malformed cn_slug and cat_slug."""
+        cn = CommonName()
+        cat = Category()
+        db.session.add_all([cn, cat])
+        cn.name = 'Foxglove'
+        cat.name = 'Perennial Flower'
+        db.session.commit()
+        with self.app.test_client() as tc:
+            rv = tc.get(url_for('seeds.common_name',
+                                cat_slug='pewennial-flower',
+                                cn_slug='fawksglove'))
+        self.assertEqual(rv.status_code, 404)
+
+    def test_common_name_renders_page(self):
+        """Render page with common name info given valid slugs."""
+        cn = CommonName()
+        cat = Category()
+        db.session.add_all([cn, cat])
+        cn.name = 'Foxglove'
+        cn.description = 'Do foxes really wear these?'
+        cat.category = 'Perennial Flower'
+        db.session.commit()
+        with self.app.test_client() as tc:
+            rv = tc.get(url_for('seeds.common_name',
+                                cat_slug=cat.slug,
+                                cn_slug=cn.slug))
+        self.assertIn('Do foxes really wear these?', str(rv.data))
 
 
 class TestEditBotanicalNameRouteWithDB(unittest.TestCase):
@@ -911,7 +988,8 @@ class TestEditSeedRouteWithDB(unittest.TestCase):
         self.assertIn('Changed seed name', str(rv.data))
         self.assertEqual(seed.name, 'Fawksy')
 
-    def test_edit_seed_change_thumbnail(self):
+    @mock.patch('werkzeug.FileStorage.save')
+    def test_edit_seed_change_thumbnail(self, mock_save):
         """Flash message if thumbnail changed, and move old one to .images."""
         user = seed_manager()
         seed = Seed()
@@ -945,6 +1023,9 @@ class TestEditSeedRouteWithDB(unittest.TestCase):
         self.assertIn('New thumbnail', str(rv.data))
         self.assertEqual(seed.thumbnail.filename, 'fawksy.jpg')
         self.assertIn(thumb, seed.images)
+        mock_save.assert_called_with(os.path.join(current_app.config.
+                                                  get('IMAGES_FOLDER'),
+                                                  'fawksy.jpg'))
 
     def test_edit_seed_no_changes(self):
         """Submission with no changes flashes relevant message."""

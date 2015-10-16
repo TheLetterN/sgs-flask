@@ -1,12 +1,17 @@
 # -*- coding: utf-8 -*-
+import os
 import unittest
 from decimal import Decimal
+from flask import current_app
 from fractions import Fraction
+from inflection import pluralize
 from slugify import slugify
+from unittest import mock
 from app import create_app
-from app.seeds.models import BotanicalName, Category, CommonName, is_480th, \
-    is_decimal, is_fraction, is_int, Packet, Price, QtyDecimal, QtyFraction, \
-    QtyInteger, Quantity480th, QuantityDecimal, Seed, Unit, USDInt
+from app.seeds.models import BotanicalName, Category, CommonName, Image, \
+    is_480th, is_decimal, is_fraction, is_int, Packet, Price, QtyDecimal, \
+    QtyFraction, QtyInteger, Quantity480th, QuantityDecimal, Seed, Unit, \
+    USDInt
 
 
 class TestModuleFunctions(unittest.TestCase):
@@ -485,11 +490,23 @@ class TestCategory(unittest.TestCase):
         self.assertEqual(category.category, 'Perennial Flower')
 
     def test_category_setter(self):
-        """Set ._category and .slug."""
+        """Set ._category and a pluralized, slugified v. to .slug."""
         category = Category()
         category.category = 'Annual Flower'
         self.assertEqual(category._category, 'Annual Flower')
-        self.assertEqual(category.slug, slugify('Annual Flower'))
+        self.assertEqual(category.slug, slugify(pluralize('Annual Flower')))
+
+    def test_header(self):
+        """Return '<._category> Seeds'"""
+        category = Category()
+        category.category = 'Annual Flower'
+        self.assertEqual(category.header, 'Annual Flower Seeds')
+
+    def test_plural(self):
+        """Return plural version of ._category."""
+        category = Category()
+        category.category = 'Annual Flower'
+        self.assertEqual(category.plural, 'Annual Flowers')
 
     def test_repr(self):
         """Return string formatted <Category '<category>'>"""
@@ -513,6 +530,12 @@ class TestCommonName(unittest.TestCase):
         cn = CommonName(name='Coleus')
         self.assertEqual(cn.__repr__(), '<CommonName \'Coleus\'>')
 
+    def test_header(self):
+        """Return '<._name> Seeds'."""
+        cn = CommonName()
+        cn._name = 'Foxglove'
+        self.assertEqual(cn.header, 'Foxglove Seeds')
+
     def test_name_getter(self):
         """Return contents of ._name"""
         cn = CommonName()
@@ -525,6 +548,42 @@ class TestCommonName(unittest.TestCase):
         cn.name = 'Butterfly Weed'
         self.assertEqual(cn._name, 'Butterfly Weed')
         self.assertEqual(cn.slug, slugify('Butterfly Weed'))
+
+
+class TestImage(unittest.TestCase):
+    """Test methods of Image in the seeds model."""
+    def setUp(self):
+        self.app = create_app('testing')
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+
+    def tearDown(self):
+        self.app_context.pop()
+
+    @mock.patch('app.seeds.models.os.remove')
+    def test_delete_file(self, mock_remove):
+        """Delete image file using os.remove."""
+        image = Image()
+        image.filename = 'hello.jpg'
+        image.delete_file()
+        mock_remove.assert_called_with(image.full_path)
+
+    @mock.patch('app.seeds.models.os.path.exists')
+    def test_exists(self, mock_exists):
+        """Call os.path.exists for path of image file."""
+        mock_exists.return_value = True
+        image = Image()
+        image.filename = 'hello.jpg'
+        self.assertTrue(image.exists())
+        mock_exists.assert_called_with(image.full_path)
+
+    def test_full_path(self):
+        """Return the absolute file path for image name."""
+        image = Image()
+        image.filename = 'hello.jpg'
+        self.assertEqual(os.path.join(current_app.config.get('IMAGES_FOLDER'),
+                                      image.filename),
+                         image.full_path)
 
 
 class TestPacket(unittest.TestCase):
@@ -672,6 +731,23 @@ class TestSeed(unittest.TestCase):
         self.assertEqual(seed.fullname, 'Foxy')
         seed.common_name = cn
         self.assertEqual(seed.fullname, 'Foxy Foxglove')
+
+    def test_list_botanical_names(self):
+        """Return a string list of botanical names associated with a seed."""
+        bn1 = BotanicalName()
+        bn2 = BotanicalName()
+        bn3 = BotanicalName()
+        seed = Seed()
+        bn1.name = 'Digitalis purpurea'
+        bn2.name = 'Digitalis watchus'
+        bn3.name = 'Innagada davida'
+        seed.name = 'Foxy'
+        seed.botanical_names.append(bn1)
+        seed.botanical_names.append(bn2)
+        seed.botanical_names.append(bn3)
+        self.assertEqual(seed.list_botanical_names(),
+                         'Digitalis purpurea, Digitalis watchus, '
+                         'Innagada davida')
 
     def test_name_getter(self):
         """Return ._name"""

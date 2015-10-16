@@ -1,0 +1,34 @@
+{# This file is part of SGS-Flask.
+
+   SGS-Flask is free software: you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
+ 
+   SGS-Flask is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+ 
+   You should have received a copy of the GNU General Public License
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ 
+   Copyright Swallowtail Garden Seeds, Inc 
+#}
+{% macro seed_box(seed) %}
+<div class="seed_box">
+    <img src="{{ url_for('static', filename=seed.thumbnail_path) }}">
+    <div class="seed_info">
+        <h3>{{ seed.name }}</h3>
+        <em>{{ seed.common_name.header }}</em>
+        <i>{{ seed.list_botanical_names() }}</i>
+        <p>{{ seed.description }}</p>
+    </div>
+    {% if seed.packets %}
+    <div class="packet_info">
+        {% for packet in seed.packets %}
+        <div>{{ packet.sku }}: {{ packet.quantity }} {{ packet.unit }} - ${{ packet.price }}</div>
+        <div>TODO: Cart quantity and submit button</div>{% endfor %} 
+    </div>{% endif %}
+</div>
+{% endmacro %}

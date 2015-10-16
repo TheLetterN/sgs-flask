@@ -353,3 +353,53 @@ label:after {
     display: inline-block;
 }
 /* END forms */
+
+/* BEGIN seed_box */
+div.seed_box {
+    display: block;
+    border-style: solid;
+    border-width: 1px;
+    border-color: #99ff99;
+    margin-bottom: 0.5em;
+    padding: 0.5em;
+    vertical-align: top;
+    overflow: auto;
+}
+
+div.seed_box img {
+    float: right;
+    margin-left: 1em;
+}
+
+div.seed_box h3 {
+    display: block;
+    font-weight: bold;
+    font-size: 1.2em;
+    vertical-align: top;
+}
+
+div.seed_box em {
+    font-style: italic;
+}
+
+div.seed_box i {
+    font-style: italic;
+}
+
+div.seed_box p {
+    margin-right: 1em;
+}
+
+div.seed_box div.seed_info {
+    display: block;
+}
+
+div.seed_box div.seed_info i {
+    display: block;
+    font-size: 0.8em;
+}
+
+div.seed_box div.packet_info {
+    clear: both;
+}
+/* END seed_box */

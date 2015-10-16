@@ -27,8 +27,9 @@ from .models import BotanicalName, Category, CommonName, Image, Price, \
 from .forms import AddBotanicalNameForm, AddCategoryForm, AddCommonNameForm, \
     AddPacketForm, AddSeedForm, EditBotanicalNameForm, EditCategoryForm, \
     EditCommonNameForm, EditSeedForm, RemoveBotanicalNameForm, \
-    RemoveCategoryForm, RemoveCommonNameForm, SelectBotanicalNameForm, \
-    SelectCategoryForm, SelectCommonNameForm, SelectSeedForm
+    RemoveCategoryForm, RemoveCommonNameForm, RemoveSeedForm, \
+    SelectBotanicalNameForm, SelectCategoryForm, SelectCommonNameForm, \
+    SelectSeedForm
 from app import db, make_breadcrumbs
 from app.decorators import permission_required
 from app.auth.models import Permission
@@ -231,8 +232,7 @@ def add_seed():
                                        thumb_name)
             seed.thumbnail = Image(filename=thumb_name)
             flash('Thumbnail uploaded to: {0}'.format(upload_path))
-            if not current_app.config.get('TESTING'):  # pragma: no cover
-                form.thumbnail.data.save(upload_path)
+            form.thumbnail.data.save(upload_path)
         seed.description = form.description.data
         flash('New seed \'{0}\' has been added to the database.'.
               format(seed.fullname))
@@ -245,19 +245,39 @@ def add_seed():
     return render_template('seeds/add_seed.html', crumbs=crumbs, form=form)
 
 
-@seeds.route('/<category_slug>')
-def category(category_slug=None):
+@seeds.route('/<cat_slug>')
+def category(cat_slug=None):
     """Display a category."""
-    category = Category.query.filter_by(slug=category_slug).first()
+    category = Category.query.filter_by(slug=cat_slug).first()
     if category is not None:
         crumbs = make_breadcrumbs(
             (url_for('seeds.index'), 'All Seeds'),
-            (url_for('seeds.category', category_slug=category.slug),
-             '{0} Seeds'.format(category.category))
+            (url_for('seeds.category', cat_slug=category.slug),
+             category.header)
         )
         return render_template('seeds/category.html',
                                crumbs=crumbs,
                                category=category)
+    else:
+        abort(404)
+
+
+@seeds.route('/<cat_slug>/<cn_slug>')
+def common_name(cat_slug=None, cn_slug=None):
+    """Display page for a common name."""
+    cat = Category.query.filter_by(slug=cat_slug).first()
+    cn = CommonName.query.filter_by(slug=cn_slug).first()
+    if cn is not None and cat is not None:
+        crumbs = make_breadcrumbs(
+            (url_for('seeds.index'), 'All Seeds'),
+            (url_for('seeds.category', cat_slug=cat_slug), cat.header),
+            (url_for('seeds.common_name', cat_slug=cat_slug, cn_slug=cn_slug),
+             cn.header)
+        )
+        return render_template('seeds/common_name.html',
+                               cat=cat,
+                               cn=cn,
+                               crumbs=crumbs)
     else:
         abort(404)
 
@@ -518,8 +538,7 @@ def edit_seed(seed_id=None):
                     seed.thumbnail = None
                     seed.images.append(tb)
                 seed.thumbnail = Image(filename=thumb_name)
-                if not current_app.config.get('TESTING'):  # pragma: no cover
-                    form.thumbnail.data.save(upload_path)
+                form.thumbnail.data.save(upload_path)
         if edited:
             db.session.commit()
             return redirect(url_for('seeds.manage'))
@@ -678,6 +697,66 @@ def remove_common_name(cn_id=None):
                            crumbs=crumbs,
                            form=form,
                            cn=cn)
+
+
+@seeds.route('/remove_seed', methods=['GET', 'POST'])
+@seeds.route('/remove_seed/<seed_id>', methods=['GET', 'POST'])
+@login_required
+@permission_required(Permission.MANAGE_SEEDS)
+def remove_seed(seed_id=None):
+    if seed_id is None:
+        return redirect(url_for('seeds.select_seed', dest='seeds.remove_seed'))
+    seed = Seed.query.get(seed_id)
+    if seed is None:
+        flash('Error: No seed exists with that id! Please select one:')
+        return redirect(url_for('seeds.select_seed', dest='seeds.remove_seed'))
+    form = RemoveSeedForm()
+    if form.validate_on_submit():
+        if not form.verify_removal:
+            flash('No changes made. Check the box labeled \'Yes\' if you '
+                  'would like to remove this seed.')
+            return redirect(url_for('seeds.remove_seed', seed_id=seed_id))
+        if form.delete_images:
+            rollback = False
+            if seed.images:
+                for image in seed.images:
+                    try:
+                        image.delete_file()
+                        db.session.delete(image)
+                    except OSError as e:
+                        rollback = True
+                        flash('Error: Attempting to delete \'{0}\' raised an '
+                              'exception: {1}'.format(image.name, e))
+            if seed.thumbnail:
+                try:
+                    seed.thumbnail.delete_file()
+                    flash('Thumbnail image \'{0}\' has been deleted.'.
+                          format(seed.thumbnail.filename))
+                    db.session.delete(seed.thumbnail)
+                except OSError as e:
+                    rollback = True
+                    flash('Error: Attempting to delete \'{0}\' raised an '
+                          'exception: {1}')
+        if rollback:
+            flash('Error: Seed could not be deleted due to problems deleting '
+                  'associated images.')
+            db.session.rollback()
+            return redirect(url_for('seeds.remove_seed', seed_id=seed_id))
+        else:
+            flash('The seed \'{0}\' has been deleted. Forever. I hope you\'re '
+                  'happy with yourself.')
+            db.session.delete(seed)
+            db.session.commit()
+            return redirect(url_for('seeds.manage'))
+    form.delete_images.data = True
+    crumbs = make_breadcrumbs(
+        (url_for('seeds.manage'), 'Manage Seeds'),
+        (url_for('seeds.remove_seed', seed_id=seed_id), 'Remove Seed')
+    )
+    return render_template('seeds/remove_seed.html',
+                           crumbs=crumbs,
+                           form=form,
+                           seed=seed)
 
 
 @seeds.route('/select_botanical_name', methods=['GET', 'POST'])

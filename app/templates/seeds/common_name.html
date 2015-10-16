@@ -19,22 +19,18 @@
 {# HTML within blocks should be indented as follows for consistency: #}
 {# block head: 2 indentations of 4 spaces each. (8 spaces total.) #}
 {# block main: 3 indentations of 4 spaces each. (12 spaces total.) #}
+{% from 'includes/seed_box.html' import seed_box %}
 {% block head %}
-    <title>Swallowtail Garden Seeds - {{ category.header }}</title>
-    <link rel="canonical" href="{{ url_for('seeds.category', cat_slug=category.slug, _external=True) }}">
+        <title>Swallowtail Garden Seeds - {{ cn.header }}</title>
+        <link rel="canonical" href="{{ url_for('seeds.common_name', cat_slug=cat.slug, cn_slug=cn.slug, _external=True) }}">
 {% endblock %}
 {% block main %}
-    <h1>{{ category.header }}</h1>
-        <p class="description">{{ category.description|safe }}</p>
-        <div id="common_names">
-            {% if category.common_names %}
-            {% for cn in category.common_names %}
-            <div class="common_name">
-                <a href="{{ url_for('seeds.common_name', cat_slug=category.slug, cn_slug=cn.slug) }}">{{ cn.name }}</a>
-                <p class="description">{{ cn.description|safe }}</p>
+            <div>
+                <h1>{{ cn.header }}</h1>
+                    <p class="description">{{ cn.description|safe }}</p>
             </div>
+            {% for seed in cn.seeds %}
+            {{ seed_box(seed)|indent(12)|safe }}
             {% endfor %}
-            {% endif %}
-        </div>
 {% endblock %}
 

@@ -515,3 +515,10 @@ class RemoveCommonNameForm(Form):
     """Form for removing a common name."""
     verify_removal = BooleanField('Yes')
     submit = SubmitField('Remove Common Name')
+
+
+class RemoveSeedForm(Form):
+    """Form for removing a seed."""
+    delete_images = BooleanField('Also delete all images for this seed')
+    verify_removal = BooleanField('Yes')
+    submit = SubmitField('Remove Seed')

@@ -18,7 +18,9 @@
 
 import os
 from decimal import Decimal
+from flask import current_app
 from fractions import Fraction
+from inflection import pluralize
 from slugify import slugify
 from sqlalchemy.ext.hybrid import hybrid_property
 from app import db
@@ -626,8 +628,8 @@ class Category(db.Model):
         """str: contents of ._category.
 
         Setter:
-            Sets ._category, and generates a slugified version and sets .slug
-            to it.
+            Sets ._category, and sets .slug to a pluralized, slugified version
+                of ._category.
         """
         return self._category
 
@@ -638,10 +640,21 @@ class Category(db.Model):
     @category.setter
     def category(self, category):
         self._category = category
-        if self._category is not None:
-            self.slug = slugify(category)
+        if category is not None:
+            self.slug = slugify(pluralize(category))
         else:
             self.slug = None
+
+    @property
+    def header(self):
+        """str: contents of ._category in a str for headers, titles, etc."""
+        # TODO : Maybe make the string setable via config?
+        return '{0} Seeds'.format(self._category)
+
+    @property
+    def plural(self):
+        """str: plural form of ._category."""
+        return pluralize(self._category)
 
 
 class CommonName(db.Model):
@@ -667,7 +680,7 @@ class CommonName(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     categories = db.relationship('Category',
                                  secondary=common_names_to_categories,
-                                 backref='_common_names')
+                                 backref='common_names')
     description = db.Column(db.Text)
     _name = db.Column(db.String(64), unique=True)
     parent_id = db.Column(db.Integer, db.ForeignKey('common_names.id'))
@@ -691,6 +704,11 @@ class CommonName(db.Model):
 
     def __repr__(self):
         return '<{0} \'{1}\'>'.format(self.__class__.__name__, self.name)
+
+    @property
+    def header(self):
+        """str: ._name formatted for headers and titles."""
+        return '{0} Seeds'.format(self._name)
 
     @hybrid_property
     def name(self):
@@ -732,6 +750,25 @@ class Image(db.Model):
 
     def __init__(self, filename=None):
         self.filename = filename
+
+    @property
+    def full_path(self):
+        """Return the full absolute path to this Image's file."""
+        return os.path.join(current_app.config.get('IMAGES_FOLDER'),
+                            self.filename)
+
+    def delete_file(self):
+        """Deletes the image file associated with this Image object.
+
+        Note:
+            The lack of exception handling is intentional, exceptions should
+            be handled where this function is called.
+        """
+        os.remove(self.full_path)
+
+    def exists(self):
+        """Check whether or not file associated with this Image exists."""
+        return os.path.exists(self.full_path)
 
 
 class Packet(db.Model):
@@ -1065,6 +1102,10 @@ class Seed(db.Model):
                                 self.thumbnail.filename)
         else:
             return os.path.join('images', 'default_thumb.jpg')
+
+    def list_botanical_names(self):
+        """Return a string containing a list of botanical names."""
+        return ', '.join([bn.name for bn in self.botanical_names])
 
 
 class Series(db.Model):

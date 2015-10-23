@@ -1654,6 +1654,109 @@ class TestRemoveCommonNameRouteWithDB(unittest.TestCase):
         self.assertEqual(CommonName.query.count(), 0)
 
 
+class TestRemovePacketRouteWithDB(unittest.TestCase):
+    """Test seeds.remove_packet."""
+    def setUp(self):
+        self.app = create_app('testing')
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+        db.create_all()
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
+
+    def test_remove_packet_no_id(self):
+        """Redirect to select_packet given no pkt_id."""
+        user = seed_manager()
+        db.session.add(user)
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.get(url_for('seeds.remove_packet',
+                                dest='seeds.remove_packet'))
+        self.assertEqual(rv.location, url_for('seeds.select_packet',
+                                              dest='seeds.remove_packet',
+                                              _external=True))
+
+    def test_remove_packet_no_packet(self):
+        """Flash error and redirect if no packet corresponds to pkt_id."""
+        user = seed_manager()
+        db.session.add(user)
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.get(url_for('seeds.remove_packet', pkt_id=42))
+        self.assertEqual(rv.location, url_for('seeds.select_packet',
+                                              dest='seeds.remove_packet',
+                                              _external=True))
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.get(url_for('seeds.remove_packet', pkt_id=42),
+                        follow_redirects=True)
+        self.assertIn('Error: No packet exists', str(rv.data))
+
+    def test_remove_packet_renders_page(self):
+        """Render form page given a valid packet id."""
+        user = seed_manager()
+        packet = Packet()
+        db.session.add_all([packet, user])
+        packet.price = Decimal('1.99')
+        packet.quantity = 100
+        packet.unit = 'seeds'
+        packet.sku = '8675309'
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.get(url_for('seeds.remove_packet', pkt_id=packet.id))
+        self.assertIn('Remove Packet', str(rv.data))
+
+    def test_remove_packet_submission_no_changes(self):
+        """Redirect and flash a message if verify_removal unchecked."""
+        user = seed_manager()
+        packet = Packet()
+        db.session.add_all([packet, user])
+        packet.price = Decimal('1.99')
+        packet.quantity = 100
+        packet.unit = 'seeds'
+        packet.sku = '8675309'
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.post(url_for('seeds.remove_packet', pkt_id=packet.id),
+                         data=dict(verify_removal=None))
+        self.assertEqual(rv.location, url_for('seeds.remove_packet',
+                                              pkt_id=packet.id,
+                                              _external=True))
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.post(url_for('seeds.remove_packet', pkt_id=packet.id),
+                         data=dict(verify_removal=None),
+                         follow_redirects=True)
+        self.assertIn('No changes made', str(rv.data))
+
+    def test_remove_packet_submission_verified(self):
+        """Delete packet and flash a message if verify_removal is checked."""
+        user = seed_manager()
+        packet = Packet()
+        db.session.add_all([packet, user])
+        packet.price = Decimal('1.99')
+        packet.quantity = 100
+        packet.unit = 'seeds'
+        packet.sku = '8675309'
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.post(url_for('seeds.remove_packet', pkt_id=packet.id),
+                         data=dict(verify_removal=True),
+                         follow_redirects=True)
+        self.assertIn('Packet SKU 8675309: $1.99 for 100 seeds has been '
+                      'removed from the database',
+                      str(rv.data))
+        self.assertEqual(Packet.query.count(), 0)
+
+
 class TestRemoveSeedRouteWithDB(unittest.TestCase):
     """Test seeds.remove_seed."""
     def setUp(self):

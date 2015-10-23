@@ -197,6 +197,75 @@ nav ul#nav_manage:target {
 
 /* END horizontal nav */
 
+/* BEGIN breadcrumbs */
+#breadcrumbs {
+    clear: both;
+    background-color: #44aa44;
+    list-style: none;
+    overflow: hidden;
+}
+
+#breadcrumbs li {
+    float: left;
+}
+
+#breadcrumbs li a {
+    color: #fff;
+    text-decoration: none;
+    padding: 6px 0 6px 65px;
+    background: #66cc66;
+    position: relative;
+    display: block;
+    float: left;
+    text-shadow: 1px 1px 1px #001100;
+}
+
+#breadcrumbs li a:after {
+    content: " ";
+    display: block;
+    width: 0;
+    height: 0;
+    border-top: 50px solid transparent;
+    border-bottom: 50px solid transparent;
+    border-left: 30px solid #66cc66;
+    position: absolute;
+    top: 50%;
+    margin-top: -50px;
+    left: 100%;
+    z-index: 2;
+}
+
+#breadcrumbs li a:before {
+    content: " ";
+    display: block;
+    width: 0;
+    height: 0;
+    border-top: 50px solid transparent;
+    border-bottom: 50px solid transparent;
+    border-left: 30px solid #44aa44;
+    position: absolute;
+    top: 50%;
+    margin-top: -50px;
+    margin-left: 3px;
+    left: 100%;
+    z-index: 1;
+}
+
+#breadcrumbs li:first-child a {
+    padding-left: 10px;
+}
+
+#breadcrumbs li a:hover {
+    background: #aaeeee;
+    color: #ffffaa;
+    text-decoration: underline;
+}
+
+#breadcrumbs li a:hover:after {
+    border-left-color: #aaeeee;
+}
+/* END breadcrumbs */
+
 /* BEGIN categories */
 div.category {
     border: 1px solid #afa;

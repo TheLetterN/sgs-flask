@@ -17,22 +17,53 @@
 
 
 import os
-from flask import abort, current_app, flash, redirect, render_template, \
-    request, url_for
+from flask import (
+    abort,
+    current_app,
+    flash,
+    redirect,
+    render_template,
+    request,
+    url_for
+)
 from werkzeug import secure_filename
 from flask.ext.login import login_required
-from . import seeds
-from .models import BotanicalName, Category, CommonName, Image, Price, \
-    Packet, Seed, Unit
-from .forms import AddBotanicalNameForm, AddCategoryForm, AddCommonNameForm, \
-    AddPacketForm, AddSeedForm, EditBotanicalNameForm, EditCategoryForm, \
-    EditCommonNameForm, EditPacketForm, EditSeedForm, \
-    RemoveBotanicalNameForm, RemoveCategoryForm, RemoveCommonNameForm, \
-    RemoveSeedForm, SelectBotanicalNameForm, SelectCategoryForm, \
-    SelectCommonNameForm, SelectPacketForm, SelectSeedForm
 from app import db, make_breadcrumbs
 from app.decorators import permission_required
 from app.auth.models import Permission
+from . import seeds
+from .models import (
+    BotanicalName,
+    Category,
+    CommonName,
+    Image,
+    Price,
+    Packet,
+    Seed,
+    Unit
+)
+from .forms import (
+    AddBotanicalNameForm,
+    AddCategoryForm,
+    AddCommonNameForm,
+    AddPacketForm,
+    AddSeedForm,
+    EditBotanicalNameForm,
+    EditCategoryForm,
+    EditCommonNameForm,
+    EditPacketForm,
+    EditSeedForm,
+    RemoveBotanicalNameForm,
+    RemoveCategoryForm,
+    RemoveCommonNameForm,
+    RemovePacketForm,
+    RemoveSeedForm,
+    SelectBotanicalNameForm,
+    SelectCategoryForm,
+    SelectCommonNameForm,
+    SelectPacketForm,
+    SelectSeedForm
+)
 
 
 @seeds.context_processor
@@ -763,6 +794,44 @@ def remove_common_name(cn_id=None):
                            crumbs=crumbs,
                            form=form,
                            cn=cn)
+
+
+@seeds.route('/remove_packet', methods=['GET', 'POST'])
+@seeds.route('/remove_packet/<pkt_id>', methods=['GET', 'POST'])
+@login_required
+@permission_required(Permission.MANAGE_SEEDS)
+def remove_packet(pkt_id=None):
+    """Remove a packet from the database."""
+    if pkt_id is None:
+        return redirect(url_for('seeds.select_packet',
+                                dest='seeds.remove_packet'))
+    packet = Packet.query.get(pkt_id)
+    if packet is None:
+        flash('Error: No packet exists with given id! Please select one:')
+        return redirect(url_for('seeds.select_packet',
+                                dest='seeds.remove_packet'))
+    form = RemovePacketForm()
+    if form.validate_on_submit():
+        if form.verify_removal.data:
+            flash('Packet SKU {0}: ${1} for {2} {3} has been removed from '
+                  'the database.'.format(packet.sku,
+                                         packet.price,
+                                         packet.quantity,
+                                         packet.unit))
+            db.session.delete(packet)
+            return redirect(url_for('seeds.manage'))
+        else:
+            flash('No changes made. Check the box labeled \'Yes\' if you '
+                  'want to remove this packet.')
+            return redirect(url_for('seeds.remove_packet', pkt_id=pkt_id))
+    crumbs = make_breadcrumbs(
+        (url_for('seeds.manage'), 'Manage Seeds'),
+        (url_for('seeds.remove_packet', pkt_id=pkt_id), 'Remove Packet')
+    )
+    return render_template('seeds/remove_packet.html',
+                           crumbs=crumbs,
+                           form=form,
+                           packet=packet)
 
 
 @seeds.route('/remove_seed', methods=['GET', 'POST'])

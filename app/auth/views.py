@@ -228,7 +228,10 @@ def login():
                                  (User.email == form.login.data)).first()
         if user is not None and user.verify_password(form.password.data):
             if user.confirmed:
-                if(login_user(user, form.remember_me.data)):
+                remember = False
+                if form.remember_me.data:  # pragma: no cover
+                    remember = True
+                if(login_user(user, remember=remember)):
                     flash('You are now logged in, {0}.'.format(user.name))
                     return redirect(request.args.get('next') or
                                     url_for('main.index'))

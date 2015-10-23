@@ -618,6 +618,12 @@ class RemoveCommonNameForm(Form):
     submit = SubmitField('Remove Common Name')
 
 
+class RemovePacketForm(Form):
+    """Form for removing a packet."""
+    verify_removal = BooleanField('Yes')
+    submit = SubmitField('Remove Packet')
+
+
 class RemoveSeedForm(Form):
     """Form for removing a seed."""
     delete_images = BooleanField('Also delete all images for this seed')

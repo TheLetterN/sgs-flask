@@ -472,4 +472,4 @@ def load_user(user_id):
     Returns:
         User: The user whose id is user_id.
     """
-    return User.query.get(int(user_id))
+    return User.query.get(user_id)

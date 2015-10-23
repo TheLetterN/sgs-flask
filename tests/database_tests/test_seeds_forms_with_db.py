@@ -1,18 +1,44 @@
 import unittest
-from werkzeug import FileStorage, secure_filename
-from wtforms import ValidationError
 from decimal import Decimal
 from fractions import Fraction
+from werkzeug import FileStorage, secure_filename
+from wtforms import ValidationError
 from app import create_app, db
-from app.seeds.forms import AddBotanicalNameForm, AddCategoryForm, \
-    AddCommonNameForm, AddPacketForm, AddSeedForm, \
-    botanical_name_select_list, category_select_list, \
-    common_name_select_list, EditBotanicalNameForm, EditCategoryForm, \
-    EditCommonNameForm, EditSeedForm, seed_select_list, \
-    SelectBotanicalNameForm, SelectCategoryForm, SelectCommonNameForm, \
+from app.seeds.forms import (
+    AddBotanicalNameForm,
+    AddCategoryForm,
+    AddCommonNameForm,
+    AddPacketForm,
+    AddSeedForm,
+    botanical_name_select_list,
+    category_select_list,
+    common_name_select_list,
+    EditBotanicalNameForm,
+    EditCategoryForm,
+    EditCommonNameForm,
+    EditPacketForm,
+    EditSeedForm,
+    packet_select_list,
+    seed_select_list,
+    SelectBotanicalNameForm,
+    SelectCategoryForm,
+    SelectCommonNameForm,
+    SelectPacketForm,
     SelectSeedForm
-from app.seeds.models import BotanicalName, Category, CommonName, Image, \
-    Packet, Price, QtyDecimal, QtyFraction, QtyInteger, Seed, Unit
+)
+from app.seeds.models import (
+    BotanicalName,
+    Category,
+    CommonName,
+    Image,
+    Packet,
+    Price,
+    QtyDecimal,
+    QtyFraction,
+    QtyInteger,
+    Seed,
+    Unit
+)
 
 
 class TestFunctionsWithDB(unittest.TestCase):
@@ -72,6 +98,51 @@ class TestFunctionsWithDB(unittest.TestCase):
         self.assertIn((cn1.id, cn1.name), cnlist)
         self.assertIn((cn2.id, cn2.name), cnlist)
         self.assertIn((cn3.id, cn3.name), cnlist)
+
+    def test_packet_select_list(self):
+        """Generate list of tuples from packets in database."""
+        pkt1 = Packet()
+        pkt2 = Packet()
+        pkt3 = Packet()
+        sd1 = Seed()
+        sd2 = Seed()
+        sd3 = Seed()
+        cn1 = CommonName()
+        cn2 = CommonName()
+        db.session.add_all([pkt1, pkt2, pkt3, sd1, sd2, sd3, cn1, cn2])
+        pkt1.price = Decimal('1.99')
+        pkt2.price = Decimal('2.99')
+        pkt3.price = Decimal('3.99')
+        pkt1.quantity = 100
+        pkt2.quantity = 200
+        pkt3.quantity = 50
+        pkt1.unit = 'seeds'
+        pkt2.unit = 'seeds'
+        pkt3.unit = 'seeds'
+        pkt1.sku = 'F41'
+        pkt2.sku = 'F42'
+        pkt3.sku = 'B13'
+        sd1.name = 'Foxy'
+        sd2.name = 'Snow Thimble'
+        sd3.name = 'Soulmate'
+        cn1.name = 'Foxglove'
+        cn2.name = 'Butterfly Weed'
+        sd1.common_name = cn1
+        sd2.common_name = cn1
+        sd3.common_name = cn2
+        sd1.packets.append(pkt1)
+        sd2.packets.append(pkt2)
+        sd3.packets.append(pkt3)
+        db.session.commit()
+        pktlst = packet_select_list()
+        expected = [(pkt3.id,
+                     'Butterfly Weed, Soulmate -'
+                     ' SKU B13: $3.99 for 50 seeds'),
+                    (pkt1.id,
+                     'Foxglove, Foxy - SKU F41: $1.99 for 100 seeds'),
+                    (pkt2.id,
+                     'Foxglove, Snow Thimble - SKU F42: $2.99 for 200 seeds')]
+        self.assertEqual(pktlst, expected)
 
     def test_seed_select_list(self):
         """Generate correct list of tuples from seeds in db."""
@@ -554,6 +625,66 @@ class TestEditCategoryFormWithDB(unittest.TestCase):
         self.assertEqual(form.description.data, category.description)
 
 
+class TestEditPacketFormWithDB(unittest.TestCase):
+    """Test custom methods of EditPacketForm."""
+    def setUp(self):
+        self.app = create_app('testing')
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+        db.create_all()
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
+
+    def test_populate(self):
+        """Populate form with info from database."""
+        pkt = Packet()
+        db.session.add(pkt)
+        pkt.price = Decimal('2.99')
+        pkt.quantity = 100
+        pkt.unit = 'seeds'
+        pkt.sku = '8675309'
+        db.session.commit()
+        form = EditPacketForm()
+        form.set_selects()
+        form.populate(pkt)
+        self.assertEqual(form.prices.data, pkt._price.id)
+        self.assertEqual(form.units.data, pkt._unit.id)
+        self.assertEqual(form.quantities.data, str(pkt.quantity))
+        self.assertEqual(form.sku.data, pkt.sku)
+
+    def test_set_selects(self):
+        """Set prices, units, and quantities with values from database."""
+        price = Price()
+        qd = QtyDecimal()
+        qf = QtyFraction()
+        qi = QtyInteger()
+        unit = Unit()
+        db.session.add_all([price, qd, qf, qi, unit])
+        price.price = Decimal('1.99')
+        qd.value = Decimal('2.5')
+        qf.value = Fraction('1/4')
+        qi.value = 100
+        unit.unit = 'cubits'
+        db.session.commit()
+        form = EditPacketForm()
+        form.set_selects()
+        self.assertIn((price.id, '$1.99'), form.prices.choices)
+        self.assertIn(('2.5', '2.5'), form.quantities.choices)
+        self.assertIn(('1/4', '1/4'), form.quantities.choices)
+        self.assertIn(('100', '100'), form.quantities.choices)
+        self.assertIn((unit.id, 'cubits'), form.units.choices)
+
+    def test_validate_quantity(self):
+        """Raise a ValidationError if field.data can't be used as quantity."""
+        form = EditPacketForm()
+        form.quantity.data = 'Forty-two'
+        with self.assertRaises(ValidationError):
+            form.validate_quantity(form.quantity)
+
+
 class TestEditSeedFormWithDB(unittest.TestCase):
     """Test custom methods of EditSeedForm."""
     def setUp(self):
@@ -698,8 +829,43 @@ class TestSelectCommonNameFormWithDB(unittest.TestCase):
         self.assertIn((cn3.id, cn3.name), form.names.choices)
 
 
+class TestSelectPacketFormWithDB(unittest.TestCase):
+    """Test custom methods of SelectPacketForm."""
+    def setUp(self):
+        self.app = create_app('testing')
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+        db.create_all()
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
+
+    def test_set_packets(self):
+        """Set select with packets loaded from database."""
+        seed = Seed()
+        cn = CommonName()
+        packet = Packet()
+        db.session.add_all([seed, cn, packet])
+        seed.name = 'Foxy'
+        cn.name = 'Foxglove'
+        packet.price = Decimal('2.99')
+        packet.quantity = 100
+        packet.unit = 'seeds'
+        packet.sku = '8675309'
+        seed.common_name = cn
+        seed.packets.append(packet)
+        db.session.commit()
+        form = SelectPacketForm()
+        form.set_packets()
+        self.assertIn((packet.id,
+                       'Foxglove, Foxy - SKU 8675309: $2.99 for 100 seeds'),
+                      form.packets.choices)
+
+
 class TestSelectSeedFormWithDB(unittest.TestCase):
-    """Test custom methods of SelectCommonNameForm."""
+    """Test custom methods of SelectSeedForm."""
     def setUp(self):
         self.app = create_app('testing')
         self.app_context = self.app.app_context()

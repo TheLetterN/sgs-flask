@@ -19,12 +19,30 @@
 from werkzeug import secure_filename
 from flask.ext.wtf import Form
 from flask.ext.wtf.file import FileAllowed, FileField
-from wtforms import BooleanField, DecimalField, SelectField, \
-    SelectMultipleField, StringField, SubmitField, TextAreaField, \
+from wtforms import (
+    BooleanField,
+    DecimalField,
+    SelectField,
+    SelectMultipleField,
+    StringField,
+    SubmitField,
+    TextAreaField,
     ValidationError
+)
 from wtforms.validators import DataRequired, Length, Optional
-from .models import BotanicalName, Category, CommonName, Image, Packet, \
-    Price, QtyDecimal, QtyFraction, QtyInteger, Seed, Unit
+from .models import (
+    BotanicalName,
+    Category,
+    CommonName,
+    Image,
+    Packet,
+    Price,
+    QtyDecimal,
+    QtyFraction,
+    QtyInteger,
+    Seed,
+    Unit
+)
 
 
 IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png']
@@ -59,6 +77,24 @@ def common_name_select_list():
             in the database.
     """
     return [(cn.id, cn.name) for cn in CommonName.query.order_by('_name')]
+
+
+def packet_select_list():
+    """Generate a list of all Packets for populating Select fields.
+
+    Returns:
+        list: A list of tuples containing the id and info of each packet in
+            the database.
+    """
+    packets = Packet.query.all()
+    packets.sort(key=lambda x: x.seed.common_name.name)
+    return [(pkt.id, '{0}, {1} - SKU {2}: ${3} for {4} {5}'.
+                     format(pkt.seed.common_name.name,
+                            pkt.seed.name,
+                            pkt.sku,
+                            pkt.price,
+                            pkt.quantity,
+                            pkt.unit)) for pkt in packets]
 
 
 def seed_select_list():
@@ -426,6 +462,61 @@ class EditCommonNameForm(Form):
         self.remove_categories.choices = choices
 
 
+class EditPacketForm(Form):
+    """Form for adding a packet to a seed.
+
+    Attributes:
+        price (DecimalField): Field for price in US Dollars.
+        prices (SelectField): Field for selecting an existing price.
+        quantity (StringField): Field for amount of seed in a packet.
+        quantities (SelectField): Field for selecting existing quantity.
+        unit (StringField): Field for unit of measure.
+        units (SelectField): Field for selecting existing unit.
+        sku (StringField): Field for product SKU.
+        submit (SubmitField: Submit button.
+    """
+    price = DecimalField('Or enter a price', places=2, validators=[Optional()])
+    prices = SelectField('Select Price', coerce=int)
+    quantities = SelectField('Select Quantity', coerce=str)
+    quantity = StringField('Or enter a quantity')
+    unit = StringField('Or enter a unit of measurement',
+                       validators=[Length(1, 32), Optional()])
+    units = SelectField('Select Unit', coerce=int)
+    sku = StringField('SKU', validators=[Length(1, 32)])
+    submit = SubmitField('Edit Packet')
+
+    def populate(self, packet):
+        """Populate form elements with data from database."""
+        self.prices.data = packet._price.id
+        self.units.data = packet._unit.id
+        self.quantities.data = str(packet.quantity)
+        self.sku.data = packet.sku
+
+    def set_selects(self):
+        """Set selects with values loaded from db."""
+        self.prices.choices = [(p.id, '${0}'.format(p.price)) for p in
+                               Price.query.order_by('price')]
+        self.units.choices = [(u.id, u.unit) for u in
+                              Unit.query.order_by('unit')]
+        quantities = []
+        quantities += [(str(qd.value), str(qd.value)) for qd in
+                       QtyDecimal.query.order_by('value')]
+        quantities += [(str(qf.value), str(qf.value)) for qf in
+                       QtyFraction.query.order_by('value')]
+        quantities += [(str(qi.value), str(qi.value)) for qi in
+                       QtyInteger.query.order_by('value')]
+        self.quantities.choices = quantities
+
+    def validate_quantity(self, field):
+        """Raise ValidationError if quantity cannot be parsed as valid."""
+        if field.data:
+            packet = Packet()
+            try:
+                packet.quantity = field.data
+            except ValueError as e:
+                raise ValidationError(str(e))
+
+
 class EditSeedForm(Form):
     """Form for editing an existing seed in the database.
     """
@@ -487,6 +578,16 @@ class SelectCommonNameForm(Form):
     def set_names(self):
         """Populate names with CommonNames from the database."""
         self.names.choices = common_name_select_list()
+
+
+class SelectPacketForm(Form):
+    """Form for selecting a packet."""
+    packets = SelectField('Select Packet', coerce=int)
+    submit = SubmitField('Submit')
+
+    def set_packets(self):
+        """Populate packets with Packets from database."""
+        self.packets.choices = packet_select_list()
 
 
 class SelectSeedForm(Form):

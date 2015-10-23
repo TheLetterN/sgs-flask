@@ -26,10 +26,10 @@ from .models import BotanicalName, Category, CommonName, Image, Price, \
     Packet, Seed, Unit
 from .forms import AddBotanicalNameForm, AddCategoryForm, AddCommonNameForm, \
     AddPacketForm, AddSeedForm, EditBotanicalNameForm, EditCategoryForm, \
-    EditCommonNameForm, EditSeedForm, RemoveBotanicalNameForm, \
-    RemoveCategoryForm, RemoveCommonNameForm, RemoveSeedForm, \
-    SelectBotanicalNameForm, SelectCategoryForm, SelectCommonNameForm, \
-    SelectSeedForm
+    EditCommonNameForm, EditPacketForm, EditSeedForm, \
+    RemoveBotanicalNameForm, RemoveCategoryForm, RemoveCommonNameForm, \
+    RemoveSeedForm, SelectBotanicalNameForm, SelectCategoryForm, \
+    SelectCommonNameForm, SelectPacketForm, SelectSeedForm
 from app import db, make_breadcrumbs
 from app.decorators import permission_required
 from app.auth.models import Permission
@@ -463,8 +463,74 @@ def edit_common_name(cn_id=None):
                            current_categories=current_categories)
 
 
+@seeds.route('/edit_packet', methods=['GET', 'POST'])
+@seeds.route('/edit_packet/<pkt_id>', methods=['GET', 'POST'])
+@login_required
+@permission_required(Permission.MANAGE_SEEDS)
+def edit_packet(pkt_id=None):
+    if pkt_id is None:
+        return redirect(url_for('seeds.select_packet',
+                                dest='seeds.edit_packet'))
+    packet = Packet.query.get(pkt_id)
+    if packet is None:
+        flash('Error: Specified packet was not found! Please select one:')
+        return redirect(url_for('seeds.select_packet',
+                                dest='seeds.edit_packet'))
+    form = EditPacketForm()
+    form.set_selects()
+    if form.validate_on_submit():
+        edited = False
+        if form.price.data is not None and form.price.data != '':
+            packet.price = form.price.data
+            edited = True
+        elif form.prices.data != packet._price.id:
+            packet._price = Price.query.get(form.prices.data)
+            edited = True
+        if form.quantity.data is not None and form.quantity.data != '':
+            packet.quantity = form.quantity.data
+            edited = True
+        elif form.quantities.data != str(packet.quantity):
+            packet.quantity = form.quantities.data
+            edited = True
+        if form.unit.data is not None and form.unit.data != '':
+            packet.unit = form.unit.data
+            edited = True
+        elif form.units.data != packet._unit.id:
+            packet._unit = Unit.query.get(form.units.data)
+            edited = True
+        if form.sku.data != packet.sku:
+            packet.sku = form.sku.data
+            edited = True
+        if edited:
+            flash('Packet changed to: SKU {0} - ${1} for {2} {3}'.
+                  format(packet.sku,
+                         packet.price,
+                         packet.quantity,
+                         packet.unit))
+            db.session.commit()
+            return redirect(url_for('seeds.manage'))
+        else:
+            flash('No changes made to packet: SKU {0} - ${1} for {2} {3}'.
+                  format(packet.sku,
+                         packet.price,
+                         packet.quantity,
+                         packet.unit))
+            return redirect(url_for('seeds.edit_packet', pkt_id=pkt_id))
+    form.populate(packet)
+    crumbs = make_breadcrumbs(
+        (url_for('seeds.manage'), 'Manage Seeds'),
+        (url_for('seeds.edit_packet', pkt_id=pkt_id), 'Edit Packet')
+    )
+    return render_template('seeds/edit_packet.html',
+                           crumbs=crumbs,
+                           form=form,
+                           packet=packet)
+
+
 @seeds.route('/edit_seed', methods=['GET', 'POST'])
 @seeds.route('/edit_seed/<seed_id>', methods=['GET', 'POST'])
+@login_required
+@permission_required(Permission.MANAGE_SEEDS)
 def edit_seed(seed_id=None):
     """Edit a seed stored in the database."""
     if seed_id is None:
@@ -712,7 +778,7 @@ def remove_seed(seed_id=None):
         return redirect(url_for('seeds.select_seed', dest='seeds.remove_seed'))
     form = RemoveSeedForm()
     if form.validate_on_submit():
-        if not form.verify_removal:
+        if not form.verify_removal.data:
             flash('No changes made. Check the box labeled \'Yes\' if you '
                   'would like to remove this seed.')
             return redirect(url_for('seeds.remove_seed', seed_id=seed_id))
@@ -722,11 +788,13 @@ def remove_seed(seed_id=None):
                 for image in seed.images:
                     try:
                         image.delete_file()
+                        flash('Image file \'{0}\' deleted.'.
+                              format(image.filename))
                         db.session.delete(image)
                     except OSError as e:
                         rollback = True
                         flash('Error: Attempting to delete \'{0}\' raised an '
-                              'exception: {1}'.format(image.name, e))
+                              'exception: {1}'.format(image.filename, e))
             if seed.thumbnail:
                 try:
                     seed.thumbnail.delete_file()
@@ -736,7 +804,7 @@ def remove_seed(seed_id=None):
                 except OSError as e:
                     rollback = True
                     flash('Error: Attempting to delete \'{0}\' raised an '
-                          'exception: {1}')
+                          'exception: {1}'.format(seed.thumbnail.filename, e))
         if rollback:
             flash('Error: Seed could not be deleted due to problems deleting '
                   'associated images.')
@@ -744,7 +812,7 @@ def remove_seed(seed_id=None):
             return redirect(url_for('seeds.remove_seed', seed_id=seed_id))
         else:
             flash('The seed \'{0}\' has been deleted. Forever. I hope you\'re '
-                  'happy with yourself.')
+                  'happy with yourself.'.format(seed.fullname))
             db.session.delete(seed)
             db.session.commit()
             return redirect(url_for('seeds.manage'))
@@ -834,6 +902,32 @@ def select_common_name():
         (url_for('seeds.select_common_name', dest=dest), 'Select Common Name')
     )
     return render_template('seeds/select_common_name.html',
+                           crumbs=crumbs,
+                           form=form)
+
+
+@seeds.route('/select_packet', methods=['GET', 'POST'])
+@login_required
+@permission_required(Permission.MANAGE_SEEDS)
+def select_packet():
+    """Select a packet to load on another page.
+
+    Request Args:
+        dest (str): The route to redirect to with selected packet id.
+    """
+    dest = request.args.get('dest')
+    if dest is None:
+        flash('Error: No destination page was specified!')
+        return redirect(url_for('seeds.manage'))
+    form = SelectPacketForm()
+    form.set_packets()
+    if form.validate_on_submit():
+        return redirect(url_for(dest, pkt_id=form.packets.data))
+    crumbs = make_breadcrumbs(
+        (url_for('seeds.manage'), 'Manage Seeds'),
+        (url_for('seeds.select_packet', dest=dest), 'Select Packet')
+    )
+    return render_template('seeds/select_packet.html',
                            crumbs=crumbs,
                            form=form)
 

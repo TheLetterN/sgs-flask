@@ -6,8 +6,17 @@ from flask import current_app, url_for
 from unittest import mock
 from app import create_app, db
 from app.auth.models import Permission, User
-from app.seeds.models import BotanicalName, Category, CommonName, Image, \
-    Price, QtyInteger, Seed, Unit
+from app.seeds.models import (
+    BotanicalName,
+    Category,
+    CommonName,
+    Image,
+    Packet,
+    Price,
+    QtyInteger,
+    Seed,
+    Unit
+)
 from tests.database_tests.test_auth_views_with_db import login
 
 
@@ -24,6 +33,23 @@ def seed_manager():
     user.confirmed = True
     user.grant_permission(Permission.MANAGE_SEEDS)
     return user
+
+
+def foxy_seed():
+    """Generate a Seed object based on Foxy Foxglove."""
+    seed = Seed()
+    seed.name = 'Foxy'
+    seed.description = 'Not to be confused with that Hendrix song.'
+    bn = BotanicalName()
+    bn.name = 'Digitalis purpurea'
+    seed.botanical_names.append(bn)
+    cat = Category()
+    cat.category = 'Perennial Flower'
+    seed.categories.append(cat)
+    cn = CommonName()
+    cn.name = 'Foxglove'
+    seed.common_name = cn
+    return seed
 
 
 class TestAddBotanicalNameRouteWithDB(unittest.TestCase):
@@ -794,6 +820,156 @@ class TestEditCommonNameRouteWithDB(unittest.TestCase):
         self.assertIn('Description changed to', str(rv.data))
 
 
+class TestEditPacketRouteWithDB(unittest.TestCase):
+    """Test seeds.edit_packet."""
+    def setUp(self):
+        self.app = create_app('testing')
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+        db.create_all()
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
+
+    def test_edit_packet_no_id(self):
+        """Redirect to select_packet given no pkt_id."""
+        user = seed_manager()
+        db.session.add(user)
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.get(url_for('seeds.edit_packet'))
+        self.assertEqual(rv.location, url_for('seeds.select_packet',
+                                              dest='seeds.edit_packet',
+                                              _external=True))
+
+    def test_edit_packet_no_packet(self):
+        """Redirect and flash message if no packet exists with pkt_id."""
+        user = seed_manager()
+        db.session.add(user)
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.get(url_for('seeds.edit_packet', pkt_id=42))
+        self.assertEqual(rv.location, url_for('seeds.select_packet',
+                                              dest='seeds.edit_packet',
+                                              _external=True))
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.get(url_for('seeds.edit_packet', pkt_id=42),
+                        follow_redirects=True)
+        self.assertIn('packet was not found', str(rv.data))
+
+    def test_edit_packet_renders_page(self):
+        """Render form page with valid pkt_id and no post data."""
+        user = seed_manager()
+        seed = Seed()
+        packet = Packet()
+        db.session.add_all([user, packet, seed])
+        packet.price = Decimal('2.99')
+        packet.quantity = 100
+        packet.unit = 'seeds'
+        packet.sku = '8675309'
+        seed.name = 'Foxy'
+        seed.common_name = CommonName(name='Foxglove')
+        seed.packets.append(packet)
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.get(url_for('seeds.edit_packet', pkt_id=packet.id))
+        self.assertIn('Edit Packet', str(rv.data))
+
+    def test_edit_packet_submission_change_inputs(self):
+        """Change packet and flash message if new values present in inputs."""
+        user = seed_manager()
+        packet = Packet()
+        db.session.add_all([user, packet])
+        packet.price = Decimal('1.99')
+        packet.quantity = 100
+        packet.unit = 'seeds'
+        packet.sku = '8675309'
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.post(url_for('seeds.edit_packet', pkt_id=packet.id),
+                         data=dict(price='2.99',
+                                   quantity='2.5',
+                                   unit='grams',
+                                   sku='BOUT350',
+                                   prices=packet._price.id,
+                                   quantities=str(packet.quantity),
+                                   units=packet._unit.id),
+                         follow_redirects=True)
+            self.assertEqual(packet.price, Decimal('2.99'))
+            self.assertEqual(packet.quantity, Decimal('2.5'))
+            self.assertEqual(packet.unit, 'grams')
+            self.assertEqual(packet.sku, 'BOUT350')
+            self.assertIn('Packet changed to: SKU BOUT350 - '
+                          '$2.99 for 2.5 grams',
+                          str(rv.data))
+
+    def test_edit_packet_submission_change_selects(self):
+        """Change packet and flash message if different values selected."""
+        user = seed_manager()
+        seed = Seed()
+        pkt1 = Packet()
+        pkt2 = Packet()
+        db.session.add_all([user, seed, pkt1, pkt2])
+        seed.name = 'Foxy'
+        seed.common_name = CommonName(name='Foxglove')
+        pkt1.price = Decimal('1.99')
+        pkt2.price = Decimal('2.99')
+        pkt1.quantity = 100
+        pkt2.quantity = Decimal('2.5')
+        pkt1.unit = 'seeds'
+        pkt2.unit = 'grams'
+        pkt1.sku = '8675309'
+        pkt2.sku = 'BOUT350'
+        seed.packets.append(pkt1)
+        seed.packets.append(pkt2)
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.post(url_for('seeds.edit_packet', pkt_id=pkt1.id),
+                         data=dict(prices=pkt2._price.id,
+                                   quantities=str(pkt2.quantity),
+                                   units=pkt2._unit.id,
+                                   sku=pkt1.sku),
+                         follow_redirects=True)
+            self.assertIs(pkt1._price, pkt2._price)
+            self.assertEqual(pkt1.quantity, pkt2.quantity)
+            self.assertIs(pkt1._unit, pkt2._unit)
+            self.assertIn('Packet changed to: SKU 8675309 - '
+                          '$2.99 for 2.5 grams',
+                          str(rv.data))
+
+    def test_edit_packet_submission_no_changes(self):
+        """Flash a message if no changes are made in a form submission."""
+        user = seed_manager()
+        seed = Seed()
+        packet = Packet()
+        db.session.add_all([user, packet, seed])
+        packet.price = Decimal('2.99')
+        packet.quantity = 100
+        packet.unit = 'seeds'
+        packet.sku = '8675309'
+        seed.name = 'Foxy'
+        seed.common_name = CommonName(name='Foxglove')
+        seed.packets.append(packet)
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.post(url_for('seeds.edit_packet', pkt_id=packet.id),
+                         data=dict(prices=packet._price.id,
+                                   quantities=str(packet.quantity),
+                                   units=packet._unit.id,
+                                   sku=packet.sku),
+                         follow_redirects=True)
+        self.assertIn('No changes made', str(rv.data))
+
+
 class TestEditSeedRouteWithDB(unittest.TestCase):
     """Test seeds.edit_seed."""
     def setUp(self):
@@ -1478,6 +1654,148 @@ class TestRemoveCommonNameRouteWithDB(unittest.TestCase):
         self.assertEqual(CommonName.query.count(), 0)
 
 
+class TestRemoveSeedRouteWithDB(unittest.TestCase):
+    """Test seeds.remove_seed."""
+    def setUp(self):
+        self.app = create_app('testing')
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+        db.create_all()
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
+
+    @mock.patch('app.seeds.models.Image.delete_file')
+    def test_remove_seed_delete_images_deletes_images(self, mock_delete):
+        """Delete images and thumbnail if delete_images is checked."""
+        user = seed_manager()
+        seed = foxy_seed()
+        img = Image()
+        img.filename = 'foxee.jpg'
+        thumb = Image()
+        thumb.filename = 'foxy.jpg'
+        seed.images.append(img)
+        seed.thumbnail = thumb
+        db.session.add_all([user, seed])
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.post(url_for('seeds.remove_seed', seed_id=seed.id),
+                         data=dict(verify_removal=True, delete_images=True),
+                         follow_redirects=True)
+        self.assertIn('Image file &#39;foxee.jpg&#39; deleted', str(rv.data))
+        self.assertIn('Thumbnail image &#39;foxy.jpg&#39; has', str(rv.data))
+        self.assertEqual(Image.query.count(), 0)
+        self.assertTrue(mock_delete.called)
+
+    @mock.patch('app.seeds.models.Image.delete_file', side_effect=OSError)
+    def test_remove_seed_delete_images_no_file(self, mock_delete):
+        """Flash errors if OSError raised trying to delete images.
+        Do not remove images from the database if files can't be deleted.
+        """
+        user = seed_manager()
+        seed = foxy_seed()
+        img = Image()
+        img.filename = 'foxee.jpg'
+        thumb = Image()
+        thumb.filename = 'foxy.jpg'
+        seed.images.append(img)
+        seed.thumbnail = thumb
+        db.session.add_all([user, seed])
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.post(url_for('seeds.remove_seed', seed_id=seed.id),
+                         data=dict(verify_removal=True, delete_images=True),
+                         follow_redirects=True)
+        self.assertIn('Error: Attempting to delete &#39;foxee.jpg&#39;',
+                      str(rv.data))
+        self.assertIn('Error: Attempting to delete &#39;foxy.jpg&#39;',
+                      str(rv.data))
+        self.assertIn('Error: Seed could not be deleted', str(rv.data))
+        self.assertIn(img, seed.images)
+        self.assertEqual(thumb, seed.thumbnail)
+        self.assertEqual(Image.query.count(), 2)
+        self.assertTrue(mock_delete.called)
+
+    def test_remove_seed_deletes_seed(self):
+        """Delete seed from the database on successful submission."""
+        user = seed_manager()
+        seed = foxy_seed()
+        db.session.add_all([user, seed])
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.post(url_for('seeds.remove_seed', seed_id=seed.id),
+                         data=dict(verify_removal=True),
+                         follow_redirects=True)
+        self.assertIn('The seed &#39;Foxy Foxglove&#39; has been deleted',
+                      str(rv.data))
+        self.assertEqual(Seed.query.count(), 0)
+
+    def test_remove_seed_no_id(self):
+        """Redirect to seeds.select_seed given no seed_id."""
+        user = seed_manager()
+        db.session.add(user)
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.get(url_for('seeds.remove_seed'))
+        self.assertEqual(rv.location, url_for('seeds.select_seed',
+                                              dest='seeds.remove_seed',
+                                              _external=True))
+
+    def test_remove_seed_no_seed(self):
+        """Redirect to seeds.select_seed if no seed exists with given id."""
+        user = seed_manager()
+        db.session.add(user)
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.get(url_for('seeds.remove_seed', seed_id=42))
+        self.assertEqual(rv.location, url_for('seeds.select_seed',
+                                              dest='seeds.remove_seed',
+                                              _external=True))
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.get(url_for('seeds.remove_seed', seed_id=42),
+                        follow_redirects=True)
+        self.assertIn('Error: No seed exists with that id', str(rv.data))
+
+    def test_remove_seed_not_verified(self):
+        """Redirect and flash message if verify_removal not checked."""
+        user = seed_manager()
+        seed = foxy_seed()
+        db.session.add_all([user, seed])
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.post(url_for('seeds.remove_seed', seed_id=seed.id),
+                         data=dict(verify_removal=None))
+        self.assertEqual(rv.location, url_for('seeds.remove_seed',
+                                              seed_id=seed.id,
+                                              _external=True))
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.post(url_for('seeds.remove_seed', seed_id=seed.id),
+                         data=dict(verify_removal=None),
+                         follow_redirects=True)
+        self.assertIn('No changes made', str(rv.data))
+
+    def test_remove_seed_renders_page(self):
+        """Render remove seed form page given valid seed id."""
+        user = seed_manager()
+        seed = foxy_seed()
+        db.session.add_all([user, seed])
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.get(url_for('seeds.remove_seed', seed_id=seed.id))
+        self.assertIn('Remove Seed', str(rv.data))
+
+
 class TestSelectBotanicalNameRouteWithDB(unittest.TestCase):
     """Test seeds.select_botanical_name."""
     def setUp(self):
@@ -1650,6 +1968,70 @@ class TestSelectCommonNameRouteWithDB(unittest.TestCase):
                                  cn_id=cn.id,
                                  _external=True),
                          rv.location)
+
+
+class TestSelectPacketRouteWithDB(unittest.TestCase):
+    """Test seeds.select_packet."""
+    def setUp(self):
+        self.app = create_app('testing')
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+        db.create_all()
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
+
+    def test_select_packet_no_dest(self):
+        """Flash an error and redirect if no dest specified."""
+        user = seed_manager()
+        db.session.add(user)
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.get(url_for('seeds.select_packet'))
+        self.assertEqual(rv.location, url_for('seeds.manage',
+                                              _external=True))
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.get(url_for('seeds.select_packet'),
+                        follow_redirects=True)
+        self.assertIn('No destination', str(rv.data))
+
+    def test_select_packet_renders_page(self):
+        """Render form page if given a dest."""
+        user = seed_manager()
+        db.session.add(user)
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.get(url_for('seeds.select_packet',
+                                dest='seeds.edit_packet'))
+        self.assertIn('Select Packet', str(rv.data))
+
+    def test_select_packet_valid_submission(self):
+        """Redirect to dest given valid selection."""
+        seed = Seed()
+        packet = Packet()
+        user = seed_manager()
+        db.session.add_all([seed, packet, user])
+        seed.name = 'Foxy'
+        seed.common_name = CommonName(name='Foxglove')
+        seed.packets.append(packet)
+        packet.price = Decimal('1.99')
+        packet.quantity = 100
+        packet.unit = 'seeds'
+        packet.sku = '8675309'
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.post(url_for('seeds.select_packet',
+                                 dest='seeds.edit_packet'),
+                         data=dict(packets=packet.id))
+        self.assertEqual(rv.location, url_for('seeds.edit_packet',
+                                              pkt_id=packet.id,
+                                              _external=True))
 
 
 class TestSelectSeedRouteWithDB(unittest.TestCase):

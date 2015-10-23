@@ -16,18 +16,36 @@
 # Copyright Swallowtail Garden Seeds, Inc
 
 
-from flask import current_app, flash, Markup, redirect, render_template, \
-    request, url_for
-from flask.ext.login import current_user, login_required, login_user, \
+from flask import (
+    current_app,
+    flash, Markup,
+    redirect,
+    render_template,
+    request,
+    url_for
+)
+from flask.ext.login import (
+    current_user,
+    login_required,
+    login_user,
     logout_user
+)
 from app import db
 from app.decorators import permission_required
-from . import auth
-from .forms import DeleteUserForm, EditUserForm, ManageUserForm, LoginForm, \
-    RegistrationForm, ResendConfirmationForm, ResetPasswordForm, \
-    ResetPasswordRequestForm, SelectUserForm
-from .models import get_user_from_confirmation_token, Permission, User
 from app.seeds.models import Category
+from . import auth
+from .forms import (
+    DeleteUserForm,
+    EditUserForm,
+    ManageUserForm,
+    LoginForm,
+    RegistrationForm,
+    ResendConfirmationForm,
+    ResetPasswordForm,
+    ResetPasswordRequestForm,
+    SelectUserForm
+)
+from .models import get_user_from_confirmation_token, Permission, User
 
 
 @auth.context_processor

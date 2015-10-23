@@ -2,8 +2,11 @@ import unittest
 from flask import Markup, url_for
 from app import create_app
 from app.auth.models import User
-from app.auth.views import confirm_account, support_mailto_address, \
+from app.auth.views import (
+    confirm_account,
+    support_mailto_address,
     update_permission
+)
 
 
 class TestHelperFunctions(unittest.TestCase):

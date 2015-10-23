@@ -1,8 +1,12 @@
 import unittest
 from wtforms import ValidationError
 from app import create_app
-from app.seeds.forms import AddCommonNameForm, EditBotanicalNameForm, \
-    EditCategoryForm, EditCommonNameForm
+from app.seeds.forms import (
+    AddCommonNameForm,
+    EditBotanicalNameForm,
+    EditCategoryForm,
+    EditCommonNameForm
+)
 from app.seeds.models import BotanicalName, Category, CommonName
 
 

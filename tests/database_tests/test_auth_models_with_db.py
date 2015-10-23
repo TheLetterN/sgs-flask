@@ -2,8 +2,12 @@ import unittest
 from datetime import datetime, timedelta
 from flask import current_app
 from app import create_app, db
-from app.auth.models import EmailRequest, get_user_from_confirmation_token, \
-    Serializer, User
+from app.auth.models import (
+    EmailRequest,
+    get_user_from_confirmation_token,
+    Serializer,
+    User
+)
 
 
 class TestUserWithDB(unittest.TestCase):

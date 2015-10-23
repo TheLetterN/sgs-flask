@@ -1,8 +1,13 @@
 import unittest
 from wtforms import ValidationError
 from app import create_app, db
-from app.auth.forms import EditUserForm, RegistrationForm, \
-    ResendConfirmationForm, ResetPasswordRequestForm, SelectUserForm
+from app.auth.forms import (
+    EditUserForm,
+    RegistrationForm,
+    ResendConfirmationForm,
+    ResetPasswordRequestForm,
+    SelectUserForm
+)
 from app.auth.models import User
 
 

@@ -8,10 +8,26 @@ from inflection import pluralize
 from slugify import slugify
 from unittest import mock
 from app import create_app
-from app.seeds.models import BotanicalName, Category, CommonName, Image, \
-    is_480th, is_decimal, is_fraction, is_int, Packet, Price, QtyDecimal, \
-    QtyFraction, QtyInteger, Quantity480th, QuantityDecimal, Seed, Unit, \
+from app.seeds.models import (
+    BotanicalName,
+    Category,
+    CommonName,
+    Image,
+    is_480th,
+    is_decimal,
+    is_fraction,
+    is_int,
+    Packet,
+    Price,
+    QtyDecimal,
+    QtyFraction,
+    QtyInteger,
+    Quantity480th,
+    QuantityDecimal,
+    Seed,
+    Unit,
     USDInt
+)
 
 
 class TestModuleFunctions(unittest.TestCase):

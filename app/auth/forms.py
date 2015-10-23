@@ -18,11 +18,24 @@
 
 from flask.ext.login import current_user
 from flask.ext.wtf import Form
-from wtforms import BooleanField, PasswordField, StringField, SelectField, \
-    SubmitField, ValidationError
-from wtforms.validators import AnyOf, Email, EqualTo, InputRequired, Length,\
-    Optional, Regexp
-from app.auth.models import User
+from wtforms import (
+    BooleanField,
+    PasswordField,
+    StringField,
+    SelectField,
+    SubmitField,
+    ValidationError
+)
+from wtforms.validators import (
+    AnyOf,
+    Email,
+    EqualTo,
+    InputRequired,
+    Length,
+    Optional,
+    Regexp
+)
+from .models import User
 
 
 class DeleteUserForm(Form):

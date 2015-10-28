@@ -16,19 +16,49 @@
    Copyright Swallowtail Garden Seeds, Inc 
 #}
 {% macro seed_box(seed) %}
+{% if not seed.dropped or current_user.can(Permission.MANAGE_SEEDS) %}
 <div class="seed_box">
     <img src="{{ url_for('static', filename=seed.thumbnail_path) }}">
     <div class="seed_info">
-        <h3>{{ seed.name }}</h3>
+        {% if current_user.can(Permission.MANAGE_SEEDS) %}
+        <span id='seed_admin'>
+            Manage this seed: 
+            {% if seed.in_stock %}
+            Seed is in stock. <a href="{{ url_for('seeds.flip_in_stock', seed_id=seed.id, next=request.path) }}">Set as Out of Stock</a>
+            {% else %}
+            Seed is out of stock. <a href="{{ url_for('seeds.flip_in_stock', seed_id=seed.id, next=request.path) }}">Set as In Stock</a>
+            {% endif %}
+            {% if seed.dropped %}
+            Seed is dropped. <a href="{{ url_for('seeds.flip_dropped', seed_id=seed.id, next=request.path) }}">Make Active</a>
+            {% else %}
+            Seed is active. <a href="{{ url_for('seeds.flip_dropped', seed_id=seed.id, next=request.path) }}">Drop</a>
+            {% endif %}
+            <a href="{{ url_for('seeds.edit_seed', seed_id=seed.id) }}">Edit</a>
+            <a href="{{ url_for('seeds.remove_seed', seed_id=seed.id) }}">Remove</a>
+        </span>
+        {% endif %}
+        {% if not cat_slug %}{% set cat_slug = seed.categories[0].slug %}{% endif %}
+        {% if not cn_slug %}{% set cn_slug = seed.common_name.slug %}{% endif %}
+        <h3><a href="{{ url_for('seeds.seed', cat_slug=cat_slug, cn_slug=cn_slug, seed_slug=seed.slug)}}">{{ seed.name }}</a></h3>
         <em>{{ seed.common_name.header }}</em>
         <i>{{ seed.list_botanical_names() }}</i>
         <p>{{ seed.description }}</p>
     </div>
+    {% if current_user.can(Permission.MANAGE_SEEDS) %}
+    <a href="{{ url_for('seeds.add_packet', seed_id=seed.id) }}">Add Packet</a>
+    {% endif %}
     {% if seed.packets %}
     <div class="packet_info">
         {% for packet in seed.packets %}
+        {% if current_user.can(Permission.MANAGE_SEEDS) %}
+        <span id="packet_admin">
+            <a href="{{ url_for('seeds.edit_packet', pkt_id=packet.id) }}">Edit Packet</a>
+            <a href="{{ url_for('seeds.remove_packet', pkt_id=packet.id) }}">Remove Packet</a>
+        </span>
+        {% endif %}
         <div>{{ packet.sku }}: {{ packet.quantity }} {{ packet.unit }} - ${{ packet.price }}</div>
         <div>TODO: Cart quantity and submit button</div>{% endfor %} 
     </div>{% endif %}
 </div>
+{% endif %}
 {% endmacro %}

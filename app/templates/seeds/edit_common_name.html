@@ -32,19 +32,11 @@
                 <ol>
                     <fieldset>
                         <legend>Add/Remove Categories</legend>
-                        <div>Current categories: {{ current_categories }}.</div>
                         <li>
-                            {{ form.add_categories.label }}
-                            {{ form.add_categories }}
-                            {% if form.add_categories.errors|count > 0 %}
-                            {{ form_errors(form.add_categories) }}
-                            {% endif %}
-                        </li>
-                        <li>
-                            {{ form.remove_categories.label }}
-                            {{ form.remove_categories }}
-                            {% if form.remove_categories.errors|count > 0 %}
-                            {{ form_errors(form.remove_categories) }}
+                            {{ form.categories.label }}
+                            {{ form.categories }}
+                            {% if form.categories.errors|count > 0 %}
+                            {{ form_errors(form.categories) }}
                             {% endif %}
                         </li>
                     </fieldset>

@@ -1,6 +1,6 @@
 import unittest
 from flask import current_app
-from app import create_app, make_breadcrumbs
+from app import Anonymous, create_app, make_breadcrumbs
 
 
 class TestApp(unittest.TestCase):
@@ -40,6 +40,22 @@ class TestApp(unittest.TestCase):
         self.assertIn('<a href="http://absolu.te/link.html">Absolute Link</a>',
                       crumbs)
         self.assertIn('<a href="parts/unknown">Parts Unknown</a>', crumbs)
+
+
+class TestAnonymous(unittest.TestCase):
+    """Tests for Anonymous user class."""
+    def setUp(self):
+        self.app = create_app('testing')
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+
+    def tearDown(self):
+        self.app_context.pop()
+
+    def test_can(self):
+        """Anonymous users are filthy savages who can do nothing."""
+        user = Anonymous()
+        self.assertFalse(user.can(permission='1'))
 
 
 if __name__ == '__main__':

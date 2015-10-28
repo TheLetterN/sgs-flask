@@ -26,7 +26,7 @@
         <link rel="canonical" href="{{ url_for('seeds.add_packet', _external=True) }}">
 {% endblock %}
 {% block main %}
-<h1>Add a Packet to: {{ seed.name }}</h1>
+<h1>Add a Packet to: {{ seed.fullname }}</h1>
             <form method="POST">
                 {{ form.hidden_tag() }}
                 <ol>

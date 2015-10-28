@@ -26,10 +26,20 @@ of the website for Swallowtail Garden Seeds.
 """
 
 from flask import Flask
-from flask.ext.login import LoginManager
+from flask.ext.login import AnonymousUserMixin, LoginManager
 from flask.ext.mail import Mail
 from flask.ext.sqlalchemy import SQLAlchemy
 from config import CONFIG
+
+
+class Anonymous(AnonymousUserMixin):
+    """Anonymous user for flask-login that mocks some attributes of User."""
+    def __init__(self):
+        self.name = 'Guest'
+
+    def can(self, permission=None):
+        """Anonymous users can't do squat, always return False!"""
+        return False
 
 
 db = SQLAlchemy()
@@ -37,6 +47,7 @@ mail = Mail()
 
 
 login_manager = LoginManager()
+login_manager.anonymous_user = Anonymous
 login_manager.session_protection = 'basic'
 login_manager.login_view = 'auth.login'
 

@@ -160,15 +160,6 @@ def add_common_name():
                 flash('{0} added to categories associated with {1}.'.
                       format(category.category, cn.name))
                 cn.categories.append(category)
-        if len(form.additional_categories.data) > 0:
-            for category in form.additional_categories.data.split(','):
-                cat = Category.query.filter_by(category=category.
-                                               strip().title()).first()
-                if cat is None:
-                    cat = Category(category=category.strip().title())
-                flash('{0} added to categories associated with {1}.'.
-                      format(cat.category, cn.name))
-                cn.categories.append(cat)
         if len(form.description.data) > 0:
             cn.description = form.description.data
         db.session.commit()
@@ -262,9 +253,23 @@ def add_seed():
             upload_path = os.path.join(current_app.config.get('IMAGES_FOLDER'),
                                        thumb_name)
             seed.thumbnail = Image(filename=thumb_name)
-            flash('Thumbnail uploaded to: {0}'.format(upload_path))
+            flash('Thumbnail uploaded as: {0}'.format(thumb_name))
             form.thumbnail.data.save(upload_path)
         seed.description = form.description.data
+        if form.in_stock.data:
+            seed.in_stock = True
+            flash('\'{0}\' is in stock.'.format(seed.fullname))
+        else:
+            flash('\'{0}\' is not in stock.'.format(seed.fullname))
+            seed.in_stock = False
+        if form.dropped.data:
+            flash('\'{0}\' is currently dropped/inactive.'.
+                  format(seed.fullname))
+            seed.dropped = True
+        else:
+            flash('\'{0}\' is currently active.'.
+                  format(seed.fullname))
+            seed.dropped = False
         flash('New seed \'{0}\' has been added to the database.'.
               format(seed.fullname))
         db.session.commit()
@@ -303,7 +308,7 @@ def common_name(cat_slug=None, cn_slug=None):
             (url_for('seeds.index'), 'All Seeds'),
             (url_for('seeds.category', cat_slug=cat_slug), cat.header),
             (url_for('seeds.common_name', cat_slug=cat_slug, cn_slug=cn_slug),
-             cn.header)
+             cn.name)
         )
         return render_template('seeds/common_name.html',
                                cat=cat,
@@ -341,22 +346,20 @@ def edit_botanical_name(bn_id=None):
             flash('Botanical name \'{0}\' changed to \'{1}\'.'.
                   format(bn.name, form.name.data))
             bn.name = form.name.data
-        if len(form.add_common_names.data) > 0:
-            for cn_id in form.add_common_names.data:
+        for cn in bn.common_names:
+            if cn.id not in form.common_names.data:
+                edited = True
+                flash('\'{0}\' removed from common names associated with '
+                      '\'{1}\'.'.format(cn.name, bn.name))
+                bn.common_names.remove(cn)
+        cn_ids = [cn.id for cn in bn.common_names]
+        for cn_id in form.common_names.data:
+            if cn_id not in cn_ids:
+                edited = True
                 cn = CommonName.query.get(cn_id)
-                if cn not in bn.common_names:
-                    edited = True
-                    flash('\'{0}\' added to common names associated with '
-                          '\'{1}\'.'.format(cn.name, bn.name))
-                    bn.common_names.append(cn)
-        if len(form.remove_common_names.data) > 0:
-            for cn_id in form.remove_common_names.data:
-                cn = CommonName.query.get(cn_id)
-                if cn in bn.common_names:
-                    edited = True
-                    flash('\'{0}\' removed from common names associated with '
-                          '\'{1}\'.'.format(cn.name, bn.name))
-                    bn.common_names.remove(cn)
+                flash('\'{0}\' added to common names associated with '
+                      '\'{1}\'.'.format(cn.name, bn.name))
+                bn.common_names.append(cn)
         if edited:
             db.session.commit()
             return redirect(url_for('seeds.manage'))
@@ -454,22 +457,20 @@ def edit_common_name(cn_id=None):
             flash('Common name \'{0}\' changed to \'{1}\'.'.
                   format(cn.name, form.name.data.title()))
             cn.name = form.name.data.title()
-        if len(form.add_categories.data) > 0:
-            for cat_id in form.add_categories.data:
+        for cat in cn.categories:
+            if cat.id not in form.categories.data:
+                edited = True
+                flash('{0} removed from categories associated with {1}.'.
+                      format(cat.category, cn.name))
+                cn.categories.remove(cat)
+        cat_ids = [cat.id for cat in cn.categories]
+        for cat_id in form.categories.data:
+            if cat_id not in cat_ids:
+                edited = True
                 cat = Category.query.get(cat_id)
-                if cat not in cn.categories:
-                    edited = True
-                    flash('{0} added to categories associated with {1}.'.
-                          format(cat.category, cn.name))
-                    cn.categories.append(cat)
-        if len(form.remove_categories.data) > 0:
-            for cat_id in form.remove_categories.data:
-                cat = Category.query.get(cat_id)
-                if cat in cn.categories:
-                    edited = True
-                    flash('{0} removed from categories associated with {1}.'.
-                          format(cat.category, cn.name))
-                    cn.categories.remove(cat)
+                flash('{0} added to categories associated with {1}.'.
+                      format(cat.category, cn.name))
+                cn.categories.append(cat)
         if form.description.data != cn.description:
             edited = True
             flash('Description changed to: \'{0}\''
@@ -618,6 +619,27 @@ def edit_seed(seed_id=None):
             flash('Changed seed name from \'{0}\' to \'{1}\''.
                   format(seed.name, form.name.data.title()))
             seed.name = form.name.data.title()
+        if form.in_stock.data:
+            if not seed.in_stock:
+                edited = True
+                flash('\'{0}\' is now in stock.'.format(seed.fullname))
+                seed.in_stock = True
+        else:
+            if seed.in_stock:
+                edited = True
+                flash('\'{0}\' is now out of stock.'.format(seed.fullname))
+                seed.in_stock = False
+        if form.dropped.data:
+            if not seed.dropped:
+                edited = True
+                flash('\'{0}\' has been dropped.'.format(seed.fullname))
+                seed.dropped = True
+        else:
+            if seed.dropped:
+                edited = True
+                flash('\'{0}\' is now active/no longer dropped.'.
+                      format(seed.fullname))
+                seed.dropped = False
         if form.thumbnail.data:
             thumb_name = secure_filename(form.thumbnail.data.filename)
             if seed.thumbnail is None or thumb_name != seed.thumbnail.filename:
@@ -652,6 +674,49 @@ def edit_seed(seed_id=None):
                            crumbs=crumbs,
                            form=form,
                            seed=seed)
+
+
+@seeds.route('/flip_dropped/<seed_id>')
+@seeds.route('/flip_dropped')
+@login_required
+@permission_required(Permission.MANAGE_SEEDS)
+def flip_dropped(seed_id=None):
+    """Reverse dropped status of given seed."""
+    if seed_id is None:
+        abort(404)
+    seed = Seed.query.get(seed_id)
+    if seed is None:
+        abort(404)
+    if seed.dropped:
+        flash('\'{0}\' has been returned to active status.'.
+              format(seed.fullname))
+        seed.dropped = False
+    else:
+        flash('\'{0}\' has been dropped.'.
+              format(seed.fullname))
+        seed.dropped = True
+    db.session.commit()
+    return redirect(request.args.get('next') or url_for('seeds.manage'))
+
+
+@seeds.route('/flip_in_stock/<seed_id>')
+@seeds.route('/flip_in_stock')
+@login_required
+@permission_required(Permission.MANAGE_SEEDS)
+def flip_in_stock(seed_id=None):
+    if seed_id is None:
+        abort(404)
+    seed = Seed.query.get(seed_id)
+    if seed is None:
+        abort(404)
+    if seed.in_stock:
+        flash('\'{0}\' is now out of stock.'.format(seed.fullname))
+        seed.in_stock = False
+    else:
+        flash('\'{0}\' is now in stock.'.format(seed.fullname))
+        seed.in_stock = True
+    db.session.commit()
+    return redirect(request.args.get('next') or url_for('seeds.manage'))
 
 
 @seeds.route('/')
@@ -894,6 +959,34 @@ def remove_seed(seed_id=None):
                            crumbs=crumbs,
                            form=form,
                            seed=seed)
+
+
+@seeds.route('/<cat_slug>/<cn_slug>/<seed_slug>')
+def seed(cat_slug=None, cn_slug=None, seed_slug=None):
+    """Display a page for a given seed."""
+    cat = Category.query.filter_by(slug=cat_slug).first()
+    cn = CommonName.query.filter_by(slug=cn_slug).first()
+    seed = Seed.query.filter_by(slug=seed_slug).first()
+    if (cat is not None and cn is not None and seed is not None) and \
+            (cat in seed.categories and cn is seed.common_name):
+        crumbs = make_breadcrumbs(
+            (url_for('seeds.index'), 'All Seeds'),
+            (url_for('seeds.category', cat_slug=cat_slug), cat.header),
+            (url_for('seeds.common_name', cat_slug=cat_slug, cn_slug=cn_slug),
+             cn.name),
+            (url_for('seeds.seed',
+                     cat_slug=cat_slug,
+                     cn_slug=cn_slug,
+                     seed_slug=seed_slug),
+             seed.name)
+        )
+        return render_template('seeds/seed.html',
+                               cat_slug=cat_slug,
+                               cn_slug=cn_slug,
+                               crumbs=crumbs,
+                               seed=seed)
+    else:
+        abort(404)
 
 
 @seeds.route('/select_botanical_name', methods=['GET', 'POST'])

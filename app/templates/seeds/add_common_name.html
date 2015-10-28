@@ -39,13 +39,6 @@
                             {{ form_errors(form.categories) }}
                             {% endif %}
                         </li>
-                        <li>
-                            {{ form.additional_categories.label }}
-                            {{ form.additional_categories }}
-                            {% if form.additional_categories.errors|count > 0 %}
-                            {{ form_errors(form.additional_categories) }}
-                            {% endif %}
-                        </li>
                     </fieldset>
                     <fieldset>
                         <legend>Add Common Name</legend>

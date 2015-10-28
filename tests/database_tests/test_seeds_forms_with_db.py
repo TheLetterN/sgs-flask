@@ -558,12 +558,9 @@ class TestEditBotanicalNameFormWithDB(unittest.TestCase):
         db.session.commit()
         form = EditBotanicalNameForm()
         form.set_common_names()
-        self.assertIn((cn1.id, cn1.name), form.add_common_names.choices)
-        self.assertIn((cn2.id, cn2.name), form.add_common_names.choices)
-        self.assertIn((cn3.id, cn3.name), form.add_common_names.choices)
-        self.assertIn((cn1.id, cn1.name), form.remove_common_names.choices)
-        self.assertIn((cn2.id, cn2.name), form.remove_common_names.choices)
-        self.assertIn((cn3.id, cn3.name), form.remove_common_names.choices)
+        self.assertIn((cn1.id, cn1.name), form.common_names.choices)
+        self.assertIn((cn2.id, cn2.name), form.common_names.choices)
+        self.assertIn((cn3.id, cn3.name), form.common_names.choices)
 
 
 class TestEditCommonNameFormWithDB(unittest.TestCase):
@@ -580,7 +577,7 @@ class TestEditCommonNameFormWithDB(unittest.TestCase):
         self.app_context.pop()
 
     def test_set_categories(self):
-        """Set add/remove categories with Categories from the db."""
+        """Set categories with Categories from the db."""
         cat1 = Category()
         cat2 = Category()
         cat3 = Category()
@@ -591,12 +588,9 @@ class TestEditCommonNameFormWithDB(unittest.TestCase):
         db.session.commit()
         form = EditCommonNameForm()
         form.set_categories()
-        self.assertIn((cat1.id, cat1.category), form.add_categories.choices)
-        self.assertIn((cat2.id, cat2.category), form.add_categories.choices)
-        self.assertIn((cat3.id, cat3.category), form.add_categories.choices)
-        self.assertIn((cat1.id, cat1.category), form.remove_categories.choices)
-        self.assertIn((cat2.id, cat2.category), form.remove_categories.choices)
-        self.assertIn((cat3.id, cat3.category), form.remove_categories.choices)
+        self.assertIn((cat1.id, cat1.category), form.categories.choices)
+        self.assertIn((cat2.id, cat2.category), form.categories.choices)
+        self.assertIn((cat3.id, cat3.category), form.categories.choices)
 
 
 class TestEditCategoryFormWithDB(unittest.TestCase):
@@ -699,6 +693,7 @@ class TestEditSeedFormWithDB(unittest.TestCase):
         self.app_context.pop()
 
     def test_populate(self):
+        """Populate form fields with data from a seed object."""
         seed = Seed()
         bn = BotanicalName()
         cn = CommonName()
@@ -706,6 +701,8 @@ class TestEditSeedFormWithDB(unittest.TestCase):
         db.session.add_all([seed, bn, cn, cat])
         seed.name = 'Foxy'
         seed.description = 'Like that Hendrix song.'
+        seed.in_stock = True
+        seed.dropped = True
         bn.name = 'Digitalis purpurea'
         cn.name = 'Foxglove'
         cat.category = 'Perennial Flower'
@@ -721,6 +718,8 @@ class TestEditSeedFormWithDB(unittest.TestCase):
         self.assertEqual(cn.id, form.common_name.data)
         self.assertIn(seed.name, form.name.data)
         self.assertIn(seed.description, form.description.data)
+        self.assertTrue(form.in_stock.data)
+        self.assertTrue(form.dropped.data)
 
     def test_set_selects(self):
         """Set selects with values loaded from database."""

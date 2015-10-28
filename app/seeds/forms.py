@@ -177,16 +177,12 @@ class AddCommonNameForm(Form):
     """Form for adding a new common name to the database.
 
     Attributes:
-        additional_categories (StringField): Field for categories not listed
-            in the .categories Select.
         categories (SelectMultipleField): Select field with categories from
             the database to associate with this CommonName.
         name (StringField): Field for the common name itself.
         description (TextAreaField): Field for description of common name.
         submit (SubmitField): Submit button.
     """
-    additional_categories = StringField('Additional Categories',
-                                        validators=[Optional()])
     categories = SelectMultipleField('Select Categories', coerce=int)
     description = TextAreaField('Description')
     name = StringField('Common Name', validators=[Length(1, 64)])
@@ -209,32 +205,6 @@ class AddCommonNameForm(Form):
                 not None:
             raise ValidationError('\'{0}\' already exists in the database!'.
                                   format(field.data))
-
-    def validate_additional_categories(self, field):
-        """Raise error if contains any categories that are too long.
-
-        Raises:
-            ValidationError: If any category listed is more than 64 characters
-                in length.
-        """
-        for category in field.data.split(','):
-            if len(category.strip()) > 64:
-                raise ValidationError('Categories can only be up '
-                                      'to 64 characters long!')
-
-    def validate_categories(self, field):
-        """Raise error if categories and additional_categories are empty.
-
-        Raises:
-            ValidationError: If no categories selected and no additional
-                categories input.
-        """
-        if field.data is None or len(field.data) < 1:
-            if self.additional_categories.data is None or \
-                    len(self.additional_categories.data) < 1:
-                raise ValidationError('No categories selected or to be added.'
-                                      ' Please select or add at least one '
-                                      'category!')
 
 
 class AddPacketForm(Form):
@@ -354,6 +324,8 @@ class AddSeedForm(Form):
                                coerce=int,
                                validators=[DataRequired()])
     description = TextAreaField('Description')
+    dropped = BooleanField('Dropped/Inactive')
+    in_stock = BooleanField('In Stock', default='checked')
     name = StringField('Seed Name (Cultivar)', validators=[Length(1, 64)])
     submit = SubmitField('Add Seed')
     thumbnail = FileField('Thumbnail Image',
@@ -389,28 +361,25 @@ class EditBotanicalNameForm(Form):
     """Form for editing an existing botanical name in the database.
 
     Attributes:
-        add_common_names (SelectMultipleField): Select names to add to
-            BotanicalName.common_names.
+        common_names (SelectMultipleField): Select/deselect common names to
+            add/remove.
         name (StringField): Botanical name to edit.
-        remove_common_names (SelectMultipleField): Select names to remove
-            from BotanicalName.common_names.
         submit (SubmitField): The submit button.
     """
-    add_common_names = SelectMultipleField('Add Common Names', coerce=int)
+    common_names = SelectMultipleField('Select to add, deselect to remove',
+                                       coerce=int,
+                                       validators=[DataRequired()])
     name = StringField('Botanical Name', validators=[Length(1, 64)])
-    remove_common_names = SelectMultipleField('Remove Common Names',
-                                              coerce=int)
     submit = SubmitField('Edit Botanical Name')
 
     def populate(self, bn):
         """Load a BotanicalName from the db and populate form with it."""
         self.name.data = bn.name
+        self.common_names.data = [cn.id for cn in bn.common_names]
 
     def set_common_names(self):
         """Set add/remove_common_names with common names from the database."""
-        choices = common_name_select_list()
-        self.add_common_names.choices = choices
-        self.remove_common_names.choices = choices
+        self.common_names.choices = common_name_select_list()
 
 
 class EditCategoryForm(Form):
@@ -438,12 +407,16 @@ class EditCommonNameForm(Form):
     """Form for editing an existing common name in the database.
 
     Attributes:
+        categories (SelectMultipleField): Select for categories.
+        description (StringField): Field for description of common name.
         name (StringField): CommonName name to edit.
+        submit (SubmitField): Submit button.
     """
-    add_categories = SelectMultipleField('Add Categories', coerce=int)
+    categories = SelectMultipleField('Select to add, deselect to remove',
+                                     coerce=int,
+                                     validators=[DataRequired()])
     description = TextAreaField('Description')
     name = StringField('Common Name', validators=[Length(1, 64)])
-    remove_categories = SelectMultipleField('Remove Categories', coerce=int)
     submit = SubmitField('Common Name')
 
     def populate(self, cn):
@@ -454,12 +427,11 @@ class EditCommonNameForm(Form):
         """
         self.name.data = cn.name
         self.description.data = cn.description
+        self.categories.data = [cat.id for cat in cn.categories]
 
     def set_categories(self):
-        """Set add_categories and remove_categories w/ categories from db."""
-        choices = category_select_list()
-        self.add_categories.choices = choices
-        self.remove_categories.choices = choices
+        """Set categories with categories from db."""
+        self.categories.choices = category_select_list()
 
 
 class EditPacketForm(Form):
@@ -528,6 +500,8 @@ class EditSeedForm(Form):
                               coerce=int,
                               validators=[DataRequired()])
     description = TextAreaField('Description')
+    dropped = BooleanField('Dropped/Inactive')
+    in_stock = BooleanField('In Stock')
     name = StringField('Seed Name', validators=[Length(1, 64)])
     submit = SubmitField('Edit Seed')
     thumbnail = FileField('Upload New Thumbnail',
@@ -547,6 +521,10 @@ class EditSeedForm(Form):
         self.categories.data = [cat.id for cat in seed.categories]
         self.common_name.data = seed.common_name.id
         self.description.data = seed.description
+        if seed.in_stock:
+            self.in_stock.data = True
+        if seed.dropped:
+            self.dropped.data = True
         self.name.data = seed.name
 
 

@@ -21,16 +21,12 @@
 {# block main: 3 indentations of 4 spaces each. (12 spaces total.) #}
 {% from 'includes/seed_box.html' import seed_box with context %}
 {% block head %}
-        <title>Swallowtail Garden Seeds - {{ cn.header }}</title>
-        <link rel="canonical" href="{{ url_for('seeds.common_name', cat_slug=cat.slug, cn_slug=cn.slug, _external=True) }}">
+        <title>Swallowtail Garden Seeds - {{ seed.fullname }}</title>
+        <link rel="canonical" href="{{ url_for('seeds.seed', cat_slug=cat_slug, cn_slug=cn_slug, seed_slug=seed.slug, _external=True) }}">
 {% endblock %}
 {% block main %}
             <div>
-                <h1>{{ cn.header }}</h1>
-                    <p class="description">{{ cn.description|safe }}</p>
-            </div>
-            {% for seed in cn.seeds %}
+                <h1>{{ seed.fullname }}</h1>
             {{ seed_box(seed)|indent(12)|safe }}
-            {% endfor %}
 {% endblock %}
 

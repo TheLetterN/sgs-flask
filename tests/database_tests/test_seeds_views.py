@@ -149,27 +149,6 @@ class TestAddCommonNameRouteWithDB(unittest.TestCase):
         db.drop_all()
         self.app_context.pop()
 
-    def test_add_common_name_adds_additional_categories(self):
-        """Add CommonName adds additional categories to db if present."""
-        user = seed_manager()
-        db.session.add(user)
-        cat1 = Category()
-        cat1.name = 'Annual Flower'
-        db.session.add(cat1)
-        db.session.commit()
-        with self.app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
-            rv = tc.post(url_for('seeds.add_common_name'),
-                         data=dict(name='Foxglove',
-                                   categories=[cat1.id],
-                                   additional_categories='Vegetable, Herb',
-                                   description='Foxy!'),
-                         follow_redirects=True)
-        cn = CommonName.query.filter_by(name='Foxglove').first()
-        self.assertIsNotNone(cn)
-        self.assertEqual(Category.query.count(), 3)
-        self.assertIn('added to categories', str(rv.data))
-
     def test_add_common_name_adds_common_name_to_database(self):
         """Add CommonName to db on successful form submit."""
         user = seed_manager()
@@ -342,7 +321,8 @@ class TestAddSeedRouteWithDB(unittest.TestCase):
         self.assertIn('Add Seed', str(rv.data))
 
     @mock.patch('werkzeug.FileStorage.save')
-    def test_add_seed_successful_submit(self, mock_save):
+    def test_add_seed_successful_submit_in_stock_and_active(self, mock_save):
+        """Add seed and flash messages for added items."""
         user = seed_manager()
         bn = BotanicalName()
         cn = CommonName()
@@ -358,6 +338,8 @@ class TestAddSeedRouteWithDB(unittest.TestCase):
                          data=dict(botanical_names=[str(bn.id)],
                                    categories=[str(cat.id)],
                                    common_names=str(cn.id),
+                                   in_stock='y',
+                                   dropped='',
                                    thumbnail=(io.BytesIO(b'fawks'),
                                               'foxy.jpg'),
                                    name='Foxy',
@@ -365,12 +347,44 @@ class TestAddSeedRouteWithDB(unittest.TestCase):
                          follow_redirects=True)
         self.assertIn('&#39;Digitalis purpurea&#39; added', str(rv.data))
         self.assertIn('&#39;Perennial Flower&#39; added', str(rv.data))
+        self.assertIn('&#39;Foxy Foxglove&#39; is in stock', str(rv.data))
+        self.assertIn('&#39;Foxy Foxglove&#39; is currently active',
+                      str(rv.data))
         self.assertIn('Thumbnail uploaded', str(rv.data))
         self.assertIn('New seed &#39;Foxy Foxglove&#39; has been',
                       str(rv.data))
         mock_save.assert_called_with(os.path.join(current_app.config.
                                                   get('IMAGES_FOLDER'),
                                                   'foxy.jpg'))
+
+    @mock.patch('werkzeug.FileStorage.save')
+    def test_add_seed_successful_submit_no_stock_and_dropped(self, mock_save):
+        """Flash messages if seed is not in stock and has been dropped."""
+        user = seed_manager()
+        bn = BotanicalName()
+        cn = CommonName()
+        cat = Category()
+        db.session.add_all([user, bn, cn, cat])
+        bn.name = 'Digitalis purpurea'
+        cn.name = 'Foxglove'
+        cat.category = 'Perennial Flower'
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.post(url_for('seeds.add_seed'),
+                         data=dict(botanical_names=[str(bn.id)],
+                                   categories=[str(cat.id)],
+                                   common_names=str(cn.id),
+                                   in_stock='',
+                                   dropped='y',
+                                   thumbnail=(io.BytesIO(b'fawks'),
+                                              'foxy.jpg'),
+                                   name='Foxy',
+                                   description='Very foxy.'),
+                         follow_redirects=True)
+        self.assertIn('&#39;Foxy Foxglove&#39; is not in stock', str(rv.data))
+        self.assertIn('&#39;Foxy Foxglove&#39; is currently dropped/inactive',
+                      str(rv.data))
 
 
 class TestCategoryRouteWithDB(unittest.TestCase):
@@ -543,7 +557,7 @@ class TestEditBotanicalNameRouteWithDB(unittest.TestCase):
             login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.edit_botanical_name', bn_id=bn.id),
                          data=dict(name=bn.name,
-                                   add_common_names=[cn.id]),
+                                   common_names=[cn.id]),
                          follow_redirects=True)
         self.assertIn('No changes made', str(rv.data))
 
@@ -591,8 +605,7 @@ class TestEditBotanicalNameRouteWithDB(unittest.TestCase):
             login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.edit_botanical_name', bn_id=bn.id),
                          data=dict(name='Asclepias tuberosa',
-                                   add_common_names=[cn2.id, cn3.id],
-                                   remove_common_names=[cn1.id]),
+                                   common_names=[cn2.id, cn3.id]),
                          follow_redirects=True)
         self.assertEqual(bn.name, 'Asclepias tuberosa')
         self.assertIn(cn2, bn.common_names)
@@ -758,7 +771,7 @@ class TestEditCommonNameRouteWithDB(unittest.TestCase):
             rv = tc.post(url_for('seeds.edit_common_name', cn_id=cn.id),
                          data=dict(name='Butterfly Weed',
                                    description='Butterflies love this stuff.',
-                                   add_categories=[cat.id]),
+                                   categories=[cat.id]),
                          follow_redirects=True)
         self.assertIn('No changes made', str(rv.data))
 
@@ -807,8 +820,7 @@ class TestEditCommonNameRouteWithDB(unittest.TestCase):
             rv = tc.post(url_for('seeds.edit_common_name', cn_id=cn.id),
                          data=dict(name='Celery',
                                    description='Crunchy!',
-                                   add_categories=[cat2.id, cat3.id],
-                                   remove_categories=[cat1.id]),
+                                   categories=[cat2.id, cat3.id]),
                          follow_redirects=True)
         self.assertEqual(cn.name, 'Celery')
         self.assertNotIn(cat1, cn.categories)
@@ -1130,6 +1142,114 @@ class TestEditSeedRouteWithDB(unittest.TestCase):
         self.assertIn('Changed description', str(rv.data))
         self.assertEqual(seed.description, 'Like a lady.')
 
+    def test_edit_seed_change_dropped(self):
+        """Flash message if dropped status changed."""
+        user = seed_manager()
+        seed = Seed()
+        bn = BotanicalName()
+        cat = Category()
+        cn = CommonName()
+        thumb = Image()
+        db.session.add_all([user, bn, cat, cn])
+        bn.name = 'Digitalis purpurea'
+        cn.name = 'Foxglove'
+        cat.category = 'Perennial Flower'
+        thumb.filename = 'foxy.jpg'
+        seed.categories.append(cat)
+        seed.botanical_names.append(bn)
+        seed.common_name = cn
+        seed.name = 'Foxy'
+        seed.description = 'Like that Hendrix song.'
+        seed.in_stock = True
+        seed.dropped = False
+        seed.thumbnail = thumb
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.post(url_for('seeds.edit_seed', seed_id=seed.id),
+                         data=dict(botanical_names=[str(bn.id)],
+                                   categories=[str(cat.id)],
+                                   common_name=str(cn.id),
+                                   dropped='y',
+                                   in_stock='y',
+                                   name=seed.name,
+                                   description='Like that Hendrix song.',
+                                   thumbnail=(io.BytesIO(b'fawks'),
+                                              'foxy.jpg')),
+                         follow_redirects=True)
+        self.assertIn('&#39;Foxy Foxglove&#39; has been dropped.',
+                      str(rv.data))
+        self.assertTrue(seed.dropped)
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.post(url_for('seeds.edit_seed', seed_id=seed.id),
+                         data=dict(botanical_names=[str(bn.id)],
+                                   categories=[str(cat.id)],
+                                   common_name=str(cn.id),
+                                   dropped='',
+                                   in_stock='y',
+                                   name=seed.name,
+                                   description='Like that Hendrix song.',
+                                   thumbnail=(io.BytesIO(b'fawks'),
+                                              'foxy.jpg')),
+                         follow_redirects=True)
+        self.assertIn('&#39;Foxy Foxglove&#39; is now active', str(rv.data))
+        self.assertFalse(seed.dropped)
+
+    def test_edit_seed_change_in_stock(self):
+        """Flash message if in_stock status changed."""
+        user = seed_manager()
+        seed = Seed()
+        bn = BotanicalName()
+        cat = Category()
+        cn = CommonName()
+        thumb = Image()
+        db.session.add_all([user, bn, cat, cn])
+        bn.name = 'Digitalis purpurea'
+        cn.name = 'Foxglove'
+        cat.category = 'Perennial Flower'
+        thumb.filename = 'foxy.jpg'
+        seed.categories.append(cat)
+        seed.botanical_names.append(bn)
+        seed.common_name = cn
+        seed.name = 'Foxy'
+        seed.description = 'Like that Hendrix song.'
+        seed.in_stock = False
+        seed.dropped = False
+        seed.thumbnail = thumb
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.post(url_for('seeds.edit_seed', seed_id=seed.id),
+                         data=dict(botanical_names=[str(bn.id)],
+                                   categories=[str(cat.id)],
+                                   common_name=str(cn.id),
+                                   dropped='',
+                                   in_stock='y',
+                                   name=seed.name,
+                                   description='Like that Hendrix song.',
+                                   thumbnail=(io.BytesIO(b'fawks'),
+                                              'foxy.jpg')),
+                         follow_redirects=True)
+        self.assertIn('&#39;Foxy Foxglove&#39; is now in stock', str(rv.data))
+        self.assertTrue(seed.in_stock)
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.post(url_for('seeds.edit_seed', seed_id=seed.id),
+                         data=dict(botanical_names=[str(bn.id)],
+                                   categories=[str(cat.id)],
+                                   common_name=str(cn.id),
+                                   dropped='',
+                                   in_stock='',
+                                   name=seed.name,
+                                   description='Like that Hendrix song.',
+                                   thumbnail=(io.BytesIO(b'fawks'),
+                                              'foxy.jpg')),
+                         follow_redirects=True)
+        self.assertIn('&#39;Foxy Foxglove&#39; is now out of stock',
+                      str(rv.data))
+        self.assertFalse(seed.in_stock)
+
     def test_edit_seed_change_name(self):
         """Flash message if name changed."""
         user = seed_manager()
@@ -1219,6 +1339,8 @@ class TestEditSeedRouteWithDB(unittest.TestCase):
         seed.categories.append(cat)
         seed.botanical_names.append(bn)
         seed.common_name = cn
+        seed.in_stock = True
+        seed.dropped = False
         seed.name = 'Foxy'
         seed.description = 'Like that Hendrix song.'
         seed.thumbnail = thumb
@@ -1229,6 +1351,8 @@ class TestEditSeedRouteWithDB(unittest.TestCase):
                          data=dict(botanical_names=[str(bn.id)],
                                    categories=[str(cat.id)],
                                    common_name=str(cn.id),
+                                   in_stock='y',
+                                   dropped='',
                                    name=seed.name,
                                    description=seed.description,
                                    thumbnail=(io.BytesIO(b'fawks'),
@@ -1259,6 +1383,138 @@ class TestEditSeedRouteWithDB(unittest.TestCase):
         self.assertEqual(rv.location, url_for('seeds.select_seed',
                                               dest='seeds.edit_seed',
                                               _external=True))
+
+
+class TestFlipDroppedRouteWithDB(unittest.TestCase):
+    """Test seeds.flip_dropped."""
+    def setUp(self):
+        self.app = create_app('testing')
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+        db.create_all()
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
+
+    def test_flip_dropped_no_seed(self):
+        """Return 404 if no seed exists with given id."""
+        user = seed_manager()
+        db.session.add(user)
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.get(url_for('seeds.flip_dropped', seed_id=42))
+        self.assertEqual(rv.status_code, 404)
+
+    def test_flip_dropped_no_seed_id(self):
+        """Return 404 if no seed_id given."""
+        user = seed_manager()
+        db.session.add(user)
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.get(url_for('seeds.flip_dropped'))
+        self.assertEqual(rv.status_code, 404)
+
+    def test_flip_dropped_success(self):
+        """Set dropped to the opposite of its current value and redirect."""
+        user = seed_manager()
+        seed = foxy_seed()
+        seed.dropped = False
+        db.session.add_all([seed, user])
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.get(url_for('seeds.flip_dropped', seed_id=seed.id))
+        self.assertEqual(rv.location, url_for('seeds.manage', _external=True))
+        self.assertTrue(seed.dropped)
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.get(url_for('seeds.flip_dropped',
+                                seed_id=seed.id,
+                                next=url_for('seeds.index')))
+        self.assertEqual(rv.location, url_for('seeds.index', _external=True))
+        self.assertFalse(seed.dropped)
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.get(url_for('seeds.flip_dropped', seed_id=seed.id),
+                        follow_redirects=True)
+        self.assertIn('&#39;Foxy Foxglove&#39; has been dropped.',
+                      str(rv.data))
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.get(url_for('seeds.flip_dropped', seed_id=seed.id),
+                        follow_redirects=True)
+        self.assertIn('&#39;Foxy Foxglove&#39; has been returned to active',
+                      str(rv.data))
+
+
+class TestFlipInStockRouteWithDB(unittest.TestCase):
+    """Test seeds.flip_in_stock."""
+    def setUp(self):
+        self.app = create_app('testing')
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+        db.create_all()
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
+
+    def test_flip_in_stock_no_seed(self):
+        """Return 404 if no seed exists with given id."""
+        user = seed_manager()
+        db.session.add(user)
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.get(url_for('seeds.flip_in_stock', seed_id=42))
+        self.assertEqual(rv.status_code, 404)
+
+    def test_flip_in_stock_no_seed_id(self):
+        """Return 404 if no seed_id given."""
+        user = seed_manager()
+        db.session.add(user)
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.get(url_for('seeds.flip_in_stock'))
+        self.assertEqual(rv.status_code, 404)
+
+    def test_flip_in_stock_success(self):
+        """Reverse value of in_stock and redirect on successful submit."""
+        user = seed_manager()
+        seed = foxy_seed()
+        seed.in_stock = False
+        db.session.add_all([seed, user])
+        db.session.commit()
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.get(url_for('seeds.flip_in_stock', seed_id=seed.id))
+        self.assertEqual(rv.location, url_for('seeds.manage', _external=True))
+        self.assertTrue(seed.in_stock)
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.get(url_for('seeds.flip_in_stock',
+                                seed_id=seed.id,
+                                next=url_for('seeds.index')))
+        self.assertEqual(rv.location, url_for('seeds.index', _external=True))
+        self.assertFalse(seed.in_stock)
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.get(url_for('seeds.flip_in_stock', seed_id=seed.id),
+                        follow_redirects=True)
+        self.assertIn('&#39;Foxy Foxglove&#39; is now in stock',
+                      str(rv.data))
+        with self.app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.get(url_for('seeds.flip_in_stock', seed_id=seed.id),
+                        follow_redirects=True)
+        self.assertIn('&#39;Foxy Foxglove&#39; is now out of stock.',
+                      str(rv.data))
 
 
 class TestIndexRouteWithDB(unittest.TestCase):
@@ -1897,6 +2153,99 @@ class TestRemoveSeedRouteWithDB(unittest.TestCase):
             login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.remove_seed', seed_id=seed.id))
         self.assertIn('Remove Seed', str(rv.data))
+
+
+class TestSeedRouteWithDB(unittest.TestCase):
+    """Test seeds.seed."""
+    def setUp(self):
+        self.app = create_app('testing')
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+        db.create_all()
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
+
+    def test_seed_bad_slugs(self):
+        """Return 404 if any slug given does not correspond to a db entry."""
+        cat = Category()
+        cn = CommonName()
+        seed = Seed()
+        db.session.add_all([cat, cn, seed])
+        cat.category = 'Perennial Flower'
+        cn.name = 'Foxglove'
+        seed.name = 'Foxy'
+        seed.categories.append(cat)
+        seed.common_name = cn
+        seed.description = 'Like that Hendrix song.'
+        db.session.commit()
+        with self.app.test_client() as tc:
+            rv = tc.get(url_for('seeds.seed',
+                                cat_slug=cat.slug,
+                                cn_slug=cn.slug,
+                                seed_slug='no-biscuit'))
+        self.assertEqual(rv.status_code, 404)
+        with self.app.test_client() as tc:
+            rv = tc.get(url_for('seeds.seed',
+                                cat_slug='no_biscuit',
+                                cn_slug=cn.slug,
+                                seed_slug=seed.slug))
+        self.assertEqual(rv.status_code, 404)
+        with self.app.test_client() as tc:
+            rv = tc.get(url_for('seeds.seed',
+                                cat_slug=cat.slug,
+                                cn_slug='no-biscuit',
+                                seed_slug=seed.slug))
+        self.assertEqual(rv.status_code, 404)
+        with self.app.test_client() as tc:
+            rv = tc.get(url_for('seeds.seed',
+                                cat_slug='no-biscuit',
+                                cn_slug='no-biscuit',
+                                seed_slug='no-biscuit'))
+        self.assertEqual(rv.status_code, 404)
+
+    def test_seed_slugs_not_in_seed(self):
+        """Return 404 if slugs return db entries, but entry not in seed."""
+        cat1 = Category()
+        cat2 = Category()
+        cn1 = CommonName()
+        cn2 = CommonName()
+        seed = Seed()
+        db.session.add_all([cat1, cat2, cn1, cn2, seed])
+        cat1.category = 'Perennial Flower'
+        cat2.category = 'Long Hair'
+        cn1.name = 'Foxglove'
+        cn2.name = 'Persian'
+        seed.name = 'Foxy'
+        seed.categories.append(cat1)
+        seed.common_name = cn1
+        db.session.commit()
+        with self.app.test_client() as tc:
+            rv = tc.get(url_for('seeds.seed',
+                                cat_slug=cat1.slug,
+                                cn_slug=cn2.slug,
+                                seed_slug=seed.slug))
+        self.assertEqual(rv.status_code, 404)
+        with self.app.test_client() as tc:
+            rv = tc.get(url_for('seeds.seed',
+                                cat_slug=cat2.slug,
+                                cn_slug=cn1.slug,
+                                seed_slug=seed.slug))
+        self.assertEqual(rv.status_code, 404)
+
+    def test_seed_renders_page(self):
+        """Render page given valid slugs."""
+        seed = foxy_seed()
+        db.session.add(seed)
+        db.session.commit()
+        with self.app.test_client() as tc:
+            rv = tc.get(url_for('seeds.seed',
+                                cat_slug=seed.categories[0].slug,
+                                cn_slug=seed.common_name.slug,
+                                seed_slug=seed.slug))
+        self.assertIn('Foxy Foxglove', str(rv.data))
 
 
 class TestSelectBotanicalNameRouteWithDB(unittest.TestCase):

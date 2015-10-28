@@ -72,6 +72,23 @@
                         </li>
                     </fieldset>
                     <fieldset>
+                        <legend>Status:</legend>
+                        <li>
+                            {{ form.in_stock.label }}
+                            {{ form.in_stock }}
+                            {% if form.in_stock.errors|count > 0 %}
+                            {{ form_errors(form.in_stock) }}
+                            {% endif %}
+                        </li>
+                        <li>
+                            {{ form.dropped.label }}
+                            {{ form.dropped }}
+                            {% if form.dropped.errors|count > 0 %}
+                            {{ form_errors(form.dropped) }}
+                            {% endif %}
+                        </li>
+                    </fieldset>
+                    <fieldset>
                         <legend>Thumbnail:</legend>
                         <div>Current thumbnail:</div>
                         <div><img src="{{ url_for('static', filename=seed.thumbnail_path) }}"></div>

@@ -32,19 +32,11 @@
                 <ol>
                     <fieldset>
                         <legend>Add/Remove Common Names</legend>
-                        <div>Current common names: {{ current_common_names }}.</div>
                         <li>
-                            {{ form.add_common_names.label }}
-                            {{ form.add_common_names }}
-                            {% if form.add_common_names.errors|count > 0 %}
-                            {{ form_errors(form.add_common_names) }}
-                            {% endif %}
-                        </li>
-                        <li>
-                            {{ form.remove_common_names.label }}
-                            {{ form.remove_common_names }}
-                            {% if form.remove_common_names.errors|count > 0 %}
-                            {{ form_errors(form.remove_common_names) }}
+                            {{ form.common_names.label }}
+                            {{ form.common_names }}
+                            {% if form.common_names.errors|count > 0 %}
+                            {{ form_errors(form.common_names) }}
                             {% endif %}
                         </li>
                     </fieldset>

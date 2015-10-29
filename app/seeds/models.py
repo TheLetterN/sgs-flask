@@ -688,8 +688,6 @@ class CommonName(db.Model):
                              backref='children',
                              remote_side=[id])
     slug = db.Column(db.String(64), unique=True)
-    synonyms_id = db.Column(db.Integer, db.ForeignKey('synonyms.id'))
-    synonyms = db.relationship('Synonym', backref='common_name')
 
     def __init__(self, name=None, description=None):
         """Construct an instance of CommonName
@@ -1052,6 +1050,9 @@ class Seed(db.Model):
     common_name = db.relationship('CommonName', backref='seeds')
     description = db.Column(db.Text)
     dropped = db.Column(db.Boolean)
+    grows_with_id = db.Column(db.Integer, db.ForeignKey('seeds.id'))
+    grows_with = db.relationship('Seed')
+    hybrid = db.Column(db.Boolean)
     images = db.relationship('Image', foreign_keys=Image.seed_id)
     in_stock = db.Column(db.Boolean)
     _name = db.Column(db.String(64), unique=True)
@@ -1071,15 +1072,20 @@ class Seed(db.Model):
 
     @hybrid_property
     def fullname(self):
-        """str: Cultivar name (._name) and (if it exists) common name."""
+        """str: Full name of seed including common name and series."""
+        fn = []
+        if self._name:
+            fn.append(self._name)
         if self.common_name:
-            return '{0} {1}'.format(self._name, self.common_name.name)
+            fn.append(self.common_name.name)
+        if fn:
+            return ' '.join(fn)
         else:
-            return self._name
+            return None
 
     @hybrid_property
     def name(self):
-        """str: contents of ._name.
+        """str: contents series + _name.
 
         Setter:
             Sets ._name, and generates a slug and sets .slug.
@@ -1126,6 +1132,22 @@ class Series(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     description = db.Column(db.Text)
     name = db.Column(db.String(64), unique=True)
+    common_name_id = db.Column(db.Integer, db.ForeignKey('common_names.id'))
+    common_name = db.relationship('CommonName', backref='series')
+
+    @property
+    def fullname(self):
+        """Return series name with common name."""
+        fn = []
+        if self.name:
+            fn.append(self.name)
+        if self.common_name:
+            fn.append(self.common_name.name)
+        if fn:
+            return ' '.join(fn)
+        else:
+            return None
+
 
 
 class Synonym(db.Model):
@@ -1145,6 +1167,13 @@ class Synonym(db.Model):
     __tablename__ = 'synonyms'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), unique=True)
+    common_name_id = db.Column(db.Integer, db.ForeignKey('common_names.id'))
+    common_name = db.relationship('CommonName', backref='synonyms')
+    botanical_name_id = db.Column(db.Integer, 
+                                  db.ForeignKey('botanical_names.id'))
+    botanical_name = db.relationship('BotanicalName', backref='synonyms')
+    seed_id = db.Column(db.Integer, db.ForeignKey('seeds.id'))
+    seed = db.relationship('Seed', backref='synonyms')
 
 
 class Unit(db.Model):

@@ -40,6 +40,7 @@ from .models import (
     Price,
     Packet,
     Seed,
+    Series,
     Unit
 )
 from .forms import (
@@ -48,21 +49,25 @@ from .forms import (
     AddCommonNameForm,
     AddPacketForm,
     AddSeedForm,
+    AddSeriesForm,
     EditBotanicalNameForm,
     EditCategoryForm,
     EditCommonNameForm,
     EditPacketForm,
     EditSeedForm,
+    EditSeriesForm,
     RemoveBotanicalNameForm,
     RemoveCategoryForm,
     RemoveCommonNameForm,
     RemovePacketForm,
+    RemoveSeriesForm,
     RemoveSeedForm,
     SelectBotanicalNameForm,
     SelectCategoryForm,
     SelectCommonNameForm,
     SelectPacketForm,
-    SelectSeedForm
+    SelectSeedForm,
+    SelectSeriesForm
 )
 
 
@@ -101,15 +106,11 @@ def add_botanical_name():
         bn = BotanicalName()
         db.session.add(bn)
         bn.name = form.name.data
-        if len(form.common_names.data) > 0:
-            for cn_id in form.common_names.data:
-                cn = CommonName.query.get(cn_id)
-                flash('\'{0}\' added to common names associated with \'{1}\'.'.
-                      format(cn.name, bn.name))
-                bn.common_names.append(cn)
+        cn = CommonName.query.get(form.common_names.data)
+        bn.common_names.append(cn)
         db.session.commit()
-        flash('Botanical name \'{0}\' has been added to the database.'.
-              format(bn.name))
+        flash('Botanical name \'{0}\' has been added to: {1}.'.
+              format(bn.name, cn.name))
         return redirect(url_for('seeds.manage'))
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
@@ -154,17 +155,14 @@ def add_common_name():
         cn = CommonName()
         db.session.add(cn)
         cn.name = form.name.data.title()
-        if len(form.categories.data) > 0:
-            for cat_id in form.categories.data:
-                category = Category.query.get(cat_id)
-                flash('{0} added to categories associated with {1}.'.
-                      format(category.category, cn.name))
-                cn.categories.append(category)
+        for cat_id in form.categories.data:
+            category = Category.query.get(cat_id)
+            cn.categories.append(category)
         if len(form.description.data) > 0:
             cn.description = form.description.data
         db.session.commit()
-        flash('The common name \'{0}\' has been added to the database.'.
-              format(cn.name))
+        flash('The common name \'{0}\' has been added to: {1}'.
+              format(cn.name, category.plural))
         return redirect(url_for('seeds.manage'))
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
@@ -245,9 +243,11 @@ def add_seed():
             flash('\'{0}\' added to categories for {1}.'.
                   format(cat.category, form.name.data))
             seed.categories.append(cat)
-        cn = CommonName.query.get(form.common_names.data)
-        seed.common_name = cn
+        seed.common_name = CommonName.query.get(form.common_names.data)
         seed.name = form.name.data.title()
+        if form.series.data > 0:
+            seed.series = Series.query.get(form.series.data)
+            flash('Series set to: {0}'.format(seed.series.name))
         if form.thumbnail.data:
             thumb_name = secure_filename(form.thumbnail.data.filename)
             upload_path = os.path.join(current_app.config.get('IMAGES_FOLDER'),
@@ -270,6 +270,12 @@ def add_seed():
             flash('\'{0}\' is currently active.'.
                   format(seed.fullname))
             seed.dropped = False
+        if form.hybrid.data:
+            flash('\'{0}\' marked as a hybrid.'.format(seed.fullname))
+            seed.hybrid = True
+        else:
+            flash('\'{0}\' is not marked as a hybrid.'.format(seed.fullname))
+            seed.hybrid = False
         flash('New seed \'{0}\' has been added to the database.'.
               format(seed.fullname))
         db.session.commit()
@@ -279,6 +285,32 @@ def add_seed():
         (url_for('seeds.add_seed'), 'Add Seed')
     )
     return render_template('seeds/add_seed.html', crumbs=crumbs, form=form)
+
+
+@seeds.route('/add_series', methods=['GET', 'POST'])
+@login_required
+@permission_required(Permission.MANAGE_SEEDS)
+def add_series():
+    """Add a series to the database."""
+    form = AddSeriesForm()
+    form.set_common_names()
+    if form.validate_on_submit():
+        series = Series()
+        db.session.add(series)
+        cn = CommonName.query.get(form.common_names.data)
+        print('CommonName: {0}'.format(cn.name))
+        series.common_name = CommonName.query.get(form.common_names.data)
+        series.name = form.name.data.title()
+        series.description = form.description.data
+        flash('New series \'{0}\' added to: {1}.'.
+              format(series.name, series.common_name.name))
+        db.session.commit()
+        return redirect(url_for('seeds.manage'))
+    crumbs = make_breadcrumbs(
+        (url_for('seeds.manage'), 'Manage Seeds'),
+        (url_for('seeds.add_series'), 'Add Series')
+    )
+    return render_template('seeds/add_series.html', crumbs=crumbs, form=form)
 
 
 @seeds.route('/<cat_slug>')
@@ -676,6 +708,62 @@ def edit_seed(seed_id=None):
                            seed=seed)
 
 
+@seeds.route('/edit_series', methods=['GET', 'POST'])
+@seeds.route('/edit_series/<series_id>', methods=['GET', 'POST'])
+@login_required
+@permission_required(Permission.MANAGE_SEEDS)
+def edit_series(series_id=None):
+    """Display page for editing a Series from the database."""
+    if series_id is None:
+        return redirect(url_for('seeds.select_series',
+                                dest='seeds.edit_series'))
+    series = Series.query.get(series_id)
+    if series is None:
+        flash('Error: No series exists with that id! Please select one:')
+        return redirect(url_for('seeds.select_series',
+                                dest='seeds.edit_series'))
+    form = EditSeriesForm()
+    form.set_common_names()
+    if form.validate_on_submit():
+        edited = False
+        if form.name.data.title() != series.name:
+            s2 = Series.query.filter_by(name=form.name.data.title()).first()
+            if s2 is not None:
+                flash('Error: {0} already exists in the database!'.
+                      format(s2.name))
+                return redirect(url_for('seeds.edit_series',
+                                        series_id=series_id))
+            else:
+                edited = True
+                series.name = form.name.data.title()
+                flash('Series name changed to: {0}'.format(series.name))
+        if form.description.data != series.description:
+            edited = True
+            flash('Description for series \'{0}\' changed to: {1}'.
+                  format(series.fullname, form.description.data))
+            series.description = form.description.data
+        if form.common_names.data != series.common_name.id:
+            edited = True
+            series.common_name = CommonName.query.get(form.common_names.data)
+            flash('Common name for \'{0}\' changed to: {1}'.
+                  format(series.fullname, series.common_name.name))
+        if edited:
+            db.session.commit()
+            return redirect(url_for('seeds.manage'))
+        else:
+            flash('No changes made to series \'{0}\'.'.
+                  format(series.fullname))
+    form.populate(series)
+    crumbs = make_breadcrumbs(
+        (url_for('seeds.manage'), 'Manage Seeds'),
+        (url_for('seeds.edit_series'), 'Edit Series')
+    )
+    return render_template('seeds/edit_series.html',
+                           crumbs=crumbs,
+                           form=form,
+                           series=series)
+
+
 @seeds.route('/flip_dropped/<seed_id>')
 @seeds.route('/flip_dropped')
 @login_required
@@ -961,6 +1049,43 @@ def remove_seed(seed_id=None):
                            seed=seed)
 
 
+@seeds.route('/remove_series', methods=['GET', 'POST'])
+@seeds.route('/remove_series/<series_id>', methods=['GET', 'POST'])
+@login_required
+@permission_required(Permission.MANAGE_SEEDS)
+def remove_series(series_id=None):
+    """Display page for removing series from database."""
+    if series_id is None:
+        return redirect(url_for('seeds.select_series',
+                                dest='seeds.remove_series'))
+    series = Series.query.get(series_id)
+    if series is None:
+        flash('Error: No series exists with that id! Please select one:')
+        return redirect(url_for('seeds.select_series',
+                                dest='seed.remove_series'))
+    form = RemoveSeriesForm()
+    if form.validate_on_submit():
+        if form.verify_removal.data:
+            flash('The series \'{0}\' has been removed from the database.'.
+                  format(series.fullname))
+            db.session.delete(series)
+            db.session.commit()
+            return redirect(url_for('seeds.manage'))
+        else:
+            flash('No changes made. Check the box labled \'Yes\' if you would'
+                  ' like to remove this series.')
+            return redirect(url_for('seeds.remove_series',
+                                    series_id=series_id))
+    crumbs = make_breadcrumbs(
+        (url_for('seeds.manage'), 'Manage Seeds'),
+        (url_for('seeds.remove_series'), 'Remove Series')
+    )
+    return render_template('seeds/remove_series.html',
+                           crumbs=crumbs,
+                           form=form,
+                           series=series)
+
+
 @seeds.route('/<cat_slug>/<cn_slug>/<seed_slug>')
 def seed(cat_slug=None, cn_slug=None, seed_slug=None):
     """Display a page for a given seed."""
@@ -1116,5 +1241,31 @@ def select_seed():
             (url_for('seeds.select_seed', dest=dest), 'Select Seed')
     )
     return render_template('seeds/select_seed.html',
+                           crumbs=crumbs,
+                           form=form)
+
+
+@seeds.route('/select_series', methods=['GET', 'POST'])
+@login_required
+@permission_required(Permission.MANAGE_SEEDS)
+def select_series():
+    """Select a series to load on another page.
+
+    Request Args:
+        dest (str): The route to redirect to once series is selected.
+    """
+    dest = request.args.get('dest')
+    if dest is None:
+        flash('Error: No destination page was specified!')
+        return redirect(url_for('seeds.manage'))
+    form = SelectSeriesForm()
+    form.set_series()
+    if form.validate_on_submit():
+        return redirect(url_for(dest, series_id=form.series.data))
+    crumbs = make_breadcrumbs(
+        (url_for('seeds.manage'), 'Manage Seeds'),
+        (url_for('seeds.select_series', dest=dest), 'Select Series')
+    )
+    return render_template('seeds/select_series.html',
                            crumbs=crumbs,
                            form=form)

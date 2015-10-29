@@ -82,7 +82,8 @@ class TestAddBotanicalNameRouteWithDB(unittest.TestCase):
         bn = BotanicalName.query.filter_by(name='Asclepias incarnata').first()
         self.assertIsNotNone(bn)
         self.assertIn(cn, bn.common_names)
-        self.assertIn('has been added to the database', str(rv.data))
+        self.assertIn('&#39;Asclepias incarnata&#39; has been added',
+                      str(rv.data))
 
     def test_add_botanical_name_renders_page(self):
         """Render the Add Botanical Name page given no form data."""
@@ -167,7 +168,7 @@ class TestAddCommonNameRouteWithDB(unittest.TestCase):
         cn = CommonName.query.filter_by(name='Foxglove').first()
         self.assertIsNotNone(cn)
         self.assertIn(cat, cn.categories)
-        self.assertIn('has been added to the database', str(rv.data))
+        self.assertIn('&#39;Foxglove&#39; has been added to', str(rv.data))
 
     def test_add_common_name_renders_page(self):
         """"Render the Add Common Name page given no form data."""
@@ -340,6 +341,7 @@ class TestAddSeedRouteWithDB(unittest.TestCase):
                                    common_names=str(cn.id),
                                    in_stock='y',
                                    dropped='',
+                                   series='0',
                                    thumbnail=(io.BytesIO(b'fawks'),
                                               'foxy.jpg'),
                                    name='Foxy',
@@ -377,6 +379,7 @@ class TestAddSeedRouteWithDB(unittest.TestCase):
                                    common_names=str(cn.id),
                                    in_stock='',
                                    dropped='y',
+                                   series='0',
                                    thumbnail=(io.BytesIO(b'fawks'),
                                               'foxy.jpg'),
                                    name='Foxy',

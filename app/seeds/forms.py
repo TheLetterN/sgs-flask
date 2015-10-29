@@ -41,6 +41,7 @@ from .models import (
     QtyFraction,
     QtyInteger,
     Seed,
+    Series,
     Unit
 )
 
@@ -97,6 +98,16 @@ def packet_select_list():
                             pkt.unit)) for pkt in packets]
 
 
+def series_select_list():
+    """Generate a list of all Series for populating Select fields.
+
+    Returns:
+        list: A list of tuples with id and name of each series.
+    """
+    sl = [(series.id, series.name) for series in Series.query.all()]
+    return sl
+
+
 def seed_select_list():
     """"Generate a list of all Seeds for populating select fields.
 
@@ -117,7 +128,7 @@ class AddBotanicalNameForm(Form):
         submit (SubmitField): Submit button.
     """
     name = StringField('Botanical Name', validators=[Length(1, 64)])
-    common_names = SelectMultipleField('Common Names', coerce=int)
+    common_names = SelectField('Select Common Name', coerce=int)
     submit = SubmitField('Add Botanical Name')
 
     def set_common_names(self):
@@ -183,7 +194,9 @@ class AddCommonNameForm(Form):
         description (TextAreaField): Field for description of common name.
         submit (SubmitField): Submit button.
     """
-    categories = SelectMultipleField('Select Categories', coerce=int)
+    categories = SelectMultipleField('Select Categories',
+                                     coerce=int,
+                                     validators=[DataRequired()])
     description = TextAreaField('Description')
     name = StringField('Common Name', validators=[Length(1, 64)])
     submit = SubmitField('Add Common Name')
@@ -325,8 +338,10 @@ class AddSeedForm(Form):
                                validators=[DataRequired()])
     description = TextAreaField('Description')
     dropped = BooleanField('Dropped/Inactive')
+    hybrid = BooleanField('Hybrid')
     in_stock = BooleanField('In Stock', default='checked')
     name = StringField('Seed Name (Cultivar)', validators=[Length(1, 64)])
+    series = SelectField('Select Series', coerce=int)
     submit = SubmitField('Add Seed')
     thumbnail = FileField('Thumbnail Image',
                           validators=[FileAllowed(IMAGE_EXTENSIONS,
@@ -337,10 +352,11 @@ class AddSeedForm(Form):
         self.botanical_names.choices = botanical_name_select_list()
         self.categories.choices = category_select_list()
         self.common_names.choices = common_name_select_list()
+        self.series.choices = [(0, 'None')] + series_select_list()
 
     def validate_name(self, field):
         """Raise ValidationError if seed exists in db with this name."""
-        seed = Seed.query.filter_by(name=field.data.title()).first()
+        seed = Seed.query.filter_by(_name=field.data.title()).first()
         if seed is not None:
             raise ValidationError('The seed \'{0}\' already exists in the '
                                   'database!'.format(field.data))
@@ -355,6 +371,32 @@ class AddSeedForm(Form):
                 raise ValidationError('An image named \'{0}\' already exists! '
                                       'Please choose a different name.'.
                                       format(image.filename))
+
+
+class AddSeriesForm(Form):
+    """Form for adding a Series to the database.
+
+    Attributes:
+        common_names (SelectField): Field for selecting a common name.
+        description (TextAreaField): Field for series description.
+        name (StringField): Field for series name.
+    """
+    common_names = SelectField('Select Common Name', coerce=int)
+    description = TextAreaField('Description')
+    name = StringField('Series Name', validators=[Length(1, 64)])
+    submit = SubmitField('Add Series')
+
+    def set_common_names(self):
+        """Set common names choices with common names from db."""
+        self.common_names.choices = common_name_select_list()
+
+    def validate_name(self, field):
+        """Raise ValidationError if name already exists in db."""
+        if field.data is not None and field.data != '':
+            series = Series.query.filter_by(name=field.data.title()).first()
+            if series is not None:
+                raise ValidationError('The series \'{0}\' already exists!'.
+                                      format(series.name))
 
 
 class EditBotanicalNameForm(Form):
@@ -489,6 +531,30 @@ class EditPacketForm(Form):
                 raise ValidationError(str(e))
 
 
+class EditSeriesForm(Form):
+    """Form for editing a Series to the database.
+
+    Attributes:
+        common_names (SelectField): Field for selecting a common name.
+        description (TextAreaField): Field for series description.
+        name (StringField): Field for series name.
+    """
+    common_names = SelectField('Select Common Name', coerce=int)
+    description = TextAreaField('Description')
+    name = StringField('Series Name', validators=[Length(1, 64)])
+    submit = SubmitField('Edit Series')
+
+    def set_common_names(self):
+        """Set common names choices with common names from db."""
+        self.common_names.choices = common_name_select_list()
+
+    def populate(self, series):
+        """Populate fields with information from a db entry."""
+        self.name.data = series.name
+        self.common_names.data = series.common_name.id
+        self.description.data = series.description
+
+                
 class EditSeedForm(Form):
     """Form for editing an existing seed in the database.
     """
@@ -577,6 +643,15 @@ class SelectSeedForm(Form):
         """Populate seeds with Seeds from the database."""
         self.seeds.choices = seed_select_list()
 
+class SelectSeriesForm(Form):
+    """Form for selecting a series."""
+    series = SelectField('Select Series', coerce=int)
+    submit = SubmitField('Submit')
+
+    def set_series(self):
+        """Populate series with Series from the database."""
+        self.series.choices = series_select_list()
+
 
 class RemoveBotanicalNameForm(Form):
     """Form for removing a botanical name."""
@@ -600,6 +675,12 @@ class RemovePacketForm(Form):
     """Form for removing a packet."""
     verify_removal = BooleanField('Yes')
     submit = SubmitField('Remove Packet')
+
+
+class RemoveSeriesForm(Form):
+    """Form for removing a series."""
+    verify_removal = BooleanField('Yes')
+    submit = SubmitField('Remove Series')
 
 
 class RemoveSeedForm(Form):

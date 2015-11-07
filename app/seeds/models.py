@@ -744,7 +744,7 @@ class Image(db.Model):
     __tablename__ = 'images'
     id = db.Column(db.Integer, primary_key=True)
     filename = db.Column(db.String(32))
-    seed_id = db.Column(db.Integer, db.ForeignKey('seeds.id'))
+    seed_id = db.Column(db.Integer, db.ForeignKey('seeds.id', use_alter=True))
 
     def __init__(self, filename=None):
         self.filename = filename

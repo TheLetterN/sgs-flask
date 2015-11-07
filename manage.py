@@ -56,14 +56,23 @@ def hello(goodbye=False):
     '-l',
     '--load',
     help='Load and run a specific tests file.')
-def test(fast=False, load=None):
+@manager.option(
+    '-v',
+    '--verbose',
+    action='store_true',
+    help='Give verbose test output.')
+def test(fast=False, load=None, verbose=False):
     """Run tests. Default runs all tests. See --help for more options. """
+    main_arg=''
+    if verbose:
+        main_arg+= '-v -s '
     if fast:
-        pytest.main('tests/fast_tests')
+        main_arg+= 'tests/fast_tests'
     elif load is not None:
-        pytest.main(load)
+        main_arg+= load
     else:
-        pytest.main('tests')
+        meain_arg+= 'tests'
+    pytest.main(main_arg)
 
 manager.add_command('db', MigrateCommand)
 manager.add_command('shell', Shell(make_context=make_shell_context))

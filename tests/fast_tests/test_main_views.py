@@ -1,31 +1,19 @@
-import unittest
 from flask import url_for
-from app import create_app
+from tests.conftest import app  # noqa
 
 
-class TestMainRoutes(unittest.TestCase):
+class TestMainRoutes:
     """Tests route functions in the main module."""
-    def setUp(self):
-        self.app = create_app('testing')
-        self.app_context = self.app.app_context()
-        self.app_context.push()
-        self.tc = self.app.test_client()
-
-    def tearDown(self):
-        self.app_context.pop()
-
-    def test_index_returns_valid_page(self):
+    def test_index_returns_valid_page(self, app):
         """If the index page breaks due to code changes, we want to know."""
-        retval = self.tc.get(url_for('main.index'))
-        self.assertEqual(retval.status_code, 200)
+        with app.test_client() as tc:
+            rv = tc.get(url_for('main.index'))
+        assert rv.status_code == 200
 
-    def test_other_index_pages_redirect_to_main_index(self):
+    def test_other_index_pages_redirect_to_main_index(self, app):
         """/index and /index.html should give 301 redirect responses."""
-        retval1 = self.tc.get('/index', follow_redirects=False)
-        retval2 = self.tc.get('/index.html', follow_redirects=False)
-        self.assertEqual(retval1.status_code, 301)
-        self.assertEqual(retval2.status_code, 301)
-
-
-if __name__ == '__main__':
-    unittest.main()
+        with app.test_client() as tc:
+            rv1 = tc.get('/index', follow_redirects=False)
+            rv2 = tc.get('/index.html', follow_redirects=False)
+        assert rv1.status_code == 301
+        assert rv2.status_code == 301

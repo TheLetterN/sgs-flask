@@ -73,7 +73,8 @@ def make_categories_available():
 
 
 @auth.route('/confirm_account/<token>')
-def confirm_account(token):
+@auth.route('/confirm_account')
+def confirm_account(token=None):
     """Get an account confirmation token and confirm account if it's valid.
 
     Args:

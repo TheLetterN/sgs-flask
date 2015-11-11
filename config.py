@@ -68,6 +68,8 @@ class Config(object):
     SQLALCHEMY_COMMIT_ON_TEARDOWN = True
     SUPPORT_EMAIL = os.environ.get('SGS_SUPPORT_EMAIL') or \
         'support@swallowtailgardenseeds.com'
+    #Set to suppress Flask-SQLAlchemy warning. May need to change later.
+    SQLALCHEMY_TRACK_MODIFICATIONS = True
 
     @staticmethod
     def init_app(app):

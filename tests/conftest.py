@@ -3,13 +3,19 @@ from app import create_app
 from app import db as _db
 
 
-@pytest.yield_fixture(scope='session')
+@pytest.fixture(scope='session')
 def app(request):
+    print('\n\n\nsetting up app')
     _app = create_app('testing')
     context = _app.app_context()
     context.push()
-    yield _app
-    context.pop()
+
+    def teardown():
+        print('\n\n\ntearing down app')
+        context.pop()
+
+    request.addfinalizer(teardown)
+    return _app
 
 
 @pytest.fixture(scope='function')

@@ -71,7 +71,7 @@ def test(fast=False, load=None, verbose=False):
     elif load is not None:
         main_arg+= load
     else:
-        meain_arg+= 'tests'
+        main_arg+= 'tests'
     pytest.main(main_arg)
 
 manager.add_command('db', MigrateCommand)

@@ -7,7 +7,7 @@ from app.auth.models import (
     Serializer,
     User
 )
-from tests.conftest import db  # noqa
+from tests.conftest import app, db  # noqa
 
 
 class TestUserWithDB():

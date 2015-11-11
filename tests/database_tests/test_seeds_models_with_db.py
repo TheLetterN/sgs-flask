@@ -12,7 +12,7 @@ from app.seeds.models import (
     Seed,
     Unit
 )
-from tests.conftest import db  # noqa
+from tests.conftest import app, db  # noqa
 
 
 class TestBotanicalNameWithDB:

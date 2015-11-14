@@ -56,7 +56,11 @@ def botanical_name_select_list():
         list: A list of tuples containing the id and name of each botanical
             name in the database.
     """
-    return [(bn.id, bn.name) for bn in BotanicalName.query.order_by('_name')]
+    bn_list = []
+    for bn in BotanicalName.query.order_by('_name'):
+        if not bn.syn_parents:
+            bn_list.append((bn.id, bn.name))
+    return bn_list
 
 
 def category_select_list():
@@ -77,7 +81,11 @@ def common_name_select_list():
         list: A list of tuples containing the id and name of each common name
             in the database.
     """
-    return [(cn.id, cn.name) for cn in CommonName.query.order_by('_name')]
+    cn_list = []
+    for cn in CommonName.query.order_by('_name'):
+        if not cn.syn_parents:
+            cn_list.append((cn.id, cn.name))
+    return cn_list
 
 
 def packet_select_list():
@@ -115,7 +123,11 @@ def seed_select_list():
         list: A list of tuples containing the ids and strings containing name
             and SKU of each seed in the database.
     """
-    return [(seed.id, seed.fullname) for seed in Seed.query.order_by('_name')]
+    seeds = []
+    for seed in Seed.query.order_by('_name'):
+        if not seed.syn_parents:
+            seeds.append((seed.id, seed.fullname))
+    return seeds
 
 
 class AddBotanicalNameForm(Form):
@@ -130,6 +142,7 @@ class AddBotanicalNameForm(Form):
     name = StringField('Botanical Name', validators=[Length(1, 64)])
     common_names = SelectField('Select Common Name', coerce=int)
     submit = SubmitField('Add Botanical Name')
+    synonyms = StringField('Synonyms')
 
     def set_common_names(self):
         """Set common_names with CommonName objects loaded from db."""
@@ -157,6 +170,21 @@ class AddBotanicalNameForm(Form):
         if bn is not None:
             raise ValidationError('The botanical name \'{0}\' already exists '
                                   'in the database!'.format(bn.name))
+
+    def validate_synonyms(self, field):
+        """Raise a ValidationError if any synonyms are too long.
+        
+        Also raise an error if any synonym is not a valid botanical name."""
+        if field.data:
+            synonyms = field.data.split(', ')
+            for synonym in synonyms:
+                if len(synonym) > 64:
+                    raise ValidationError('Each synonym can only be a maximum '
+                                          'of 64 characters long!')
+                if not BotanicalName.validate(synonym):
+                    raise ValidationError('The synonym \'{0}\' does not '
+                                          'appear to be a valid botanical '
+                                          'name!')
 
 
 class AddCategoryForm(Form):
@@ -198,12 +226,21 @@ class AddCommonNameForm(Form):
                                      coerce=int,
                                      validators=[DataRequired()])
     description = TextAreaField('Description')
+    gw_common_names = SelectMultipleField('Common Names', coerce=int)
+    gw_seeds = SelectMultipleField('Cultivars', coerce=int)
+    instructions = TextAreaField('Planting Instructions')
     name = StringField('Common Name', validators=[Length(1, 64)])
+    parent_cn = SelectField('Subcategory of', coerce=int)
     submit = SubmitField('Add Common Name')
+    synonyms = StringField('Synonyms')
 
-    def set_categories(self):
+    def set_selects(self):
         """Populate categories with Categories from the database."""
         self.categories.choices = category_select_list()
+        self.gw_common_names.choices = common_name_select_list()
+        self.gw_seeds.choices = seed_select_list()
+        self.parent_cn.choices = common_name_select_list()
+        self.parent_cn.choices.insert(0, (0, 'N/A'))
 
     def validate_name(self, field):
         """Raise a ValidationError if submitted common name already exists.
@@ -218,6 +255,14 @@ class AddCommonNameForm(Form):
                 not None:
             raise ValidationError('\'{0}\' already exists in the database!'.
                                   format(field.data))
+
+    def validate_synonyms(self, field):
+        """Raise a ValidationError if any synonyms are too long."""
+        synonyms = field.data.split(', ')
+        for synonym in synonyms:
+            if len(synonym) > 64:
+                raise ValidationError('Each synonym can only be a maximum of '
+                                      '64 characters long!')
 
 
 class AddPacketForm(Form):
@@ -329,20 +374,20 @@ class AddSeedForm(Form):
         submit (SubmitField): Submit button.
         thumbnail (FileField): Field for uploading thumbnail image.
     """
-    botanical_names = SelectMultipleField('Select Botanical Names', coerce=int)
-    categories = SelectMultipleField('Select Categories',
-                                     coerce=int,
-                                     validators=[DataRequired()])
+    botanical_names = SelectField('Select Botanical Name', coerce=int)
+    categories = SelectMultipleField('Select Categories', coerce=int)
     common_names = SelectField('Select Common Name',
                                coerce=int,
                                validators=[DataRequired()])
     description = TextAreaField('Description')
     dropped = BooleanField('Dropped/Inactive')
-    hybrid = BooleanField('Hybrid')
+    gw_common_names = SelectMultipleField('Common Names')
+    gw_seeds = SelectMultipleField('Cultivars')
     in_stock = BooleanField('In Stock', default='checked')
     name = StringField('Seed Name (Cultivar)', validators=[Length(1, 64)])
     series = SelectField('Select Series', coerce=int)
     submit = SubmitField('Add Seed')
+    synonyms = StringField('Synonyms')
     thumbnail = FileField('Thumbnail Image',
                           validators=[FileAllowed(IMAGE_EXTENSIONS,
                                                   'Images only!')])
@@ -352,6 +397,8 @@ class AddSeedForm(Form):
         self.botanical_names.choices = botanical_name_select_list()
         self.categories.choices = category_select_list()
         self.common_names.choices = common_name_select_list()
+        self.gw_common_names.choices = common_name_select_list()
+        self.gw_seeds.choices = seed_select_list()
         self.series.choices = [(0, 'None')] + series_select_list()
 
     def validate_name(self, field):
@@ -408,16 +455,16 @@ class EditBotanicalNameForm(Form):
         name (StringField): Botanical name to edit.
         submit (SubmitField): The submit button.
     """
-    common_names = SelectMultipleField('Select to add, deselect to remove',
-                                       coerce=int,
-                                       validators=[DataRequired()])
+    common_names = SelectField('Select to add, deselect to remove',
+                                       coerce=int)
     name = StringField('Botanical Name', validators=[Length(1, 64)])
     submit = SubmitField('Edit Botanical Name')
 
     def populate(self, bn):
         """Load a BotanicalName from the db and populate form with it."""
         self.name.data = bn.name
-        self.common_names.data = [cn.id for cn in bn.common_names]
+        if bn.common_name:
+            self.common_names.data = bn.common_name.id
 
     def set_common_names(self):
         """Set add/remove_common_names with common names from the database."""
@@ -454,12 +501,17 @@ class EditCommonNameForm(Form):
         name (StringField): CommonName name to edit.
         submit (SubmitField): Submit button.
     """
-    categories = SelectMultipleField('Select to add, deselect to remove',
+    categories = SelectMultipleField('Select/Deselect Categories',
                                      coerce=int,
                                      validators=[DataRequired()])
     description = TextAreaField('Description')
+    gw_common_names = SelectMultipleField('Common Names', coerce=int)
+    gw_seeds = SelectMultipleField('Cultivars', coerce=int)
+    instructions = TextAreaField('Planting Instructions')
     name = StringField('Common Name', validators=[Length(1, 64)])
-    submit = SubmitField('Common Name')
+    parent_cn = SelectField('Subcategory of', coerce=int)
+    submit = SubmitField('Edit Common Name')
+    synonyms = StringField('Synonyms')
 
     def populate(self, cn):
         """Load a common name from the database and populate form with it.
@@ -469,11 +521,27 @@ class EditCommonNameForm(Form):
         """
         self.name.data = cn.name
         self.description.data = cn.description
+        self.instructions.data = cn.instructions
+        if cn.parent:
+            self.parent_cn.data = cn.parent.id
+        if cn.synonyms:
+            self.synonyms.data = cn.list_synonyms_as_string()
         self.categories.data = [cat.id for cat in cn.categories]
+        if cn.gw_common_names:
+            self.gw_common_names.data = [gw_cn.id for gw_cn in
+                                         cn.gw_common_names]
+        if cn.gw_seeds:
+            self.gw_seeds.data = [gw_seed.id for gw_seed in cn.gw_seeds]
 
-    def set_categories(self):
-        """Set categories with categories from db."""
+    def set_selects(self):
+        """Populate categories with Categories from the database."""
         self.categories.choices = category_select_list()
+        self.gw_common_names.choices = common_name_select_list()
+        self.gw_common_names.choices.insert(0, (0, 'None'))
+        self.gw_seeds.choices = seed_select_list()
+        self.gw_seeds.choices.insert(0, (0, 'None'))
+        self.parent_cn.choices = common_name_select_list()
+        self.parent_cn.choices.insert(0, (0, 'N/A'))
 
 
 class EditPacketForm(Form):
@@ -558,7 +626,7 @@ class EditSeriesForm(Form):
 class EditSeedForm(Form):
     """Form for editing an existing seed in the database.
     """
-    botanical_names = SelectMultipleField('Botanical Names', coerce=int)
+    botanical_names = SelectField('Botanical Names', coerce=int)
     categories = SelectMultipleField('Categories',
                                      coerce=int,
                                      validators=[DataRequired()])
@@ -582,8 +650,8 @@ class EditSeedForm(Form):
 
     def populate(self, seed):
         """Populate form with data from a Seed object."""
-        if seed.botanical_names:
-            self.botanical_names.data = [bn.id for bn in seed.botanical_names]
+        if seed.botanical_name:
+            self.botanical_names.data = seed.botanical_name.id
         self.categories.data = [cat.id for cat in seed.categories]
         self.common_name.data = seed.common_name.id
         self.description.data = seed.description

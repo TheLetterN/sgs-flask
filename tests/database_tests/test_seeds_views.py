@@ -41,7 +41,7 @@ def foxy_seed():
     seed.description = 'Not to be confused with that Hendrix song.'
     bn = BotanicalName()
     bn.name = 'Digitalis purpurea'
-    seed.botanical_names.append(bn)
+    seed.botanical_name = bn
     cat = Category()
     cat.category = 'Perennial Flower'
     seed.categories.append(cat)
@@ -65,11 +65,11 @@ class TestAddBotanicalNameRouteWithDB:
             login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.add_botanical_name'),
                          data=dict(name='Asclepias incarnata',
-                                   common_names=[cn.id]),
+                                   common_names=cn.id),
                          follow_redirects=True)
         bn = BotanicalName.query.filter_by(name='Asclepias incarnata').first()
         assert bn is not None
-        assert cn in bn.common_names
+        assert cn is bn.common_name
         assert '&#39;Asclepias incarnata&#39; has been added' in str(rv.data)
 
     def test_add_botanical_name_renders_page(self, app, db):
@@ -127,6 +127,7 @@ class TestAddCommonNameRouteWithDB:
             login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.add_common_name'),
                          data=dict(name='Foxglove',
+                                   parent_cn=0,
                                    categories=[cat.id],
                                    description='Foxy!'),
                          follow_redirects=True)
@@ -281,7 +282,7 @@ class TestAddSeedRouteWithDB:
         with app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.add_seed'),
-                         data=dict(botanical_names=[str(bn.id)],
+                         data=dict(botanical_names=str(bn.id),
                                    categories=[str(cat.id)],
                                    common_names=str(cn.id),
                                    in_stock='y',
@@ -292,7 +293,6 @@ class TestAddSeedRouteWithDB:
                                    name='Foxy',
                                    description='Very foxy.'),
                          follow_redirects=True)
-        assert '&#39;Digitalis purpurea&#39; added' in str(rv.data)
         assert '&#39;Perennial Flower&#39; added' in str(rv.data)
         assert '&#39;Foxy Foxglove&#39; is in stock' in str(rv.data)
         assert '&#39;Foxy Foxglove&#39; is currently active' in str(rv.data)
@@ -463,7 +463,7 @@ class TestEditBotanicalNameRouteWithDB:
         db.session.add_all([user, bn, cn])
         bn.name = 'Asclepias incarnata'
         cn.name = 'Butterly Weed'
-        bn.common_names.append(cn)
+        bn.common_name = cn
         db.session.commit()
         with app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
@@ -503,28 +503,26 @@ class TestEditBotanicalNameRouteWithDB:
         bn = BotanicalName()
         cn1 = CommonName()
         cn2 = CommonName()
-        cn3 = CommonName()
         user = seed_manager()
-        db.session.add_all([bn, cn1, cn2, cn3, user])
+        db.session.add_all([bn, cn1, cn2, user])
         bn.name = 'Asclepias incarnata'
         cn1.name = 'Butterfly Weed'
         cn2.name = 'Milkweed'
-        cn3.name = 'Swamp Milkweed'
-        bn.common_names.append(cn1)
+        bn.common_name = cn1
         db.session.commit()
         with app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.edit_botanical_name', bn_id=bn.id),
                          data=dict(name='Asclepias tuberosa',
-                                   common_names=[cn2.id, cn3.id]),
+                                   common_names=cn2.id),
                          follow_redirects=True)
         assert bn.name == 'Asclepias tuberosa'
-        assert cn2 in bn.common_names
-        assert cn3 in bn.common_names
-        assert cn1 not in bn.common_names
-        assert 'changed to' in str(rv.data)
-        assert 'added to common names' in str(rv.data)
-        assert 'removed from common names' in str(rv.data)
+        assert cn2 is bn.common_name
+        assert 'Botanical name &#39;Asclepias incarnata&#39; changed to '\
+            '&#39;Asclepias tuberosa&#39;.' in str(rv.data)
+        assert 'Common name associated with botanical name &#39;Asclepias '\
+            'tuberosa&#39; changed from &#39;Butterfly Weed&#39; to: '\
+            '&#39;Milkweed&#39;.' in str(rv.data)
 
 
 class TestEditCategoryRouteWithDB:
@@ -659,7 +657,8 @@ class TestEditCommonNameRouteWithDB:
             rv = tc.post(url_for('seeds.edit_common_name', cn_id=cn.id),
                          data=dict(name='Butterfly Weed',
                                    description='Butterflies love this stuff.',
-                                   categories=[cat.id]),
+                                   categories=[cat.id],
+                                   parent_cn=0),
                          follow_redirects=True)
         assert 'No changes made' in str(rv.data)
 
@@ -708,6 +707,7 @@ class TestEditCommonNameRouteWithDB:
             rv = tc.post(url_for('seeds.edit_common_name', cn_id=cn.id),
                          data=dict(name='Celery',
                                    description='Crunchy!',
+                                   parent_cn=0,
                                    categories=[cat2.id, cat3.id]),
                          follow_redirects=True)
         assert cn.name == 'Celery'
@@ -859,8 +859,8 @@ class TestEditPacketRouteWithDB:
 
 class TestEditSeedRouteWithDB:
     """Test seeds.edit_seed."""
-    def test_edit_seed_change_botanical_names(self, app, db):
-        """Flash messages if botanical names are added or removed."""
+    def test_edit_seed_change_botanical_name(self, app, db):
+        """Flash messages if botanical name is changed."""
         user = seed_manager()
         seed = Seed()
         bn = BotanicalName()
@@ -875,7 +875,7 @@ class TestEditSeedRouteWithDB:
         cat.category = 'Perennial Flower'
         thumb.filename = 'foxy.jpg'
         seed.categories.append(cat)
-        seed.botanical_names.append(bn)
+        seed.botanical_name = bn
         seed.common_name = cn
         seed.name = 'Foxy'
         seed.description = 'Like that Hendrix song.'
@@ -884,7 +884,7 @@ class TestEditSeedRouteWithDB:
         with app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.edit_seed', seed_id=seed.id),
-                         data=dict(botanical_names=[str(bn2.id)],
+                         data=dict(botanical_names=str(bn2.id),
                                    categories=[str(cat.id)],
                                    common_name=str(cn.id),
                                    name=seed.name,
@@ -892,10 +892,8 @@ class TestEditSeedRouteWithDB:
                                    thumbnail=(io.BytesIO(b'fawks'),
                                               'foxy.jpg')),
                          follow_redirects=True)
-        assert 'Added botanical name' in str(rv.data)
-        assert 'Removed botanical name' in str(rv.data)
-        assert bn2 in seed.botanical_names
-        assert bn not in seed.botanical_names
+        assert 'Changed botanical name' in str(rv.data)
+        assert bn2 is seed.botanical_name
 
     def test_edit_seed_change_categories(self, app, db):
         """Flash messages if categories added or removed."""
@@ -913,7 +911,7 @@ class TestEditSeedRouteWithDB:
         cat2.category = 'Plant'
         thumb.filename = 'foxy.jpg'
         seed.categories.append(cat)
-        seed.botanical_names.append(bn)
+        seed.botanical_name = bn
         seed.common_name = cn
         seed.name = 'Foxy'
         seed.description = 'Like that Hendrix song.'
@@ -951,7 +949,7 @@ class TestEditSeedRouteWithDB:
         cat.category = 'Perennial Flower'
         thumb.filename = 'foxy.jpg'
         seed.categories.append(cat)
-        seed.botanical_names.append(bn)
+        seed.botanical_name = bn
         seed.common_name = cn
         seed.name = 'Foxy'
         seed.description = 'Like that Hendrix song.'
@@ -986,7 +984,7 @@ class TestEditSeedRouteWithDB:
         cat.category = 'Perennial Flower'
         thumb.filename = 'foxy.jpg'
         seed.categories.append(cat)
-        seed.botanical_names.append(bn)
+        seed.botanical_name = bn
         seed.common_name = cn
         seed.name = 'Foxy'
         seed.description = 'Like that Hendrix song.'
@@ -1020,7 +1018,7 @@ class TestEditSeedRouteWithDB:
         cat.category = 'Perennial Flower'
         thumb.filename = 'foxy.jpg'
         seed.categories.append(cat)
-        seed.botanical_names.append(bn)
+        seed.botanical_name = bn
         seed.common_name = cn
         seed.name = 'Foxy'
         seed.description = 'Like that Hendrix song.'
@@ -1073,7 +1071,7 @@ class TestEditSeedRouteWithDB:
         cat.category = 'Perennial Flower'
         thumb.filename = 'foxy.jpg'
         seed.categories.append(cat)
-        seed.botanical_names.append(bn)
+        seed.botanical_name = bn
         seed.common_name = cn
         seed.name = 'Foxy'
         seed.description = 'Like that Hendrix song.'
@@ -1126,7 +1124,7 @@ class TestEditSeedRouteWithDB:
         cat.category = 'Perennial Flower'
         thumb.filename = 'foxy.jpg'
         seed.categories.append(cat)
-        seed.botanical_names.append(bn)
+        seed.botanical_name = bn
         seed.common_name = cn
         seed.name = 'Foxy'
         seed.description = 'Like that Hendrix song.'
@@ -1164,7 +1162,7 @@ class TestEditSeedRouteWithDB:
         cat.category = 'Perennial Flower'
         thumb.filename = 'foxy.jpg'
         seed.categories.append(cat)
-        seed.botanical_names.append(bn)
+        seed.botanical_name = bn
         seed.common_name = cn
         seed.name = 'Foxy'
         seed.description = 'Like that Hendrix song.'
@@ -1202,7 +1200,7 @@ class TestEditSeedRouteWithDB:
         cat.category = 'Perennial Flower'
         thumb.filename = 'foxy.jpg'
         seed.categories.append(cat)
-        seed.botanical_names.append(bn)
+        seed.botanical_name = bn
         seed.common_name = cn
         seed.in_stock = True
         seed.dropped = False
@@ -1213,7 +1211,7 @@ class TestEditSeedRouteWithDB:
         with app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.edit_seed', seed_id=seed.id),
-                         data=dict(botanical_names=[str(bn.id)],
+                         data=dict(botanical_names=str(bn.id),
                                    categories=[str(cat.id)],
                                    common_name=str(cn.id),
                                    in_stock='y',

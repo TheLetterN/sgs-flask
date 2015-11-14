@@ -202,21 +202,30 @@ class TestAddCategoryFormWithDB:
 
 class TestAddCommonNameFormWithDB:
     """Test custom methods of AddCommonNameForm."""
-    def test_set_categories(self, db):
+    def test_set_selects(self, db):
         """Set .categories.choices with Categories from the db."""
         cat1 = Category()
         cat2 = Category()
-        cat3 = Category()
-        db.session.add_all([cat1, cat2, cat3])
+        cn1 = CommonName()
+        cn2 = CommonName()
+        sd1 = Seed()
+        sd2 = Seed()
+        db.session.add_all([cat1, cat2, cn1, cn2, sd1, sd2])
         cat1.category = 'Annual Flower'.title()
         cat2.category = 'Perennial Flower'.title()
-        cat3.category = 'Vegetable'.title()
+        cn1.name = 'Foxglove'
+        cn2.name = 'Butterfly Weed'
+        sd1.name = 'Foxy'
+        sd2.name = 'Soulmate'
         db.session.commit()
         form = AddCommonNameForm()
-        form.set_categories()
+        form.set_selects()
         assert (cat1.id, cat1.category) in form.categories.choices
         assert (cat2.id, cat2.category) in form.categories.choices
-        assert (cat3.id, cat3.category) in form.categories.choices
+        assert (cn1.id, cn1.name) in form.gw_common_names.choices
+        assert (cn2.id, cn2.name) in form.gw_common_names.choices
+        assert (sd1.id, sd1.name) in form.gw_seeds.choices
+        assert (sd2.id, sd2.name) in form.gw_seeds.choices
 
     def test_validate_name(self, db):
         """Raise a Validation error if common name already in db."""
@@ -230,6 +239,15 @@ class TestAddCommonNameFormWithDB:
         form.name.data = 'Coleus'
         with pytest.raises(ValidationError):
             form.validate_name(form.name)
+
+    def test_validate_synonyms(self, db):
+        """Raise a ValidationError if any synonyms are more than 64 chars."""
+        form = AddCommonNameForm()
+        form.synonyms.data = 'Sixty-four characters is actually quite a lot '\
+                             'of characters to fit in one name, the limit is '\
+                             'perfectly reasonable'
+        with pytest.raises(ValidationError):
+            form.validate_synonyms(form.synonyms)
 
 
 class TestAddPacketFormWithDB:
@@ -484,21 +502,33 @@ class TestEditBotanicalNameFormWithDB:
 
 class TestEditCommonNameFormWithDB:
     """Test custom methods of EditCommonNameForm."""
-    def test_set_categories(self, db):
-        """Set categories with Categories from the db."""
+    def test_set_selects(self, db):
+        """Set selects with data from the db."""
         cat1 = Category()
         cat2 = Category()
-        cat3 = Category()
-        db.session.add_all([cat1, cat2, cat3])
+        cn1 = CommonName()
+        cn2 = CommonName()
+        sd1 = Seed()
+        sd2 = Seed()
+        db.session.add_all([cat1, cat2, cn1, cn2, sd1, sd2])
         cat1.category = 'Annual Flower'.title()
         cat2.category = 'Perennial Flower'.title()
-        cat3.category = 'Vegetable'.title()
+        cn1.name = 'Foxglove'
+        cn2.name = 'Butterfly Weed'
+        sd1.name = 'Foxy'
+        sd2.name = 'Soulmate'
         db.session.commit()
         form = EditCommonNameForm()
-        form.set_categories()
+        form.set_selects()
         assert (cat1.id, cat1.category) in form.categories.choices
         assert (cat2.id, cat2.category) in form.categories.choices
-        assert (cat3.id, cat3.category) in form.categories.choices
+        assert (cn1.id, cn1.name) in form.gw_common_names.choices
+        assert (cn2.id, cn2.name) in form.gw_common_names.choices
+        assert (sd1.id, sd1.name) in form.gw_seeds.choices
+        assert (sd2.id, sd2.name) in form.gw_seeds.choices
+        assert (cn1.id, cn1.name) in form.parent_cn.choices
+        assert (cn2.id, cn2.name) in form.parent_cn.choices
+
 
 
 class TestEditCategoryFormWithDB:
@@ -581,14 +611,14 @@ class TestEditSeedFormWithDB:
         bn.name = 'Digitalis purpurea'
         cn.name = 'Foxglove'
         cat.category = 'Perennial Flower'
-        seed.botanical_names.append(bn)
+        seed.botanical_name = bn
         seed.categories.append(cat)
         seed.common_name = cn
         db.session.commit()
         form = EditSeedForm()
         form.set_selects()
         form.populate(seed)
-        assert bn.id in form.botanical_names.data
+        assert bn.id == form.botanical_names.data
         assert cat.id in form.categories.data
         assert cn.id == form.common_name.data
         assert seed.name in form.name.data

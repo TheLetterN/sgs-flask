@@ -24,6 +24,7 @@ import pytest
 from flask.ext.migrate import Migrate, MigrateCommand
 from flask.ext.script import Manager, Shell
 from app import create_app, db, mail
+from app.auth.models import User, Permission
 
 app = create_app(os.getenv('SGS_CONFIG') or 'default')
 manager = Manager(app)
@@ -32,6 +33,24 @@ migrate = Migrate(app, db)
 
 def make_shell_context():
     return dict(app=app, db=db, mail=mail)
+
+
+@manager.command
+def create():
+    """Create a new database and add an admin user.
+    
+    This should only be used during development, never in production!
+    """
+    db.create_all()
+    admin = User()
+    db.session.add(admin)
+    admin.name = 'admin'
+    admin.set_password('sgsadmin')
+    admin.email = 'admin@localhost'
+    admin.grant_permission(Permission.MANAGE_SEEDS)
+    admin.grant_permission(Permission.MANAGE_USERS)
+    admin.confirmed = True
+    db.session.commit()
 
 
 @manager.option(

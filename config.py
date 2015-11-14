@@ -65,11 +65,14 @@ class Config(object):
         'info@swallowtailgardenseeds.com'
     SECRET_KEY = os.environ.get('SGS_SECRET_KEY') or \
         '\xbdc@:b\xac\xfa\xfa\xd1z[\xa3=\xd1\x9a\x0b&\xe3\x1d5\xe9\x84(\xda'
-    SQLALCHEMY_COMMIT_ON_TEARDOWN = True
     SUPPORT_EMAIL = os.environ.get('SGS_SUPPORT_EMAIL') or \
         'support@swallowtailgardenseeds.com'
     #Set to suppress Flask-SQLAlchemy warning. May need to change later.
     SQLALCHEMY_TRACK_MODIFICATIONS = True
+    if os.environ.get('SGS_SQLALCHEMY_ECHO'):
+        SQLALCHEMY_ECHO = True
+    else:
+        SQLALCHEMY_ECHO = False
 
     @staticmethod
     def init_app(app):

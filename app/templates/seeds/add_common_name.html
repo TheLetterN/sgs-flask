@@ -16,7 +16,7 @@
    Copyright Swallowtail Garden Seeds, Inc 
 #}
 {% extends "main/base.html" %}
-{% from "includes/form_errors.html" import form_errors %}
+{% from "includes/form_field.html" import form_field %}
 {# HTML within blocks should be indented as follows for consistency: #}
 {# block head: 2 indentations of 4 spaces each. (8 spaces total.) #}
 {# block main: 3 indentations of 4 spaces each. (12 spaces total.) #}
@@ -33,28 +33,34 @@
                     <fieldset>
                         <legend>Select/Add Categories</legend>
                         <li>
-                            {{ form.categories.label }}
-                            {{ form.categories }}
-                            {% if form.categories.errors|count > 0 %}
-                            {{ form_errors(form.categories) }}
-                            {% endif %}
+                            {{ form_field(form.categories)|indent(28)|safe }}
                         </li>
                     </fieldset>
                     <fieldset>
                         <legend>Add Common Name</legend>
                         <li>
-                            {{ form.name.label }}
-                            {{ form.name }}
-                            {% if form.name.errors|count > 0 %}
-                            {{ form_errors(form.name) }}
-                            {% endif %}
+                            {{ form_field(form.name)|indent(28)|safe }}
                         </li>
                         <li>
-                            {{ form.description.label }}
-                            {{ form.description }}
-                            {% if form.description.errors|count > 0 %}
-                            {{ form_errors(form.description) }}
-                            {% endif %}
+                            {{ form_field(form.parent_cn)|indent(28)|safe }}
+                        </li>
+                        <li>
+                            {{ form_field(form.description)|indent(28)|safe }}
+                        </li>
+                        <li>
+                            {{ form_field(form.instructions)|indent(28)|safe }}
+                        </li>
+                        <li>
+                            {{ form_field(form.synonyms)|indent(28)|safe }}
+                        </li>
+                    </fieldset>
+                    <fieldset>
+                        <legend>Grows Well With</legend>
+                        <li>
+                            {{ form_field(form.gw_common_names)|indent(28)|safe }}
+                        </li>
+                        <li>
+                            {{ form_field(form.gw_seeds)|indent(28)|safe }}
                         </li>
                     </fieldset>
                     <li>

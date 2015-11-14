@@ -31,7 +31,7 @@
             {% if seed.dropped %}
             Seed is dropped. <a href="{{ url_for('seeds.flip_dropped', seed_id=seed.id, next=request.path) }}">Make Active</a>
             {% else %}
-            Seed is active. <a href="{{ url_for('seeds.flip_dropped', seed_id=seed.id, next=request.path) }}">Drop</a>
+            Seed is active. <a href="{{ url_for('seeds.flip_dropped', seed_id=seed.id, next=request.path) }}">Drop</a> | 
             {% endif %}
             <a href="{{ url_for('seeds.edit_seed', seed_id=seed.id) }}">Edit</a>
             <a href="{{ url_for('seeds.remove_seed', seed_id=seed.id) }}">Remove</a>
@@ -41,7 +41,7 @@
         {% if not cn_slug %}{% set cn_slug = seed.common_name.slug %}{% endif %}
         <h3><a href="{{ url_for('seeds.seed', cat_slug=cat_slug, cn_slug=cn_slug, seed_slug=seed.slug)}}">{{ seed.name }}</a></h3>
         <em>{{ seed.common_name.header }}</em>
-        <i>{{ seed.list_botanical_names() }}</i>
+        <i>{{ seed.botanical_name.name }}</i>
         <p>{{ seed.description }}</p>
     </div>
     {% if current_user.can(Permission.MANAGE_SEEDS) %}

@@ -23,6 +23,7 @@ from fractions import Fraction
 from inflection import pluralize
 from slugify import slugify
 from sqlalchemy.ext.hybrid import hybrid_property
+from titlecase import titlecase
 from app import db
 
 
@@ -154,13 +155,13 @@ def is_int(value):
         return False
 
 
-botanical_names_to_common_names = db.Table(
-    'botanical_names_to_common_names',
+botanical_name_synonyms = db.Table(
+    'botanical_name_synonyms',
     db.Model.metadata,
-    db.Column('botanical_names_id',
+    db.Column('syn_parents_id',
               db.Integer,
               db.ForeignKey('botanical_names.id')),
-    db.Column('common_names_id', db.Integer, db.ForeignKey('common_names.id'))
+    db.Column('synonyms_id', db.Integer, db.ForeignKey('botanical_names.id'))
 )
 
 
@@ -182,23 +183,45 @@ common_names_to_categories = db.Table(
 )
 
 
-seeds_to_botanical_names = db.Table(
-    'seeds_to_botanical_names',
+common_name_synonyms = db.Table(
+    'common_name_synonyms',
     db.Model.metadata,
-    db.Column('seeds_id', db.Integer, db.ForeignKey('seeds.id')),
-    db.Column('botanical_names_id',
-              db.Integer,
-              db.ForeignKey('botanical_names.id'))
+    db.Column('syn_parents_id', db.Integer, db.ForeignKey('common_names.id')),
+    db.Column('synonyms_id', db.Integer, db.ForeignKey('common_names.id'))
 )
 
 
-seeds_to_common_names = db.Table(
-    'seeds_to_common_names',
+cns_to_gw_cns = db.Table(
+    'cns_to_gw_cns',
     db.Model.metadata,
-    db.Column('seeds_id', db.Integer, db.ForeignKey('seeds.id')),
-    db.Column('common_names_id',
-              db.Integer,
+    db.Column('common_name_id', db.Integer, db.ForeignKey('common_names.id')),
+    db.Column('gw_common_name_id',
+              db.Integer, 
               db.ForeignKey('common_names.id'))
+)
+
+
+gw_common_names_to_gw_seeds = db.Table(
+    'gw_common_names_to_gw_seeds',
+    db.Model.metadata,
+    db.Column('common_names_id', db.Integer, db.ForeignKey('common_names.id')),
+    db.Column('seeds_id', db.Integer, db.ForeignKey('seeds.id'))
+)
+
+
+seeds_to_gw_seeds = db.Table(
+    'seeds_to_gw_seeds',
+    db.Model.metadata,
+    db.Column('seed_id', db.Integer, db.ForeignKey('seeds.id')),
+    db.Column('gw_seed_id', db.Integer, db.ForeignKey('seeds.id'))
+)
+
+
+seed_synonyms = db.Table(
+    'seed_synonyms',
+    db.Model.metadata,
+    db.Column('syn_parents_id', db.Integer, db.ForeignKey('seeds.id')),
+    db.Column('synonyms_id', db.Integer, db.ForeignKey('seeds.id'))
 )
 
 
@@ -494,9 +517,13 @@ class BotanicalName(db.Model):
     """
     __tablename__ = 'botanical_names'
     id = db.Column(db.Integer, primary_key=True)
-    common_names = db.relationship('CommonName',
-                                   secondary=botanical_names_to_common_names,
-                                   backref='botanical_names')
+    common_name_id = db.Column(db.Integer, db.ForeignKey('common_names.id'))
+    common_name = db.relationship('CommonName', backref='botanical_names')
+    syn_parents = db.relationship('BotanicalName',
+                                  secondary=botanical_name_synonyms,
+                                  backref='synonyms',
+                                  primaryjoin=id==botanical_name_synonyms.c.syn_parents_id,
+                                 secondaryjoin=id==botanical_name_synonyms.c.synonyms_id)
     _name = db.Column(db.String(64), unique=True)
 
     def __init__(self, name=None):
@@ -581,6 +608,31 @@ class BotanicalName(db.Model):
                 return False
         except:
             return False
+
+    def list_synonyms_as_string(self):
+        """Return a string listing of synonyms delineated by commas."""
+        return ', '.join([syn.name for syn in self.synonyms])
+
+    def set_synonyms_from_string_list(self, synlist):
+        """Set synonyms with data from a string list delineated by commas."""
+        syns = synlist.split(', ')
+        syns = [titlecase(syn) for syn in syns]
+        if self.synonyms:
+            for synonym in list(self.synonyms):
+                if synonym.name not in syns:
+                    self.synonyms.remove(synonym)
+                    if not synonym.syn_parents:
+                        db.session.delete(synonym)
+                        db.session.commit()
+        for syn in syns:
+            synonym = BotanicalName.query.filter_by(_name=syn).first()
+            if synonym:
+                if synonym not in self.synonyms:
+                    self.synonyms.append(synonym)
+            else:
+                synonym = BotanicalName()
+                synonym.name = syn
+                self.synonyms.append(synonym)
 
 
 class Category(db.Model):
@@ -682,12 +734,23 @@ class CommonName(db.Model):
                                  secondary=common_names_to_categories,
                                  backref='common_names')
     description = db.Column(db.Text)
+    gw_common_names = db.relationship('CommonName',
+                                      secondary=cns_to_gw_cns,
+                                      primaryjoin=id==cns_to_gw_cns.c.common_name_id,
+                                      secondaryjoin=id==cns_to_gw_cns.c.gw_common_name_id)
+    instructions = db.Column(db.Text)
     _name = db.Column(db.String(64), unique=True)
     parent_id = db.Column(db.Integer, db.ForeignKey('common_names.id'))
     parent = db.relationship('CommonName',
                              backref='children',
+                             foreign_keys=parent_id,
                              remote_side=[id])
     slug = db.Column(db.String(64), unique=True)
+    syn_parents = db.relationship('CommonName',
+                                 secondary=common_name_synonyms,
+                                 backref='synonyms',
+                                 primaryjoin=id==common_name_synonyms.c.syn_parents_id,
+                                 secondaryjoin=id==common_name_synonyms.c.synonyms_id)
 
     def __init__(self, name=None, description=None):
         """Construct an instance of CommonName
@@ -728,6 +791,33 @@ class CommonName(db.Model):
             self.slug = slugify(name)
         else:
             self.slug = None
+
+    def list_synonyms_as_string(self):
+        """Return a string listing of synonyms delineated by commas."""
+        return ', '.join([syn.name for syn in self.synonyms])
+
+    def set_synonyms_from_string_list(self, synlist):
+        """Set synonyms with data from a string list delineated by commas."""
+        if not synlist:
+            self.synonyms = None
+        syns = synlist.split(', ')
+        syns = [titlecase(syn) for syn in syns]
+        if self.synonyms:
+            for synonym in list(self.synonyms):
+                if synonym.name not in syns:
+                    self.synonyms.remove(synonym)
+                    if not synonym.syn_parents:
+                        db.session.delete(synonym)
+                        db.session.commit()
+        for syn in syns:
+            synonym = CommonName.query.filter_by(_name=syn).first()
+            if synonym:
+                if synonym not in self.synonyms:
+                    self.synonyms.append(synonym)
+            else:
+                synonym = CommonName()
+                synonym.name = syn
+                self.synonyms.append(synonym)
 
 
 class Image(db.Model):
@@ -1043,16 +1133,21 @@ class Seed(db.Model):
     """
     __tablename__ = 'seeds'
     id = db.Column(db.Integer, primary_key=True)
-    botanical_names = db.relationship('BotanicalName',
-                                      secondary=seeds_to_botanical_names,
-                                      backref='_seeds')
+    botanical_name_id = db.Column(db.Integer,
+                                  db.ForeignKey('botanical_names.id'))
+    botanical_name = db.relationship('BotanicalName',
+                                      backref='seeds')
     common_name_id = db.Column(db.Integer, db.ForeignKey('common_names.id'))
     common_name = db.relationship('CommonName', backref='seeds')
     description = db.Column(db.Text)
     dropped = db.Column(db.Boolean)
-    grows_with_id = db.Column(db.Integer, db.ForeignKey('seeds.id'))
-    grows_with = db.relationship('Seed')
-    hybrid = db.Column(db.Boolean)
+    gw_common_names = db.relationship('CommonName',
+                                      secondary=gw_common_names_to_gw_seeds,
+                                      backref='gw_seeds')
+    gw_seeds = db.relationship('Seed',
+                               secondary=seeds_to_gw_seeds,
+                               primaryjoin=id==seeds_to_gw_seeds.c.seed_id,
+                               secondaryjoin=id==seeds_to_gw_seeds.c.gw_seed_id)
     images = db.relationship('Image', foreign_keys=Image.seed_id)
     in_stock = db.Column(db.Boolean)
     _name = db.Column(db.String(64), unique=True)
@@ -1062,6 +1157,11 @@ class Seed(db.Model):
     series_id = db.Column(db.Integer, db.ForeignKey('series.id'))
     series = db.relationship('Series', backref='seeds')
     slug = db.Column(db.String(64), unique=True)
+    syn_parents = db.relationship('Seed',
+                                 secondary=seed_synonyms,
+                                 backref='synonyms',
+                                 primaryjoin=id==seed_synonyms.c.syn_parents_id,
+                                 secondaryjoin=id==seed_synonyms.c.synonyms_id)
     thumbnail_id = db.Column(db.Integer, db.ForeignKey('images.id'))
     thumbnail = db.relationship('Image', foreign_keys=thumbnail_id)
 
@@ -1109,9 +1209,30 @@ class Seed(db.Model):
         else:
             return os.path.join('images', 'default_thumb.jpg')
 
-    def list_botanical_names(self):
-        """Return a string containing a list of botanical names."""
-        return ', '.join([bn.name for bn in self.botanical_names])
+    def list_synonyms_as_string(self):
+        """Return a string listing of synonyms delineated by commas."""
+        return ', '.join([syn.name for syn in self.synonyms])
+
+    def set_synonyms_from_string_list(self, synlist):
+        """Set synonyms with data from a string list delineated by commas."""
+        syns = synlist.split(', ')
+        syns = [titlecase(syn) for syn in syns]
+        if self.synonyms:
+            for synonym in list(self.synonyms):
+                if synonym.name not in syns:
+                    self.synonyms.remove(synonym)
+                    if not synonym.syn_parents:
+                        db.session.delete(synonym)
+                        db.session.commit()
+        for syn in syns:
+            synonym = Seed.query.filter_by(_name=syn).first()
+            if synonym:
+                if synonym not in self.synonyms:
+                    self.synonyms.append(synonym)
+            else:
+                synonym = Seed()
+                synonym.name = syn
+                self.synonyms.append(synonym)
 
 
 class Series(db.Model):
@@ -1147,33 +1268,6 @@ class Series(db.Model):
             return ' '.join(fn)
         else:
             return None
-
-
-
-class Synonym(db.Model):
-    """Table for synonyms.
-
-    Some names along the chain of names involved in a seed have synonyms, most
-    commonly seen in botanical names and common names. In these cases, the
-    only information we need is the synonym itself, as we just need it to be
-    searchable and displayable. As such, this table can work as a universal
-    target for relationships from tables in need of synonyms.
-
-    Attributes:
-        __tablename__ (str): Name of the table: 'synonyms'
-        id (int): Auto-incremented ID # used as primary key.
-        name (str): Column for a synonym.
-    """
-    __tablename__ = 'synonyms'
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(64), unique=True)
-    common_name_id = db.Column(db.Integer, db.ForeignKey('common_names.id'))
-    common_name = db.relationship('CommonName', backref='synonyms')
-    botanical_name_id = db.Column(db.Integer, 
-                                  db.ForeignKey('botanical_names.id'))
-    botanical_name = db.relationship('BotanicalName', backref='synonyms')
-    seed_id = db.Column(db.Integer, db.ForeignKey('seeds.id'))
-    seed = db.relationship('Seed', backref='synonyms')
 
 
 class Unit(db.Model):

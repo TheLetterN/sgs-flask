@@ -1,0 +1,23 @@
+{# This file is part of SGS-Flask.
+
+   SGS-Flask is free software: you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
+ 
+   SGS-Flask is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+ 
+   You should have received a copy of the GNU General Public License
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ 
+   Copyright Swallowtail Garden Seeds, Inc 
+#}
+{# This macro will take either a Seed or CommonName object, as they both
+contain the members gw_common_names and gw_seeds
+#}
+{% macro grows_with(obj) %}
+{% if obj.gw_common_names %}{% for gw_cn in obj.gw_common_names %}<a href="{{ url_for('seeds.common_name', cat_slug=gw_cn.categories[0].slug, cn_slug=gw_cn.slug) }}">{{ gw_cn.name }}</a>{% if not loop.last or obj.gw_seeds %}, {% endif %}{% endfor %}{% endif %}{% if obj.gw_seeds %}{% for gw_sd in obj.gw_seeds %}<a href="{{ url_for('seeds.seed', cat_slug=gw_sd.common_name.categories[0].slug, cn_slug=gw_sd.common_name.slug, seed_slug=gw_sd.slug) }}">{{ gw_sd.fullname }}</a>{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}
+{% endmacro %}

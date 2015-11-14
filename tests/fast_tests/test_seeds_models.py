@@ -642,22 +642,6 @@ class TestSeed:
         seed.common_name = cn
         assert seed.fullname == 'Foxy Foxglove'
 
-    def test_list_botanical_names(self, app):
-        """Return a string list of botanical names associated with a seed."""
-        bn1 = BotanicalName()
-        bn2 = BotanicalName()
-        bn3 = BotanicalName()
-        seed = Seed()
-        bn1.name = 'Digitalis purpurea'
-        bn2.name = 'Digitalis watchus'
-        bn3.name = 'Innagada davida'
-        seed.name = 'Foxy'
-        seed.botanical_names.append(bn1)
-        seed.botanical_names.append(bn2)
-        seed.botanical_names.append(bn3)
-        assert seed.list_botanical_names() == 'Digitalis purpurea, Digitalis '\
-            'watchus, Innagada davida'
-
     def test_name_getter(self, app):
         """Return ._name"""
         seed = Seed()

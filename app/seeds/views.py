@@ -17,11 +17,11 @@
 
 
 import os
-from titlecase import titlecase
 from flask import (
     abort,
     current_app,
     flash,
+    Markup,
     redirect,
     render_template,
     request,
@@ -29,7 +29,7 @@ from flask import (
 )
 from werkzeug import secure_filename
 from flask.ext.login import login_required
-from app import db, make_breadcrumbs
+from app import db, dbify, make_breadcrumbs
 from app.decorators import permission_required
 from app.auth.models import Permission
 from . import seeds
@@ -40,9 +40,9 @@ from .models import (
     Image,
     Price,
     Packet,
+    Quantity,
     Seed,
-    Series,
-    Unit
+    Series
 )
 from .forms import (
     AddBotanicalNameForm,
@@ -68,7 +68,8 @@ from .forms import (
     SelectCommonNameForm,
     SelectPacketForm,
     SelectSeedForm,
-    SelectSeriesForm
+    SelectSeriesForm,
+    syn_parents_links
 )
 
 
@@ -100,33 +101,27 @@ def make_categories_available():  # pragma: no cover
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
 def add_botanical_name():
-    """Add a botanical name to the database."""
+    """Handle web interface for adding BotanicalName objects to database."""
     form = AddBotanicalNameForm()
     form.set_common_names()
     if form.validate_on_submit():
         bn = BotanicalName()
         db.session.add(bn)
         bn.name = form.name.data
-        cn = CommonName.query.get(form.common_names.data)
+        cn = CommonName.query.get(form.common_name.data)
         bn.common_name = cn
         if form.synonyms.data:
-            synonyms = form.synonyms.data.split(', ')
-            for synonym in synonyms:
-                syn = BotanicalName.query.filter_by(_name=synonym)\
-                    .first()
-                if syn:
-                    bn.children.append(syn)
-                else:
-                    syn = BotanicalName()
-                    db.session.add(syn)
-                    syn.name = synonym
-                    bn.children.append(syn)
+            bn.set_synonyms_from_string_list(form.synonyms.data)
+            flash('Synonyms for \'{0}\' set to: {1}'
+                  .format(bn.name, bn.list_synonyms_as_string()))
         db.session.commit()
-        flash('Botanical name \'{0}\' has been added to: {1}.'.
+        flash('Botanical name \'{0}\' belonging to \'{1}\' has been added.'.
               format(bn.name, cn.name))
         return redirect(url_for('seeds.manage'))
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
+        (url_for('seeds.add_category'), 'Add Category'),
+        (url_for('seeds.add_common_name'), 'Add Common Name'),
         (url_for('seeds.add_botanical_name'), 'Add Botanical Name')
     )
     return render_template('seeds/add_botanical_name.html',
@@ -138,14 +133,16 @@ def add_botanical_name():
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
 def add_category():
-    """Add a category to the database."""
+    """Handle web interface for adding Category objects to the database."""
     form = AddCategoryForm()
     if form.validate_on_submit():
         category = Category()
         db.session.add(category)
-        category.category = titlecase(form.category.data)
-        if len(form.description.data) > 0:
+        category.category = dbify(form.category.data)
+        if form.description.data:
             category.description = form.description.data
+            flash('Description for \'{0}\' set to: {1}'
+                  .format(category.category, category.description))
         db.session.commit()
         flash('New category \'{0}\' has been added to the database.'.
               format(category.category))
@@ -161,18 +158,18 @@ def add_category():
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
 def add_common_name():
-    """Add a common name to the database."""
+    """Handle web interface for adding CommonName objects to the database."""
     form = AddCommonNameForm()
     form.set_selects()
     if form.validate_on_submit():
         cn = CommonName()
         db.session.add(cn)
-        cn.name = titlecase(form.name.data)
+        cn.name = dbify(form.name.data)
         for cat_id in form.categories.data:
             category = Category.query.get(cat_id)
             cn.categories.append(category)
-            flash('\'{0}\' added to Categories associated with \'{1}\''
-                  .format(category.category, cn.name))
+            flash('The common name \'{0}\' has been added to the category '
+                  '\'{1}\'.'.format(cn.name, category.category))
         if form.description.data:
             cn.description = form.description.data
             flash('Description for \'{0}\' set to: {1}'
@@ -196,12 +193,11 @@ def add_common_name():
             for sd_id in form.gw_seeds.data:
                 gw_sd = Seed.query.get(sd_id)
                 cn.gw_seeds.append(gw_sd)
-                gw_sd.gw_common_names.append(cn)
                 flash('\'{0}\' added to Grows With for \'{1}\', and vice '
                       'versa.'.format(gw_sd.fullname, cn.name))
-        if form.parent_cn.data > 0:
+        if form.parent_cn.data:
             cn.parent = CommonName.query.get(form.parent_cn.data)
-            flash('\'{0}\' has been set as a subcategory of \'{1}\''
+            flash('\'{0}\' has been set as a subcategory of \'{1}\'.'
                   .format(cn.name, cn.parent.name))
         db.session.commit()
         flash('The common name \'{0}\' has been added to the database.'.
@@ -209,6 +205,7 @@ def add_common_name():
         return redirect(url_for('seeds.manage'))
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
+        (url_for('seeds.add_category'), 'Add Category'),
         (url_for('seeds.add_common_name'), 'Add Common Name')
     )
     return render_template('seeds/add_common_name.html', crumbs=crumbs,
@@ -223,40 +220,38 @@ def add_packet(seed_id=None):
     """Add a packet to the database."""
     if seed_id is None:
         return redirect(url_for('seeds.select_seed', dest='seeds.add_packet'))
-    form = AddPacketForm()
-    form.set_selects()
     seed = Seed.query.get(seed_id)
+    if not seed:
+        return redirect(url_for('seeds.select_seed', dest='seeds.add_packet'))
+    form = AddPacketForm()
     if form.validate_on_submit():
         packet = Packet()
         db.session.add(packet)
         packet.seed = seed
-        if form.price.data:
-            packet.price = form.price.data
-        else:
-            packet._price = Price.query.get(form.prices.data)
-        if form.quantity.data:
-            packet.quantity = form.quantity.data
-        else:
-            packet.quantity = form.quantities.data
-        if form.unit.data:
-            packet.unit = form.unit.data
-        else:
-            packet._unit = Unit.query.get(form.units.data)
-        packet.sku = form.sku.data
+        packet.price = form.price.data.strip()
+        # TODO load existing Quantity if the same
+        packet.quantity = Quantity(value=form.quantity.data.strip(),
+                                   units=form.unit.data.strip())
+        packet.sku = form.sku.data.strip()
+        db.session.commit()
         flash('Packet SKU {0}: ${1} for {2} {3} added to {4} {5}.'.
               format(packet.sku,
                      packet.price,
-                     packet.quantity,
-                     packet.unit,
+                     packet.quantity.value,
+                     packet.quantity.units,
                      seed.name,
                      seed.common_name.name))
-        db.session.commit()
         if form.again.data:
             return redirect(url_for('seeds.add_packet', seed_id=seed_id))
         else:
             return redirect(url_for('seeds.manage'))
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
+        (url_for('seeds.add_category'), 'Add Category'),
+        (url_for('seeds.add_common_name'), 'Add Common Name'),
+        (url_for('seeds.add_botanical_name'), 'Add Botanical Name'),
+        (url_for('seeds.add_series'), 'Add Series'),
+        (url_for('seeds.add_seed'), 'Add Seed'),
         (url_for('seeds.add_packet'), 'Add Packet')
         )
     return render_template('seeds/add_packet.html',
@@ -275,10 +270,13 @@ def add_seed():
     if form.validate_on_submit():
         seed = Seed()
         db.session.add(seed)
-        seed.name = titlecase(form.name.data)
-        seed.botanical_name = BotanicalName.query\
-            .get(form.botanical_names.data)
-        seed.common_name = CommonName.query.get(form.common_names.data)
+        seed.name = dbify(form.name.data)
+        seed.common_name = CommonName.query.get(form.common_name.data)
+        if form.botanical_name.data:
+            seed.botanical_name = BotanicalName.query\
+                .get(form.botanical_name.data)
+            flash('Botanical name for \'{0}\' set to: {1}'
+                  .format(seed.fullname, seed.botanical_name.name))
         if form.categories.data:
             for cat_id in form.categories.data:
                 cat = Category.query.get(cat_id)
@@ -290,9 +288,26 @@ def add_seed():
                   ' name \'{0}\''.format(seed.common_name.name))
             for cat in seed.common_name.categories:
                 seed.categories.append(cat)
-        if form.series.data > 0:
+        if form.gw_common_names.data:
+            for cn_id in form.gw_common_names.data:
+                gw_cn = CommonName.query.get(cn_id)
+                seed.gw_common_names.append(gw_cn)
+                flash('\'{0}\' added to Grows With for \'{1}\', and vice '
+                      'versa.'.format(gw_cn.name, seed.name))
+        if form.gw_seeds.data:
+            for sd_id in form.gw_seeds.data:
+                gw_sd = Seed.query.get(sd_id)
+                seed.gw_seeds.append(gw_sd)
+                gw_sd.gw_seeds.append(seed)
+                flash('\'{0}\' added to Grows With for \'{1}\', and vice '
+                      'versa.'.format(gw_sd.fullname, seed.name))
+        if form.series.data:
             seed.series = Series.query.get(form.series.data)
             flash('Series set to: {0}'.format(seed.series.name))
+        if form.synonyms.data:
+            seed.set_synonyms_from_string_list(form.synonyms.data)
+            flash('Synonyms for \'{0}\' set to: {1}'
+                  .format(seed.fullname, seed.list_synonyms_as_string()))
         if form.thumbnail.data:
             thumb_name = secure_filename(form.thumbnail.data.filename)
             upload_path = os.path.join(current_app.config.get('IMAGES_FOLDER'),
@@ -321,6 +336,10 @@ def add_seed():
         return redirect(url_for('seeds.add_packet', seed_id=seed.id))
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
+        (url_for('seeds.add_category'), 'Add Category'),
+        (url_for('seeds.add_common_name'), 'Add Common Name'),
+        (url_for('seeds.add_botanical_name'), 'Add Botanical Name'),
+        (url_for('seeds.add_series'), 'Add Series'),
         (url_for('seeds.add_seed'), 'Add Seed')
     )
     return render_template('seeds/add_seed.html', crumbs=crumbs, form=form)
@@ -336,10 +355,8 @@ def add_series():
     if form.validate_on_submit():
         series = Series()
         db.session.add(series)
-        cn = CommonName.query.get(form.common_names.data)
-        print('CommonName: {0}'.format(cn.name))
-        series.common_name = CommonName.query.get(form.common_names.data)
-        series.name = titlecase(form.name.data)
+        series.common_name = CommonName.query.get(form.common_name.data)
+        series.name = dbify(form.name.data)
         series.description = form.description.data
         flash('New series \'{0}\' added to: {1}.'.
               format(series.name, series.common_name.name))
@@ -347,6 +364,9 @@ def add_series():
         return redirect(url_for('seeds.manage'))
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
+        (url_for('seeds.add_category'), 'Add Category'),
+        (url_for('seeds.add_common_name'), 'Add Common Name'),
+        (url_for('seeds.add_botanical_name'), 'Add Botanical Name'),
         (url_for('seeds.add_series'), 'Add Series')
     )
     return render_template('seeds/add_series.html', crumbs=crumbs, form=form)
@@ -397,15 +417,8 @@ def edit_botanical_name(bn_id=None):
     if bn_id is None:
         return redirect(url_for('seeds.select_botanical_name',
                                 dest='seeds.edit_botanical_name'))
-    if not bn_id.isdigit():
-        flash('Error: Botanical name id must be an integer!'
-              ' Please select a botanical name:')
-        return redirect(url_for('seeds.select_botanical_name',
-                                dest='seeds.edit_botanical_name'))
     bn = BotanicalName.query.get(bn_id)
     if bn is None:
-        flash('Error: No botanical name exists with that id!'
-              ' Please select one from the list:')
         return redirect(url_for('seeds.select_botanical_name',
                                 dest='seeds.edit_botanical_name'))
     form = EditBotanicalNameForm()
@@ -413,29 +426,57 @@ def edit_botanical_name(bn_id=None):
     if form.validate_on_submit():
         edited = False
         if form.name.data != bn.name:
+            bn2 = BotanicalName.query.filter_by(_name=form.name.data).first()
+            if bn2:
+                if not bn2.syn_only:
+                    bn2_url= url_for('seeds.edit_botanical_name', bn_id=bn2.id)
+                    flash(Markup(('Error: Botanical name \'{0}\' is already '
+                                  'in use! <a href="{1}">Click here</a> if '
+                                  'you wish to edit it.'
+                                  .format(bn2.name, bn2_url))))
+                else:
+                    flash(Markup('Error: The botanical name \'{0}\' already '
+                                 'exists as a synonym of: {1}. You will '
+                                 'need to remove it as a synonym before '
+                                 'adding it here.'
+                                 .format(bn2.name, syn_parents_links(bn2))))
+                return redirect(url_for('seeds.edit_botanical_name', 
+                                        bn_id=bn_id))
+            else:
+                edited = True
+                flash('Botanical name \'{0}\' changed to \'{1}\'.'.
+                      format(bn.name, form.name.data))
+                bn.name = form.name.data
+        if form.common_name.data != bn.common_name.id:
             edited = True
-            flash('Botanical name \'{0}\' changed to \'{1}\'.'.
-                  format(bn.name, form.name.data))
-            bn.name = form.name.data
-        if form.common_names.data != bn.common_name.id:
-            edited = True
-            cn = CommonName.query.get(form.common_names.data)
+            cn = CommonName.query.get(form.common_name.data)
             flash('Common name associated with botanical name \'{0}\' changed'
                     ' from \'{1}\' to: \'{2}\'.'.format(bn.name,
                                                        bn.common_name.name,
                                                        cn.name))
             bn.common_name = cn
+        if form.synonyms.data != bn.list_synonyms_as_string():
+            edited = True
+            if form.synonyms.data:
+                bn.set_synonyms_from_string_list(form.synonyms.data)
+                flash('Synonyms for \'{0}\' set to: {1}'
+                      .format(bn.name, bn.list_synonyms_as_string()))
+            else:
+                bn.clear_synonyms()
+                flash('Synonyms for \'{0}\' cleared.'.format(bn.name))
         if edited:
             db.session.commit()
             return redirect(url_for('seeds.manage'))
         else:
-            flash('No changes made to botanical name: \'{0}\'.'.
+            flash('No changes made to the botanical name: \'{0}\'.'.
                   format(bn.name))
             return redirect(url_for('seeds.edit_botanical_name', bn_id=bn_id))
     form.populate(bn)
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
-        (url_for('seeds.edit_botanical_name', bn_id=bn_id),
+        (url_for('seeds.edit_category'), 'Edit Category'),
+        (url_for('seeds.edit_common_name'), 'Edit Common Name'),
+        (url_for('seeds.edit_botanical_name'),
          'Edit Botanical Name')
     )
     return render_template('/seeds/edit_botanical_name.html',
@@ -444,49 +485,55 @@ def edit_botanical_name(bn_id=None):
 
 
 @seeds.route('/edit_category', methods=['GET', 'POST'])
-@seeds.route('/edit_category/<category_id>', methods=['GET', 'POST'])
+@seeds.route('/edit_category/<cat_id>', methods=['GET', 'POST'])
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
-def edit_category(category_id=None):
-    if category_id is None:
+def edit_category(cat_id=None):
+    if cat_id is None:
         return redirect(url_for('seeds.select_category',
                                 dest='seeds.edit_category'))
-    if not category_id.isdigit():
-        flash('Error: Category id must be an integer!'
-              ' Please select a category:')
-        return redirect(url_for('seeds.select_category',
-                                dest='seeds.edit_category'))
-    category = Category.query.get(category_id)
+    category = Category.query.get(cat_id)
     if category is None:
-        flash('Error: No category exists with that id!'
-              ' Please select one from the list:')
         return redirect(url_for('seeds.select_category',
                         dest='seeds.edit_category'))
     form = EditCategoryForm()
     if form.validate_on_submit():
         edited = False
-        if titlecase(form.category.data) != category.category:
-            flash('Category changed from \'{0}\' to \'{1}\'.'
-                  .format(category.category, titlecase(form.category.data)))
-            category.category = titlecase(form.category.data)
-            edited = True
+        if dbify(form.category.data) != category.category:
+            cat2 = Category.query\
+                .filter_by(category=dbify(form.category.data)).first()
+            if not cat2:
+                edited = True
+                oldcat = category.category
+                category.category = dbify(form.category.data)
+                flash('Category changed from \'{0}\' to \'{1}\'.'
+                      .format(oldcat, category.category))
+            else:
+                cat2_url = url_for('seeds.edit_category', cat_id=cat2.id)
+                flash(Markup('Error: Category \'{0}\' already exists. <a '
+                             'href="{1}">Click here</a> if you wish to edit '
+                             'it.'.format(cat2.category, cat2_url)))
+                return redirect(url_for('seeds.edit_category', cat_id=cat_id))
         if form.description.data != category.description:
-            flash('{0} description changed to \'{1}\'.'
-                  .format(titlecase(form.category.data),
-                          form.description.data))
-            category.description = form.description.data
             edited = True
+            if form.description.data:
+                category.description = form.description.data
+                flash('Description for \'{0}\' changed to: {1}'
+                      .format(category.category, category.description))
+            else:
+                category.description = None
+                flash('Description for \'{0}\' has been cleared.'
+                      .format(category.category))
         if edited:
             db.session.commit()
             return redirect(url_for('seeds.manage'))
         else:
             flash('No changes made to category: {0}'.format(category.category))
-            return redirect(url_for('seeds.manage'))
+            return redirect(url_for('seeds.edit_category', cat_id=cat_id))
     form.populate(category)
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
-        (url_for('seeds.edit_category', category_id=category_id),
-         'Edit Category')
+        (url_for('seeds.edit_category'), 'Edit Category')
     )
     return render_template('seeds/edit_category.html',
                            crumbs=crumbs,
@@ -506,25 +553,40 @@ def edit_common_name(cn_id=None):
     if cn_id is None:
         return redirect(url_for('seeds.select_common_name',
                                 dest='seeds.edit_common_name'))
-    if not cn_id.isdigit():
-        flash('Error: Common name id must be an integer! '
-              'Please select a common name:')
+    cn = CommonName.query.get(cn_id)
+    if not cn:
         return redirect(url_for('seeds.select_common_name',
                                 dest='seeds.edit_common_name'))
     form = EditCommonNameForm()
     form.set_selects()
-    cn = CommonName.query.get(cn_id)
     if form.validate_on_submit():
         edited = False
-        if titlecase(form.name.data) != cn.name:
-            edited = True
-            flash('Common name \'{0}\' changed to \'{1}\'.'.
-                  format(cn.name, titlecase(form.name.data)))
-            cn.name = titlecase(form.name.data)
+        form_name = dbify(form.name.data)
+        if form_name != cn.name:
+            cn2 = CommonName.query.filter_by(_name=form_name).first()
+            if cn2:
+                if not cn2.syn_only:
+                    cn2_url = url_for('seeds.edit_common_name', cn_id=cn2.id)
+                    flash(Markup('Error: the common name \'{0}\' is already '
+                                 'in use. <a href="{1}">Click here</a> if you '
+                                 'wish to edit it.'
+                                 .format(cn2.name, cn2_url)))
+                else:
+                    flash(Markup('Error: The common name \'{0}\' already '
+                                 'exists as a synonym of: {1}. You will need '
+                                 'to remove it as a synonym if you wish to '
+                                 'add it here.'
+                                 .format(cn2.name, syn_parents_links(cn2))))
+                return redirect(url_for('seeds.edit_common_name', cn_id=cn_id))
+            else:
+                edited = True
+                flash('Common name \'{0}\' changed to \'{1}\'.'.
+                      format(cn.name, form_name))
+                cn.name = form_name
         for cat in list(cn.categories):
             if cat.id not in form.categories.data:
                 edited = True
-                flash('{0} removed from categories associated with {1}.'.
+                flash('\'{0}\' removed from categories associated with {1}.'.
                       format(cat.category, cn.name))
                 cn.categories.remove(cat)
         cat_ids = [cat.id for cat in cn.categories]
@@ -532,14 +594,21 @@ def edit_common_name(cn_id=None):
             if cat_id not in cat_ids:
                 edited = True
                 cat = Category.query.get(cat_id)
-                flash('{0} added to categories associated with {1}.'
+                flash('\'{0}\' added to categories associated with {1}.'
                       .format(cat.category, cn.name))
                 cn.categories.append(cat)
+        if not form.description.data:
+            form.description.data = None
         if form.description.data != cn.description:
             edited = True
-            flash('Description changed to: \'{0}\''
-                  .format(form.description.data))
-            cn.description = form.description.data
+            if form.description.data:
+                cn.description = form.description.data
+                flash('Description for \'{0}\' changed to: {1}'
+                      .format(cn.name, cn.description))
+            else:
+                cn.description = None
+                flash('Description for \'{0}\' has been cleared.'
+                      .format(cn.name))
         if cn.gw_common_names:
             for gw_cn in list(cn.gw_common_names):
                 if gw_cn.id not in form.gw_common_names.data:
@@ -565,8 +634,6 @@ def edit_common_name(cn_id=None):
                     edited = True
                     flash('\'{0}\' removed from Grows With for \'{1}\', and '
                           'vice versa'.format(gw_sd.name, cn.name))
-                    if cn in gw_sd.gw_common_names:
-                        gw_sd.gw_common_names.remove(cn)
                     cn.gw_seeds.remove(gw_sd)
         if form.gw_seeds.data:
             for gw_sd_id in form.gw_seeds.data:
@@ -577,14 +644,18 @@ def edit_common_name(cn_id=None):
                         flash('\'{0}\' added to Grows With for \'{1}\', and '
                               'vice versa.'.format(gw_sd.fullname, cn.name))
                         cn.gw_seeds.append(gw_sd)
-                        gw_sd.gw_common_names.append(cn)
-        if form.instructions.data == '':
+        if  not form.instructions.data:
             form.instructions.data = None
         if form.instructions.data != cn.instructions:
             edited = True
-            flash('Planting Instructions changed to: \'{0}\''
-                  .format(form.instructions.data))
-            cn.instructions = form.instructions.data
+            if form.instructions.data:
+                cn.instructions = form.instructions.data
+                flash('Planting instructions for \'{0}\' changed to: {1}'
+                      .format(cn.name, cn.instructions))
+            else:
+                cn.instructions = None
+                flash('Planting instructions for \'{0}\' have been cleared.'
+                      .format(cn.name))
         if form.parent_cn.data == 0:
             if cn.parent:
                 edited = True
@@ -600,9 +671,13 @@ def edit_common_name(cn_id=None):
                       .format(cn.name, cn.parent.name))
         if form.synonyms.data != cn.list_synonyms_as_string():
             edited = True
-            flash('Synonyms for \'{0}\' changed to: {1}'
-                  .format(cn.name, form.synonyms.data))
-            cn.set_synonyms_from_string_list(form.synonyms.data)
+            if form.synonyms.data:
+                flash('Synonyms for \'{0}\' changed to: {1}'
+                      .format(cn.name, form.synonyms.data))
+                cn.set_synonyms_from_string_list(form.synonyms.data)
+            else:
+                cn.clear_synonyms()
+                flash('Synonyms for \'{0}\' cleared.'.format(cn.name))
         if edited:
             db.session.commit()
             return redirect(url_for('seeds.manage'))
@@ -610,17 +685,14 @@ def edit_common_name(cn_id=None):
             flash('No changes made to common name: \'{0}\''.format(cn.name))
             return redirect(url_for('seeds.edit_common_name', cn_id=cn.id))
     form.populate(cn)
-    current_categories = ', '.join([category.category for category in
-                                    cn.categories])
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
-        (url_for('seeds.edit_common_name', cn_id=cn_id),
-         'Edit Common Name')
+        (url_for('seeds.edit_category'), 'Edit Category'),
+        (url_for('seeds.edit_common_name'), 'Edit Common Name')
     )
     return render_template('seeds/edit_common_name.html',
                            crumbs=crumbs,
-                           form=form,
-                           current_categories=current_categories)
+                           form=form)
 
 
 @seeds.route('/edit_packet', methods=['GET', 'POST'])
@@ -633,14 +705,13 @@ def edit_packet(pkt_id=None):
                                 dest='seeds.edit_packet'))
     packet = Packet.query.get(pkt_id)
     if packet is None:
-        flash('Error: Specified packet was not found! Please select one:')
         return redirect(url_for('seeds.select_packet',
                                 dest='seeds.edit_packet'))
     form = EditPacketForm()
     form.set_selects()
     if form.validate_on_submit():
         edited = False
-        if form.price.data is not None and form.price.data != '':
+        if form.price.data:
             packet.price = form.price.data
             edited = True
         elif form.prices.data != packet._price.id:
@@ -703,6 +774,34 @@ def edit_seed(seed_id=None):
     form.set_selects()
     if form.validate_on_submit():
         edited = False
+        form_name = dbify(form.name.data)
+        sds = Seed.query.filter_by(_name=form_name).all()
+        for sd in sds:
+                if sd.syn_only:
+                    flash('Error: \'{0}\' is already being used as a synonym '
+                          'for: \'{1}\'. If you wish to rename this seed to '
+                          'it, you will need to remove it from synonyms for '
+                          '\'{1}\' first.'
+                          .format(sd.name, sd.list_syn_parents_as_string()))
+                    return redirect(url_for('seeds.edit_seed',
+                                            seed_id=seed_id))
+                elif sd.id != seed.id and sd.name == form_name and\
+                        sd.common_name.id == form.common_name.data:
+                    flash('Error: There is already another \'{0}\'!'
+                          .format(sd.fullname))
+                    return redirect(url_for('seeds.edit_seed',
+                                            seed_id=seed_id))
+        if form.common_name.data != seed.common_name.id:
+            edited = True
+            cn = CommonName.query.get(form.common_name.data)
+            flash('Changed common name to \'{0}\' for: {1}'.
+                  format(cn.name, seed.fullname))
+            seed.common_name = CommonName.query.get(form.common_name.data)
+        if seed.name != form_name:
+            edited = True
+            flash('Changed seed name from \'{0}\' to \'{1}\''.
+                  format(seed.name, form_name))
+            seed.name = form_name
         if form.botanical_names.data != seed.botanical_name.id:
             edited = True
             seed.botanical_name = BotanicalName.query\
@@ -722,22 +821,66 @@ def edit_seed(seed_id=None):
                 flash('Added category \'{0}\' to: {1}'.
                       format(cat.category, seed.fullname))
                 seed.categories.append(cat)
-        if form.common_name.data != seed.common_name.id:
-            edited = True
-            cn = CommonName.query.get(form.common_name.data)
-            flash('Changed common name to \'{0}\' for: {1}'.
-                  format(cn.name, seed.fullname))
-            seed.common_name = CommonName.query.get(form.common_name.data)
         if form.description.data != seed.description:
             edited = True
             flash('Changed description for \'{0}\' to: \'{1}\''.
                   format(seed.fullname, form.description.data))
             seed.description = form.description.data
-        if titlecase(form.name.data) != seed.name:
-            edited = True
-            flash('Changed seed name from \'{0}\' to \'{1}\''.
-                  format(seed.name, titlecase(form.name.data)))
-            seed.name = titlecase(form.name.data)
+        if seed.gw_common_names:
+            for gw_cn in list(seed.gw_common_names):
+                if gw_cn.id not in form.gw_common_names.data:
+                    edited = True
+                    flash('\'{0}\' removed from Grows With for \'{1}\', and '
+                          'vice versa.'.format(gw_cn.name, seed.fullname))
+                    seed.gw_common_names.remove(gw_cn)
+        if form.gw_common_names.data:
+            for gw_cn_id in form.gw_common_names.data:
+                if gw_cn_id != 0:
+                    gw_cn = CommonName.query.get(gw_cn_id)
+                    if gw_cn not in seed.gw_common_names:
+                        edited = True
+                        flash('\'{0}\' added to Grows With for \'{1}\', and '
+                              'vice versa.'.format(gw_cn.name, seed.fullname))
+                        seed.gw_common_names.append(gw_cn)
+        if seed.gw_seeds:
+            for gw_sd in list(seed.gw_seeds):
+                if gw_sd.id not in form.gw_seeds.data:
+                    edited = True
+                    flash('\'{0}\' removed from Grows With for \'{1}\', and '
+                          'vice versa'.format(gw_sd.name, seed.name))
+                    if seed in gw_sd.gw_seeds:
+                        gw_sd.gw_seeds.remove(seed)
+                    seed.gw_seeds.remove(gw_sd)
+        if form.gw_seeds.data:
+            for gw_sd_id in form.gw_seeds.data:
+                if gw_sd_id != 0 and gw_sd_id != seed.id:
+                    gw_sd = Seed.query.get(gw_sd_id)
+                    if gw_sd not in seed.gw_seeds:
+                        edited = True
+                        flash('\'{0}\' added to Grows With for \'{1}\', and '
+                              'vice versa.'.format(gw_sd.fullname,
+                                                   seed.fullname))
+                        seed.gw_seeds.append(gw_sd)
+                        gw_sd.gw_seeds.append(seed)
+        if seed.series:
+            if form.series.data != seed.series.id:
+                edited = True
+                if form.series.data == 0:
+                    flash('Series for \'{0}\' has been unset.'
+                          .format(seed.fullname))
+                    seed.series = None
+                else:
+                    series = Series.query.get(form.series.data)
+                    seed.series = series
+                    flash('Series for \'{0}\' has been set to: {1}'
+                          .format(seed.fullname, seed.series.name))
+        else:
+            if form.series.data != 0:
+                edited = True
+                series = Series.query.get(form.series.data)
+                seed.series = series
+                flash('Series for \'{0}\' has been set to: {1}'
+                      .format(seed.fullname, seed.series.name))
         if form.in_stock.data:
             if not seed.in_stock:
                 edited = True
@@ -759,6 +902,11 @@ def edit_seed(seed_id=None):
                 flash('\'{0}\' is now active/no longer dropped.'.
                       format(seed.fullname))
                 seed.dropped = False
+        if form.synonyms.data != seed.list_synonyms_as_string():
+            edited = True
+            seed.set_synonyms_from_string_list(form.synonyms.data)
+            flash('Synonyms for \'{0}\' set to: {1}'
+                  .format(seed.fullname, seed.list_synonyms_as_string()))
         if form.thumbnail.data:
             thumb_name = secure_filename(form.thumbnail.data.filename)
             if seed.thumbnail is None or thumb_name != seed.thumbnail.filename:
@@ -813,8 +961,8 @@ def edit_series(series_id=None):
     form.set_common_names()
     if form.validate_on_submit():
         edited = False
-        if titlecase(form.name.data) != series.name:
-            s2 = Series.query.filter_by(name=titlecase(form.name.data)).first()
+        if dbify(form.name.data) != series.name:
+            s2 = Series.query.filter_by(name=dbify(form.name.data)).first()
             if s2 is not None:
                 flash('Error: {0} already exists in the database!'.
                       format(s2.name))
@@ -822,7 +970,7 @@ def edit_series(series_id=None):
                                         series_id=series_id))
             else:
                 edited = True
-                series.name = titlecase(form.name.data)
+                series.name = dbify(form.name.data)
                 flash('Series name changed to: {0}'.format(series.name))
         if form.description.data != series.description:
             edited = True
@@ -931,9 +1079,14 @@ def remove_botanical_name(bn_id=None):
     form = RemoveBotanicalNameForm()
     if form.validate_on_submit():
         if form.verify_removal.data:
+            if bn.synonyms:
+                flash('Synonyms for \'{0}\' cleared and orphaned synonyms '
+                      'have been deleted.'.format(bn.name))
+                bn.clear_synonyms()
             flash('Botanical name {0}: \'{1}\' has been removed from the '
                   'database.'.format(bn.id, bn.name))
             db.session.delete(bn)
+            db.session.commit()
             return redirect(url_for('seeds.manage'))
         else:
             flash('No changes made. Check the box labeled \'Yes\' if '
@@ -952,20 +1105,20 @@ def remove_botanical_name(bn_id=None):
 
 
 @seeds.route('/remove_category', methods=['GET', 'POST'])
-@seeds.route('/remove_category/<category_id>', methods=['GET', 'POST'])
+@seeds.route('/remove_category/<cat_id>', methods=['GET', 'POST'])
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
-def remove_category(category_id=None):
+def remove_category(cat_id=None):
     """Remove a category from the database."""
-    if category_id is None:
+    if cat_id is None:
         return redirect(url_for('seeds.select_category',
                                 dest='seeds.remove_category'))
-    if not category_id.isdigit():
+    if not cat_id.isdigit():
         flash('Error: Category id must be an integer! '
               'Please select a category from the list:')
         return redirect(url_for('seeds.select_category',
                                 dest='seeds.remove_category'))
-    category = Category.query.get(category_id)
+    category = Category.query.get(cat_id)
     if category is None:
         flash('Error: No such category exists. '
               'Please select one from the list:')
@@ -977,15 +1130,16 @@ def remove_category(category_id=None):
             flash('Category {0}: \'{1}\' has been removed from the database.'.
                   format(category.id, category.category))
             db.session.delete(category)
+            db.session.commit()
             return redirect(url_for('seeds.manage'))
         else:
             flash('No changes made. Check the box labeled \'Yes\''
                   ' if you want to remove this category.')
             return redirect(url_for('seeds.remove_category',
-                                    category_id=category_id))
+                                    cat_id=cat_id))
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
-        (url_for('seeds.remove_category', category_id=category_id),
+        (url_for('seeds.remove_category', cat_id=cat_id),
          'Remove Category')
     )
     return render_template('seeds/remove_category.html',
@@ -1017,9 +1171,14 @@ def remove_common_name(cn_id=None):
     form = RemoveCommonNameForm()
     if form.validate_on_submit():
         if form.verify_removal.data:
+            if cn.synonyms:
+                cn.clear_synonyms()
+                flash('Synonyms for \'{0}\' cleared, and orphaned synonyms '
+                      'have been deleted.'.format(cn.name))
             flash('Common name {0}: \'{1}\' has been removed from the '
                   'database.'.format(cn.id, cn.name))
             db.session.delete(cn)
+            db.session.commit()
             return redirect(url_for('seeds.manage'))
         else:
             flash('No changes made. Check the box labeled \'Yes\' if '
@@ -1120,6 +1279,10 @@ def remove_seed(seed_id=None):
             db.session.rollback()
             return redirect(url_for('seeds.remove_seed', seed_id=seed_id))
         else:
+            if seed.synonyms:
+                flash('Synonyms for \'{0}\' cleared, and orphaned synonyms '
+                      'have been deleted.'.format(seed.fullname))
+                seed.clear_synonyms()
             flash('The seed \'{0}\' has been deleted. Forever. I hope you\'re '
                   'happy with yourself.'.format(seed.fullname))
             db.session.delete(seed)
@@ -1244,7 +1407,7 @@ def select_category():
     form = SelectCategoryForm()
     form.set_categories()
     if form.validate_on_submit():
-        return redirect(url_for(dest, category_id=form.categories.data))
+        return redirect(url_for(dest, cat_id=form.categories.data))
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
         (url_for('seeds.select_category', dest=dest), 'Select Category')

@@ -16,14 +16,13 @@
    Copyright Swallowtail Garden Seeds, Inc 
 #}
 {% extends "main/base.html" %}
-{% from "includes/form_errors.html" import form_errors %}
+{% from "includes/form_field.html" import form_field %}
 {# HTML within blocks should be indented as follows for consistency: #}
 {# block head: 2 indentations of 4 spaces each. (8 spaces total.) #}
 {# block main: 3 indentations of 4 spaces each. (12 spaces total.) #}
 {% block head %}
         <title>Edit Seed</title>
         <meta name="robots" content="noindex, nofollow">
-        <link rel="canonical" href="{{ url_for('seeds.edit_seed', _external=True) }}">
 {% endblock %}
 {% block main %}
         <h1>Edit Seed: {{ seed.fullname }}</h1>
@@ -33,71 +32,50 @@
                     <fieldset>
                         <legend>Groups:</legend>
                         <li>
-                            {{ form.categories.label }}
-                            {{ form.categories }}
-                            {% if form.categories.errors|count > 0 %}
-                            {{ form_errors(form.categories) }}
-                            {% endif %}
+                            {{ form_field(form.categories)|indent(28)|safe }}
                         </li>
                         <li>
-                            {{ form.common_name.label }}
-                            {{ form.common_name }}
-                            {% if form.common_name.errors|count > 0 %}
-                            {{ form_errors(form.common_name) }}
-                            {% endif %}
+                            {{ form_field(form.common_name)|indent(28)|safe }}
                         </li>
                         <li>
-                            {{ form.botanical_names.label }}
-                            {{ form.botanical_names }}
-                            {% if form.botanical_names.errors|count > 0 %}
-                            {{ form_errors(form.botanical_names) }}
-                            {% endif %}
+                            {{ form_field(form.botanical_names)|indent(28)|safe }}
+                        </li>
+                        <li>
+                            {{ form_field(form.series)|indent(28)|safe }}
                         </li>
                     </fieldset>
                     <fieldset>
                         <legend>Data:</legend>
                         <li>
-                            {{ form.name.label }}
-                            {{ form.name }}
-                            {% if form.name.errors|count > 0 %}
-                            {{ form_errors(form.name) }}
-                            {% endif %}
+                            {{ form_field(form.name)|indent(28)|safe }}
+                        </li>
+                        <div>Current thumbnail:</div>
+                        <div><img src="{{ url_for('static', filename=seed.thumbnail_path) }}"></div>
+                        <li>
+                            {{ form_field(form.thumbnail)|indent(28)|safe }}
                         </li>
                         <li>
-                            {{ form.description.label }}
-                            {{ form.description }}
-                            {% if form.description.errors|count > 0 %}
-                            {{ form_errors(form.description) }}
-                            {% endif %}
+                            {{ form_field(form.description)|indent(28)|safe }}
+                        </li>
+                        <li>
+                            {{ form_field(form.synonyms)|indent(28)|safe }}
+                    </fieldset>
+                    <fieldset>
+                        <legend>Grows With</legend>
+                        <li>
+                            {{ form_field(form.gw_common_names)|indent(28)|safe }}
+                        </li>
+                        <li>
+                            {{ form_field(form.gw_seeds)|indent(28)|safe }}
                         </li>
                     </fieldset>
                     <fieldset>
                         <legend>Status:</legend>
                         <li>
-                            {{ form.in_stock.label }}
-                            {{ form.in_stock }}
-                            {% if form.in_stock.errors|count > 0 %}
-                            {{ form_errors(form.in_stock) }}
-                            {% endif %}
+                            {{ form_field(form.in_stock)|indent(28)|safe }}
                         </li>
                         <li>
-                            {{ form.dropped.label }}
-                            {{ form.dropped }}
-                            {% if form.dropped.errors|count > 0 %}
-                            {{ form_errors(form.dropped) }}
-                            {% endif %}
-                        </li>
-                    </fieldset>
-                    <fieldset>
-                        <legend>Thumbnail:</legend>
-                        <div>Current thumbnail:</div>
-                        <div><img src="{{ url_for('static', filename=seed.thumbnail_path) }}"></div>
-                        <li>
-                            {{ form.thumbnail.label }}
-                            {{ form.thumbnail }}
-                            {% if form.thumbnail.errors|count > 0 %}
-                            {{ form_errors(form.thumbnail) }}
-                            {% endif %}
+                            {{ form_field(form.dropped)|indent(28)|safe }}
                         </li>
                     </fieldset>
                     <li>

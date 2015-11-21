@@ -32,7 +32,9 @@
                     {% if cn.gw_common_names or cn.gw_seeds %}<p class="grows_with">Grows nicely with: {{ grows_with(cn) }}.</p>{% endif %}
             </div>
             {% for seed in cn.seeds %}
+            {% if not seed.syn_only %}
             {{ seed_box(seed)|indent(12)|safe }}
+            {% endif %}
             {% endfor %}
 {% endblock %}
 

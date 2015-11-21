@@ -25,6 +25,7 @@ This is the main application module for SGS Flask, a Flask implementation
 of the website for Swallowtail Garden Seeds.
 """
 
+from titlecase import titlecase
 from flask import Flask
 from flask.ext.login import AnonymousUserMixin, LoginManager
 from flask.ext.mail import Mail
@@ -70,6 +71,18 @@ def make_breadcrumbs(*args):
     else:
         raise ValueError('Could not parse arguments. Please make sure your '
                          'arguments are tuples formatted (route, page title)!')
+
+
+def dbify(string):
+    """Format a string to be stored in the database.
+
+    Args:
+        string (str): The string to be converted.
+
+    Returns:
+        str: A string formatted for database usage.
+    """
+    return titlecase(string.lower().strip())
 
 
 def create_app(config_name):

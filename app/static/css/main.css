@@ -472,3 +472,14 @@ div.seed_box div.packet_info {
     clear: both;
 }
 /* END seed_box */
+
+/* BEGIN fractions */
+span.fraction sup {
+    vertical-align: super;
+    font-size: 0.6em;
+}
+
+span.fraction sub {
+    font-size: 0.6em;
+}
+/* END fractions */

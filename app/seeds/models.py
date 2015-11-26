@@ -176,6 +176,14 @@ class USDInt(db.TypeDecorator):
             except:
                 raise TypeError('amount is of a type that could'
                                 ' not be converted to int!')
+        
+    @staticmethod
+    def usd_to_decimal(val):
+        """Convert a value representing USD to a Decimal."""
+        if isinstance(val, str):
+            return Decimal(val.replace('$', '').strip())
+        else:
+            return Decimal(val)
 
 
 class BotanicalName(db.Model):
@@ -551,11 +559,15 @@ class Image(db.Model):
     """
     __tablename__ = 'images'
     id = db.Column(db.Integer, primary_key=True)
-    filename = db.Column(db.String(32))
+    filename = db.Column(db.String(32), unique=True)
     seed_id = db.Column(db.Integer, db.ForeignKey('seeds.id', use_alter=True))
 
     def __init__(self, filename=None):
         self.filename = filename
+
+    def __repr__(self):
+        return '<{0} filename: \'{1}\'>'.format(self.__class__.__name__,
+                                                self.filename)
 
     @property
     def full_path(self):
@@ -598,62 +610,28 @@ class Packet(db.Model):
     """
     __tablename__ = 'packets'
     id = db.Column(db.Integer, primary_key=True)
-    price_id = db.Column(db.Integer, db.ForeignKey('prices.id'))
-    _price = db.relationship('Price', backref='packets')
+    price = db.Column(USDInt)
     quantity_id = db.Column(db.ForeignKey('quantities.id'))
     quantity = db.relationship('Quantity', backref='packets')
     seed_id = db.Column(db.Integer, db.ForeignKey('seeds.id'))
     sku = db.Column(db.String(32), unique=True)
 
-    @hybrid_property
-    def price(self):
-        """Decimal: The value of ._price.
-
-        Setter:
-            Check type of data, set it as a Decimal if it's Decimal, int, or
-            str, and raise a TypeError if not.
-        """
-        return self._price.price
-
-    @price.expression
-    def price(cls):
-        return Price.price
-
-    @price.setter
-    def price(self, price):
-        if self._price:
-            op = self._price
-        else:
-            op = None
-        pc = Price.query.filter_by(price=price).first()
-        if pc is not None:
-            self._price = pc
-        else:
-            self._price = Price(price=price)
-        if op:
-            if not op.packets:
-                db.session.delete(op)
-                db.session.commit()
-
-
-class Price(db.Model):
-    """Table for prices in US Dollars.
-
-    Attributes:
-        __tablename__ (str): Name of the table: 'prices'
-        id (int): Auto-incremended ID # used as primary key.
-        price (USDInt): Column for holding prices in US dollars.
-    """
-    __tablename__ = 'prices'
-    id = db.Column(db.Integer, primary_key=True)
-    price = db.Column(USDInt, unique=True)
-
-    def __init__(self, price=None):
-        if price is not None:
-            self.price = price
-
     def __repr__(self):
-        return '<{0} \'${1}\'>'.format(self.__class__.__name__, self.price)
+        return '<{0} SKU: {1}>'.format(self.__class__.__name__, self.sku)
+
+    @property
+    def info(self):
+        if self.quantity:
+            qv = self.quantity.value
+            qu = self.quantity.units
+        else:
+            qv = None
+            qu = None
+        """str: A formatted string containing the data of this packet."""
+        return 'SKU: {0} - ${1} for {2} {3}'.format(self.sku,
+                                                    self.price,
+                                                    qv,
+                                                    qu)
 
 
 class Quantity(db.Model):
@@ -685,7 +663,7 @@ class Quantity(db.Model):
     @staticmethod
     def dec_check(val):
         """Check if a given value is a decimal number."""
-        if isinstance(val, Decimal):
+        if isinstance(val, Decimal) or isinstance(val, float):
             return True
         if isinstance(val, Fraction):
             return False
@@ -723,6 +701,20 @@ class Quantity(db.Model):
             raise TypeError('val must be of type Fraction')
 
     @staticmethod
+    def for_cmp(val):
+        """Convert a value into appropriate type for use in comparisons."""
+        if Quantity.dec_check(val):
+            return float(val)
+        elif isinstance(val, str):
+            frac = Quantity.str_to_fraction(val)
+        else:
+            frac = Fraction(val)
+        if frac.denominator == 1:
+            return int(frac)
+        else:
+            return frac
+
+    @staticmethod
     def str_to_fraction(val):
         """Convert a string containing a number into a fraction.
 
@@ -754,8 +746,57 @@ class Quantity(db.Model):
         else:
             raise TypeError('val must be a str')
 
+    @property
+    def html_value(self):
+        """str: value expressed in HTML."""
+        if isinstance(self.value, Fraction):
+            if self.value == Fraction(1, 4):
+                return '&frac14;'
+            elif self.value == Fraction(1, 2):
+                return '&frac12;'
+            elif self.value == Fraction(3, 4):
+                return '&frac34;'
+            elif self.value == Fraction(1, 3):
+                return '&#8531;'
+            elif self.value == Fraction(2, 3):
+                return '&#8532;'
+            elif self.value == Fraction(1, 5):
+                return '&#8533;'
+            elif self.value == Fraction(2, 5):
+                return '&#8534;'
+            elif self.value == Fraction(3, 5):
+                return '&#8535;'
+            elif self.value == Fraction(4, 5):
+                return '&#8536;'
+            elif self.value == Fraction(1, 6):
+                return '&#8537;'
+            elif self.value == Fraction(5, 6):
+                return '&#8537;'
+            elif self.value == Fraction(1, 8):
+                return '&#8539;'
+            elif self.value == Fraction(3, 8):
+                return '&#8540;'
+            elif self.value == Fraction(5, 8):
+                return '&#8541;'
+            elif self.value == Fraction(7, 8):
+                return '&#8542;'
+            else:
+                return '<span class="fraction"><sup>{0}</sup>&frasl;'\
+                        '<sub>{1}</sub></span>'.format(self._numerator,
+                                                       self._denominator)
+        return self.value
+
     @hybrid_property
     def value(self):
+        """"int, float, Fraction: The value of a quantity in the same format
+                it was entered.
+
+            Setter:
+                Convert value a Fraction, store its numerator and denominator,
+                and store a floating point version to allow querying based on
+                quantity value. Flag is_decimal if the initial value is a 
+                decimal (floating point) number.
+        """
         if self._float is not None:
             if self.is_decimal:
                 return self._float
@@ -773,15 +814,19 @@ class Quantity(db.Model):
     @value.setter
     def value(self, val):
         if val is not None:
-            if isinstance(val, str):
-                frac = Quantity.str_to_fraction(val)
-            else:
-                frac = Fraction(val)
-            self._numerator = frac.numerator
-            self._denominator = frac.denominator
-            self._float = float(frac)
             if Quantity.dec_check(val):
                 self.is_decimal = True
+                self._float = float(val)
+                self._numerator = None
+                self._denominator = None
+            else:
+                if isinstance(val, str):
+                    frac = Quantity.str_to_fraction(val)
+                else:
+                    frac = Fraction(val)
+                self._numerator = frac.numerator
+                self._denominator = frac.denominator
+                self._float = float(frac)
         else:
             self._numerator = None
             self._denominator = None

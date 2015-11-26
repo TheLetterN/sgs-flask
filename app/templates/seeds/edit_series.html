@@ -23,7 +23,6 @@
 {% block head %}
         <title>Edit Series</title>
         <meta name="robots" content="noindex, nofollow">
-        <link rel="canonical" href="{{ url_for('seeds.edit_series', _external=True) }}">
 {% endblock %}
 {% block main %}
             <h1>Edit Series: {{ series.name }}</h1>
@@ -33,7 +32,7 @@
                     <fieldset>
                         <legend>Edit Series</legend>
                         <li>
-                            {{ form_field(form.common_names)|indent(28)|safe }}
+                            {{ form_field(form.common_name)|indent(28)|safe }}
                         </li>
                         <li>
                             {{ form_field(form.name)|indent(28)|safe }}

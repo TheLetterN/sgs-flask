@@ -38,7 +38,6 @@ from .models import (
     CommonName,
     Image,
     Packet,
-    Price,
     Quantity,
     Seed,
     Series
@@ -71,6 +70,8 @@ class USDollar(object):
         if field:
             try:
                 Decimal(field.data.replace('$', '').strip())
+                if '.' in field.data and len(field.data.split('.')[-1]) > 2:
+                    raise ValueError
             except:
                 raise ValidationError(self.message)
 
@@ -123,13 +124,10 @@ def packet_select_list():
     """
     packets = Packet.query.all()
     packets.sort(key=lambda x: x.seed.common_name.name)
-    return [(pkt.id, '{0}, {1} - SKU {2}: ${3} for {4} {5}'.
+    return [(pkt.id, '{0}, {1}: {2}'.
                      format(pkt.seed.common_name.name,
                             pkt.seed.name,
-                            pkt.sku,
-                            pkt.price,
-                            pkt.quantity,
-                            pkt.unit)) for pkt in packets]
+                            pkt.info)) for pkt in packets]
 
 
 def series_select_list():
@@ -381,7 +379,7 @@ class AddPacketForm(Form):
             packets on submit.
         price (StringField): Field for price in US Dollars.
         quantity (StringField): Field for amount of seed in a packet.
-        unit (StringField): Field for nit of measure for this packet.
+        units (StringField): Field for nit of measure for this packet.
         sku (StringField): Field for product SKU of packet.
         submit (SubmitField): Submit button.
     """
@@ -389,7 +387,7 @@ class AddPacketForm(Form):
     price = StringField('Price in US dollars',
                         validators=[DataRequired(), NotSpace(), USDollar()])
     quantity = StringField('Quantity', validators=[DataRequired(), NotSpace()])
-    unit = StringField('Unit of measurement',
+    units = StringField('Unit of measurement',
                        validators=[Length(1, 32), NotSpace()])
     sku = StringField('SKU', validators=[Length(1, 32), NotSpace()])
     submit = SubmitField('Add Packet')
@@ -402,9 +400,8 @@ class AddPacketForm(Form):
                 valid decimal, fraction, or integer.
         """
         if field.data:
-            packet = Packet()
             try:
-                packet.quantity = Quantity(value=field.data.strip())
+                Quantity(value=field.data.strip())
             except ValueError:
                 raise ValidationError('Field must be a valid numerical value. '
                                       '(integer, decimal, fraction, or mixed '
@@ -481,6 +478,24 @@ class AddSeedForm(Form):
         self.series.choices = series_select_list()
         self.series.choices.insert(0, (0, 'None'))
 
+    def validate_categories(self, field):
+        """Raise ValidationError if any categories not in selected CommonName.
+
+        Raises:
+            ValidationError: If any selected categories are not present within
+                the selected CommonName.
+        """
+        cn = CommonName.query.get(self.common_name.data)
+        cat_ids = [cat.id for cat in cn.categories]
+        for cat_id in field.data:
+            if cat_id not in cat_ids:
+                cn_url = url_for('seeds.edit_common_name', cn_id=cn.id)
+                raise ValidationError(
+                    Markup('One or more of selected categories are not '
+                           'associated with selected common name \'{0}\'. <a '
+                           'href="{1}">Click here</a> if you would like to '
+                           'edit \'{0}\'.'.format(cn.name, cn_url)))
+
     def validate_name(self, field):
         """Raise ValidationError if seed already exists.
         
@@ -491,7 +506,7 @@ class AddSeedForm(Form):
         seeds = Seed.query.filter_by(_name=titlecase(field.data)).all()
         for seed in seeds:
             if not seed.syn_only:
-                if seed and seed.common_name.id == self.common_names.data:
+                if seed and seed.common_name.id == self.common_name.data:
                     sd_url=url_for('seeds.edit_seed', seed_id=seed.id)
                     raise ValidationError(
                         Markup('A seed named \'{0}\' already exists in the '
@@ -536,8 +551,8 @@ class AddSeedForm(Form):
                 first()
             if image is not None:
                 raise ValidationError('An image named \'{0}\' already exists! '
-                                      'Please choose a different name.'.
-                                      format(image.filename))
+                                      'Please choose a different name.'
+                                      .format(image.filename))
 
 
 class AddSeriesForm(Form):
@@ -726,83 +741,70 @@ class EditPacketForm(Form):
     """Form for adding a packet to a seed.
 
     Attributes:
-        price (DecimalField): Field for price in US Dollars.
-        prices (SelectField): Field for selecting an existing price.
+        price (StringField): Field for price in US Dollars.
         quantity (StringField): Field for amount of seed in a packet.
-        quantities (SelectField): Field for selecting existing quantity.
-        unit (StringField): Field for unit of measure.
-        units (SelectField): Field for selecting existing unit.
+        units (StringField): Field for unit of measurement.
         sku (StringField): Field for product SKU.
-        submit (SubmitField: Submit button.
+        submit (SubmitField): Submit button.
     """
-    price = DecimalField('Or enter a price', places=2, validators=[Optional()])
-    prices = SelectField('Select Price', coerce=int)
-    quantities = SelectField('Select Quantity', coerce=str)
-    quantity = StringField('Or enter a quantity')
-    unit = StringField('Or enter a unit of measurement',
-                       validators=[Length(1, 32), Optional()])
-    units = SelectField('Select Unit', coerce=int)
-    sku = StringField('SKU', validators=[Length(1, 32)])
+    price = StringField('Price in US dollars',
+                        validators=[DataRequired(), NotSpace(), USDollar()])
+    quantity = StringField('Quantity', validators=[DataRequired(), NotSpace()])
+    units = StringField('Unit of measurement',
+                       validators=[Length(1, 32), NotSpace()])
+    sku = StringField('SKU', validators=[Length(1, 32), NotSpace()])
     submit = SubmitField('Edit Packet')
 
     def populate(self, packet):
         """Populate form elements with data from database."""
-        self.prices.data = packet._price.id
-        self.units.data = packet._unit.id
-        self.quantities.data = str(packet.quantity)
+        self.price.data = packet.price
+        self.units.data = packet.quantity.units
+        self.quantity.data = packet.quantity.value
         self.sku.data = packet.sku
 
-    def set_selects(self):
-        """Set selects with values loaded from db."""
-        self.prices.choices = [(p.id, '${0}'.format(p.price)) for p in
-                               Price.query.order_by('price')]
-        self.units.choices = [(u.id, u.unit) for u in
-                              Unit.query.order_by('unit')]
-        quantities = []
-        quantities += [(str(qd.value), str(qd.value)) for qd in
-                       QtyDecimal.query.order_by('value')]
-        quantities += [(str(qf.value), str(qf.value)) for qf in
-                       QtyFraction.query.order_by('value')]
-        quantities += [(str(qi.value), str(qi.value)) for qi in
-                       QtyInteger.query.order_by('value')]
-        self.quantities.choices = quantities
-
     def validate_quantity(self, field):
-        """Raise ValidationError if quantity cannot be parsed as valid."""
+        """Raise ValidationError if quantity cannot be parsed as valid.
+        
+        Raises:
+            ValidationError: If value of quantity cannot be determined to be a
+                valid decimal, fraction, or integer.
+        """
         if field.data:
-            packet = Packet()
             try:
-                packet.quantity = field.data
-            except ValueError as e:
-                raise ValidationError(str(e))
+                Quantity(value=field.data.strip())
+            except ValueError:
+                raise ValidationError('Field must be a valid numerical value. '
+                                      '(integer, decimal, fraction, or mixed '
+                                      'number)')
 
 
 class EditSeedForm(Form):
     """Form for editing an existing seed in the database.
     """
-    botanical_names = SelectField('Botanical Names', coerce=int)
+    botanical_name = SelectField('Botanical Names', coerce=int)
     categories = SelectMultipleField('Select/Deselect Categories',
                                      coerce=int,
                                      validators=[DataRequired()])
     common_name = SelectField('Common Name',
                               coerce=int,
                               validators=[DataRequired()])
-    description = TextAreaField('Description')
+    description = TextAreaField('Description', validators=[NotSpace()])
     dropped = BooleanField('Dropped/Inactive')
     gw_common_names = SelectMultipleField('Common Names', coerce=int)
     gw_seeds = SelectMultipleField('Cultivars', coerce=int)
     in_stock = BooleanField('In Stock')
-    name = StringField('Seed Name', validators=[Length(1, 64)])
+    name = StringField('Seed Name', validators=[Length(1, 64), NotSpace()])
     series = SelectField('Select Series', coerce=int)
     submit = SubmitField('Edit Seed')
-    synonyms = StringField('Synonyms')
+    synonyms = StringField('Synonyms', validators=[NotSpace()])
     thumbnail = FileField('New Thumbnail',
                           validators=[FileAllowed(IMAGE_EXTENSIONS,
                                                   'Images only!')])
 
     def set_selects(self):
         """Set choices for all select fields with values from database."""
-        self.botanical_names.choices = botanical_name_select_list()
+        self.botanical_name.choices = botanical_name_select_list()
+        self.botanical_name.choices.insert(0, (0, 'None'))
         self.categories.choices = category_select_list()
         self.common_name.choices = common_name_select_list()
         self.gw_common_names.choices = common_name_select_list()
@@ -815,9 +817,10 @@ class EditSeedForm(Form):
     def populate(self, seed):
         """Populate form with data from a Seed object."""
         if seed.botanical_name:
-            self.botanical_names.data = seed.botanical_name.id
+            self.botanical_name.data = seed.botanical_name.id
         self.categories.data = [cat.id for cat in seed.categories]
-        self.common_name.data = seed.common_name.id
+        if seed.common_name:
+            self.common_name.data = seed.common_name.id
         self.description.data = seed.description
         if seed.in_stock:
             self.in_stock.data = True
@@ -833,6 +836,24 @@ class EditSeedForm(Form):
             self.series.data = seed.series.id
         if seed.synonyms:
             self.synonyms.data = seed.list_synonyms_as_string()
+
+    def validate_categories(self, field):
+        """Raise ValidationError if any categories not in selected CommonName.
+
+        Raises:
+            ValidationError: If any selected categories are not present within
+                the selected CommonName.
+        """
+        cn = CommonName.query.get(self.common_name.data)
+        cat_ids = [cat.id for cat in cn.categories]
+        for cat_id in field.data:
+            if cat_id not in cat_ids:
+                cn_url = url_for('seeds.edit_common_name', cn_id=cn.id)
+                raise ValidationError(
+                    Markup('One or more of selected categories are not '
+                           'associated with selected common name \'{0}\'. <a '
+                           'href="{1}">Click here</a> if you would like to '
+                           'edit \'{0}\'.'.format(cn.name, cn_url)))
 
     def validate_synonyms(self, field):
         """Raise a ValidationError if any synonyms are too long."""
@@ -851,24 +872,83 @@ class EditSeriesForm(Form):
     """Form for editing a Series to the database.
 
     Attributes:
-        common_names (SelectField): Field for selecting a common name.
+        common_name (SelectField): Field for selecting a common name.
         description (TextAreaField): Field for series description.
         name (StringField): Field for series name.
     """
-    common_names = SelectField('Select Common Name', coerce=int)
-    description = TextAreaField('Description')
-    name = StringField('Series Name', validators=[Length(1, 64)])
+    common_name = SelectField('Select Common Name', coerce=int)
+    description = TextAreaField('Description', validators=[NotSpace()])
+    name = StringField('Series Name', validators=[Length(1, 64), NotSpace()])
     submit = SubmitField('Edit Series')
 
     def set_common_names(self):
-        """Set common names choices with common names from db."""
-        self.common_names.choices = common_name_select_list()
+        """Set common name choices with common names from db."""
+        self.common_name.choices = common_name_select_list()
 
     def populate(self, series):
         """Populate fields with information from a db entry."""
         self.name.data = series.name
-        self.common_names.data = series.common_name.id
+        self.common_name.data = series.common_name.id
         self.description.data = series.description
+
+
+class RemoveBotanicalNameForm(Form):
+    """Form for removing a botanical name."""
+    verify_removal = BooleanField('Yes')
+    submit = SubmitField('Remove Botanical Name')
+
+
+class RemoveCategoryForm(Form):
+    """Form for removing a category."""
+    move_to = SelectField('Move common names and seeds in this category to', 
+                          coerce=int)
+    verify_removal = BooleanField('Yes')
+    submit = SubmitField('Remove Category')
+
+    def set_move_to(self, cat_id):
+        """Set move_to SelectField with other Categories.
+
+        Args:
+            cat_id: The id of the Category to be removed.
+        """
+        cats = Category.query.filter(Category.id != cat_id).all()
+        self.move_to.choices = [(cat.id, cat.category) for cat in cats]
+
+
+class RemoveCommonNameForm(Form):
+    """Form for removing a common name."""
+    move_to = SelectField('Move botanical names and seeds associated with '
+                          'this common name to', coerce=int)
+    verify_removal = BooleanField('Yes')
+    submit = SubmitField('Remove Common Name')
+
+    def set_move_to(self, cn_id):
+        """Set move_to SelectField with other CommonNames.
+
+        Args:
+            cn_id: The id of the CommonName to be removed.
+        """
+        cns = CommonName.query.filter(CommonName.id != cn_id).all()
+        self.move_to.choices = [(cn.id, cn.name) for cn in cns]
+
+
+class RemovePacketForm(Form):
+    """Form for removing a packet."""
+    verify_removal = BooleanField('Yes')
+    submit = SubmitField('Remove Packet')
+
+
+class RemoveSeedForm(Form):
+    """Form for removing a seed."""
+    delete_images = BooleanField('Also delete all images for this seed')
+    verify_removal = BooleanField('Yes')
+    submit = SubmitField('Remove Seed')
+
+
+class RemoveSeriesForm(Form):
+    """Form for removing a series."""
+    verify_removal = BooleanField('Yes')
+    submit = SubmitField('Remove Series')
 
                 
 class SelectBotanicalNameForm(Form):
@@ -928,40 +1008,3 @@ class SelectSeriesForm(Form):
     def set_series(self):
         """Populate series with Series from the database."""
         self.series.choices = series_select_list()
-
-
-class RemoveBotanicalNameForm(Form):
-    """Form for removing a botanical name."""
-    verify_removal = BooleanField('Yes')
-    submit = SubmitField('Remove Botanical Name')
-
-
-class RemoveCategoryForm(Form):
-    """Form for removing a category."""
-    verify_removal = BooleanField('Yes')
-    submit = SubmitField('Remove Category')
-
-
-class RemoveCommonNameForm(Form):
-    """Form for removing a common name."""
-    verify_removal = BooleanField('Yes')
-    submit = SubmitField('Remove Common Name')
-
-
-class RemovePacketForm(Form):
-    """Form for removing a packet."""
-    verify_removal = BooleanField('Yes')
-    submit = SubmitField('Remove Packet')
-
-
-class RemoveSeriesForm(Form):
-    """Form for removing a series."""
-    verify_removal = BooleanField('Yes')
-    submit = SubmitField('Remove Series')
-
-
-class RemoveSeedForm(Form):
-    """Form for removing a seed."""
-    delete_images = BooleanField('Also delete all images for this seed')
-    verify_removal = BooleanField('Yes')
-    submit = SubmitField('Remove Seed')

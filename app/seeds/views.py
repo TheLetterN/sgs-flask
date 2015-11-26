@@ -38,11 +38,11 @@ from .models import (
     Category,
     CommonName,
     Image,
-    Price,
     Packet,
     Quantity,
     Seed,
-    Series
+    Series,
+    USDInt
 )
 from .forms import (
     AddBotanicalNameForm,
@@ -229,18 +229,17 @@ def add_packet(seed_id=None):
         db.session.add(packet)
         packet.seed = seed
         packet.price = form.price.data.strip()
-        # TODO load existing Quantity if the same
-        packet.quantity = Quantity(value=form.quantity.data.strip(),
-                                   units=form.unit.data.strip())
+        fq = Quantity.for_cmp(form.quantity.data)
+        fu = form.units.data.strip()
+        qty = Quantity.query.filter(Quantity.value == fq,
+                                    Quantity.units == fu).first()
+        if qty:
+            packet.quantity = qty
+        else:
+            packet.quantity = Quantity(value=fq, units=fu)
         packet.sku = form.sku.data.strip()
         db.session.commit()
-        flash('Packet SKU {0}: ${1} for {2} {3} added to {4} {5}.'.
-              format(packet.sku,
-                     packet.price,
-                     packet.quantity.value,
-                     packet.quantity.units,
-                     seed.name,
-                     seed.common_name.name))
+        flash('Packet {0} added to {1}.'.format(packet.info, seed.fullname))
         if form.again.data:
             return redirect(url_for('seeds.add_packet', seed_id=seed_id))
         else:
@@ -427,7 +426,7 @@ def edit_botanical_name(bn_id=None):
         edited = False
         if form.name.data != bn.name:
             bn2 = BotanicalName.query.filter_by(_name=form.name.data).first()
-            if bn2:
+            if bn2 and bn2 not in bn.synonyms:
                 if not bn2.syn_only:
                     bn2_url= url_for('seeds.edit_botanical_name', bn_id=bn2.id)
                     flash(Markup(('Error: Botanical name \'{0}\' is already '
@@ -446,6 +445,9 @@ def edit_botanical_name(bn_id=None):
                 edited = True
                 flash('Botanical name \'{0}\' changed to \'{1}\'.'.
                       format(bn.name, form.name.data))
+                if bn2 in bn.synonyms:
+                    bn.clear_synonyms()
+                    db.session.commit()
                 bn.name = form.name.data
         if form.common_name.data != bn.common_name.id:
             edited = True
@@ -499,21 +501,20 @@ def edit_category(cat_id=None):
     form = EditCategoryForm()
     if form.validate_on_submit():
         edited = False
-        if dbify(form.category.data) != category.category:
-            cat2 = Category.query\
-                .filter_by(category=dbify(form.category.data)).first()
-            if not cat2:
-                edited = True
-                oldcat = category.category
-                category.category = dbify(form.category.data)
-                flash('Category changed from \'{0}\' to \'{1}\'.'
-                      .format(oldcat, category.category))
-            else:
+        form_cat = dbify(form.category.data)
+        if form_cat != category.category:
+            cat2 = Category.query.filter_by(category=form_cat).first()
+            if cat2:
                 cat2_url = url_for('seeds.edit_category', cat_id=cat2.id)
                 flash(Markup('Error: Category \'{0}\' already exists. <a '
                              'href="{1}">Click here</a> if you wish to edit '
                              'it.'.format(cat2.category, cat2_url)))
                 return redirect(url_for('seeds.edit_category', cat_id=cat_id))
+            else:
+                edited = True
+                flash('Category changed from \'{0}\' to \'{1}\'.'
+                      .format(category.category, form_cat))
+                category.category = form_cat
         if form.description.data != category.description:
             edited = True
             if form.description.data:
@@ -564,7 +565,7 @@ def edit_common_name(cn_id=None):
         form_name = dbify(form.name.data)
         if form_name != cn.name:
             cn2 = CommonName.query.filter_by(_name=form_name).first()
-            if cn2:
+            if cn2 and cn2 not in cn.synonyms:
                 if not cn2.syn_only:
                     cn2_url = url_for('seeds.edit_common_name', cn_id=cn2.id)
                     flash(Markup('Error: the common name \'{0}\' is already '
@@ -579,6 +580,9 @@ def edit_common_name(cn_id=None):
                                  .format(cn2.name, syn_parents_links(cn2))))
                 return redirect(url_for('seeds.edit_common_name', cn_id=cn_id))
             else:
+                if cn2 in cn.synonyms:
+                    cn.clear_synonyms()
+                    db.session.commit()
                 edited = True
                 flash('Common name \'{0}\' changed to \'{1}\'.'.
                       format(cn.name, form_name))
@@ -708,54 +712,73 @@ def edit_packet(pkt_id=None):
         return redirect(url_for('seeds.select_packet',
                                 dest='seeds.edit_packet'))
     form = EditPacketForm()
-    form.set_selects()
     if form.validate_on_submit():
         edited = False
-        if form.price.data:
-            packet.price = form.price.data
+        if form.sku.data.strip() != packet.sku:
+            pkt2 = Packet.query.filter_by(sku=form.sku.data.strip()).first()
+            if pkt2:
+                flash(Markup('Error: SKU already in use by {0} in packet {1}. '
+                             '<a href="{2}">Click here</a> if you would like '
+                             'to edit it.'
+                             .format(pkt2.seed.fullname, 
+                                     pkt2.info,
+                                     url_for('seeds.edit_packet', 
+                                             pkt_id=pkt2.id))))
+                return redirect(url_for('seeds.edit_packet', pkt_id=packet.id))
             edited = True
-        elif form.prices.data != packet._price.id:
-            packet._price = Price.query.get(form.prices.data)
+            packet.sku = form.sku.data.strip()
+        dec_p = USDInt.usd_to_decimal(form.price.data)
+        if dec_p != packet.price:
             edited = True
-        if form.quantity.data is not None and form.quantity.data != '':
-            packet.quantity = form.quantity.data
+            packet.price = dec_p
+        fq = Quantity.for_cmp(form.quantity.data)
+        fu = form.units.data.strip()
+        if fq != packet.quantity.value:
             edited = True
-        elif form.quantities.data != str(packet.quantity):
-            packet.quantity = form.quantities.data
+            oldqty = packet.quantity
+            qty = Quantity.query.filter(Quantity.value == fq,
+                                        Quantity.units == fu).first()
+            if qty:
+                packet.quantity = qty
+            else:
+                qty = Quantity()
+                qty.value = fq
+                qty.units = fu
+                packet.quantity = qty
+            if not oldqty.packets:
+                db.session.delete(oldqty)
+        if fu != packet.quantity.units:
             edited = True
-        if form.unit.data is not None and form.unit.data != '':
-            packet.unit = form.unit.data
-            edited = True
-        elif form.units.data != packet._unit.id:
-            packet._unit = Unit.query.get(form.units.data)
-            edited = True
-        if form.sku.data != packet.sku:
-            packet.sku = form.sku.data
-            edited = True
+            qty = Quantity.query.filter(Quantity.value == fq,
+                                        Quantity.units == fu).first()
+            if qty:
+                if qty != packet.quantity:
+                    oldqty = packet.quantity
+                    packet.quantity = qty
+                    if not oldqty.packets:
+                        db.session.delete(oldqty)
+            else:
+                packet.quantity.units = fu
         if edited:
-            flash('Packet changed to: SKU {0} - ${1} for {2} {3}'.
-                  format(packet.sku,
-                         packet.price,
-                         packet.quantity,
-                         packet.unit))
             db.session.commit()
+            flash('Packet changed to: {0}'.format(packet.info))
             return redirect(url_for('seeds.manage'))
         else:
-            flash('No changes made to packet: SKU {0} - ${1} for {2} {3}'.
-                  format(packet.sku,
-                         packet.price,
-                         packet.quantity,
-                         packet.unit))
+            flash('No changes made to packet: {0}'.format(packet.info))
             return redirect(url_for('seeds.edit_packet', pkt_id=pkt_id))
     form.populate(packet)
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
-        (url_for('seeds.edit_packet', pkt_id=pkt_id), 'Edit Packet')
+        (url_for('seeds.edit_category'), 'Edit Category'),
+        (url_for('seeds.edit_common_name'), 'Edit Common Name'),
+        (url_for('seeds.edit_botanical_name'), 'Edit Botanical Name'),
+        (url_for('seeds.edit_series'), 'Edit Series'),
+        (url_for('seeds.edit_seed'), 'Edit Seed'),
+        (url_for('seeds.edit_packet'), 'Edit Packet')
     )
     return render_template('seeds/edit_packet.html',
                            crumbs=crumbs,
-                           form=form,
-                           packet=packet)
+                           form=form)
 
 
 @seeds.route('/edit_seed', methods=['GET', 'POST'])
@@ -768,7 +791,6 @@ def edit_seed(seed_id=None):
         return redirect(url_for('seeds.select_seed', dest='seeds.edit_seed'))
     seed = Seed.query.get(seed_id)
     if seed is None:
-        flash('Error: invalid seed number! Please select a seed:')
         return redirect(url_for('seeds.select_seed', dest='seeds.edit_seed'))
     form = EditSeedForm()
     form.set_selects()
@@ -791,23 +813,31 @@ def edit_seed(seed_id=None):
                           .format(sd.fullname))
                     return redirect(url_for('seeds.edit_seed',
                                             seed_id=seed_id))
-        if form.common_name.data != seed.common_name.id:
-            edited = True
-            cn = CommonName.query.get(form.common_name.data)
-            flash('Changed common name to \'{0}\' for: {1}'.
-                  format(cn.name, seed.fullname))
-            seed.common_name = CommonName.query.get(form.common_name.data)
         if seed.name != form_name:
             edited = True
             flash('Changed seed name from \'{0}\' to \'{1}\''.
                   format(seed.name, form_name))
             seed.name = form_name
-        if form.botanical_names.data != seed.botanical_name.id:
+        if not seed.common_name or \
+                form.common_name.data != seed.common_name.id:
             edited = True
-            seed.botanical_name = BotanicalName.query\
-                .get(form.botanical_names.data)
-            flash('Changed botanical name for \'{0}\' to \'{1}\''
-                  .format(seed.name, seed.botanical_name.name))
+            cn = CommonName.query.get(form.common_name.data)
+            flash('Changed common name to \'{0}\' for: {1}'.
+                  format(cn.name, seed.fullname))
+            seed.common_name = CommonName.query.get(form.common_name.data)
+        if form.botanical_name.data:
+            if not seed.botanical_name or\
+                    form.botanical_name.data != seed.botanical_name.id:
+                edited = True
+                seed.botanical_name = BotanicalName.query\
+                    .get(form.botanical_name.data)
+                flash('Changed botanical name for \'{0}\' to \'{1}\''
+                      .format(seed.fullname, seed.botanical_name.name))
+        elif seed.botanical_name:
+            edited = True
+            seed.botanical_name = None
+            flash('Botanical name for \'{0}\' has been removed.'
+                  .format(seed.fullname))
         for cat in seed.categories:
             if cat.id not in form.categories.data:
                 edited = True
@@ -821,11 +851,18 @@ def edit_seed(seed_id=None):
                 flash('Added category \'{0}\' to: {1}'.
                       format(cat.category, seed.fullname))
                 seed.categories.append(cat)
+        if not form.description.data:
+            form.description.data = None
         if form.description.data != seed.description:
             edited = True
-            flash('Changed description for \'{0}\' to: \'{1}\''.
-                  format(seed.fullname, form.description.data))
-            seed.description = form.description.data
+            if form.description.data:
+                seed.description = form.description.data
+                flash('Changed description for \'{0}\' to: {1}'.
+                      format(seed.fullname, seed.description))
+            else:
+                seed.description = None
+                flash('Description for \'{0}\' has been cleared.'
+                      .format(seed.fullname))
         if seed.gw_common_names:
             for gw_cn in list(seed.gw_common_names):
                 if gw_cn.id not in form.gw_common_names.data:
@@ -847,7 +884,7 @@ def edit_seed(seed_id=None):
                 if gw_sd.id not in form.gw_seeds.data:
                     edited = True
                     flash('\'{0}\' removed from Grows With for \'{1}\', and '
-                          'vice versa'.format(gw_sd.name, seed.name))
+                          'vice versa'.format(gw_sd.fullname, seed.fullname))
                     if seed in gw_sd.gw_seeds:
                         gw_sd.gw_seeds.remove(seed)
                     seed.gw_seeds.remove(gw_sd)
@@ -909,7 +946,14 @@ def edit_seed(seed_id=None):
                   .format(seed.fullname, seed.list_synonyms_as_string()))
         if form.thumbnail.data:
             thumb_name = secure_filename(form.thumbnail.data.filename)
-            if seed.thumbnail is None or thumb_name != seed.thumbnail.filename:
+            img = Image.query.filter_by(filename=thumb_name).first()
+            if img != seed.thumbnail and img not in seed.images:
+                flash('Error: The filename \'{0}\' is already in use by '
+                      'another seed. Please rename it and try again.'
+                      .format(thumb_name))
+                db.session.rollback()
+                return redirect(url_for('seeds.edit_seed', seed_id=seed.id))
+            else:
                 edited = True
                 flash('New thumbnail for \'{0}\' uploaded as: \'{1}\''.
                       format(seed.fullname, thumb_name))
@@ -923,7 +967,11 @@ def edit_seed(seed_id=None):
                     tb = seed.thumbnail
                     seed.thumbnail = None
                     seed.images.append(tb)
-                seed.thumbnail = Image(filename=thumb_name)
+                if img in seed.images:
+                    seed.thumbnail = img
+                    seed.images.remove(img)
+                if not img:
+                    seed.thumbnail = Image(filename=thumb_name)
                 form.thumbnail.data.save(upload_path)
         if edited:
             db.session.commit()
@@ -931,11 +979,14 @@ def edit_seed(seed_id=None):
         else:
             flash('No changes made to \'{0}\'.'.format(seed.fullname))
             return redirect(url_for('seeds.edit_seed', seed_id=seed_id))
-
     form.populate(seed)
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
-        (url_for('seeds.edit_seed', seed_id=seed_id), 'Edit Seed')
+        (url_for('seeds.edit_category'), 'Edit Category'),
+        (url_for('seeds.edit_common_name'), 'Edit Common Name'),
+        (url_for('seeds.edit_botanical_name'), 'Edit Botanical Name'),
+        (url_for('seeds.edit_series'), 'Edit Series'),
+        (url_for('seeds.edit_seed'), 'Edit Seed')
     )
     return render_template('seeds/edit_seed.html',
                            crumbs=crumbs,
@@ -954,7 +1005,6 @@ def edit_series(series_id=None):
                                 dest='seeds.edit_series'))
     series = Series.query.get(series_id)
     if series is None:
-        flash('Error: No series exists with that id! Please select one:')
         return redirect(url_for('seeds.select_series',
                                 dest='seeds.edit_series'))
     form = EditSeriesForm()
@@ -964,7 +1014,7 @@ def edit_series(series_id=None):
         if dbify(form.name.data) != series.name:
             s2 = Series.query.filter_by(name=dbify(form.name.data)).first()
             if s2 is not None:
-                flash('Error: {0} already exists in the database!'.
+                flash('Error: Another series named \'{0}\' already exists!'.
                       format(s2.name))
                 return redirect(url_for('seeds.edit_series',
                                         series_id=series_id))
@@ -972,14 +1022,21 @@ def edit_series(series_id=None):
                 edited = True
                 series.name = dbify(form.name.data)
                 flash('Series name changed to: {0}'.format(series.name))
+        if not form.description.data:
+            form.description.data = None
         if form.description.data != series.description:
             edited = True
-            flash('Description for series \'{0}\' changed to: {1}'.
-                  format(series.fullname, form.description.data))
-            series.description = form.description.data
-        if form.common_names.data != series.common_name.id:
+            if form.description.data:
+                flash('Description for series \'{0}\' changed to: {1}'
+                      .format(series.fullname, form.description.data))
+                series.description = form.description.data
+            else:
+                flash('Description for series \'{0}\' has been cleared.'
+                      .format(series.fullname))
+                series.description = None
+        if form.common_name.data != series.common_name.id:
             edited = True
-            series.common_name = CommonName.query.get(form.common_names.data)
+            series.common_name = CommonName.query.get(form.common_name.data)
             flash('Common name for \'{0}\' changed to: {1}'.
                   format(series.fullname, series.common_name.name))
         if edited:
@@ -991,6 +1048,9 @@ def edit_series(series_id=None):
     form.populate(series)
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
+        (url_for('seeds.edit_category'), 'Edit Category'),
+        (url_for('seeds.edit_common_name'), 'Edit Common Name'),
+        (url_for('seeds.edit_botanical_name'), 'Edit Botanical Name'),
         (url_for('seeds.edit_series'), 'Edit Series')
     )
     return render_template('seeds/edit_series.html',
@@ -1065,15 +1125,8 @@ def remove_botanical_name(bn_id=None):
     if bn_id is None:
         return redirect(url_for('seeds.select_botanical_name',
                                 dest='seeds.remove_botanical_name'))
-    if not bn_id.isdigit():
-        flash('Error: Botanical name id must be an integer!'
-              ' Please select a botanical name from the list:')
-        return redirect(url_for('seeds.select_botanical_name',
-                                dest='seeds.remove_botanical_name'))
     bn = BotanicalName.query.get(bn_id)
     if bn is None:
-        flash('Error: No such botanical name exists!'
-              ' Please select one from the list:')
         return redirect(url_for('seeds.select_botanical_name',
                                 dest='seeds.remove_botanical_name'))
     form = RemoveBotanicalNameForm()
@@ -1083,8 +1136,8 @@ def remove_botanical_name(bn_id=None):
                 flash('Synonyms for \'{0}\' cleared and orphaned synonyms '
                       'have been deleted.'.format(bn.name))
                 bn.clear_synonyms()
-            flash('Botanical name {0}: \'{1}\' has been removed from the '
-                  'database.'.format(bn.id, bn.name))
+            flash('The botanical name \'{1}\' has been removed from '
+                  'the database.'.format(bn.id, bn.name))
             db.session.delete(bn)
             db.session.commit()
             return redirect(url_for('seeds.manage'))
@@ -1095,8 +1148,9 @@ def remove_botanical_name(bn_id=None):
                                     bn_id=bn_id))
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
-        (url_for('seeds.remove_botanical_name', bn_id=bn_id),
-         'Remove Botanical Name')
+        (url_for('seeds.remove_category'), 'Remove Category'),
+        (url_for('seeds.remove_common_name'), 'Remove Common Name'),
+        (url_for('seeds.remove_botanical_name'), 'Remove Botanical Name')
     )
     return render_template('seeds/remove_botanical_name.html',
                            bn=bn,
@@ -1113,21 +1167,25 @@ def remove_category(cat_id=None):
     if cat_id is None:
         return redirect(url_for('seeds.select_category',
                                 dest='seeds.remove_category'))
-    if not cat_id.isdigit():
-        flash('Error: Category id must be an integer! '
-              'Please select a category from the list:')
-        return redirect(url_for('seeds.select_category',
-                                dest='seeds.remove_category'))
     category = Category.query.get(cat_id)
     if category is None:
-        flash('Error: No such category exists. '
-              'Please select one from the list:')
         return redirect(url_for('seeds.select_category',
                                 dest='seeds.remove_category'))
     form = RemoveCategoryForm()
+    form.set_move_to(cat_id)
     if form.validate_on_submit():
         if form.verify_removal.data:
-            flash('Category {0}: \'{1}\' has been removed from the database.'.
+            cat2 = Category.query.get(form.move_to.data)
+            flash('Common names and seeds formerly associated with \'{0}\' '
+                  'are now associated with \'{1}\'.'
+                  .format(category.category, cat2.category))
+            for cn in category.common_names:
+                if cn not in cat2.common_names:
+                    cat2.common_names.append(cn)
+            for sd in category.seeds:
+                if sd not in cat2.seeds:
+                    cat2.seeds.append(sd)
+            flash('The category \'{1}\' has been removed from the database.'.
                   format(category.id, category.category))
             db.session.delete(category)
             db.session.commit()
@@ -1139,8 +1197,7 @@ def remove_category(cat_id=None):
                                     cat_id=cat_id))
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
-        (url_for('seeds.remove_category', cat_id=cat_id),
-         'Remove Category')
+        (url_for('seeds.remove_category'), 'Remove Category')
     )
     return render_template('seeds/remove_category.html',
                            crumbs=crumbs,
@@ -1157,24 +1214,43 @@ def remove_common_name(cn_id=None):
     if cn_id is None:
         return redirect(url_for('seeds.select_common_name',
                                 dest='seeds.remove_common_name'))
-    if not cn_id.isdigit():
-        flash('Error: Common name id must be an integer! Please '
-              'select a common name from the list:')
-        return redirect(url_for('seeds.select_common_name',
-                        dest='seeds.remove_common_name'))
     cn = CommonName.query.get(cn_id)
     if cn is None:
-        flash('Error: No such common name exists. '
-              'Please select one from the list:')
         return redirect(url_for('seeds.select_common_name',
                                 dest='seeds.remove_common_name'))
     form = RemoveCommonNameForm()
+    form.set_move_to(cn_id)
     if form.validate_on_submit():
         if form.verify_removal.data:
             if cn.synonyms:
                 cn.clear_synonyms()
                 flash('Synonyms for \'{0}\' cleared, and orphaned synonyms '
                       'have been deleted.'.format(cn.name))
+            cn2 = CommonName.query.get(form.move_to.data)
+            flash('Botanical names and seeds formerly associated with \'{0}\' '
+                  'are now associated with \'{1}\'.'.format(cn.name, cn2.name))
+            for bn in cn.botanical_names:
+                if bn not in cn2.botanical_names:
+                    cn2.botanical_names.append(bn)
+            for sd in cn.seeds:
+                if sd not in cn2.seeds:
+                    new_fullname = '{0} {1}'.format(sd.name, cn2.name)
+                    fns = [seed.fullname for seed in cn2.seeds]
+                    if new_fullname in fns:
+                        ed_url = url_for('seeds.edit_seed', seed_id=sd.id)
+                        rem_url = url_for('seeds.remove_seed', seed_id=sd.id)
+                        flash(
+                            Markup('Warning: \'{0}\' could not be changed to '
+                                   '\'{1}\' because \'{1}\' already exists! '
+                                   '<a href="{2}">Click here</a> to edit the '
+                                   'orphaned seed, or <a href="{3}">click '
+                                   'here</a> to remove it from the database.'
+                                   .format(sd.fullname,
+                                           new_fullname,
+                                           ed_url,
+                                           rem_url)))
+                    else:
+                        cn2.seeds.append(sd)
             flash('Common name {0}: \'{1}\' has been removed from the '
                   'database.'.format(cn.id, cn.name))
             db.session.delete(cn)
@@ -1182,12 +1258,12 @@ def remove_common_name(cn_id=None):
             return redirect(url_for('seeds.manage'))
         else:
             flash('No changes made. Check the box labeled \'Yes\' if '
-                  'you want to remve this common name.')
+                  'you want to remove this common name.')
             return redirect(url_for('seeds.remove_common_name', cn_id=cn_id))
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
-        (url_for('seeds.remove_common_name', cn_id=cn_id),
-         'Remove Common Name')
+        (url_for('seeds.remove_category'), 'Remove Category'),
+        (url_for('seeds.remove_common_name'), 'Remove Common Name')
     )
     return render_template('seeds/remove_common_name.html',
                            crumbs=crumbs,
@@ -1206,18 +1282,18 @@ def remove_packet(pkt_id=None):
                                 dest='seeds.remove_packet'))
     packet = Packet.query.get(pkt_id)
     if packet is None:
-        flash('Error: No packet exists with given id! Please select one:')
         return redirect(url_for('seeds.select_packet',
                                 dest='seeds.remove_packet'))
     form = RemovePacketForm()
     if form.validate_on_submit():
         if form.verify_removal.data:
-            flash('Packet SKU {0}: ${1} for {2} {3} has been removed from '
-                  'the database.'.format(packet.sku,
-                                         packet.price,
-                                         packet.quantity,
-                                         packet.unit))
+            flash('Packet {0} has been removed from the database.'
+                  .format(packet.info))
+            oldqty = packet.quantity
             db.session.delete(packet)
+            if not oldqty.packets:
+                db.session.delete(oldqty)
+            db.session.commit()
             return redirect(url_for('seeds.manage'))
         else:
             flash('No changes made. Check the box labeled \'Yes\' if you '
@@ -1225,7 +1301,12 @@ def remove_packet(pkt_id=None):
             return redirect(url_for('seeds.remove_packet', pkt_id=pkt_id))
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
-        (url_for('seeds.remove_packet', pkt_id=pkt_id), 'Remove Packet')
+        (url_for('seeds.remove_category'), 'Remove Category'),
+        (url_for('seeds.remove_common_name'), 'Remove Common Name'),
+        (url_for('seeds.remove_botanical_name'), 'Remove Botanical Name'),
+        (url_for('seeds.remove_series'), 'Remove Series'),
+        (url_for('seeds.remove_seed'), 'Remove Seed'),
+        (url_for('seeds.remove_packet'), 'Remove Packet')
     )
     return render_template('seeds/remove_packet.html',
                            crumbs=crumbs,
@@ -1242,7 +1323,6 @@ def remove_seed(seed_id=None):
         return redirect(url_for('seeds.select_seed', dest='seeds.remove_seed'))
     seed = Seed.query.get(seed_id)
     if seed is None:
-        flash('Error: No seed exists with that id! Please select one:')
         return redirect(url_for('seeds.select_seed', dest='seeds.remove_seed'))
     form = RemoveSeedForm()
     if form.validate_on_submit():
@@ -1260,9 +1340,13 @@ def remove_seed(seed_id=None):
                               format(image.filename))
                         db.session.delete(image)
                     except OSError as e:
-                        rollback = True
-                        flash('Error: Attempting to delete \'{0}\' raised an '
-                              'exception: {1}'.format(image.filename, e))
+                        if e.errno == 2:    # No such file or directory
+                            db.session.delete(image)
+                        else:
+                            rollback = True
+                            flash('Error: Attempting to delete image \'{0}\' '
+                                  'raised an exception: {1}'
+                                  .format(image.filename, e))
             if seed.thumbnail:
                 try:
                     seed.thumbnail.delete_file()
@@ -1270,9 +1354,13 @@ def remove_seed(seed_id=None):
                           format(seed.thumbnail.filename))
                     db.session.delete(seed.thumbnail)
                 except OSError as e:
-                    rollback = True
-                    flash('Error: Attempting to delete \'{0}\' raised an '
-                          'exception: {1}'.format(seed.thumbnail.filename, e))
+                    if e.errno == 2:    # No such file or directory
+                        db.session.delete(seed.thumbnail)
+                    else:
+                        rollback = True
+                        flash('Error: Attempting to delete thumbnail \'{0}\' '
+                              'raised an exception: {1}'
+                              .format(seed.thumbnail.filename, e))
         if rollback:
             flash('Error: Seed could not be deleted due to problems deleting '
                   'associated images.')
@@ -1291,7 +1379,11 @@ def remove_seed(seed_id=None):
     form.delete_images.data = True
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
-        (url_for('seeds.remove_seed', seed_id=seed_id), 'Remove Seed')
+        (url_for('seeds.remove_category'), 'Remove Category'),
+        (url_for('seeds.remove_common_name'), 'Remove Common Name'),
+        (url_for('seeds.remove_series'), 'Remove Series'),
+        (url_for('seeds.remove_botanical_name'), 'Remove Botanical Name'),
+        (url_for('seeds.remove_seed'), 'Remove Seed')
     )
     return render_template('seeds/remove_seed.html',
                            crumbs=crumbs,
@@ -1341,7 +1433,8 @@ def seed(cat_slug=None, cn_slug=None, seed_slug=None):
     """Display a page for a given seed."""
     cat = Category.query.filter_by(slug=cat_slug).first()
     cn = CommonName.query.filter_by(slug=cn_slug).first()
-    seed = Seed.query.filter_by(slug=seed_slug).first()
+    seed = Seed.query.filter(Seed.slug == seed_slug,
+                             Seed.common_name == cn).first()
     if (cat is not None and cn is not None and seed is not None) and \
             (cat in seed.categories and cn is seed.common_name):
         crumbs = make_breadcrumbs(

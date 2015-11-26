@@ -16,79 +16,32 @@
    Copyright Swallowtail Garden Seeds, Inc 
 #}
 {% extends "main/base.html" %}
-{% from "includes/form_errors.html" import form_errors %}
+{% from "includes/form_field.html" import form_field %}
 {# HTML within blocks should be indented as follows for consistency: #}
 {# block head: 2 indentations of 4 spaces each. (8 spaces total.) #}
 {# block main: 3 indentations of 4 spaces each. (12 spaces total.) #}
 {% block head %}
         <title>Edit Packet</title>
         <meta name="robots" content="noindex, nofollow">
-        <link rel="canonical" href="{{ url_for('seeds.edit_packet', pkt_id=pkt_id, _external=True) }}">
 {% endblock %}
 {% block main %}
-<h1>Editing Packet SKU {{ packet.sku }} for {{ packet.seed.fullname }}</h1>
+<h1>Edit Packet</h1>
             <form method="POST">
                 {{ form.hidden_tag() }}
                 <ol>
-                    <fieldset>
-                        <legend>Price</legend>
-                        <li>
-                            {{ form.prices.label }}
-                            {{ form.prices }}
-                            {% if form.prices.errors|count > 0 %}
-                            {{ form_errors(form.prices) }}
-                            {% endif %}
-                        </li>
-                        <li>
-                            {{ form.price.label }}
-                            {{ form.price }}
-                            {% if form.price.errors|count > 0 %}
-                            {{ form_errors(form.price) }}
-                            {% endif %}
-                        </li>
-                    </fieldset>
-                    <fieldset>
-                        <legend>Quantity</legend>
-                        <li>
-                            {{ form.quantities.label }}
-                            {{ form.quantities }}
-                            {% if form.quantities.errors|count > 0 %}
-                            {{ form_errors(form.quantities) }}
-                            {% endif %}
-                        </li>
-                        <li>
-                            {{ form.quantity.label }}
-                            {{ form.quantity }}
-                            {% if form.quantity.errors|count > 0 %}
-                            {{ form_errors(form.quantity) }}
-                            {% endif %}
-                        </li>
-                    </fieldset>
-                    <fieldset>
-                        <legend>Unit of Measurement</legend>
-                        <li>
-                            {{ form.units.label }}
-                            {{ form.units }}
-                            {% if form.units.errors|count > 0 %}
-                            {{ form_errors(form.units) }}
-                            {% endif %}
-                        </li>
-                        <li>
-
-                            {{ form.unit.label }}
-                            {{ form.unit }}
-                            {% if form.unit.errors|count > 0 %}
-                            {{ form_errors(form.unit) }}
-                            {% endif %}
-                        </li>
-                    </fieldset>
                     <li>
-                        {{ form.sku.label }}
-                        {{ form.sku }}
-                        {% if form.sku.errors|count > 0 %}
-                        {{ form_errors(form.sku) }}
-                        {% endif %}
+                        {{ form_field(form.sku)|indent(24)|safe }}
                     </li>
+                    <li>
+                        {{ form_field(form.price)|indent(24)|safe }}
+                    </li>
+                    <li>
+                        {{ form_field(form.quantity)|indent(24)|safe }}
+                    </li>
+                    <li>
+                        {{ form_field(form.units)|indent(24)|safe }}
+                    </li>
+                    <li>
                         {{ form.submit }}
                     </li>
                 </ol>

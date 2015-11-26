@@ -19,5 +19,5 @@
 contain the members gw_common_names and gw_seeds
 #}
 {% macro grows_with(obj) %}
-{% if obj.gw_common_names %}{% for gw_cn in obj.gw_common_names %}<a href="{{ url_for('seeds.common_name', cat_slug=gw_cn.categories[0].slug, cn_slug=gw_cn.slug) }}">{{ gw_cn.name }}</a>{% if not loop.last or obj.gw_seeds %}, {% endif %}{% endfor %}{% endif %}{% if obj.gw_seeds %}{% for gw_sd in obj.gw_seeds %}<a href="{{ url_for('seeds.seed', cat_slug=gw_sd.common_name.categories[0].slug, cn_slug=gw_sd.common_name.slug, seed_slug=gw_sd.slug) }}">{{ gw_sd.fullname }}</a>{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}
+{% if obj.gw_common_names %}{% for gw_cn in obj.gw_common_names %}<a href="{{ url_for('seeds.common_name', cat_slug=gw_cn.categories[0].slug, cn_slug=gw_cn.slug) }}">{{ gw_cn.name }}</a>{% if not loop.last or obj.gw_seeds %}, {% endif %}{% endfor %}{% endif %}{% if obj.gw_seeds %}{% for gw_sd in obj.gw_seeds %}<a href="{{ url_for('seeds.seed', cat_slug=gw_sd.categories[0].slug, cn_slug=gw_sd.common_name.slug, seed_slug=gw_sd.slug) }}">{{ gw_sd.fullname }}</a>{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}
 {% endmacro %}

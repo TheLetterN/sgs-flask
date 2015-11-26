@@ -16,6 +16,7 @@
    Copyright Swallowtail Garden Seeds, Inc 
 #}
 {% macro seed_box(seed) %}
+{% from 'includes/grows_with.html' import grows_with %}
 {% if not seed.dropped or current_user.can(Permission.MANAGE_SEEDS) %}
 <div class="seed_box">
     <img src="{{ url_for('static', filename=seed.thumbnail_path) }}">
@@ -43,6 +44,7 @@
         <em>{{ seed.common_name.header }}</em>
         <i>{{ seed.botanical_name.name }}</i>
         <p>{{ seed.description }}</p>
+        {% if seed.gw_common_names or seed.gw_seeds %}<p class="grows_with">Grows nicely with: {{ grows_with(seed) }}.</p>{% endif %}
     </div>
     {% if current_user.can(Permission.MANAGE_SEEDS) %}
     <a href="{{ url_for('seeds.add_packet', seed_id=seed.id) }}">Add Packet</a>
@@ -56,7 +58,7 @@
             <a href="{{ url_for('seeds.remove_packet', pkt_id=packet.id) }}">Remove Packet</a>
         </span>
         {% endif %}
-        <div>{{ packet.sku }}: {{ packet.quantity }} {{ packet.unit }} - ${{ packet.price }}</div>
+        <div>{{ packet.sku }}: {{ packet.quantity.html_value|safe }} {{ packet.quantity.units }} - ${{ packet.price }}</div>
         <div>TODO: Cart quantity and submit button</div>{% endfor %} 
     </div>{% endif %}
 </div>

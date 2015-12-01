@@ -138,14 +138,14 @@ def add_category():
     if form.validate_on_submit():
         category = Category()
         db.session.add(category)
-        category.category = dbify(form.category.data)
+        category.name = dbify(form.category.data)
         if form.description.data:
             category.description = form.description.data
             flash('Description for \'{0}\' set to: {1}'
-                  .format(category.category, category.description))
+                  .format(category.name, category.description))
         db.session.commit()
         flash('New category \'{0}\' has been added to the database.'.
-              format(category.category))
+              format(category.name))
         return redirect(url_for('seeds.manage'))
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
@@ -169,7 +169,7 @@ def add_common_name():
             category = Category.query.get(cat_id)
             cn.categories.append(category)
             flash('The common name \'{0}\' has been added to the category '
-                  '\'{1}\'.'.format(cn.name, category.category))
+                  '\'{1}\'.'.format(cn.name, category.name))
         if form.description.data:
             cn.description = form.description.data
             flash('Description for \'{0}\' set to: {1}'
@@ -280,7 +280,7 @@ def add_seed():
             for cat_id in form.categories.data:
                 cat = Category.query.get(cat_id)
                 flash('\'{0}\' added to categories for {1}.'.
-                      format(cat.category, form.name.data))
+                      format(cat.name, form.name.data))
                 seed.categories.append(cat)
         else:
             flash('No categories specified, will use categories from common '
@@ -502,34 +502,34 @@ def edit_category(cat_id=None):
     if form.validate_on_submit():
         edited = False
         form_cat = dbify(form.category.data)
-        if form_cat != category.category:
-            cat2 = Category.query.filter_by(category=form_cat).first()
+        if form_cat != category.name:
+            cat2 = Category.query.filter_by(name=form_cat).first()
             if cat2:
                 cat2_url = url_for('seeds.edit_category', cat_id=cat2.id)
                 flash(Markup('Error: Category \'{0}\' already exists. <a '
                              'href="{1}">Click here</a> if you wish to edit '
-                             'it.'.format(cat2.category, cat2_url)))
+                             'it.'.format(cat2.name, cat2_url)))
                 return redirect(url_for('seeds.edit_category', cat_id=cat_id))
             else:
                 edited = True
                 flash('Category changed from \'{0}\' to \'{1}\'.'
-                      .format(category.category, form_cat))
-                category.category = form_cat
+                      .format(category.name, form_cat))
+                category.name = form_cat
         if form.description.data != category.description:
             edited = True
             if form.description.data:
                 category.description = form.description.data
                 flash('Description for \'{0}\' changed to: {1}'
-                      .format(category.category, category.description))
+                      .format(category.name, category.description))
             else:
                 category.description = None
                 flash('Description for \'{0}\' has been cleared.'
-                      .format(category.category))
+                      .format(category.name))
         if edited:
             db.session.commit()
             return redirect(url_for('seeds.manage'))
         else:
-            flash('No changes made to category: {0}'.format(category.category))
+            flash('No changes made to category: {0}'.format(category.name))
             return redirect(url_for('seeds.edit_category', cat_id=cat_id))
     form.populate(category)
     crumbs = make_breadcrumbs(
@@ -591,7 +591,7 @@ def edit_common_name(cn_id=None):
             if cat.id not in form.categories.data:
                 edited = True
                 flash('\'{0}\' removed from categories associated with {1}.'.
-                      format(cat.category, cn.name))
+                      format(cat.name, cn.name))
                 cn.categories.remove(cat)
         cat_ids = [cat.id for cat in cn.categories]
         for cat_id in form.categories.data:
@@ -599,7 +599,7 @@ def edit_common_name(cn_id=None):
                 edited = True
                 cat = Category.query.get(cat_id)
                 flash('\'{0}\' added to categories associated with {1}.'
-                      .format(cat.category, cn.name))
+                      .format(cat.name, cn.name))
                 cn.categories.append(cat)
         if not form.description.data:
             form.description.data = None
@@ -842,14 +842,14 @@ def edit_seed(seed_id=None):
             if cat.id not in form.categories.data:
                 edited = True
                 flash('Removed category \'{0}\' from: {1}'.
-                      format(cat.category, seed.fullname))
+                      format(cat.name, seed.fullname))
                 seed.categories.remove(cat)
         for cat_id in form.categories.data:
             if cat_id not in [cat.id for cat in seed.categories]:
                 edited = True
                 cat = Category.query.get(cat_id)
                 flash('Added category \'{0}\' to: {1}'.
-                      format(cat.category, seed.fullname))
+                      format(cat.name, seed.fullname))
                 seed.categories.append(cat)
         if not form.description.data:
             form.description.data = None
@@ -1178,7 +1178,7 @@ def remove_category(cat_id=None):
             cat2 = Category.query.get(form.move_to.data)
             flash('Common names and seeds formerly associated with \'{0}\' '
                   'are now associated with \'{1}\'.'
-                  .format(category.category, cat2.category))
+                  .format(category.name, cat2.name))
             for cn in category.common_names:
                 if cn not in cat2.common_names:
                     cat2.common_names.append(cn)
@@ -1186,7 +1186,7 @@ def remove_category(cat_id=None):
                 if sd not in cat2.seeds:
                     cat2.seeds.append(sd)
             flash('The category \'{1}\' has been removed from the database.'.
-                  format(category.id, category.category))
+                  format(category.id, category.name))
             db.session.delete(category)
             db.session.commit()
             return redirect(url_for('seeds.manage'))

@@ -32,6 +32,7 @@ from wtforms import (
     ValidationError
 )
 from wtforms.validators import DataRequired, Length, Optional
+from app import dbify
 from .models import (
     BotanicalName,
     Category,
@@ -97,8 +98,8 @@ def category_select_list():
         list: A list of tuples containing the id and category of each category
             in the database.
     """
-    return [(category.id, category.category) for category in
-            Category.query.order_by('_category')]
+    return [(category.id, category.name) for category in
+            Category.query.order_by('_name')]
 
 
 def common_name_select_list():
@@ -277,13 +278,13 @@ class AddCategoryForm(Form):
             ValidationError: If submitted category already exists in the
                 database.
         """
-        cat = Category.query.filter_by(category=titlecase(field.data)).first()
+        cat = Category.query.filter_by(name=dbify(field.data)).first()
         if cat is not None:
             cat_url = url_for('seeds.edit_category', cat_id = cat.id)
             raise ValidationError(
                 Markup('\'{0}\' already exists in the database. <a '
                        'href="{1}">Click here</a> to edit it.'
-                       .format(cat.category, cat_url))
+                       .format(cat.name, cat_url))
             )
 
 
@@ -668,7 +669,7 @@ class EditCategoryForm(Form):
         Args:
             category (Category): A category object to populate the form from.
         """
-        self.category.data = category.category
+        self.category.data = category.name
         self.description.data = category.description
 
 
@@ -912,7 +913,7 @@ class RemoveCategoryForm(Form):
             cat_id: The id of the Category to be removed.
         """
         cats = Category.query.filter(Category.id != cat_id).all()
-        self.move_to.choices = [(cat.id, cat.category) for cat in cats]
+        self.move_to.choices = [(cat.id, cat.name) for cat in cats]
 
 
 class RemoveCommonNameForm(Form):

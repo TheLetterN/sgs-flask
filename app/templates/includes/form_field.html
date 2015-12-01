@@ -15,8 +15,8 @@
  
    Copyright Swallowtail Garden Seeds, Inc 
 #}
-{% macro form_field(field) %}
-{{ field.label }}
+{% macro form_field(field, show_label=True) %}
+{% if show_label %}{{ field.label }}{% endif %}
 {{ field }}
 {% if field.errors %}{% for error in field.errors %}
 <span class="form_error">{{ error }}</span>{% endfor %}

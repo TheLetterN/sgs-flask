@@ -1402,7 +1402,6 @@ def remove_series(series_id=None):
                                 dest='seeds.remove_series'))
     series = Series.query.get(series_id)
     if series is None:
-        flash('Error: No series exists with that id! Please select one:')
         return redirect(url_for('seeds.select_series',
                                 dest='seed.remove_series'))
     form = RemoveSeriesForm()
@@ -1420,6 +1419,9 @@ def remove_series(series_id=None):
                                     series_id=series_id))
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
+        (url_for('seeds.remove_category'), 'Remove Category'),
+        (url_for('seeds.remove_common_name'), 'Remove Common Name'),
+        (url_for('seeds.remove_botanical_name'), 'Remove Botanical Name'),
         (url_for('seeds.remove_series'), 'Remove Series')
     )
     return render_template('seeds/remove_series.html',

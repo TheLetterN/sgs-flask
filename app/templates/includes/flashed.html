@@ -16,6 +16,8 @@
    Copyright Swallowtail Garden Seeds, Inc 
 #}
 {% with messages = get_flashed_messages() %}
+
+    {% if messages %}
     {% for message in messages %}
         {% if 'Error:' in message %}
         <div class="flashed_error">{{ message }}</div>
@@ -23,5 +25,6 @@
         <div class="flashed_message">{{ message }}</div>
         {% endif %}
     {% endfor %}
+    {% endif %}
 {% endwith %}
 

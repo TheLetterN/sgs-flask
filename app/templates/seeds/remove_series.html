@@ -30,7 +30,7 @@
                 {{ form.hidden_tag() }}
                 <ol>
                     <li>
-                        <div class="warning">Are you sure you want to remove series {{ series.id }}: {{ series.name }}?</div>
+                        <div class="warning">Are you sure you want to remove series: {{ series.name }}?</div>
                         {{ form_field(form.verify_removal)|indent(24)|safe }}
                     </li>
                     <li>

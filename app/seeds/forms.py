@@ -613,8 +613,8 @@ class EditBotanicalNameForm(Form):
         if bn.synonyms:
             self.synonyms.data = bn.list_synonyms_as_string()
 
-    def set_common_names(self):
-        """Set add/remove_common_names with common names from the database."""
+    def set_common_name(self):
+        """Set common_name with common names from the database."""
         self.common_name.choices = common_name_select_list()
 
     def validate_name(self, field):

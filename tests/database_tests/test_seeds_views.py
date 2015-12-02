@@ -10,10 +10,8 @@ from app.seeds.models import (
     CommonName,
     Image,
     Packet,
-    Price,
-    QtyInteger,
-    Seed,
-    Unit
+    Quantity,
+    Seed
 )
 from tests.database_tests.test_auth_views_with_db import login
 from tests.conftest import app, db  # noqa
@@ -43,10 +41,11 @@ def foxy_seed():
     bn.name = 'Digitalis purpurea'
     seed.botanical_name = bn
     cat = Category()
-    cat.category = 'Perennial Flower'
+    cat.name = 'Perennial Flower'
     seed.categories.append(cat)
     cn = CommonName()
     cn.name = 'Foxglove'
+    cn.categories.append(cat)
     seed.common_name = cn
     return seed
 
@@ -65,12 +64,12 @@ class TestAddBotanicalNameRouteWithDB:
             login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.add_botanical_name'),
                          data=dict(name='Asclepias incarnata',
-                                   common_names=cn.id),
+                                   common_name=cn.id),
                          follow_redirects=True)
         bn = BotanicalName.query.filter_by(name='Asclepias incarnata').first()
         assert bn is not None
         assert cn is bn.common_name
-        assert '&#39;Asclepias incarnata&#39; has been added' in str(rv.data)
+        assert 'Botanical name &#39;Asclepias incarnata&#39;' in str(rv.data)
 
     def test_add_botanical_name_renders_page(self, app, db):
         """Render the Add Botanical Name page given no form data."""
@@ -97,8 +96,8 @@ class TestAddCategoryRouteWithDB:
                          data=dict(category='Perennial Flower',
                                    description='Built to last.'),
                          follow_redirects=True)
-        cat = Category.query.filter_by(category='Perennial Flower').first()
-        assert cat.category == 'Perennial Flower'
+        cat = Category.query.filter_by(name='Perennial Flower').first()
+        assert cat.name == 'Perennial Flower'
         assert cat.description == 'Built to last.'
         assert 'has been added to the database' in str(rv.data)
 
@@ -121,7 +120,7 @@ class TestAddCommonNameRouteWithDB:
         db.session.add(user)
         cat = Category()
         db.session.add(cat)
-        cat.category = 'Perennial Flower'
+        cat.name = 'Perennial Flower'
         db.session.commit()
         with app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
@@ -201,43 +200,11 @@ class TestAddPacketRouteWithDB:
             login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.add_packet', seed_id=seed.id),
                          data=(dict(price='2.99',
-                                    prices=0,
                                     quantity='100',
-                                    quantities='0',
-                                    unit='seeds',
-                                    units=0,
+                                    units='seeds',
                                     sku='8675309')),
                          follow_redirects=True)
-        assert 'Packet SKU 8675309' in str(rv.data)
-
-    def test_add_packet_success_with_selects(self, app, db):
-        """Flash a message on successful submission with data in selects."""
-        user = seed_manager()
-        seed = Seed()
-        cn = CommonName()
-        price = Price()
-        qty = QtyInteger()
-        unit = Unit()
-        db.session.add_all([user, seed, cn, price, qty, unit])
-        seed.name = 'Foxy'
-        cn.name = 'Foxglove'
-        price.price = Decimal('2.99')
-        qty.value = 100
-        unit.unit = 'seeds'
-        seed.common_name = cn
-        db.session.commit()
-        with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
-            rv = tc.post(url_for('seeds.add_packet', seed_id=seed.id),
-                         data=dict(prices=price.id,
-                                   price='',
-                                   quantities='100',
-                                   quantity='',
-                                   units=unit.id,
-                                   unit='',
-                                   sku='8675309'),
-                         follow_redirects=True)
-        assert 'Packet SKU 8675309' in str(rv.data)
+        assert 'Packet SKU #8675309' in str(rv.data)
 
     def test_add_packet_renders_page(self, app, db):
         """Render form page given a valid seed_id."""
@@ -276,22 +243,23 @@ class TestAddSeedRouteWithDB:
         cat = Category()
         db.session.add_all([user, bn, cn, cat])
         bn.name = 'Digitalis purpurea'
+        cat.name = 'Perennial Flower'
         cn.name = 'Foxglove'
-        cat.category = 'Perennial Flower'
+        cn.categories.append(cat)
         db.session.commit()
         with app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.add_seed'),
-                         data=dict(botanical_names=str(bn.id),
+                         data=dict(botanical_name=str(bn.id),
                                    categories=[str(cat.id)],
-                                   common_names=str(cn.id),
-                                   in_stock='y',
+                                   common_name=str(cn.id),
+                                   description='Very foxy.',
                                    dropped='',
+                                   in_stock='y',
                                    series='0',
                                    thumbnail=(io.BytesIO(b'fawks'),
                                               'foxy.jpg'),
-                                   name='Foxy',
-                                   description='Very foxy.'),
+                                   name='Foxy'),
                          follow_redirects=True)
         assert '&#39;Perennial Flower&#39; added' in str(rv.data)
         assert '&#39;Foxy Foxglove&#39; is in stock' in str(rv.data)
@@ -314,22 +282,23 @@ class TestAddSeedRouteWithDB:
         cat = Category()
         db.session.add_all([user, bn, cn, cat])
         bn.name = 'Digitalis purpurea'
+        cat.name = 'Perennial Flower'
         cn.name = 'Foxglove'
-        cat.category = 'Perennial Flower'
+        cn.categories.append(cat)
         db.session.commit()
         with app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.add_seed'),
-                         data=dict(botanical_names=[str(bn.id)],
+                         data=dict(botanical_name=str(bn.id),
                                    categories=[str(cat.id)],
-                                   common_names=str(cn.id),
-                                   in_stock='',
+                                   common_name=str(cn.id),
+                                   description='Very foxy.',
                                    dropped='y',
+                                   in_stock='',
+                                   name='Foxy',
                                    series='0',
                                    thumbnail=(io.BytesIO(b'fawks'),
-                                              'foxy.jpg'),
-                                   name='Foxy',
-                                   description='Very foxy.'),
+                                              'foxy.jpg')),
                          follow_redirects=True)
         assert '&#39;Foxy Foxglove&#39; is not in stock' in str(rv.data)
         assert '&#39;Foxy Foxglove&#39; is currently dropped/inactive' in\
@@ -350,7 +319,7 @@ class TestCategoryRouteWithDB:
         """Return valid page given a valid category slug."""
         cat = Category()
         db.session.add(cat)
-        cat.category = 'Annual Flower'
+        cat.name = 'Annual Flower'
         cat.description = 'Not really built to last.'
         db.session.commit()
         with app.test_client() as tc:
@@ -367,7 +336,7 @@ class TestCommonNameRouteWithDB:
         cat = Category()
         db.session.add_all([cn, cat])
         cn.name = 'Foxglove'
-        cat.category = 'Perennial Flower'
+        cat.name = 'Perennial Flower'
         db.session.commit()
         with app.test_client() as tc:
             rv = tc.get(url_for('seeds.common_name',
@@ -381,7 +350,7 @@ class TestCommonNameRouteWithDB:
         cat = Category()
         db.session.add_all([cn, cat])
         cn.name = 'Foxglove'
-        cat.category = 'Perennial Flower'
+        cat.name = 'Perennial Flower'
         db.session.commit()
         with app.test_client() as tc:
             rv = tc.get(url_for('seeds.common_name',
@@ -410,7 +379,7 @@ class TestCommonNameRouteWithDB:
         db.session.add_all([cn, cat])
         cn.name = 'Foxglove'
         cn.description = 'Do foxes really wear these?'
-        cat.category = 'Perennial Flower'
+        cat.name = 'Perennial Flower'
         db.session.commit()
         with app.test_client() as tc:
             rv = tc.get(url_for('seeds.common_name',
@@ -428,15 +397,9 @@ class TestEditBotanicalNameRouteWithDB:
         with app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.edit_botanical_name', bn_id='frogs'))
-        assert rv.status_code == 302
         assert rv.location == url_for('seeds.select_botanical_name',
                                       dest='seeds.edit_botanical_name',
                                       _external=True)
-        with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
-            rv = tc.get(url_for('seeds.edit_botanical_name', bn_id='frogs'),
-                        follow_redirects=True)
-        assert 'Error: Botanical name id must be an integer!' in str(rv.data)
 
     def test_edit_botanical_name_does_not_exist(self, app, db):
         """Redirect if bn_id does not correspond to a BotanicalName.id."""
@@ -445,15 +408,9 @@ class TestEditBotanicalNameRouteWithDB:
         with app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.edit_botanical_name', bn_id=42))
-        assert rv.status_code == 302
         assert rv.location == url_for('seeds.select_botanical_name',
                                       dest='seeds.edit_botanical_name',
                                       _external=True)
-        with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
-            rv = tc.get(url_for('seeds.edit_botanical_name', bn_id=42),
-                        follow_redirects=True)
-        assert 'Error: No botanical name exists with that id!' in str(rv.data)
 
     def test_edit_botanical_name_no_changes(self, app, db):
         """Redirect to self and flash a message if no changes made."""
@@ -469,7 +426,7 @@ class TestEditBotanicalNameRouteWithDB:
             login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.edit_botanical_name', bn_id=bn.id),
                          data=dict(name=bn.name,
-                                   common_names=[cn.id]),
+                                   common_name=[cn.id]),
                          follow_redirects=True)
         assert 'No changes made' in str(rv.data)
 
@@ -514,7 +471,7 @@ class TestEditBotanicalNameRouteWithDB:
             login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.edit_botanical_name', bn_id=bn.id),
                          data=dict(name='Asclepias tuberosa',
-                                   common_names=cn2.id),
+                                   common_name=cn2.id),
                          follow_redirects=True)
         assert bn.name == 'Asclepias tuberosa'
         assert cn2 is bn.common_name
@@ -534,15 +491,9 @@ class TestEditCategoryRouteWithDB:
         with app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.edit_category', category_id='frogs'))
-        assert rv.status_code == 302
         assert rv.location == url_for('seeds.select_category',
                                       dest='seeds.edit_category',
                                       _external=True)
-        with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
-            rv = tc.get(url_for('seeds.edit_category', category_id='frogs'),
-                        follow_redirects=True)
-        assert 'Error: Category id must be an integer!' in str(rv.data)
 
     def test_edit_category_does_not_exist(self, app, db):
         """Redirect if no Category.id corresponds with category_id."""
@@ -551,28 +502,22 @@ class TestEditCategoryRouteWithDB:
         with app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.edit_category', category_id=42))
-        assert rv.status_code == 302
         assert rv.location == url_for('seeds.select_category',
                                       dest='seeds.edit_category',
                                       _external=True)
-        with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
-            rv = tc.get(url_for('seeds.edit_category', category_id=42),
-                        follow_redirects=True)
-        assert 'Error: No category exists with that id!' in str(rv.data)
 
     def test_edit_category_no_changes(self, app, db):
         """Redirect to self and flash a message if no changes are made."""
         user = seed_manager()
         cat = Category()
         db.session.add_all([user, cat])
-        cat.category = 'Annual Flower'
+        cat.name = 'Annual Flower'
         cat.description = 'Not really built to last.'
         db.session.commit()
         with app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
-            rv = tc.post(url_for('seeds.edit_category', category_id=cat.id),
-                         data=dict(category=cat.category,
+            rv = tc.post(url_for('seeds.edit_category', cat_id=cat.id),
+                         data=dict(category=cat.name,
                                    description=cat.description),
                          follow_redirects=True)
         assert 'No changes made' in str(rv.data)
@@ -594,11 +539,11 @@ class TestEditCategoryRouteWithDB:
         user = seed_manager()
         cat = Category()
         db.session.add_all([user, cat])
-        cat.category = 'Vegetable'
+        cat.name = 'Vegetable'
         db.session.commit()
         with app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
-            rv = tc.get(url_for('seeds.edit_category', category_id=cat.id),
+            rv = tc.get(url_for('seeds.edit_category', cat_id=cat.id),
                         follow_redirects=True)
         assert 'Edit Category' in str(rv.data)
 
@@ -607,19 +552,20 @@ class TestEditCategoryRouteWithDB:
         user = seed_manager()
         cat = Category()
         db.session.add_all([user, cat])
-        cat.category = 'Annual Flowers'
+        cat.name = 'Annual Flowers'
         cat.description = 'Not really built to last.'
         db.session.commit()
         with app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
-            rv = tc.post(url_for('seeds.edit_category', category_id=cat.id),
+            rv = tc.post(url_for('seeds.edit_category', cat_id=cat.id),
                          data=dict(category='Perennial Flowers',
                                    description='Built to last.'),
                          follow_redirects=True)
-        assert cat.category == 'Perennial Flowers'
+        assert cat.name == 'Perennial Flowers'
         assert cat.description == 'Built to last.'
         assert 'Category changed from' in str(rv.data)
-        assert 'description changed to'in str(rv.data)
+        assert 'Description for &#39;Perennial Flowers&#39; changed to' in\
+            str(rv.data)
 
 
 class TestEditCommonNameRouteWithDB:
@@ -631,15 +577,9 @@ class TestEditCommonNameRouteWithDB:
         with app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.edit_common_name', cn_id='frogs'))
-        assert rv.status_code == 302
         assert rv.location == url_for('seeds.select_common_name',
                                       dest='seeds.edit_common_name',
                                       _external=True)
-        with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
-            rv = tc.get(url_for('seeds.edit_common_name', cn_id='frogs'),
-                        follow_redirects=True)
-        assert 'Error: Common name id must be an integer!' in str(rv.data)
 
     def test_edit_common_name_no_changes(self, app, db):
         """Redirect to self and flash message if no changes made."""
@@ -649,7 +589,7 @@ class TestEditCommonNameRouteWithDB:
         db.session.add_all([user, cn, cat])
         cn.name = 'Butterfly Weed'
         cn.description = 'Butterflies love this stuff.'
-        cat.category = 'Perennial Flower'
+        cat.name = 'Perennial Flower'
         cn.categories.append(cat)
         db.session.commit()
         with app.test_client() as tc:
@@ -697,9 +637,9 @@ class TestEditCommonNameRouteWithDB:
         db.session.add_all([user, cn, cat1, cat2, cat3])
         cn.name = 'Butterfly Weed'
         cn.description = 'Butterflies _really_ like this.'
-        cat1.category = 'Annual Flower'
-        cat2.category = 'Vegetable'
-        cat3.category = 'Herb'
+        cat1.name = 'Annual Flower'
+        cat2.name = 'Vegetable'
+        cat3.name = 'Herb'
         cn.categories.append(cat1)
         db.session.commit()
         with app.test_client() as tc:
@@ -717,7 +657,7 @@ class TestEditCommonNameRouteWithDB:
         assert 'Common name &#39;Butterfly Weed&#39;' in str(rv.data)
         assert 'added to categories' in str(rv.data)
         assert 'removed from categories' in str(rv.data)
-        assert 'Description changed to' in str(rv.data)
+        assert 'Description for &#39;Celery&#39; changed' in str(rv.data)
 
 
 class TestEditPacketRouteWithDB:
@@ -735,7 +675,7 @@ class TestEditPacketRouteWithDB:
                                       _external=True)
 
     def test_edit_packet_no_packet(self, app, db):
-        """Redirect and flash message if no packet exists with pkt_id."""
+        """Redirect to select if no packet exists with pkt_id."""
         user = seed_manager()
         db.session.add(user)
         db.session.commit()
@@ -745,11 +685,6 @@ class TestEditPacketRouteWithDB:
         assert rv.location == url_for('seeds.select_packet',
                                       dest='seeds.edit_packet',
                                       _external=True)
-        with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
-            rv = tc.get(url_for('seeds.edit_packet', pkt_id=42),
-                        follow_redirects=True)
-        assert 'packet was not found' in str(rv.data)
 
     def test_edit_packet_renders_page(self, app, db):
         """Render form page with valid pkt_id and no post data."""
@@ -758,8 +693,7 @@ class TestEditPacketRouteWithDB:
         packet = Packet()
         db.session.add_all([user, packet, seed])
         packet.price = Decimal('2.99')
-        packet.quantity = 100
-        packet.unit = 'seeds'
+        packet.quantity = Quantity(value=100, units='seeds')
         packet.sku = '8675309'
         seed.name = 'Foxy'
         seed.common_name = CommonName(name='Foxglove')
@@ -776,8 +710,7 @@ class TestEditPacketRouteWithDB:
         packet = Packet()
         db.session.add_all([user, packet])
         packet.price = Decimal('1.99')
-        packet.quantity = 100
-        packet.unit = 'seeds'
+        packet.quantity = Quantity(value=100, units='seeds')
         packet.sku = '8675309'
         db.session.commit()
         with app.test_client() as tc:
@@ -785,51 +718,14 @@ class TestEditPacketRouteWithDB:
             rv = tc.post(url_for('seeds.edit_packet', pkt_id=packet.id),
                          data=dict(price='2.99',
                                    quantity='2.5',
-                                   unit='grams',
-                                   sku='BOUT350',
-                                   prices=packet._price.id,
-                                   quantities=str(packet.quantity),
-                                   units=packet._unit.id),
+                                   units='grams',
+                                   sku='BOUT350'),
                          follow_redirects=True)
         assert packet.price == Decimal('2.99')
-        assert packet.quantity == Decimal('2.5')
-        assert packet.unit == 'grams'
+        assert packet.quantity.value == Decimal('2.5')
+        assert packet.quantity.units == 'grams'
         assert packet.sku == 'BOUT350'
-        assert 'Packet changed to: SKU BOUT350 - $2.99 for 2.5 grams' in\
-            str(rv.data)
-
-    def test_edit_packet_submission_change_selects(self, app, db):
-        """Change packet and flash message if different values selected."""
-        user = seed_manager()
-        seed = Seed()
-        pkt1 = Packet()
-        pkt2 = Packet()
-        db.session.add_all([user, seed, pkt1, pkt2])
-        seed.name = 'Foxy'
-        seed.common_name = CommonName(name='Foxglove')
-        pkt1.price = Decimal('1.99')
-        pkt2.price = Decimal('2.99')
-        pkt1.quantity = 100
-        pkt2.quantity = Decimal('2.5')
-        pkt1.unit = 'seeds'
-        pkt2.unit = 'grams'
-        pkt1.sku = '8675309'
-        pkt2.sku = 'BOUT350'
-        seed.packets.append(pkt1)
-        seed.packets.append(pkt2)
-        db.session.commit()
-        with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
-            rv = tc.post(url_for('seeds.edit_packet', pkt_id=pkt1.id),
-                         data=dict(prices=pkt2._price.id,
-                                   quantities=str(pkt2.quantity),
-                                   units=pkt2._unit.id,
-                                   sku=pkt1.sku),
-                         follow_redirects=True)
-        assert pkt1._price is pkt2._price
-        assert pkt1.quantity == pkt2.quantity
-        assert pkt1._unit is pkt2._unit
-        assert 'Packet changed to: SKU 8675309 - $2.99 for 2.5 grams' in\
+        assert 'Packet changed to: SKU #BOUT350: $2.99 for 2.5 grams' in\
             str(rv.data)
 
     def test_edit_packet_submission_no_changes(self, app, db):
@@ -839,8 +735,7 @@ class TestEditPacketRouteWithDB:
         packet = Packet()
         db.session.add_all([user, packet, seed])
         packet.price = Decimal('2.99')
-        packet.quantity = 100
-        packet.unit = 'seeds'
+        packet.quantity = Quantity(value=100, units='seeds')
         packet.sku = '8675309'
         seed.name = 'Foxy'
         seed.common_name = CommonName(name='Foxglove')
@@ -849,9 +744,9 @@ class TestEditPacketRouteWithDB:
         with app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.edit_packet', pkt_id=packet.id),
-                         data=dict(prices=packet._price.id,
-                                   quantities=str(packet.quantity),
-                                   units=packet._unit.id,
+                         data=dict(price=packet.price,
+                                   quantity=str(packet.quantity.value),
+                                   units=packet.quantity.units,
                                    sku=packet.sku),
                          follow_redirects=True)
         assert 'No changes made' in str(rv.data)
@@ -872,10 +767,11 @@ class TestEditSeedRouteWithDB:
         bn.name = 'Digitalis purpurea'
         bn2.name = 'Innagada davida'
         cn.name = 'Foxglove'
-        cat.category = 'Perennial Flower'
+        cat.name = 'Perennial Flower'
         thumb.filename = 'foxy.jpg'
         seed.categories.append(cat)
         seed.botanical_name = bn
+        cn.categories.append(cat)
         seed.common_name = cn
         seed.name = 'Foxy'
         seed.description = 'Like that Hendrix song.'
@@ -884,13 +780,12 @@ class TestEditSeedRouteWithDB:
         with app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.edit_seed', seed_id=seed.id),
-                         data=dict(botanical_names=str(bn2.id),
+                         data=dict(botanical_name=str(bn2.id),
                                    categories=[str(cat.id)],
                                    common_name=str(cn.id),
-                                   name=seed.name,
                                    description=seed.description,
-                                   thumbnail=(io.BytesIO(b'fawks'),
-                                              'foxy.jpg')),
+                                   name=seed.name,
+                                   series='0'),
                          follow_redirects=True)
         assert 'Changed botanical name' in str(rv.data)
         assert bn2 is seed.botanical_name
@@ -907,11 +802,13 @@ class TestEditSeedRouteWithDB:
         db.session.add_all([user, bn, cat, cat2, cn])
         bn.name = 'Digitalis purpurea'
         cn.name = 'Foxglove'
-        cat.category = 'Perennial Flower'
-        cat2.category = 'Plant'
+        cat.name = 'Perennial Flower'
+        cat2.name = 'Plant'
         thumb.filename = 'foxy.jpg'
         seed.categories.append(cat)
         seed.botanical_name = bn
+        cn.categories.append(cat)
+        cn.categories.append(cat2)
         seed.common_name = cn
         seed.name = 'Foxy'
         seed.description = 'Like that Hendrix song.'
@@ -920,13 +817,12 @@ class TestEditSeedRouteWithDB:
         with app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.edit_seed', seed_id=seed.id),
-                         data=dict(botanical_names=[str(bn.id)],
+                         data=dict(botanical_name=str(bn.id),
                                    categories=[str(cat2.id)],
                                    common_name=str(cn.id),
-                                   name=seed.name,
                                    description=seed.description,
-                                   thumbnail=(io.BytesIO(b'fawks'),
-                                              'foxy.jpg')),
+                                   name=seed.name,
+                                   series='0'),
                          follow_redirects=True)
         assert 'Added category' in str(rv.data)
         assert 'Removed category' in str(rv.data)
@@ -946,10 +842,12 @@ class TestEditSeedRouteWithDB:
         bn.name = 'Digitalis purpurea'
         cn.name = 'Foxglove'
         cn2.name = 'Vulpinemitten'
-        cat.category = 'Perennial Flower'
+        cat.name = 'Perennial Flower'
         thumb.filename = 'foxy.jpg'
         seed.categories.append(cat)
         seed.botanical_name = bn
+        cn.categories.append(cat)
+        cn2.categories.append(cat)
         seed.common_name = cn
         seed.name = 'Foxy'
         seed.description = 'Like that Hendrix song.'
@@ -958,13 +856,12 @@ class TestEditSeedRouteWithDB:
         with app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.edit_seed', seed_id=seed.id),
-                         data=dict(botanical_names=[str(bn.id)],
+                         data=dict(botanical_name=str(bn.id),
                                    categories=[str(cat.id)],
                                    common_name=str(cn2.id),
-                                   name=seed.name,
                                    description=seed.description,
-                                   thumbnail=(io.BytesIO(b'fawks'),
-                                              'foxy.jpg')),
+                                   name=seed.name,
+                                   series='0'),
                          follow_redirects=True)
         assert 'Changed common name' in str(rv.data)
         assert seed.common_name is cn2
@@ -981,10 +878,11 @@ class TestEditSeedRouteWithDB:
         db.session.add_all([user, bn, cat, cn])
         bn.name = 'Digitalis purpurea'
         cn.name = 'Foxglove'
-        cat.category = 'Perennial Flower'
+        cat.name = 'Perennial Flower'
         thumb.filename = 'foxy.jpg'
         seed.categories.append(cat)
         seed.botanical_name = bn
+        cn.categories.append(cat)
         seed.common_name = cn
         seed.name = 'Foxy'
         seed.description = 'Like that Hendrix song.'
@@ -993,13 +891,12 @@ class TestEditSeedRouteWithDB:
         with app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.edit_seed', seed_id=seed.id),
-                         data=dict(botanical_names=[str(bn.id)],
+                         data=dict(botanical_name=str(bn.id),
                                    categories=[str(cat.id)],
                                    common_name=str(cn.id),
-                                   name=seed.name,
                                    description='Like a lady.',
-                                   thumbnail=(io.BytesIO(b'fawks'),
-                                              'foxy.jpg')),
+                                   name=seed.name,
+                                   series='0'),
                          follow_redirects=True)
         assert 'Changed description' in str(rv.data)
         assert seed.description == 'Like a lady.'
@@ -1015,10 +912,11 @@ class TestEditSeedRouteWithDB:
         db.session.add_all([user, bn, cat, cn])
         bn.name = 'Digitalis purpurea'
         cn.name = 'Foxglove'
-        cat.category = 'Perennial Flower'
+        cat.name = 'Perennial Flower'
         thumb.filename = 'foxy.jpg'
         seed.categories.append(cat)
         seed.botanical_name = bn
+        cn.categories.append(cat)
         seed.common_name = cn
         seed.name = 'Foxy'
         seed.description = 'Like that Hendrix song.'
@@ -1029,30 +927,28 @@ class TestEditSeedRouteWithDB:
         with app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.edit_seed', seed_id=seed.id),
-                         data=dict(botanical_names=[str(bn.id)],
+                         data=dict(botanical_name=str(bn.id),
                                    categories=[str(cat.id)],
                                    common_name=str(cn.id),
+                                   description=seed.description,
                                    dropped='y',
                                    in_stock='y',
                                    name=seed.name,
-                                   description='Like that Hendrix song.',
-                                   thumbnail=(io.BytesIO(b'fawks'),
-                                              'foxy.jpg')),
+                                   series='0'),
                          follow_redirects=True)
         assert '&#39;Foxy Foxglove&#39; has been dropped.' in str(rv.data)
         assert seed.dropped
         with app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.edit_seed', seed_id=seed.id),
-                         data=dict(botanical_names=[str(bn.id)],
+                         data=dict(botanical_name=str(bn.id),
                                    categories=[str(cat.id)],
                                    common_name=str(cn.id),
+                                   description=seed.description,
                                    dropped='',
                                    in_stock='y',
                                    name=seed.name,
-                                   description='Like that Hendrix song.',
-                                   thumbnail=(io.BytesIO(b'fawks'),
-                                              'foxy.jpg')),
+                                   series='0'),
                          follow_redirects=True)
         assert '&#39;Foxy Foxglove&#39; is now active' in str(rv.data)
         assert not seed.dropped
@@ -1068,10 +964,11 @@ class TestEditSeedRouteWithDB:
         db.session.add_all([user, bn, cat, cn])
         bn.name = 'Digitalis purpurea'
         cn.name = 'Foxglove'
-        cat.category = 'Perennial Flower'
+        cat.name = 'Perennial Flower'
         thumb.filename = 'foxy.jpg'
         seed.categories.append(cat)
         seed.botanical_name = bn
+        cn.categories.append(cat)
         seed.common_name = cn
         seed.name = 'Foxy'
         seed.description = 'Like that Hendrix song.'
@@ -1082,30 +979,28 @@ class TestEditSeedRouteWithDB:
         with app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.edit_seed', seed_id=seed.id),
-                         data=dict(botanical_names=[str(bn.id)],
+                         data=dict(botanical_name=str(bn.id),
                                    categories=[str(cat.id)],
                                    common_name=str(cn.id),
+                                   description=seed.description,
                                    dropped='',
                                    in_stock='y',
                                    name=seed.name,
-                                   description='Like that Hendrix song.',
-                                   thumbnail=(io.BytesIO(b'fawks'),
-                                              'foxy.jpg')),
+                                   series='0'),
                          follow_redirects=True)
         assert '&#39;Foxy Foxglove&#39; is now in stock' in str(rv.data)
         assert seed.in_stock
         with app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.edit_seed', seed_id=seed.id),
-                         data=dict(botanical_names=[str(bn.id)],
+                         data=dict(botanical_name=str(bn.id),
                                    categories=[str(cat.id)],
                                    common_name=str(cn.id),
+                                   description='Like that Hendrix song.',
                                    dropped='',
                                    in_stock='',
                                    name=seed.name,
-                                   description='Like that Hendrix song.',
-                                   thumbnail=(io.BytesIO(b'fawks'),
-                                              'foxy.jpg')),
+                                   series='0'),
                          follow_redirects=True)
         assert '&#39;Foxy Foxglove&#39; is now out of stock' in str(rv.data)
         assert not seed.in_stock
@@ -1121,10 +1016,11 @@ class TestEditSeedRouteWithDB:
         db.session.add_all([user, bn, cat, cn])
         bn.name = 'Digitalis purpurea'
         cn.name = 'Foxglove'
-        cat.category = 'Perennial Flower'
+        cat.name = 'Perennial Flower'
         thumb.filename = 'foxy.jpg'
         seed.categories.append(cat)
         seed.botanical_name = bn
+        cn.categories.append(cat)
         seed.common_name = cn
         seed.name = 'Foxy'
         seed.description = 'Like that Hendrix song.'
@@ -1133,13 +1029,12 @@ class TestEditSeedRouteWithDB:
         with app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.edit_seed', seed_id=seed.id),
-                         data=dict(botanical_names=[str(bn.id)],
+                         data=dict(botanical_name=str(bn.id),
                                    categories=[str(cat.id)],
                                    common_name=str(cn.id),
-                                   name='Fawksy',
                                    description=seed.description,
-                                   thumbnail=(io.BytesIO(b'fawks'),
-                                              'foxy.jpg')),
+                                   name='Fawksy',
+                                   series='0'),
                          follow_redirects=True)
         assert 'Changed seed name' in str(rv.data)
         assert seed.name == 'Fawksy'
@@ -1159,10 +1054,11 @@ class TestEditSeedRouteWithDB:
         db.session.add_all([user, bn, cat, cn])
         bn.name = 'Digitalis purpurea'
         cn.name = 'Foxglove'
-        cat.category = 'Perennial Flower'
+        cat.name = 'Perennial Flower'
         thumb.filename = 'foxy.jpg'
         seed.categories.append(cat)
         seed.botanical_name = bn
+        cn.categories.append(cat)
         seed.common_name = cn
         seed.name = 'Foxy'
         seed.description = 'Like that Hendrix song.'
@@ -1171,11 +1067,12 @@ class TestEditSeedRouteWithDB:
         with app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.edit_seed', seed_id=seed.id),
-                         data=dict(botanical_names=[str(bn.id)],
+                         data=dict(botanical_name=str(bn.id),
                                    categories=[str(cat.id)],
                                    common_name=str(cn.id),
-                                   name=seed.name,
                                    description=seed.description,
+                                   name=seed.name,
+                                   series='0',
                                    thumbnail=(io.BytesIO(b'fawks'),
                                               'fawksy.jpg')),
                          follow_redirects=True)
@@ -1197,10 +1094,11 @@ class TestEditSeedRouteWithDB:
         db.session.add_all([user, bn, cat, cn])
         bn.name = 'Digitalis purpurea'
         cn.name = 'Foxglove'
-        cat.category = 'Perennial Flower'
+        cat.name = 'Perennial Flower'
         thumb.filename = 'foxy.jpg'
         seed.categories.append(cat)
         seed.botanical_name = bn
+        cn.categories.append(cat)
         seed.common_name = cn
         seed.in_stock = True
         seed.dropped = False
@@ -1211,16 +1109,16 @@ class TestEditSeedRouteWithDB:
         with app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.edit_seed', seed_id=seed.id),
-                         data=dict(botanical_names=str(bn.id),
+                         data=dict(botanical_name=str(bn.id),
                                    categories=[str(cat.id)],
                                    common_name=str(cn.id),
-                                   in_stock='y',
-                                   dropped='',
-                                   name=seed.name,
                                    description=seed.description,
-                                   thumbnail=(io.BytesIO(b'fawks'),
-                                              'foxy.jpg')),
+                                   dropped='',
+                                   in_stock='y',
+                                   name=seed.name,
+                                   series='0'),
                          follow_redirects=True)
+        print(rv.data)
         assert 'No changes made' in str(rv.data)
 
     def test_edit_seed_no_seed(self, app, db):
@@ -1388,15 +1286,9 @@ class TestRemoveBotanicalNameRouteWithDB:
         with app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.remove_botanical_name', bn_id='frogs'))
-        assert rv.status_code == 302
         assert rv.location == url_for('seeds.select_botanical_name',
                                       dest='seeds.remove_botanical_name',
                                       _external=True)
-        with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
-            rv = tc.get(url_for('seeds.remove_botanical_name', bn_id='frogs'),
-                        follow_redirects=True)
-        assert 'Error: Botanical name id must be an integer!' in str(rv.data)
 
     def test_remove_botanical_name_does_not_exist(self, app, db):
         """Redirect if no BotanicalName corresponds to bn_id."""
@@ -1405,15 +1297,9 @@ class TestRemoveBotanicalNameRouteWithDB:
         with app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.remove_botanical_name', bn_id=42))
-        assert rv.status_code == 302
         assert rv.location == url_for('seeds.select_botanical_name',
                                       dest='seeds.remove_botanical_name',
                                       _external=True)
-        with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
-            rv = tc.get(url_for('seeds.remove_botanical_name', bn_id=42),
-                        follow_redirects=True)
-        assert 'Error: No such botanical name exists!' in str(rv.data)
 
     def test_remove_botanical_name_no_id(self, app, db):
         """Redirect to seeds.select_botanical_name given no bn_id."""
@@ -1486,16 +1372,10 @@ class TestRemoveCategoryRouteWithDB:
         db.session.add(user)
         with app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
-            rv = tc.get(url_for('seeds.remove_category', category_id='frogs'))
-        assert rv.status_code == 302
+            rv = tc.get(url_for('seeds.remove_category', cat_id='frogs'))
         assert rv.location == url_for('seeds.select_category',
                                       dest='seeds.remove_category',
                                       _external=True)
-        with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
-            rv = tc.get(url_for('seeds.remove_category', category_id='frogs'),
-                        follow_redirects=True)
-        assert 'Error: Category id must be an integer!' in str(rv.data)
 
     def test_remove_category_does_not_exist(self, app, db):
         """Redirect if no Category corresponds to category_id."""
@@ -1503,16 +1383,10 @@ class TestRemoveCategoryRouteWithDB:
         db.session.add(user)
         with app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
-            rv = tc.get(url_for('seeds.remove_category', category_id=42))
-        assert rv.status_code == 302
+            rv = tc.get(url_for('seeds.remove_category', cat_id=42))
         assert rv.location == url_for('seeds.select_category',
                                       dest='seeds.remove_category',
                                       _external=True)
-        with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
-            rv = tc.get(url_for('seeds.remove_category', category_id=42),
-                        follow_redirects=True)
-        assert 'Error: No such category exists.' in str(rv.data)
 
     def test_remove_category_no_id(self, app, db):
         """Redirect to seeds.select_category if no category_id."""
@@ -1521,7 +1395,6 @@ class TestRemoveCategoryRouteWithDB:
         with app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.remove_category'))
-        assert rv.status_code == 302
         assert rv.location == url_for('seeds.select_category',
                                       dest='seeds.remove_category',
                                       _external=True)
@@ -1530,21 +1403,22 @@ class TestRemoveCategoryRouteWithDB:
         """Redirect to self if verify_removal not checked."""
         user = seed_manager()
         cat = Category()
-        db.session.add_all([user, cat])
-        cat.category = 'Asclepias incarnata'
+        cat2 = Category()
+        db.session.add_all([user, cat, cat2])
+        cat.name = 'Annual Flower'
+        cat2.name = 'Herb'
         db.session.commit()
         with app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
-            rv = tc.post(url_for('seeds.remove_category', category_id=cat.id),
-                         data=dict(verify_removal=''))
-        assert rv.status_code == 302
+            rv = tc.post(url_for('seeds.remove_category', cat_id=cat.id),
+                         data=dict(verify_removal='', move_to=cat2.id))
         assert rv.location == url_for('seeds.remove_category',
-                                      category_id=cat.id,
+                                      cat_id=cat.id,
                                       _external=True)
         with app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
-            rv = tc.post(url_for('seeds.remove_category', category_id=cat.id),
-                         data=dict(verify_removal=''),
+            rv = tc.post(url_for('seeds.remove_category', cat_id=cat.id),
+                         data=dict(verify_removal='', move_to=cat2.id),
                          follow_redirects=True)
         assert 'No changes made' in str(rv.data)
 
@@ -1553,11 +1427,11 @@ class TestRemoveCategoryRouteWithDB:
         user = seed_manager()
         cat = Category()
         db.session.add_all([user, cat])
-        cat.category = 'Annual Flower'
+        cat.name = 'Annual Flower'
         db.session.commit()
         with app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
-            rv = tc.get(url_for('seeds.remove_category', category_id=cat.id))
+            rv = tc.get(url_for('seeds.remove_category', cat_id=cat.id))
         assert rv.status_code == 200
         assert 'Remove Category' in str(rv.data)
 
@@ -1565,54 +1439,44 @@ class TestRemoveCategoryRouteWithDB:
         """Remove Category from db if verify_removal is checked."""
         user = seed_manager()
         cat = Category()
-        db.session.add_all([user, cat])
-        cat.category = 'Annual Flower'
+        cat2 = Category()
+        db.session.add_all([user, cat, cat2])
+        cat.name = 'Annual Flower'
+        cat2.name = 'Herb'
         db.session.commit()
-        assert Category.query.count() == 1
+        assert cat in Category.query.all()
         with app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
-            rv = tc.post(url_for('seeds.remove_category', category_id=cat.id),
-                         data=dict(verify_removal=True),
+            rv = tc.post(url_for('seeds.remove_category', cat_id=cat.id),
+                         data=dict(verify_removal=True, move_to=cat2.id),
                          follow_redirects=True)
-        assert Category.query.count() == 0
+        assert cat not in Category.query.all()
         assert 'has been removed from the database' in str(rv.data)
 
 
 class TestRemoveCommonNameRouteWithDB:
     """Test seeds.remove_common_name."""
     def test_remove_common_name_bad_id(self, app, db):
-        """Redirect given a non-integer cn_id."""
+        """Redirect to select given a non-integer cn_id."""
         user = seed_manager()
         db.session.add(user)
         with app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.remove_common_name', cn_id='frogs'))
-        assert rv.status_code == 302
         assert rv.location == url_for('seeds.select_common_name',
                                       dest='seeds.remove_common_name',
                                       _external=True)
-        with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
-            rv = tc.get(url_for('seeds.remove_common_name', cn_id='frogs'),
-                        follow_redirects=True)
-        assert 'Common name id must be an integer!' in str(rv.data)
 
     def test_remove_common_name_does_not_exist(self, app, db):
-        """Redirect to select of no CommonName corresponds to cn_id."""
+        """Redirect to select if no CommonName corresponds to cn_id."""
         user = seed_manager()
         db.session.add(user)
         with app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.remove_common_name', cn_id=42))
-        assert rv.status_code == 302
         assert rv.location == url_for('seeds.select_common_name',
                                       dest='seeds.remove_common_name',
                                       _external=True)
-        with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
-            rv = tc.get(url_for('seeds.remove_common_name', cn_id=42),
-                        follow_redirects=True)
-        assert 'Error: No such common name exists' in str(rv.data)
 
     def test_remove_common_name_no_id(self, app, db):
         """Redirect to seeds.select_common_name with no cn_id."""
@@ -1621,7 +1485,6 @@ class TestRemoveCommonNameRouteWithDB:
         with app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.remove_common_name'))
-        assert rv.status_code == 302
         assert rv.location == url_for('seeds.select_common_name',
                                       dest='seeds.remove_common_name',
                                       _external=True)
@@ -1630,25 +1493,26 @@ class TestRemoveCommonNameRouteWithDB:
         """Redirect to self with flash if verify_removal not checked."""
         user = seed_manager()
         cn = CommonName()
-        db.session.add_all([user, cn])
+        cn2 = CommonName()
+        db.session.add_all([user, cn, cn2])
         cn.name = 'Coleus'
+        cn2.name = 'Kingus'
         db.session.commit()
-        assert CommonName.query.count() == 1
+        assert cn in CommonName.query.all()
         with app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.remove_common_name', cn_id=cn.id),
-                         data=dict(verify_removal=''))
-        assert rv.status_code == 302
+                         data=dict(verify_removal='', move_to=cn2.id))
         assert rv.location == url_for('seeds.remove_common_name',
                                       cn_id=cn.id,
                                       _external=True)
         with app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.remove_common_name', cn_id=cn.id),
-                         data=dict(verify_removal=''),
+                         data=dict(verify_removal='', move_to=cn2.id),
                          follow_redirects=True)
         assert 'No changes made' in str(rv.data)
-        assert CommonName.query.count() == 1
+        assert cn in CommonName.query.all()
 
     def test_remove_common_name_renders_page(self, app, db):
         """Render seeds/remove_common_name.html given valid cn_id."""
@@ -1667,17 +1531,19 @@ class TestRemoveCommonNameRouteWithDB:
         """Delete CommonName from db on successful submit."""
         user = seed_manager()
         cn = CommonName()
-        db.session.add_all([user, cn])
+        cn2 = CommonName()
+        db.session.add_all([user, cn, cn2])
         cn.name = 'Coleus'
+        cn2.name = 'Kingus'
         db.session.commit()
-        assert CommonName.query.count(), 1
+        assert cn in CommonName.query.all()
         with app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.remove_common_name', cn_id=cn.id),
-                         data=dict(verify_removal=True),
+                         data=dict(verify_removal=True, move_to=cn2.id),
                          follow_redirects=True)
         assert 'has been removed from the database' in str(rv.data)
-        assert CommonName.query.count() == 0
+        assert cn not in CommonName.query.all()
 
 
 class TestRemovePacketRouteWithDB:
@@ -1696,7 +1562,7 @@ class TestRemovePacketRouteWithDB:
                                       _external=True)
 
     def test_remove_packet_no_packet(self, app, db):
-        """Flash error and redirect if no packet corresponds to pkt_id."""
+        """Redirect back to select if no packet corresponds to pkt_id."""
         user = seed_manager()
         db.session.add(user)
         db.session.commit()
@@ -1706,11 +1572,6 @@ class TestRemovePacketRouteWithDB:
         assert rv.location == url_for('seeds.select_packet',
                                       dest='seeds.remove_packet',
                                       _external=True)
-        with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
-            rv = tc.get(url_for('seeds.remove_packet', pkt_id=42),
-                        follow_redirects=True)
-        assert 'Error: No packet exists' in str(rv.data)
 
     def test_remove_packet_renders_page(self, app, db):
         """Render form page given a valid packet id."""
@@ -1718,8 +1579,7 @@ class TestRemovePacketRouteWithDB:
         packet = Packet()
         db.session.add_all([packet, user])
         packet.price = Decimal('1.99')
-        packet.quantity = 100
-        packet.unit = 'seeds'
+        packet.quantity = Quantity(value=100, units='seeds')
         packet.sku = '8675309'
         db.session.commit()
         with app.test_client() as tc:
@@ -1733,8 +1593,7 @@ class TestRemovePacketRouteWithDB:
         packet = Packet()
         db.session.add_all([packet, user])
         packet.price = Decimal('1.99')
-        packet.quantity = 100
-        packet.unit = 'seeds'
+        packet.quantity = Quantity(value=100, units='seeds')
         packet.sku = '8675309'
         db.session.commit()
         with app.test_client() as tc:
@@ -1757,8 +1616,7 @@ class TestRemovePacketRouteWithDB:
         packet = Packet()
         db.session.add_all([packet, user])
         packet.price = Decimal('1.99')
-        packet.quantity = 100
-        packet.unit = 'seeds'
+        packet.quantity = Quantity(value=100, units='seeds')
         packet.sku = '8675309'
         db.session.commit()
         with app.test_client() as tc:
@@ -1766,7 +1624,7 @@ class TestRemovePacketRouteWithDB:
             rv = tc.post(url_for('seeds.remove_packet', pkt_id=packet.id),
                          data=dict(verify_removal=True),
                          follow_redirects=True)
-        assert 'Packet SKU 8675309: $1.99 for 100 seeds has'\
+        assert 'Packet SKU #8675309: $1.99 for 100 seeds has'\
             ' been removed from the database' in str(rv.data)
         assert Packet.query.count() == 0
 
@@ -1797,39 +1655,6 @@ class TestRemoveSeedRouteWithDB:
         assert 'Image file &#39;foxee.jpg&#39; deleted' in str(rv.data)
         assert 'Thumbnail image &#39;foxy.jpg&#39; has' in str(rv.data)
         assert Image.query.count() == 0
-        assert mock_delete.called
-
-    @mock.patch('app.seeds.models.Image.delete_file', side_effect=OSError)
-    def test_remove_seed_delete_images_no_file(self,
-                                               mock_delete,
-                                               app,
-                                               db):
-        """Flash errors if OSError raised trying to delete images.
-        Do not remove images from the database if files can't be deleted.
-        """
-        user = seed_manager()
-        seed = foxy_seed()
-        img = Image()
-        img.filename = 'foxee.jpg'
-        thumb = Image()
-        thumb.filename = 'foxy.jpg'
-        seed.images.append(img)
-        seed.thumbnail = thumb
-        db.session.add_all([user, seed])
-        db.session.commit()
-        with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
-            rv = tc.post(url_for('seeds.remove_seed', seed_id=seed.id),
-                         data=dict(verify_removal=True, delete_images=True),
-                         follow_redirects=True)
-        assert 'Error: Attempting to delete &#39;foxee.jpg&#39;' in\
-            str(rv.data)
-        assert 'Error: Attempting to delete &#39;foxy.jpg&#39;' in\
-            str(rv.data)
-        assert 'Error: Seed could not be deleted', str(rv.data)
-        assert img in seed.images
-        assert thumb is seed.thumbnail
-        assert Image.query.count() == 2
         assert mock_delete.called
 
     def test_remove_seed_deletes_seed(self, app, db):
@@ -1870,11 +1695,6 @@ class TestRemoveSeedRouteWithDB:
         assert rv.location == url_for('seeds.select_seed',
                                       dest='seeds.remove_seed',
                                       _external=True)
-        with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
-            rv = tc.get(url_for('seeds.remove_seed', seed_id=42),
-                        follow_redirects=True)
-        assert 'Error: No seed exists with that id' in str(rv.data)
 
     def test_remove_seed_not_verified(self, app, db):
         """Redirect and flash message if verify_removal not checked."""
@@ -1916,7 +1736,7 @@ class TestSeedRouteWithDB:
         cn = CommonName()
         seed = Seed()
         db.session.add_all([cat, cn, seed])
-        cat.category = 'Perennial Flower'
+        cat.name = 'Perennial Flower'
         cn.name = 'Foxglove'
         seed.name = 'Foxy'
         seed.categories.append(cat)
@@ -1956,8 +1776,8 @@ class TestSeedRouteWithDB:
         cn2 = CommonName()
         seed = Seed()
         db.session.add_all([cat1, cat2, cn1, cn2, seed])
-        cat1.category = 'Perennial Flower'
-        cat2.category = 'Long Hair'
+        cat1.name = 'Perennial Flower'
+        cat2.name = 'Long Hair'
         cn1.name = 'Foxglove'
         cn2.name = 'Persian'
         seed.name = 'Foxy'
@@ -1982,6 +1802,7 @@ class TestSeedRouteWithDB:
         seed = foxy_seed()
         db.session.add(seed)
         db.session.commit()
+        print(seed.categories[0].slug)
         with app.test_client() as tc:
             rv = tc.get(url_for('seeds.seed',
                                 cat_slug=seed.categories[0].slug,
@@ -2029,7 +1850,7 @@ class TestSelectBotanicalNameRouteWithDB:
             login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.select_botanical_name',
                                  dest='seeds.edit_botanical_name'),
-                         data=dict(names=bn.id))
+                         data=dict(botanical_name=bn.id))
         assert rv.status_code == 302
         assert rv.location == url_for('seeds.edit_botanical_name',
                                       bn_id=bn.id,
@@ -2069,16 +1890,16 @@ class TestSelectCategoryRouteWithDB:
         user = seed_manager()
         cat = Category()
         db.session.add_all([user, cat])
-        cat.category = 'Annual Flower'
+        cat.name = 'Annual Flower'
         db.session.commit()
         with app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.select_category',
                                  dest='seeds.edit_category'),
-                         data=dict(categories=cat.id))
+                         data=dict(category=cat.id))
         assert rv.status_code == 302
         assert rv.location == url_for('seeds.edit_category',
-                                      category_id=cat.id,
+                                      cat_id=cat.id,
                                       _external=True)
 
 
@@ -2121,7 +1942,7 @@ class TestSelectCommonNameRouteWithDB:
             login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.select_common_name',
                                  dest='seeds.edit_common_name'),
-                         data=dict(names=cn.id))
+                         data=dict(common_name=cn.id))
         assert rv.status_code == 302
         assert rv.location == url_for('seeds.edit_common_name',
                                       cn_id=cn.id,
@@ -2166,15 +1987,14 @@ class TestSelectPacketRouteWithDB:
         seed.common_name = CommonName(name='Foxglove')
         seed.packets.append(packet)
         packet.price = Decimal('1.99')
-        packet.quantity = 100
-        packet.unit = 'seeds'
+        packet.quantity = Quantity(value=100, units='seeds')
         packet.sku = '8675309'
         db.session.commit()
         with app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.select_packet',
                                  dest='seeds.edit_packet'),
-                         data=dict(packets=packet.id))
+                         data=dict(packet=packet.id))
         assert rv.location == url_for('seeds.edit_packet',
                                       pkt_id=packet.id,
                                       _external=True)
@@ -2213,6 +2033,6 @@ class TestSelectSeedRouteWithDB:
         with app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.select_seed', dest=dest),
-                         data=dict(seeds=seed.id))
+                         data=dict(seed=seed.id))
         assert rv.location == url_for(dest, seed_id=str(seed.id),
                                       _external=True)

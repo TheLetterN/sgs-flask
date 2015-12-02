@@ -1,6 +1,5 @@
 import pytest
 from decimal import Decimal
-from fractions import Fraction
 from werkzeug import FileStorage, secure_filename
 from wtforms import ValidationError
 from app.seeds.forms import (
@@ -31,12 +30,8 @@ from app.seeds.models import (
     CommonName,
     Image,
     Packet,
-    Price,
-    QtyDecimal,
-    QtyFraction,
-    QtyInteger,
-    Seed,
-    Unit
+    Quantity,
+    Seed
 )
 from tests.conftest import app, db  # noqa
 
@@ -64,14 +59,14 @@ class TestFunctionsWithDB:
         cat2 = Category()
         cat3 = Category()
         db.session.add_all([cat1, cat2, cat3])
-        cat1.category = 'Annual Flower'.title()
-        cat2.category = 'Perennial Flower'.title()
-        cat3.category = 'Vegetable'.title()
+        cat1.name = 'Annual Flower'.title()
+        cat2.name = 'Perennial Flower'.title()
+        cat3.name = 'Vegetable'.title()
         db.session.commit()
         catlist = category_select_list()
-        assert (cat1.id, cat1.category) in catlist
-        assert (cat2.id, cat2.category) in catlist
-        assert (cat3.id, cat3.category) in catlist
+        assert (cat1.id, cat1.name) in catlist
+        assert (cat2.id, cat2.name) in catlist
+        assert (cat3.id, cat3.name) in catlist
 
     def test_common_name_select_list(self, db):
         """Generate correct list of tuples from common names in db."""
@@ -102,12 +97,9 @@ class TestFunctionsWithDB:
         pkt1.price = Decimal('1.99')
         pkt2.price = Decimal('2.99')
         pkt3.price = Decimal('3.99')
-        pkt1.quantity = 100
-        pkt2.quantity = 200
-        pkt3.quantity = 50
-        pkt1.unit = 'seeds'
-        pkt2.unit = 'seeds'
-        pkt3.unit = 'seeds'
+        pkt1.quantity = Quantity(value=100, units='seeds')
+        pkt2.quantity = Quantity(value=200, units='seeds')
+        pkt3.quantity = Quantity(value=50, units='seeds')
         pkt1.sku = 'F41'
         pkt2.sku = 'F42'
         pkt3.sku = 'B13'
@@ -125,12 +117,11 @@ class TestFunctionsWithDB:
         db.session.commit()
         pktlst = packet_select_list()
         expected = [(pkt3.id,
-                     'Butterfly Weed, Soulmate -'
-                     ' SKU B13: $3.99 for 50 seeds'),
+                     'Butterfly Weed, Soulmate: SKU #B13: $3.99 for 50 seeds'),
                     (pkt1.id,
-                     'Foxglove, Foxy - SKU F41: $1.99 for 100 seeds'),
+                     'Foxglove, Foxy: SKU #F41: $1.99 for 100 seeds'),
                     (pkt2.id,
-                     'Foxglove, Snow Thimble - SKU F42: $2.99 for 200 seeds')]
+                     'Foxglove, Snow Thimble: SKU #F42: $2.99 for 200 seeds')]
         assert pktlst == expected
 
     def test_seed_select_list(self, db):
@@ -151,8 +142,8 @@ class TestFunctionsWithDB:
 
 class TestAddBotanicalNameFormWithDB:
     """Test custom methods of AddBotanicalNameForm."""
-    def test_set_common_names(self, db):
-        """Set .common_names.choices with all common names from db."""
+    def test_set_common_name(self, db):
+        """Set .common_name.choices with all common names from db."""
         cn1 = CommonName()
         cn2 = CommonName()
         cn3 = CommonName()
@@ -162,16 +153,19 @@ class TestAddBotanicalNameFormWithDB:
         cn3.name = 'Zinnia'
         db.session.commit()
         form = AddBotanicalNameForm()
-        form.set_common_names()
-        assert (cn1.id, cn1.name) in form.common_names.choices
-        assert (cn2.id, cn2.name) in form.common_names.choices
-        assert (cn2.id, cn2.name) in form.common_names.choices
+        form.set_common_name()
+        assert (cn1.id, cn1.name) in form.common_name.choices
+        assert (cn2.id, cn2.name) in form.common_name.choices
+        assert (cn2.id, cn2.name) in form.common_name.choices
 
     def test_validate_name(self, db):
         """Raise error if name in DB or invalid botanical name."""
         bn = BotanicalName()
-        db.session.add(bn)
+        cn = CommonName()
+        db.session.add_all([bn, cn])
+        cn.name = 'Butterfly Weed'
         bn.name = 'Asclepias incarnata'
+        bn.common_name = cn
         db.session.commit()
         form = AddBotanicalNameForm()
         form.name.data = 'Innagada davida'
@@ -190,7 +184,7 @@ class TestAddCategoryFormWithDB:
         """Raise a ValidationError if category already in db."""
         category = Category()
         db.session.add(category)
-        category.category = 'Annual Flowers'
+        category.name = 'Annual Flowers'
         db.session.commit()
         form = AddCategoryForm()
         form.category.data = 'Perennial Flowers'
@@ -211,8 +205,8 @@ class TestAddCommonNameFormWithDB:
         sd1 = Seed()
         sd2 = Seed()
         db.session.add_all([cat1, cat2, cn1, cn2, sd1, sd2])
-        cat1.category = 'Annual Flower'.title()
-        cat2.category = 'Perennial Flower'.title()
+        cat1.name = 'Annual Flower'.title()
+        cat2.name = 'Perennial Flower'.title()
         cn1.name = 'Foxglove'
         cn2.name = 'Butterfly Weed'
         sd1.name = 'Foxy'
@@ -220,8 +214,8 @@ class TestAddCommonNameFormWithDB:
         db.session.commit()
         form = AddCommonNameForm()
         form.set_selects()
-        assert (cat1.id, cat1.category) in form.categories.choices
-        assert (cat2.id, cat2.category) in form.categories.choices
+        assert (cat1.id, cat1.name) in form.categories.choices
+        assert (cat2.id, cat2.name) in form.categories.choices
         assert (cn1.id, cn1.name) in form.gw_common_names.choices
         assert (cn2.id, cn2.name) in form.gw_common_names.choices
         assert (sd1.id, sd1.name) in form.gw_seeds.choices
@@ -252,178 +246,6 @@ class TestAddCommonNameFormWithDB:
 
 class TestAddPacketFormWithDB:
     """Test custom methods of AddPacketForm."""
-    def test_set_selects(self, db):
-        """Set prices, units, and quantities with values from db."""
-        price = Price()
-        unit = Unit()
-        qtyd = QtyDecimal()
-        qtyf = QtyFraction()
-        qtyi = QtyInteger()
-        db.session.add_all([price, unit, qtyd, qtyf, qtyi])
-        price.price = Decimal('2.99')
-        unit.unit = 'seeds'
-        qtyd.value = Decimal('4.35')
-        qtyf.value = Fraction('1/2')
-        qtyi.value = 200
-        db.session.commit()
-        form = AddPacketForm()
-        form.set_selects()
-        assert (0, '---') in form.prices.choices
-        assert (0, '---') in form.units.choices
-        # form.quantities is coerced to string, so first val of tuple is str.
-        assert ('0', '---') in form.quantities.choices
-        assert (price.id, '${0}'.format(price.price)) in form.prices.choices
-        assert (unit.id, unit.unit) in form.units.choices
-        assert (str(qtyd.value), str(qtyd.value)) in form.quantities.choices
-        assert (str(qtyf.value), str(qtyf.value)) in form.quantities.choices
-        assert (str(qtyi.value), str(qtyi.value)) in form.quantities.choices
-
-    def test_validate_prices_different_submitted(self, db):
-        """Raise error if prices and price result in different values."""
-        price = Price()
-        db.session.add(price)
-        price.price = Decimal('2.99')
-        db.session.commit()
-        form = AddPacketForm()
-        form.price.data = Decimal('3.99')
-        form.prices.data = price.id
-        with pytest.raises(ValidationError):
-            form.validate_prices(form.prices)
-
-    def test_validate_prices_none_submitted(self, db):
-        """Raise error if prices and price are both unset."""
-        form = AddPacketForm()
-        with pytest.raises(ValidationError):
-            form.validate_prices(form.prices)
-        # Now check form submission with no user input.
-        form.prices.data = 0
-        form.price.data = ''
-        with pytest.raises(ValidationError):
-            form.validate_prices(form.prices)
-
-    def test_validate_prices_one_or_the_other(self, db):
-        """Raise no error if only .prices or .price has data."""
-        price = Price()
-        db.session.add(price)
-        price.price = Decimal('3.99')
-        db.session.commit()
-        form = AddPacketForm()
-        form.prices.data = price.id
-        form.validate_prices(form.prices)
-        form.price.data = ''  # Empty input form submission.
-        form.validate_prices(form.prices)
-        form.prices.data = None
-        form.price.data = '2.99'
-        form.validate_prices(form.prices)
-        form.prices.data = 0  # Default select form submission.
-        form.validate_prices(form.prices)
-
-    def test_validate_prices_same_submitted(self, db):
-        """Raise no error if prices and price result in same value."""
-        price = Price()
-        db.session.add(price)
-        price.price = Decimal('3.99')
-        db.session.commit()
-        form = AddPacketForm()
-        form.prices.data = price.id
-        form.price.data = Decimal('3.99')
-        form.validate_prices(form.prices)
-
-    def test_validate_quantities_different_submitted(self, db):
-        """Raise error if quantity and quantities result in diff. values."""
-        form = AddPacketForm()
-        form.quantity.data = '100'
-        form.quantities.data = '200'
-        with pytest.raises(ValidationError):
-            form.validate_quantities(form.quantities)
-
-    def test_validate_quantities_none_submitted(self, db):
-        """Raise error if no data in quantity or quantities."""
-        form = AddPacketForm()
-        with pytest.raises(ValidationError):
-            form.validate_quantities(form.quantities)
-        form.quantities.data = '0'  # Default select form submission.
-        with pytest.raises(ValidationError):
-            form.validate_quantities(form.quantities)
-
-    def test_validate_quantities_one_or_the_other(self, db):
-        """Raise no error if only .quantities or .quantity has data."""
-        form = AddPacketForm()
-        form.quantities.data = '100'
-        form.validate_quantities(form.quantities)
-        form.quantity.data = ''  # Empty input form submission.
-        form.validate_quantities(form.quantities)
-        form.quantities.data = None
-        form.quantity.data = '100'
-        form.validate_quantities(form.quantities)
-        form.quantities.data = '0'  # Default select form submission.
-        form.validate_quantities(form.quantities)
-        form.quantities.data = 'None'  # Form coerces None to str.
-        form.validate_quantities(form.quantities)
-
-    def test_validate_quantities_same_submitted(self, db):
-        """Raise no error if quantities and quantity result in same value."""
-        form = AddPacketForm()
-        form.quantity.data = '100'
-        form.quantities.data = '100'
-        form.validate_quantities(form.quantities)
-
-    def test_validate_quantity(self, db):
-        """Raise a ValidationError if field.data can't be used as quantity."""
-        form = AddPacketForm()
-        form.quantity.data = 'Forty-two'
-        with pytest.raises(ValidationError):
-            form.validate_quantity(form.quantity)
-
-    def test_validate_units_different_submitted(self, db):
-        """Raise ValidationError if unit and units conflict."""
-        unit = Unit()
-        db.session.add(unit)
-        unit.unit = 'cubits'
-        db.session.commit()
-        form = AddPacketForm()
-        form.unit.data = 'seeds'
-        form.units.data = unit.id
-        with pytest.raises(ValidationError):
-            form.validate_units(form.units)
-
-    def test_validate_units_none_submitted(self, db):
-        """Raise error if no data in unit or units."""
-        form = AddPacketForm()
-        with pytest.raises(ValidationError):
-            form.validate_units(form.units)
-        form.units.data = 0  # Check with default selected value.
-        with pytest.raises(ValidationError):
-            form.validate_units(form.units)
-
-    def test_validate_units_one_or_the_other(self, db):
-        """Raise no error if only .units or .unit is set."""
-        unit = Unit()
-        db.session.add(unit)
-        unit.unit = 'bananas'
-        db.session.commit()
-        form = AddPacketForm()
-        form.unit.data = 'hectares'
-        form.validate_units(form.units)
-        form.units.data = 0  # Default select form submission.
-        form.validate_units(form.units)
-        form.unit.data = None
-        form.units.data = unit.id
-        form.validate_units(form.units)
-        form.unit.data = ''  # Empty input form submission.
-        form.validate_units(form.units)
-
-    def test_validate_units_same_submitted(self, db):
-        """Do not raise an error if unit and units refer to same value."""
-        unit = Unit()
-        db.session.add(unit)
-        unit.unit = 'seeds'
-        db.session.commit()
-        form = AddPacketForm()
-        form.units.data = unit.id
-        form.unit.data = 'seeds'
-        form.validate_units(form.units)
-
     def test_validate_sku(self, db):
         """Raise ValidationError if SKU already exists in db."""
         packet = Packet()
@@ -448,23 +270,27 @@ class TestAddSeedFormWithDB:
         cn = CommonName()
         db.session.add_all([bn, cat, cn])
         bn.name = 'Asclepias incarnata'
-        cat.category = 'Perennial Flower'
+        cat.name = 'Perennial Flower'
         cn.name = 'Butterfly Weed'
         db.session.commit()
         form = AddSeedForm()
         form.set_selects()
-        assert (bn.id, bn.name) in form.botanical_names.choices
-        assert (cat.id, cat.category) in form.categories.choices
-        assert (cn.id, cn.name) in form.common_names.choices
+        assert (bn.id, bn.name) in form.botanical_name.choices
+        assert (cat.id, cat.name) in form.categories.choices
+        assert (cn.id, cn.name) in form.common_name.choices
 
     def test_validate_name(self, db):
         """Raise error if name is already in the database."""
         seed = Seed()
-        db.session.add(seed)
+        cn = CommonName()
+        db.session.add_all([cn, seed])
         seed.name = 'Soulmate'
+        cn.name = 'Butterfly Weed'
+        seed.common_name = cn
         db.session.commit()
         form = AddSeedForm()
         form.name.data = 'Soulmate'
+        form.common_name.data = cn.id
         with pytest.raises(ValidationError):
             form.validate_name(form.name)
 
@@ -483,8 +309,8 @@ class TestAddSeedFormWithDB:
 
 class TestEditBotanicalNameFormWithDB:
     """Test custom methods of EditBotanicalNameForm."""
-    def test_set_common_names(self, db):
-        """Set .add/remove_common_names.choices with CommonNames from db."""
+    def test_set_common_name(self, db):
+        """Set common_name.choices with CommonNames from db."""
         cn1 = CommonName()
         cn2 = CommonName()
         cn3 = CommonName()
@@ -494,10 +320,10 @@ class TestEditBotanicalNameFormWithDB:
         cn3.name = 'Zinnia'
         db.session.commit()
         form = EditBotanicalNameForm()
-        form.set_common_names()
-        assert (cn1.id, cn1.name) in form.common_names.choices
-        assert (cn2.id, cn2.name) in form.common_names.choices
-        assert (cn3.id, cn3.name) in form.common_names.choices
+        form.set_common_name()
+        assert (cn1.id, cn1.name) in form.common_name.choices
+        assert (cn2.id, cn2.name) in form.common_name.choices
+        assert (cn3.id, cn3.name) in form.common_name.choices
 
 
 class TestEditCommonNameFormWithDB:
@@ -511,8 +337,8 @@ class TestEditCommonNameFormWithDB:
         sd1 = Seed()
         sd2 = Seed()
         db.session.add_all([cat1, cat2, cn1, cn2, sd1, sd2])
-        cat1.category = 'Annual Flower'.title()
-        cat2.category = 'Perennial Flower'.title()
+        cat1.name = 'Annual Flower'.title()
+        cat2.name = 'Perennial Flower'.title()
         cn1.name = 'Foxglove'
         cn2.name = 'Butterfly Weed'
         sd1.name = 'Foxy'
@@ -520,8 +346,8 @@ class TestEditCommonNameFormWithDB:
         db.session.commit()
         form = EditCommonNameForm()
         form.set_selects()
-        assert (cat1.id, cat1.category) in form.categories.choices
-        assert (cat2.id, cat2.category) in form.categories.choices
+        assert (cat1.id, cat1.name) in form.categories.choices
+        assert (cat2.id, cat2.name) in form.categories.choices
         assert (cn1.id, cn1.name) in form.gw_common_names.choices
         assert (cn2.id, cn2.name) in form.gw_common_names.choices
         assert (sd1.id, sd1.name) in form.gw_seeds.choices
@@ -530,19 +356,18 @@ class TestEditCommonNameFormWithDB:
         assert (cn2.id, cn2.name) in form.parent_cn.choices
 
 
-
 class TestEditCategoryFormWithDB:
     """Test custom methods of EditCategoryForm."""
     def test_populate(self, db):
         """Populate form from a Category object."""
         category = Category()
         db.session.add(category)
-        category.category = 'Annual Flowers'
+        category.name = 'Annual Flowers'
         category.description = 'Not really built to last.'
         db.session.commit()
         form = EditCategoryForm()
         form.populate(category)
-        assert form.category.data == category.category
+        assert form.category.data == category.name
         assert form.description.data == category.description
 
 
@@ -553,39 +378,15 @@ class TestEditPacketFormWithDB:
         pkt = Packet()
         db.session.add(pkt)
         pkt.price = Decimal('2.99')
-        pkt.quantity = 100
-        pkt.unit = 'seeds'
+        pkt.quantity = Quantity(value=100, units='seeds')
         pkt.sku = '8675309'
         db.session.commit()
         form = EditPacketForm()
-        form.set_selects()
         form.populate(pkt)
-        assert form.prices.data == pkt._price.id
-        assert form.units.data == pkt._unit.id
-        assert form.quantities.data == str(pkt.quantity)
+        assert form.price.data == pkt.price
+        assert form.units.data == pkt.quantity.units
+        assert form.quantity.data == pkt.quantity.value
         assert form.sku.data == pkt.sku
-
-    def test_set_selects(self, db):
-        """Set prices, units, and quantities with values from database."""
-        price = Price()
-        qd = QtyDecimal()
-        qf = QtyFraction()
-        qi = QtyInteger()
-        unit = Unit()
-        db.session.add_all([price, qd, qf, qi, unit])
-        price.price = Decimal('1.99')
-        qd.value = Decimal('2.5')
-        qf.value = Fraction('1/4')
-        qi.value = 100
-        unit.unit = 'cubits'
-        db.session.commit()
-        form = EditPacketForm()
-        form.set_selects()
-        assert (price.id, '$1.99') in form.prices.choices
-        assert ('2.5', '2.5') in form.quantities.choices
-        assert ('1/4', '1/4') in form.quantities.choices
-        assert ('100', '100') in form.quantities.choices
-        assert (unit.id, 'cubits') in form.units.choices
 
     def test_validate_quantity(self, db):
         """Raise a ValidationError if field.data can't be used as quantity."""
@@ -610,7 +411,7 @@ class TestEditSeedFormWithDB:
         seed.dropped = True
         bn.name = 'Digitalis purpurea'
         cn.name = 'Foxglove'
-        cat.category = 'Perennial Flower'
+        cat.name = 'Perennial Flower'
         seed.botanical_name = bn
         seed.categories.append(cat)
         seed.common_name = cn
@@ -618,7 +419,7 @@ class TestEditSeedFormWithDB:
         form = EditSeedForm()
         form.set_selects()
         form.populate(seed)
-        assert bn.id == form.botanical_names.data
+        assert bn.id == form.botanical_name.data
         assert cat.id in form.categories.data
         assert cn.id == form.common_name.data
         assert seed.name in form.name.data
@@ -638,9 +439,9 @@ class TestEditSeedFormWithDB:
         db.session.commit()
         form = EditSeedForm()
         form.set_selects()
-        assert (bn.id, bn.name) in form.botanical_names.choices
+        assert (bn.id, bn.name) in form.botanical_name.choices
         assert (cn.id, cn.name) in form.common_name.choices
-        assert (cat.id, cat.category) in form.categories.choices
+        assert (cat.id, cat.name) in form.categories.choices
 
 
 class TestSelectBotanicalFormWithDB:
@@ -656,10 +457,10 @@ class TestSelectBotanicalFormWithDB:
         bn3.name = 'Innagada davida'
         db.session.commit()
         form = SelectBotanicalNameForm()
-        form.set_names()
-        assert (bn1.id, bn1.name) in form.names.choices
-        assert (bn2.id, bn2.name) in form.names.choices
-        assert (bn3.id, bn3.name) in form.names.choices
+        form.set_botanical_name()
+        assert (bn1.id, bn1.name) in form.botanical_name.choices
+        assert (bn2.id, bn2.name) in form.botanical_name.choices
+        assert (bn3.id, bn3.name) in form.botanical_name.choices
 
 
 class TestSelectCategoryFormWithDB:
@@ -670,15 +471,15 @@ class TestSelectCategoryFormWithDB:
         cat2 = Category()
         cat3 = Category()
         db.session.add_all([cat1, cat2, cat3])
-        cat1.category = 'Perennial Flowers'
-        cat2.category = 'Annual Flowers'
-        cat3.category = 'Vegetables'
+        cat1.name = 'Perennial Flowers'
+        cat2.name = 'Annual Flowers'
+        cat3.name = 'Vegetables'
         db.session.commit()
         form = SelectCategoryForm()
-        form.set_categories()
-        assert (cat1.id, cat1.category) in form.categories.choices
-        assert (cat2.id, cat2.category) in form.categories.choices
-        assert (cat3.id, cat3.category) in form.categories.choices
+        form.set_category()
+        assert (cat1.id, cat1.name) in form.category.choices
+        assert (cat2.id, cat2.name) in form.category.choices
+        assert (cat3.id, cat3.name) in form.category.choices
 
 
 class TestSelectCommonNameFormWithDB:
@@ -694,15 +495,15 @@ class TestSelectCommonNameFormWithDB:
         cn3.name = 'Sunflower'
         db.session.commit()
         form = SelectCommonNameForm()
-        form.set_names()
-        assert (cn1.id, cn1.name) in form.names.choices
-        assert (cn2.id, cn2.name) in form.names.choices
-        assert (cn3.id, cn3.name) in form.names.choices
+        form.set_common_name()
+        assert (cn1.id, cn1.name) in form.common_name.choices
+        assert (cn2.id, cn2.name) in form.common_name.choices
+        assert (cn3.id, cn3.name) in form.common_name.choices
 
 
 class TestSelectPacketFormWithDB:
     """Test custom methods of SelectPacketForm."""
-    def test_set_packets(self, db):
+    def test_set_packet(self, db):
         """Set select with packets loaded from database."""
         seed = Seed()
         cn = CommonName()
@@ -711,22 +512,21 @@ class TestSelectPacketFormWithDB:
         seed.name = 'Foxy'
         cn.name = 'Foxglove'
         packet.price = Decimal('2.99')
-        packet.quantity = 100
-        packet.unit = 'seeds'
+        packet.quantity = Quantity(value=100, units='seeds')
         packet.sku = '8675309'
         seed.common_name = cn
         seed.packets.append(packet)
         db.session.commit()
         form = SelectPacketForm()
-        form.set_packets()
+        form.set_packet()
         assert (packet.id,
-                'Foxglove, Foxy - SKU 8675309: $2.99 for 100 seeds') in\
-            form.packets.choices
+                'Foxglove, Foxy: SKU #8675309: $2.99 for 100 seeds') in\
+            form.packet.choices
 
 
 class TestSelectSeedFormWithDB:
     """Test custom methods of SelectSeedForm."""
-    def test_set_seeds(self, db):
+    def test_set_seed(self, db):
         """Set select with seeds loaded from database."""
         sd1 = Seed()
         sd2 = Seed()
@@ -737,7 +537,7 @@ class TestSelectSeedFormWithDB:
         sd2.name = 'Foxy'
         db.session.commit()
         form = SelectSeedForm()
-        form.set_seeds()
-        assert (sd1.id, sd1.name) in form.seeds.choices
-        assert (sd2.id, sd2.name) in form.seeds.choices
-        assert (sd3.id, sd3.name) in form.seeds.choices
+        form.set_seed()
+        assert (sd1.id, sd1.name) in form.seed.choices
+        assert (sd2.id, sd2.name) in form.seed.choices
+        assert (sd3.id, sd3.name) in form.seed.choices

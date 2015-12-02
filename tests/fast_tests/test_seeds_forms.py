@@ -23,11 +23,11 @@ class TestEditCategoryForm:
     def test_populate(self, app):
         """Populate form from a Category object."""
         category = Category()
-        category.category = 'Annual Flowers'
+        category.name = 'Annual Flowers'
         category.description = 'Not really built to last.'
         form = EditCategoryForm()
         form.populate(category)
-        assert form.category.data == category.category
+        assert form.category.data == category.name
         assert form.description.data == category.description
 
 

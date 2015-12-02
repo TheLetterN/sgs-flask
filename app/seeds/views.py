@@ -421,14 +421,15 @@ def edit_botanical_name(bn_id=None):
         return redirect(url_for('seeds.select_botanical_name',
                                 dest='seeds.edit_botanical_name'))
     form = EditBotanicalNameForm()
-    form.set_common_names()
+    form.set_common_name()
     if form.validate_on_submit():
         edited = False
         if form.name.data != bn.name:
             bn2 = BotanicalName.query.filter_by(_name=form.name.data).first()
             if bn2 and bn2 not in bn.synonyms:
                 if not bn2.syn_only:
-                    bn2_url= url_for('seeds.edit_botanical_name', bn_id=bn2.id)
+                    bn2_url = url_for('seeds.edit_botanical_name',
+                                      bn_id=bn2.id)
                     flash(Markup(('Error: Botanical name \'{0}\' is already '
                                   'in use! <a href="{1}">Click here</a> if '
                                   'you wish to edit it.'
@@ -439,7 +440,7 @@ def edit_botanical_name(bn_id=None):
                                  'need to remove it as a synonym before '
                                  'adding it here.'
                                  .format(bn2.name, syn_parents_links(bn2))))
-                return redirect(url_for('seeds.edit_botanical_name', 
+                return redirect(url_for('seeds.edit_botanical_name',
                                         bn_id=bn_id))
             else:
                 edited = True
@@ -453,9 +454,9 @@ def edit_botanical_name(bn_id=None):
             edited = True
             cn = CommonName.query.get(form.common_name.data)
             flash('Common name associated with botanical name \'{0}\' changed'
-                    ' from \'{1}\' to: \'{2}\'.'.format(bn.name,
-                                                       bn.common_name.name,
-                                                       cn.name))
+                  ' from \'{1}\' to: \'{2}\'.'.format(bn.name,
+                                                      bn.common_name.name,
+                                                      cn.name))
             bn.common_name = cn
         if form.synonyms.data != bn.list_synonyms_as_string():
             edited = True
@@ -648,7 +649,7 @@ def edit_common_name(cn_id=None):
                         flash('\'{0}\' added to Grows With for \'{1}\', and '
                               'vice versa.'.format(gw_sd.fullname, cn.name))
                         cn.gw_seeds.append(gw_sd)
-        if  not form.instructions.data:
+        if not form.instructions.data:
             form.instructions.data = None
         if form.instructions.data != cn.instructions:
             edited = True
@@ -720,9 +721,9 @@ def edit_packet(pkt_id=None):
                 flash(Markup('Error: SKU already in use by {0} in packet {1}. '
                              '<a href="{2}">Click here</a> if you would like '
                              'to edit it.'
-                             .format(pkt2.seed.fullname, 
+                             .format(pkt2.seed.fullname,
                                      pkt2.info,
-                                     url_for('seeds.edit_packet', 
+                                     url_for('seeds.edit_packet',
                                              pkt_id=pkt2.id))))
                 return redirect(url_for('seeds.edit_packet', pkt_id=packet.id))
             edited = True
@@ -947,7 +948,7 @@ def edit_seed(seed_id=None):
         if form.thumbnail.data:
             thumb_name = secure_filename(form.thumbnail.data.filename)
             img = Image.query.filter_by(filename=thumb_name).first()
-            if img != seed.thumbnail and img not in seed.images:
+            if img and img != seed.thumbnail and img not in seed.images:
                 flash('Error: The filename \'{0}\' is already in use by '
                       'another seed. Please rename it and try again.'
                       .format(thumb_name))
@@ -1582,8 +1583,8 @@ def select_seed():
     if form.validate_on_submit():
         return redirect(url_for(dest, seed_id=form.seed.data))
     crumbs = make_breadcrumbs(
-            (url_for('seeds.manage'), 'Manage Seeds'),
-            (url_for('seeds.select_seed', dest=dest), 'Select Seed')
+        (url_for('seeds.manage'), 'Manage Seeds'),
+        (url_for('seeds.select_seed', dest=dest), 'Select Seed')
     )
     return render_template('seeds/select_seed.html',
                            crumbs=crumbs,

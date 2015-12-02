@@ -726,7 +726,7 @@ class Packet(db.Model):
     sku = db.Column(db.String(32), unique=True)
 
     def __repr__(self):
-        return '<{0} SKU: {1}>'.format(self.__class__.__name__, self.sku)
+        return '<{0} SKU #{1}>'.format(self.__class__.__name__, self.sku)
 
     @property
     def info(self):
@@ -737,7 +737,7 @@ class Packet(db.Model):
         else:
             qv = None
             qu = None
-        return 'SKU: {0} - ${1} for {2} {3}'.format(self.sku,
+        return 'SKU #{0}: ${1} for {2} {3}'.format(self.sku,
                                                     self.price,
                                                     qv,
                                                     qu)

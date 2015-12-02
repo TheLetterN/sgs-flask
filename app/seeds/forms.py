@@ -23,7 +23,6 @@ from flask.ext.wtf import Form
 from flask.ext.wtf.file import FileAllowed, FileField
 from wtforms import (
     BooleanField,
-    DecimalField,
     SelectField,
     SelectMultipleField,
     StringField,
@@ -31,7 +30,7 @@ from wtforms import (
     TextAreaField,
     ValidationError
 )
-from wtforms.validators import DataRequired, Length, Optional
+from wtforms.validators import DataRequired, Length
 from app import dbify
 from .models import (
     BotanicalName,
@@ -95,7 +94,7 @@ def category_select_list():
     """Generate a list of all Categories for populating Select fields.
 
     Returns:
-        list: A list of tuples containing the id and category of each category
+        list: A list of tuples containing the id and name of each category
             in the database.
     """
     return [(category.id, category.name) for category in
@@ -145,8 +144,8 @@ def seed_select_list():
     """"Generate a list of all Seeds for populating select fields.
 
     Returns:
-        list: A list of tuples containing the ids and strings containing name
-            and SKU of each seed in the database.
+        list: A list of tuples containing the ids and full names of each seed
+            in the database.
     """
     seeds = []
     for seed in Seed.query.order_by('_name'):
@@ -199,18 +198,17 @@ class AddBotanicalNameForm(Form):
     submit = SubmitField('Add Botanical Name')
     synonyms = StringField('Synonyms', validators=[NotSpace()])
 
-    def set_common_names(self):
-        """Set common_names with CommonName objects loaded from db."""
+    def set_common_name(self):
+        """Set common_name with CommonName objects loaded from db."""
         self.common_name.choices = common_name_select_list()
 
     def validate_name(self, field):
         """Raise a ValidationError if name exists or is invalid.
 
         Raises:
-            ValidationError: If name is not in valid binomial format.
-            ValidationError: If a botanical name with the same name already
-                exists in the database.
-            ValidationError: If a synonym with the same name already exists.
+            ValidationError: If name is not in valid binomial format, if a
+                botanical name with the same name already exists in the
+                database, or if a synonym with the same name already exists.
         """
         if not BotanicalName.validate(field.data):
             raise ValidationError('\'{0}\' does not appear to be a valid '
@@ -240,9 +238,9 @@ class AddBotanicalNameForm(Form):
         """Raise a ValidationError if synonyms or a synonym are invalid.
 
         Raises:
-            ValidationError: If botanical name itself is present in synonyms.
-            ValidationError: If any synonym is too long.
-            ValidationError: If any synonym is not in valid binomial format.
+            ValidationError: If botanical name itself is present in synonyms,
+                if any synonym is too long, or if any synonym is not in valid
+                binomial format.
         """
         if field.data:
             synonyms = field.data.split(', ')
@@ -280,7 +278,7 @@ class AddCategoryForm(Form):
         """
         cat = Category.query.filter_by(name=dbify(field.data)).first()
         if cat is not None:
-            cat_url = url_for('seeds.edit_category', cat_id = cat.id)
+            cat_url = url_for('seeds.edit_category', cat_id=cat.id)
             raise ValidationError(
                 Markup('\'{0}\' already exists in the database. <a '
                        'href="{1}">Click here</a> to edit it.'
@@ -301,7 +299,7 @@ class AddCommonNameForm(Form):
             with this common name.
         instructions (TextAreaField): Field for planting instructions.
         name (StringField): Field for the common name itself.
-        parent_cn (selectField)" Field to optionally make this common name a
+        parent_cn (SelectField)" Field to optionally make this common name a
             subcategory of another.
         submit (SubmitField): Submit button.
         synonyms (StringField): Field for synonyms of this common name.
@@ -334,8 +332,8 @@ class AddCommonNameForm(Form):
             field: The field to validate: .name.
 
         Raises:
-            ValidationError: If name already in use by another common name.
-            ValidationError: If name already in use by a synonym.
+            ValidationError: If name already in use by another common name, if
+                name already in use by a synonym.
         """
         cn = CommonName.query.filter_by(name=titlecase(field.data)).first()
         if cn is not None:
@@ -356,10 +354,10 @@ class AddCommonNameForm(Form):
 
     def validate_synonyms(self, field):
         """Raise a ValidationError if any synonyms are invalid.
-        
+
         Raises:
-            ValidationError: If any synonym is the same as common name itself.
-            ValidationError: If any synonym too long.
+            ValidationError: If any synonym is the same as common name itself,
+                or if any synonym is too long.
         """
         if field.data:
             synonyms = field.data.split(', ')
@@ -389,13 +387,13 @@ class AddPacketForm(Form):
                         validators=[DataRequired(), NotSpace(), USDollar()])
     quantity = StringField('Quantity', validators=[DataRequired(), NotSpace()])
     units = StringField('Unit of measurement',
-                       validators=[Length(1, 32), NotSpace()])
+                        validators=[Length(1, 32), NotSpace()])
     sku = StringField('SKU', validators=[Length(1, 32), NotSpace()])
     submit = SubmitField('Add Packet')
 
     def validate_quantity(self, field):
         """Raise ValidationError if quantity cannot be parsed as valid.
-        
+
         Raises:
             ValidationError: If value of quantity cannot be determined to be a
                 valid decimal, fraction, or integer.
@@ -410,13 +408,13 @@ class AddPacketForm(Form):
 
     def validate_sku(self, field):
         """Raise ValidationError if sku already exists in database.
-        
+
         Raises:
             ValidationError: If value of sku is already used by another packet.
         """
         packet = Packet.query.filter_by(sku=field.data.strip()).first()
         if packet is not None:
-            pkt_url = url_for('seeds.edit_packet', pkt_id = packet.id)
+            pkt_url = url_for('seeds.edit_packet', pkt_id=packet.id)
             raise ValidationError(
                 Markup('The SKU \'{0}\' is already in use by \'{1}\'. <a '
                        'href="{2}">Click here</a> if you wish to edit it.'
@@ -428,12 +426,12 @@ class AddSeedForm(Form):
     """Form for adding a new seed to the database.
 
     Attributes:
-        botanical_name (SelectField): Select field for selecting the botanical
-            name associated with this seed.
-        categories (SelectMultipleField): Select field for selecting categories
-            associated with seed.
-        common_name (SelectMultipleField): Select ield for selecting the common
-            name associated with this seed.
+        botanical_name (SelectField): Select field for the botanical name
+            associated with this seed.
+        categories (SelectMultipleField): Select field for selecting
+            categories associated with seed.
+        common_name (SelectField): Select field for the common name associated
+            with this seed.
         description (TextAreaField): Field for seed product description.
         dropped (BooleanField): Checkbox for whether or not a seed is active.
         gw_common_names (SelectMultipleField): Select field for common names
@@ -499,16 +497,16 @@ class AddSeedForm(Form):
 
     def validate_name(self, field):
         """Raise ValidationError if seed already exists.
-        
+
         Raises:
-            ValidationError: If a seed with the same name and common name 
-                already exists in the database.
-            ValidationError: If the seed name already exists as a synonym."""
+            ValidationError: If a seed with the same name and common name
+                already exists in the database, or if the seed name already
+                exists as a synonym."""
         seeds = Seed.query.filter_by(_name=titlecase(field.data)).all()
         for seed in seeds:
             if not seed.syn_only:
                 if seed and seed.common_name.id == self.common_name.data:
-                    sd_url=url_for('seeds.edit_seed', seed_id=seed.id)
+                    sd_url = url_for('seeds.edit_seed', seed_id=seed.id)
                     raise ValidationError(
                         Markup('A seed named \'{0}\' already exists in the '
                                'database. <a href="{1}">Click here</a> if you '
@@ -525,10 +523,10 @@ class AddSeedForm(Form):
 
     def validate_synonyms(self, field):
         """Raise a ValidationError if any synonyms are invalid.
-        
+
         Raises:
-            ValidationError: If synonym is the same as this seed's name.
-            ValidationError: If synonym is too long.
+            ValidationError: If synonym is the same as this seed's name, or if
+                any synonym is too long.
         """
         if field.data:
             synonyms = field.data.split(', ')
@@ -542,7 +540,7 @@ class AddSeedForm(Form):
 
     def validate_thumbnail(self, field):
         """Raise a ValidationError if file exists with thumbnail's name.
-        
+
         Raises:
             ValidationError: If image name already exists in database.
         """
@@ -576,7 +574,7 @@ class AddSeriesForm(Form):
 
     def validate_name(self, field):
         """Raise ValidationError if name already exists in db.
-        
+
         Raises:
             ValidationError: If series already exists in database.
         """
@@ -597,15 +595,18 @@ class EditBotanicalNameForm(Form):
         submit (SubmitField): Submit button.
         synonyms (StringField): Field for synonyms of this botanical name.
     """
-    common_name = SelectField('Select Common Name',
-                                       coerce=int)
+    common_name = SelectField('Select Common Name', coerce=int)
     name = StringField('Botanical Name',
                        validators=[Length(1, 64), NotSpace()])
     submit = SubmitField('Edit Botanical Name')
     synonyms = StringField('Synonyms', validators=[NotSpace()])
 
     def populate(self, bn):
-        """Load a BotanicalName from the db and populate form with it."""
+        """Load a BotanicalName from the db and populate form with it.
+
+        Args:
+            bn (BotanicalName): The botanical name used to populate the form.
+        """
         self.name.data = bn.name
         if bn.common_name:
             self.common_name.data = bn.common_name.id
@@ -631,10 +632,10 @@ class EditBotanicalNameForm(Form):
 
     def validate_synonyms(self, field):
         """Raise a ValidationError if any synonyms are invalid.
-        
+
         Raises:
-            ValidationError: If a synonym is the same as name.
-            ValidationError: If a synonym is too long.
+            ValidationError: If any synonym is the same as name, or if any
+                synonym is too long.
             """
         if field.data:
             synonyms = field.data.split(', ')
@@ -678,9 +679,15 @@ class EditCommonNameForm(Form):
 
     Attributes:
         categories (SelectMultipleField): Select for categories.
-        description (StringField): Field for description of common name.
+        description (TextAreaField): Field for description of common name.
+        gw_common_names (SelectMultipleField): Field for common names that
+            grow well with this one.
+        gw_seeds (SelectMultipleField): Field for seeds that grow well with
+            this common name.
+        instructions (TextAreaField): Field for planting instructions.
         name (StringField): CommonName name to edit.
         submit (SubmitField): Submit button.
+        synonyms (StringField): Field for synonyms of this common name.
     """
     categories = SelectMultipleField('Select/Deselect Categories',
                                      coerce=int,
@@ -726,7 +733,12 @@ class EditCommonNameForm(Form):
         self.parent_cn.choices.insert(0, (0, 'N/A'))
 
     def validate_synonyms(self, field):
-        """Raise a ValidationError if any synonyms are too long."""
+        """Raise a ValidationError if any synonyms are too long.
+
+        Raises:
+            ValidationError: If any synonym is the same as name, or if any
+                synonym is too long.
+        """
         if field.data:
             synonyms = field.data.split(', ')
             for synonym in synonyms:
@@ -752,12 +764,16 @@ class EditPacketForm(Form):
                         validators=[DataRequired(), NotSpace(), USDollar()])
     quantity = StringField('Quantity', validators=[DataRequired(), NotSpace()])
     units = StringField('Unit of measurement',
-                       validators=[Length(1, 32), NotSpace()])
+                        validators=[Length(1, 32), NotSpace()])
     sku = StringField('SKU', validators=[Length(1, 32), NotSpace()])
     submit = SubmitField('Edit Packet')
 
     def populate(self, packet):
-        """Populate form elements with data from database."""
+        """Populate form elements with data from database.
+
+        Args:
+            packet (Packet): The packet to populate this form with.
+        """
         self.price.data = packet.price
         self.units.data = packet.quantity.units
         self.quantity.data = packet.quantity.value
@@ -765,7 +781,7 @@ class EditPacketForm(Form):
 
     def validate_quantity(self, field):
         """Raise ValidationError if quantity cannot be parsed as valid.
-        
+
         Raises:
             ValidationError: If value of quantity cannot be determined to be a
                 valid decimal, fraction, or integer.
@@ -781,8 +797,30 @@ class EditPacketForm(Form):
 
 class EditSeedForm(Form):
     """Form for editing an existing seed in the database.
+
+    Attributes:
+        botanical_name (SelectField): Field for selecting botanical name for
+            this seed.
+        categories (SelectMultipleField): Field for selecting categories
+            this seed belongs to.
+        common_name (SelectField): Field for selecting common name for this
+            seed.
+        description (TextAreaField): Field for description of seed.
+        dropped (BooleanField): Field for whether this seed is dropped or
+            active.
+        gw_common_names (SelectMultipleField): Field for selecting common names
+            that grow well with this seed.
+        gw_seeds (SelectMultipleField): Field for selecting seeds that grow
+            well with this seed.
+        in_stock (Boolean): Field for whether or not seed is in stock.
+        name (StringField): Field for name of seed.
+        series (SelectField): Field for selecting a series this seed belongs
+            to, if applicable.
+        submit (SubmitField): Submit button.
+        synonyms (StringField): Field for synonyms of this seed.
+        thumbnail (FileField): Field for uploading a thumbnail for this seed.
     """
-    botanical_name = SelectField('Botanical Names', coerce=int)
+    botanical_name = SelectField('Botanical Name', coerce=int)
     categories = SelectMultipleField('Select/Deselect Categories',
                                      coerce=int,
                                      validators=[DataRequired()])
@@ -816,7 +854,11 @@ class EditSeedForm(Form):
         self.series.choices.insert(0, (0, 'N/A'))
 
     def populate(self, seed):
-        """Populate form with data from a Seed object."""
+        """Populate form with data from a Seed object.
+
+        Args:
+            seed (Seed): The seed to populate this form with.
+        """
         if seed.botanical_name:
             self.botanical_name.data = seed.botanical_name.id
         self.categories.data = [cat.id for cat in seed.categories]
@@ -857,7 +899,12 @@ class EditSeedForm(Form):
                            'edit \'{0}\'.'.format(cn.name, cn_url)))
 
     def validate_synonyms(self, field):
-        """Raise a ValidationError if any synonyms are too long."""
+        """Raise a ValidationError if any synonyms are too long.
+
+        Raises:
+            ValidationError: If any synonym is same as name, or any synonym is
+                too long.
+        """
         if field.data:
             synonyms = field.data.split(', ')
             for synonym in synonyms:
@@ -876,6 +923,7 @@ class EditSeriesForm(Form):
         common_name (SelectField): Field for selecting a common name.
         description (TextAreaField): Field for series description.
         name (StringField): Field for series name.
+        submit (SubmitField): Submit button.
     """
     common_name = SelectField('Select Common Name', coerce=int)
     description = TextAreaField('Description', validators=[NotSpace()])
@@ -901,7 +949,7 @@ class RemoveBotanicalNameForm(Form):
 
 class RemoveCategoryForm(Form):
     """Form for removing a category."""
-    move_to = SelectField('Move common names and seeds in this category to', 
+    move_to = SelectField('Move common names and seeds in this category to',
                           coerce=int)
     verify_removal = BooleanField('Yes')
     submit = SubmitField('Remove Category')
@@ -917,7 +965,15 @@ class RemoveCategoryForm(Form):
 
 
 class RemoveCommonNameForm(Form):
-    """Form for removing a common name."""
+    """Form for removing a common name.
+
+    Attributes:
+        move_to (SelectField): Field for selecting CommonName to move orphans
+            to.
+        verify_removal (BooleanField): Field that must be checked for removal
+            of CommonName.
+        submit (SubmitField): Submit button.
+    """
     move_to = SelectField('Move botanical names and seeds associated with '
                           'this common name to', coerce=int)
     verify_removal = BooleanField('Yes')
@@ -934,75 +990,126 @@ class RemoveCommonNameForm(Form):
 
 
 class RemovePacketForm(Form):
-    """Form for removing a packet."""
+    """Form for removing a packet.
+
+    Attributes:
+        verify_removal (BooleanField): Field that must be checked for removal
+            of packet.
+        submit (SubmitField): Submit button.
+    """
     verify_removal = BooleanField('Yes')
     submit = SubmitField('Remove Packet')
 
 
 class RemoveSeedForm(Form):
-    """Form for removing a seed."""
+    """Form for removing a seed.
+
+    Attributes:
+        delete_images (BooleanField): Field for whether or not to delete images
+            associated with seed being removed.
+        verify_removal (BooleanField): Field that must be checked for removal
+            of seed.
+        submit (SubmitField): Submit button.
+    """
     delete_images = BooleanField('Also delete all images for this seed')
     verify_removal = BooleanField('Yes')
     submit = SubmitField('Remove Seed')
 
 
 class RemoveSeriesForm(Form):
-    """Form for removing a series."""
+    """Form for removing a series.
+
+    Attributes:
+        verify_removal (BooleanField): Field that must be checked for removal
+            of series.
+        submit (SubmitField): Submit button.
+    """
     verify_removal = BooleanField('Yes')
     submit = SubmitField('Remove Series')
 
-                
+
 class SelectBotanicalNameForm(Form):
-    """Form for selecting a botanical name."""
-    names = SelectField('Select Botanical Name', coerce=int)
+    """Form for selecting a botanical name.
+
+    Attributes:
+        name (SelectField): Field for selecting a botanical name.
+        submit (SubmitField): Submit button.
+    """
+    botanical_name = SelectField('Select Botanical Name', coerce=int)
     submit = SubmitField('Submit')
 
-    def set_names(self):
+    def set_botanical_name(self):
         """Populate names with BotanicalNames from the database."""
-        self.names.choices = botanical_name_select_list()
+        self.botanical_name.choices = botanical_name_select_list()
 
 
 class SelectCategoryForm(Form):
-    """Form for selecting a category."""
-    categories = SelectField('Select Category', coerce=int)
+    """Form for selecting a category.
+
+    Attributes:
+        category (SelectField): Field for selecting a category.
+        submit (SubmitField): Submit button.
+    """
+    category = SelectField('Select Category', coerce=int)
     submit = SubmitField('Submit')
 
-    def set_categories(self):
-        """Populate categories with Categories from the database."""
-        self.categories.choices = category_select_list()
+    def set_category(self):
+        """Populate category with Categories from the database."""
+        self.category.choices = category_select_list()
 
 
 class SelectCommonNameForm(Form):
-    """Form for selecting a common name."""
-    names = SelectField('Select Common Name', coerce=int)
+    """Form for selecting a common name.
+
+    Attributes:
+        common_name (SelectField): Field for selecting a common name.
+        submit (SubmitField): Submit button.
+    """
+    common_name = SelectField('Select Common Name', coerce=int)
     submit = SubmitField('Submit')
 
-    def set_names(self):
-        """Populate names with CommonNames from the database."""
-        self.names.choices = common_name_select_list()
+    def set_common_name(self):
+        """Populate common_name with CommonNames from the database."""
+        self.common_name.choices = common_name_select_list()
 
 
 class SelectPacketForm(Form):
-    """Form for selecting a packet."""
-    packets = SelectField('Select Packet', coerce=int)
+    """Form for selecting a packet.
+
+    Attributes:
+        packet (SelectField): Field for selecting a packet.
+        submit (SubmitField): Submit button.
+    """
+    packet = SelectField('Select Packet', coerce=int)
     submit = SubmitField('Submit')
 
-    def set_packets(self):
-        """Populate packets with Packets from database."""
-        self.packets.choices = packet_select_list()
+    def set_packet(self):
+        """Populate packet with Packets from database."""
+        self.packet.choices = packet_select_list()
 
 
 class SelectSeedForm(Form):
-    """Form for selecting a seed."""
-    seeds = SelectField('Select Seed', coerce=int)
+    """Form for selecting a seed.
+
+    Attributes:
+        seed (SelectField): Field for selecting a seed.
+        submit (SubmitField): Submit button
+    """
+    seed = SelectField('Select Seed', coerce=int)
     submit = SubmitField('Submit')
 
-    def set_seeds(self):
-        """Populate seeds with Seeds from the database."""
-        self.seeds.choices = seed_select_list()
+    def set_seed(self):
+        """Populate seed with Seeds from the database."""
+        self.seed.choices = seed_select_list()
+
 
 class SelectSeriesForm(Form):
-    """Form for selecting a series."""
+    """Form for selecting a series.
+
+    Attributes:
+        series (SelectField): Field for selecting a series.
+        submit (SubmitField): Submit button.
+    """
     series = SelectField('Select Series', coerce=int)
     submit = SubmitField('Submit')
 

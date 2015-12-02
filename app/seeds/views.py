@@ -103,7 +103,7 @@ def make_categories_available():  # pragma: no cover
 def add_botanical_name():
     """Handle web interface for adding BotanicalName objects to database."""
     form = AddBotanicalNameForm()
-    form.set_common_names()
+    form.set_common_name()
     if form.validate_on_submit():
         bn = BotanicalName()
         db.session.add(bn)
@@ -1473,9 +1473,9 @@ def select_botanical_name():
         flash('Error: No destination page was specified!')
         return redirect(url_for('seeds.manage'))
     form = SelectBotanicalNameForm()
-    form.set_names()
+    form.set_botanical_name()
     if form.validate_on_submit():
-        return redirect(url_for(dest, bn_id=form.names.data))
+        return redirect(url_for(dest, bn_id=form.botanical_name.data))
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
         (url_for('seeds.select_botanical_name', dest=dest),
@@ -1500,9 +1500,9 @@ def select_category():
         flash('Error: No destination page was specified!')
         return redirect(url_for('seeds.manage'))
     form = SelectCategoryForm()
-    form.set_categories()
+    form.set_category()
     if form.validate_on_submit():
-        return redirect(url_for(dest, cat_id=form.categories.data))
+        return redirect(url_for(dest, cat_id=form.category.data))
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
         (url_for('seeds.select_category', dest=dest), 'Select Category')
@@ -1526,9 +1526,9 @@ def select_common_name():
         flash('Error: No destination page was specified!')
         return redirect(url_for('seeds.manage'))
     form = SelectCommonNameForm()
-    form.set_names()
+    form.set_common_name()
     if form.validate_on_submit():
-        return redirect(url_for(dest, cn_id=form.names.data))
+        return redirect(url_for(dest, cn_id=form.common_name.data))
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
         (url_for('seeds.select_common_name', dest=dest), 'Select Common Name')
@@ -1552,9 +1552,9 @@ def select_packet():
         flash('Error: No destination page was specified!')
         return redirect(url_for('seeds.manage'))
     form = SelectPacketForm()
-    form.set_packets()
+    form.set_packet()
     if form.validate_on_submit():
-        return redirect(url_for(dest, pkt_id=form.packets.data))
+        return redirect(url_for(dest, pkt_id=form.packet.data))
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
         (url_for('seeds.select_packet', dest=dest), 'Select Packet')
@@ -1578,9 +1578,9 @@ def select_seed():
         flash('Error: No destination page was specified!')
         return redirect(url_for('seeds.manage'))
     form = SelectSeedForm()
-    form.set_seeds()
+    form.set_seed()
     if form.validate_on_submit():
-        return redirect(url_for(dest, seed_id=form.seeds.data))
+        return redirect(url_for(dest, seed_id=form.seed.data))
     crumbs = make_breadcrumbs(
             (url_for('seeds.manage'), 'Manage Seeds'),
             (url_for('seeds.select_seed', dest=dest), 'Select Seed')

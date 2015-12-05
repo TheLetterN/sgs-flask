@@ -71,7 +71,7 @@ class USDollar(object):
             try:
                 Decimal(field.data.replace('$', '').strip())
                 if '.' in field.data and len(field.data.split('.')[-1]) > 2:
-                    raise ValueError
+                    raise ValidationError(self.message)
             except:
                 raise ValidationError(self.message)
 

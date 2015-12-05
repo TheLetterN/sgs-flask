@@ -16,11 +16,24 @@
 # Copyright Swallowtail Garden Seeds, Inc
 
 
-from flask import current_app, redirect, render_template, url_for
+import os
+from flask import current_app, request, redirect, render_template, url_for
+from app import create_app
 from . import main
 from app.auth.models import Permission
 from app.seeds.models import Category
+from .models import Redirect
 
+
+def redirect_path(rd):
+    return redirect(rd.new_path, rd.status_code)
+
+
+def add_redirect(app, rd):
+    app.add_url_rule(rd.old_path,
+                     rd.old_path,
+                     view_func=redirect_path,
+                     defaults={'rd': rd})
 
 @main.context_processor
 def make_permissions_available():
@@ -52,9 +65,12 @@ def index():
     return render_template('main/index.html')
 
 
-@main.route('/index')
-@main.route('/index.html')
-@main.route('/index.htm')
-def index_redirect():
-    """Redirect common index page names to main.index"""
-    return redirect(url_for('main.index'), code=301)
+tapp = create_app(os.getenv('SGS_CONFIG') or 'default')
+
+@main.before_app_first_request
+def before_first():
+    with tapp.app_context():
+        rds = Redirect.query.all()
+        for rd in rds:
+            print(rd)
+            add_redirect(main, rd)

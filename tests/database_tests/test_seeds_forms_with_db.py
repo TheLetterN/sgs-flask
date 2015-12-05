@@ -18,6 +18,7 @@ from app.seeds.forms import (
     EditSeedForm,
     packet_select_list,
     seed_select_list,
+    syn_parents_links,
     SelectBotanicalNameForm,
     SelectCategoryForm,
     SelectCommonNameForm,
@@ -139,6 +140,51 @@ class TestFunctionsWithDB:
         assert (sd2.id, sd2.name) in seedlist
         assert (sd3.id, sd3.name) in seedlist
 
+    def test_syn_parents_links(self, db):
+        """Generate list of links to parents of synonyms."""
+        bn1 = BotanicalName()
+        bn2 = BotanicalName()
+        bn3 = BotanicalName()
+        cn1 = CommonName()
+        cn2 = CommonName()
+        cn3 = CommonName()
+        sd1 = Seed()
+        sd2 = Seed()
+        sd3 = Seed()
+        db.session.add_all([bn1, bn2, bn3, cn1, cn2, cn3, sd1, sd2, sd3])
+        bn1.name = 'Digitalis purpurea'
+        bn2.name = 'Asclepias incarnata'
+        bn3.name = 'Innagada davida'
+        cn1.name = 'Foxglove'
+        cn2.name = 'Butterfly Weed'
+        cn3.name = 'Smith'
+        sd1.name = 'Foxy'
+        sd1.common_name = cn1
+        sd2.name = 'Soulmate'
+        sd2.common_name = cn2
+        sd3.name = 'John'
+        sd3.common_name = cn3
+        bn1.syn_parents.append(bn2)
+        bn1.syn_parents.append(bn3)
+        cn1.syn_parents.append(cn2)
+        cn1.syn_parents.append(cn3)
+        sd1.syn_parents.append(sd2)
+        sd1.syn_parents.append(sd3)
+        db.session.commit()
+        rv = syn_parents_links(bn1)
+        assert bn2.name in rv
+        assert bn3.name in rv
+        rv = syn_parents_links(cn1)
+        assert cn2.name in rv
+        assert cn3.name in rv
+        rv = syn_parents_links(sd1)
+        assert sd2.name in rv
+        assert sd3.name in rv
+        foo = 'woof'
+        rv = syn_parents_links(foo)
+        assert rv == ''
+
+
 
 class TestAddBotanicalNameFormWithDB:
     """Test custom methods of AddBotanicalNameForm."""
@@ -161,11 +207,18 @@ class TestAddBotanicalNameFormWithDB:
     def test_validate_name(self, db):
         """Raise error if name in DB or invalid botanical name."""
         bn = BotanicalName()
+        bn2 = BotanicalName()
+        bn3 = BotanicalName()
         cn = CommonName()
-        db.session.add_all([bn, cn])
+        db.session.add_all([bn, bn2, bn3, cn])
         cn.name = 'Butterfly Weed'
         bn.name = 'Asclepias incarnata'
+        bn2.name = 'Canis lupus familiaris'
+        bn3.name = 'Canis familiaris'
+        bn3.syn_only = True
+        bn2.synonyms.append(bn3)
         bn.common_name = cn
+        bn2.common_name = cn
         db.session.commit()
         form = AddBotanicalNameForm()
         form.name.data = 'Innagada davida'
@@ -174,6 +227,9 @@ class TestAddBotanicalNameFormWithDB:
         with pytest.raises(ValidationError):
             form.validate_name(form.name)
         form.name.data = 'Asclepias incarnata'
+        with pytest.raises(ValidationError):
+            form.validate_name(form.name)
+        form.name.data = 'Canis familiaris'
         with pytest.raises(ValidationError):
             form.validate_name(form.name)
 
@@ -224,8 +280,14 @@ class TestAddCommonNameFormWithDB:
     def test_validate_name(self, db):
         """Raise a Validation error if common name already in db."""
         cn = CommonName()
-        db.session.add(cn)
+        cn2 = CommonName()
+        cn3 = CommonName()
+        db.session.add_all([cn, cn2, cn3])
         cn.name = 'Coleus'
+        cn2.name = 'Foxglove'
+        cn3.name = 'Digitalis'
+        cn3.syn_only = True
+        cn2.synonyms.append(cn3)
         db.session.commit()
         form = AddCommonNameForm()
         form.name.data = 'Sunflower'
@@ -233,15 +295,9 @@ class TestAddCommonNameFormWithDB:
         form.name.data = 'Coleus'
         with pytest.raises(ValidationError):
             form.validate_name(form.name)
-
-    def test_validate_synonyms(self, db):
-        """Raise a ValidationError if any synonyms are more than 64 chars."""
-        form = AddCommonNameForm()
-        form.synonyms.data = 'Sixty-four characters is actually quite a lot '\
-                             'of characters to fit in one name, the limit is '\
-                             'perfectly reasonable'
+        form.name.data = 'Digitalis'
         with pytest.raises(ValidationError):
-            form.validate_synonyms(form.synonyms)
+            form.validate_name(form.name)
 
 
 class TestAddPacketFormWithDB:
@@ -279,18 +335,47 @@ class TestAddSeedFormWithDB:
         assert (cat.id, cat.name) in form.categories.choices
         assert (cn.id, cn.name) in form.common_name.choices
 
+    def test_validate_categories(self, db):
+        """Raise validation error if any categories not in common name."""
+        cn = CommonName()
+        cat1 = Category()
+        cat2 = Category()
+        db.session.add_all([cn, cat1, cat2])
+        cn.name = 'Foxglove'
+        cat1.name = 'Perennial Flower'
+        cat2.name = 'Rock'
+        cn.categories.append(cat1)
+        db.session.commit()
+        form = AddSeedForm()
+        form.common_name.data = cn.id
+        form.categories.data = [cat1.id]
+        form.validate_categories(form.categories)
+        form.categories.data = [cat1.id, cat2.id]
+        with pytest.raises(ValidationError):
+            form.validate_categories(form.categories)
+
     def test_validate_name(self, db):
         """Raise error if name is already in the database."""
         seed = Seed()
         cn = CommonName()
-        db.session.add_all([cn, seed])
+        sd2 = Seed()
+        sd3 = Seed()
+        db.session.add_all([cn, seed, sd2, sd3])
         seed.name = 'Soulmate'
+        sd2.name = 'Foxy'
+        sd3.name = 'Lady'
+        sd3.syn_only = True
+        sd2.synonyms.append(sd3)
         cn.name = 'Butterfly Weed'
+        sd2.common_name = cn
         seed.common_name = cn
         db.session.commit()
         form = AddSeedForm()
         form.name.data = 'Soulmate'
         form.common_name.data = cn.id
+        with pytest.raises(ValidationError):
+            form.validate_name(form.name)
+        form.name.data = 'Lady'
         with pytest.raises(ValidationError):
             form.validate_name(form.name)
 

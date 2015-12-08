@@ -25,12 +25,14 @@ This is the main application module for SGS Flask, a Flask implementation
 of the website for Swallowtail Garden Seeds.
 """
 
+
 from titlecase import titlecase
 from flask import Flask
 from flask.ext.login import AnonymousUserMixin, LoginManager
 from flask.ext.mail import Mail
 from flask.ext.sqlalchemy import SQLAlchemy
 from config import CONFIG
+from .redirects import RedirectsFile
 
 
 class Anonymous(AnonymousUserMixin):
@@ -111,5 +113,11 @@ def create_app(config_name):
     app.register_blueprint(auth_blueprint, url_prefix='/auth')
     app.register_blueprint(main_blueprint)
     app.register_blueprint(seeds_blueprint, url_prefix='/seeds')
+
+    # Add redirects
+    rdf = RedirectsFile(app.config.get('REDIRECTS_FILE'))
+    if rdf.exists():
+        rdf.load()
+        rdf.add_all_to_app(app)
 
     return app

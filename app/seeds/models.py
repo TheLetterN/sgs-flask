@@ -738,9 +738,9 @@ class Packet(db.Model):
             qv = None
             qu = None
         return 'SKU #{0}: ${1} for {2} {3}'.format(self.sku,
-                                                    self.price,
-                                                    qv,
-                                                    qu)
+                                                   self.price,
+                                                   qv,
+                                                   qu)
 
 
 class Quantity(db.Model):

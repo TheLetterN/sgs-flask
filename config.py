@@ -41,6 +41,7 @@ class Config(object):
                                              additional requests after one has
                                              already been made.
         INFO_EMAIL (str): Email address to send information with.
+        REDIRECTS_FILE (str): Location of JSON file containing redirects.
         SECRET_KEY (str): Key used by Flask and extensions for encryption.
         SQLALCHEMY_COMMIT_ON_TEARDOWN (bool): Whether or not to commit
                                               changes to database on
@@ -63,6 +64,8 @@ class Config(object):
     IMAGES_FOLDER = os.path.join(BASEDIR, 'app', 'static', 'images')
     INFO_EMAIL = os.environ.get('SGS_INFO_EMAIL') or \
         'info@swallowtailgardenseeds.com'
+    REDIRECTS_FILE = os.environ.get('SGS_REDIRECTS_FILE') or \
+            os.path.join(BASEDIR, 'redirects.json')
     SECRET_KEY = os.environ.get('SGS_SECRET_KEY') or \
         '\xbdc@:b\xac\xfa\xfa\xd1z[\xa3=\xd1\x9a\x0b&\xe3\x1d5\xe9\x84(\xda'
     SUPPORT_EMAIL = os.environ.get('SGS_SUPPORT_EMAIL') or \
@@ -99,6 +102,7 @@ class TestingConfig(Config):
     """
     TESTING = True
     WTF_CSRF_ENABLED = False
+    REDIRECTS_FILE = os.path.join(TEMPDIR, 'redirects.json')
     SQLALCHEMY_DATABASE_URI = os.environ.get('SGS_TEST_DATABASE_URI') or \
         'sqlite:///:memory:'
 

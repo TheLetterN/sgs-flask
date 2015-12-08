@@ -20,6 +20,9 @@ venv2/
 # Ignore SQLite databases.
 *.db
 
+# Ignore JSON files.
+*.json
+
 # Ignore database migrations.
 migrations/
 

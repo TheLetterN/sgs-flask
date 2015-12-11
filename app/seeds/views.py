@@ -218,6 +218,8 @@ def add_common_name():
             cn.description = form.description.data
             flash('Description for \'{0}\' set to: {1}'
                   .format(cn.name, cn.description))
+        else:
+            cn.description = None
         if form.instructions.data:
             cn.instructions = form.instructions.data
             flash('Planting instructions for \'{0}\' set to: {1}'
@@ -397,7 +399,9 @@ def add_seed():
             seed.thumbnail = Image(filename=thumb_name)
             flash('Thumbnail uploaded as: {0}'.format(thumb_name))
             form.thumbnail.data.save(upload_path)
-        seed.description = form.description.data
+        if form.description.data:
+            seed.description = form.description.data
+            flash('Description set to: {0}'.format(seed.description))
         if form.in_stock.data:
             seed.in_stock = True
             flash('\'{0}\' is in stock.'.format(seed.fullname))
@@ -1470,7 +1474,16 @@ def remove_category(cat_id=None):
             old_path = url_for('seeds.category',
                                cat_slug=old_cat_slug)
             new_path = url_for('seeds.category',
-                               cat_slug=old_cat_slug)
+                               cat_slug=new_cat_slug)
+            flash(redirect_warning(
+                old_path,
+                '<a href="{0}">{1}</a>'
+                .format(url_for('seeds.add_redirect',
+                                old_path=old_path,
+                                new_path=new_path,
+                                status_code=301),
+                        new_path)
+            ))
             for cn in category.common_names:
                 if cn not in cat2.common_names:
                     cat2.common_names.append(cn)
@@ -1614,8 +1627,8 @@ def remove_common_name(cn_id=None):
                                 )
                             flash(redirect_warning(old_path,
                                                    list_to_or_string(urllist)))
-            flash('Common name {0}: \'{1}\' has been removed from the '
-                  'database.'.format(cn.id, cn.name))
+            flash('The common name \'{0}\' has been removed from the '
+                  'database.'.format(cn.name))
             db.session.delete(cn)
             db.session.commit()
             return redirect(url_for('seeds.manage'))

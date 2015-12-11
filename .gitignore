@@ -23,6 +23,9 @@ venv2/
 # Ignore JSON files.
 *.json
 
+# Ignore pending changes file.
+pending.txt
+
 # Ignore database migrations.
 migrations/
 

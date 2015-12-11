@@ -59,6 +59,32 @@ class NotSpace(object):
             raise ValidationError(self.message)
 
 
+class ReplaceMe(object):
+    """Validator for if a field still contains <replace me> data."""
+    def __init__(self, message=None):
+        if not message:
+            self.message = 'Field contains data that needs to be replaced. '\
+                           'Please replace any sections surrounded by < and '\
+                           '> with requested data.'
+
+    def __call__(self, form, field):
+        if '<' in field.data and '>' in field.data:
+            raise ValidationError(self.message)
+
+
+class RRPath(object):
+    """Validatator for fields requiring a root-relative path."""
+    def __init__(self, message=None):
+        if not message:
+            message = 'Field must contain a root-relative path beginning with'\
+                      'a forward slash. (/)'
+        self.message = message
+
+    def __call__(self, form, field):
+        if field.data and field.data[0] != '/':
+            raise ValidationError(self.message)
+
+
 class USDollar(object):
     """Validator raises ValidationError if can't be parsed as a USD value."""
     def __init__(self, message=None):
@@ -420,6 +446,31 @@ class AddPacketForm(Form):
                        'href="{2}">Click here</a> if you wish to edit it.'
                        .format(packet.sku, packet.seed.fullname, pkt_url))
             )
+
+
+class AddRedirectForm(Form):
+    """Form for adding a redirect to the application."""
+    old_path = StringField('Old Path', validators=[DataRequired(),
+                                                   NotSpace(),
+                                                   ReplaceMe(),
+                                                   RRPath()])
+    new_path = StringField('New Path', validators=[DataRequired(),
+                                                   NotSpace(),
+                                                   ReplaceMe(),
+                                                   RRPath()])
+    status_code = SelectField('Status Code',
+                              coerce=int,
+                              choices=[(300, '300 Multiple Choices'),
+                                       (301, '301 Moved Permanently'),
+                                       (302, '302 Found'),
+                                       (303, '303 See Other'),
+                                       (304, '304 Not Modified'),
+                                       (305, '305 Use Proxy'),
+                                       (306, '306 Switch Proxy'),
+                                       (307, '307 Temporary Redirect'),
+                                       (308, '308 Permanent Redirect')],
+                              default=302)
+    submit = SubmitField('Add Redirect')
 
 
 class AddSeedForm(Form):

@@ -32,6 +32,7 @@ from flask.ext.login import AnonymousUserMixin, LoginManager
 from flask.ext.mail import Mail
 from flask.ext.sqlalchemy import SQLAlchemy
 from config import CONFIG
+from .pending import Pending
 from .redirects import RedirectsFile
 
 
@@ -119,5 +120,10 @@ def create_app(config_name):
     if rdf.exists():
         rdf.load()
         rdf.add_all_to_app(app)
+
+    # Clear pending changes messages
+    pending = Pending(app.config.get('PENDING_FILE'))
+    pending.clear()
+    pending.save()
 
     return app

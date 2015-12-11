@@ -31,6 +31,8 @@ from werkzeug import secure_filename
 from flask.ext.login import login_required
 from app import db, dbify, make_breadcrumbs
 from app.decorators import permission_required
+from app.pending import Pending
+from app.redirects import Redirect, RedirectsFile
 from app.auth.models import Permission
 from . import seeds
 from .models import (
@@ -49,6 +51,7 @@ from .forms import (
     AddCategoryForm,
     AddCommonNameForm,
     AddPacketForm,
+    AddRedirectForm,
     AddSeedForm,
     AddSeriesForm,
     EditBotanicalNameForm,
@@ -71,6 +74,47 @@ from .forms import (
     SelectSeriesForm,
     syn_parents_links
 )
+
+
+def list_to_or_string(lst):
+    """Return a comma-separated list with 'or' before the last element.
+
+    Args:
+        lst (list): A list of strings to convert to a single string.
+
+    Examples:
+        >>> list_to_or_string(['frogs'])
+        'frogs'
+
+        >>> list_to_or_string(['frogs', 'toads'])
+        'frogs or toads'
+
+        >>> list_to_or_string(['frogs', 'toads', 'salamanders'])
+        'frogs, toads, or salamanders'
+    """
+    if len(lst) > 1:
+        if len(lst) == 2:
+            return ' or '.join(lst)
+        else:
+            lstc = list(lst)  # Don't change values of original list
+            lstc[-1] = 'or ' + lstc[-1]
+            return ', '.join(lstc)
+    else:
+        return lst[0]
+
+
+def redirect_warning(old_path, links):
+    """Generate a message warning that a redirect should be created.
+
+    Args:
+        old_path (str): The path that has been rendered invalid.
+        links (str): A link or links to forms to add possible redirects.
+
+    Returns:
+        Markup: A string containing a warning that a redirect should be added.
+    """
+    return Markup('Warning: the path \'{0}\' is no longer valid. You may wish '
+                  'to redirect it to {1}.'.format(old_path, links))
 
 
 @seeds.context_processor
@@ -252,11 +296,50 @@ def add_packet(seed_id=None):
         (url_for('seeds.add_series'), 'Add Series'),
         (url_for('seeds.add_seed'), 'Add Seed'),
         (url_for('seeds.add_packet'), 'Add Packet')
-        )
+    )
     return render_template('seeds/add_packet.html',
                            crumbs=crumbs,
                            form=form,
                            seed=seed)
+
+
+@seeds.route('/add_redirect', methods=['GET', 'POST'])
+@login_required
+@permission_required(Permission.MANAGE_SEEDS)
+def add_redirect():
+    """Add a redirect from an old path to a new one."""
+    form = AddRedirectForm()
+    if form.validate_on_submit():
+        rdf = RedirectsFile(current_app.config.get('REDIRECTS_FILE'))
+        if rdf.exists():
+            rdf.load()
+        rd = Redirect(form.old_path.data,
+                      form.new_path.data,
+                      form.status_code.data)
+        pending = Pending(current_app.config.get('PENDING_FILE'))
+        if pending.exists():
+            pending.load()
+        pending.add_message(rd.message() + '<br>')
+        rdf.add_redirect(rd)
+        pending.save()
+        rdf.save()
+        flash('{0} added. It will take effect on next restart of Flask app.'
+              .format(rd.message()))
+        return redirect(url_for('seeds.manage'))
+    op = request.args.get('old_path')
+    if op:
+        form.old_path.data = op
+    np = request.args.get('new_path')
+    if np:
+        form.new_path.data = np
+    sc = request.args.get('status_code')
+    if sc:
+        form.status_code.data = int(sc)
+    crumbs = make_breadcrumbs(
+        (url_for('seeds.manage'), 'Manage Seeds'),
+        (url_for('seeds.add_redirect'), 'Add Redirect')
+    )
+    return render_template('seeds/add_redirect.html', crumbs=crumbs, form=form)
 
 
 @seeds.route('/add_seed', methods=['GET', 'POST'])
@@ -515,7 +598,54 @@ def edit_category(cat_id=None):
                 edited = True
                 flash('Category changed from \'{0}\' to \'{1}\'.'
                       .format(category.name, form_cat))
+                old_slug = category.slug
                 category.name = form_cat
+                new_slug = category.slug
+                old_path = url_for('seeds.category', cat_slug=old_slug)
+                new_path = url_for('seeds.category', cat_slug=new_slug)
+                flash(redirect_warning(
+                    old_path,
+                    '<a href="{0}" target="_blank">{1}</a>'
+                    .format(url_for('seeds.add_redirect',
+                                    old_path=old_path,
+                                    new_path=new_path,
+                                    status_code=301),
+                            new_path)
+                ))
+                for cn in category.common_names:
+                    old_path = url_for('seeds.common_name',
+                                       cat_slug=old_slug,
+                                       cn_slug=cn.slug)
+                    new_path = url_for('seeds.common_name',
+                                       cat_slug=new_slug,
+                                       cn_slug=cn.slug)
+                    flash(redirect_warning(
+                        old_path,
+                        '<a href="{0}" target="_blank">{1}</a>'
+                        .format(url_for('seeds.add_redirect',
+                                        old_path=old_path,
+                                        new_path=new_path,
+                                        status_code=301),
+                                new_path)
+                    ))
+                for sd in category.seeds:
+                    old_path = url_for('seeds.seed',
+                                       cat_slug=old_slug,
+                                       cn_slug=sd.common_name.slug,
+                                       seed_slug=sd.slug)
+                    new_path = url_for('seeds.seed',
+                                       cat_slug=new_slug,
+                                       cn_slug=sd.common_name.slug,
+                                       seed_slug=sd.slug)
+                    flash(redirect_warning(
+                        old_path,
+                        '<a href="{0}" target="_blank">{1}</a>'
+                        .format(url_for('seeds.add_redirect',
+                                        old_path=old_path,
+                                        new_path=new_path,
+                                        status_code=301),
+                                new_path)
+                    ))
         if form.description.data != category.description:
             edited = True
             if form.description.data:
@@ -564,6 +694,8 @@ def edit_common_name(cn_id=None):
     if form.validate_on_submit():
         edited = False
         form_name = dbify(form.name.data)
+        old_cn_slug = cn.slug
+        new_cn_slug = ''
         if form_name != cn.name:
             cn2 = CommonName.query.filter_by(_name=form_name).first()
             if cn2 and cn2 not in cn.synonyms:
@@ -582,19 +714,36 @@ def edit_common_name(cn_id=None):
                 return redirect(url_for('seeds.edit_common_name', cn_id=cn_id))
             else:
                 if cn2 in cn.synonyms:
+                    # Safe to clear synonyms because from will replace them
                     cn.clear_synonyms()
                     db.session.commit()
                 edited = True
                 flash('Common name \'{0}\' changed to \'{1}\'.'.
                       format(cn.name, form_name))
                 cn.name = form_name
+        new_cn_slug = cn.slug
+        cats_removed = []
         for cat in list(cn.categories):
             if cat.id not in form.categories.data:
+                cats_removed.append(cat)
                 edited = True
                 flash('\'{0}\' removed from categories associated with {1}.'.
                       format(cat.name, cn.name))
                 cn.categories.remove(cat)
+                for sd in cn.seeds:
+                    if cat in sd.categories:
+                        sd.categories.remove(cat)
+                        flash(Markup(
+                            'Warning: the category \'{0}\' has also been '
+                            'removed from the seed \'{1}\'. You may wish to '
+                            '<a href="{2}" target="_blank">edit {1}</a> to '
+                            'ensure it is in the correct categories.'
+                            .format(cat.name,
+                                    sd.fullname,
+                                    url_for('seeds.edit_seed', seed_id=sd.id))
+                        ))
         cat_ids = [cat.id for cat in cn.categories]
+        cats_added = []
         for cat_id in form.categories.data:
             if cat_id not in cat_ids:
                 edited = True
@@ -602,6 +751,92 @@ def edit_common_name(cn_id=None):
                 flash('\'{0}\' added to categories associated with {1}.'
                       .format(cat.name, cn.name))
                 cn.categories.append(cat)
+                cats_added.append(cat)
+                for sd in cn.seeds:
+                    if not sd.categories:
+                        sd.categories.append(cat)
+                        flash(Markup(
+                            'Warning: the seed \'{0}\' had no categories '
+                            'associated with it, so \'{1}\' has been added to '
+                            'it to ensure it is not orphaned. You may wish to '
+                            '<a href="{2}" target="_blank">edit {0}</a> to '
+                            'ensure it is in the correct categories.'
+                            .format(sd.fullname,
+                                    cat.name,
+                                    url_for('seeds.edit_seed', seed_id=sd.id))
+                        ))
+        if cats_removed:
+            for cat in cats_removed:
+                urllist = []
+                old_path = url_for('seeds.common_name',
+                                   cat_slug=cat.slug,
+                                   cn_slug=old_cn_slug)
+                for cn_cat in cn.categories:
+                    new_path = url_for('seeds.common_name',
+                                       cat_slug=cn_cat.slug,
+                                       cn_slug=new_cn_slug)
+                    urllist.append('<a href="{0}" target="_blank">{1}</a>'
+                                   .format(url_for('seeds.add_redirect',
+                                                   old_path=old_path,
+                                                   new_path=new_path,
+                                                   status_code=301),
+                                           new_path))
+                flash(redirect_warning(old_path, list_to_or_string(urllist)))
+                for sd in cn.seeds:
+                    old_path = url_for('seeds.seed',
+                                       cat_slug=cat.slug,
+                                       cn_slug=old_cn_slug,
+                                       seed_slug=sd.slug)
+                    urllist = []
+                    for cn_cat in cn.categories:
+                        new_path = url_for('seeds.seed',
+                                           cat_slug=cn_cat.slug,
+                                           cn_slug=new_cn_slug,
+                                           seed_slug=sd.slug)
+                        urllist.append('<a href="{0}" target="_blank">{1}</a>'
+                                       .format(url_for('seeds.add_redirect',
+                                                       old_path=old_path,
+                                                       new_path=new_path,
+                                                       status_code=301),
+                                               new_path))
+                    flash(redirect_warning(old_path,
+                                           list_to_or_string(urllist)))
+        if new_cn_slug != old_cn_slug:
+            for cat in cn.categories:
+                if cat not in cats_added:
+                    old_path = url_for('seeds.common_name',
+                                       cat_slug=cat.slug,
+                                       cn_slug=old_cn_slug)
+                    new_path = url_for('seeds.common_name',
+                                       cat_slug=cat.slug,
+                                       cn_slug=new_cn_slug)
+                    flash(redirect_warning(
+                        old_path,
+                        '<a href="{0}" target="_blank">{1}</a>'
+                        .format(url_for('seeds.add_redirect',
+                                        old_path=old_path,
+                                        new_path=new_path,
+                                        status_code=301),
+                                new_path)
+                    ))
+                    for sd in cn.seeds:
+                        old_path = url_for('seeds.seed',
+                                           cat_slug=cat.slug,
+                                           cn_slug=old_cn_slug,
+                                           seed_slug=sd.slug)
+                        new_path = url_for('seeds.seed',
+                                           cat_slug=cat.slug,
+                                           cn_slug=new_cn_slug,
+                                           seed_slug=sd.slug)
+                        flash(redirect_warning(
+                            old_path,
+                            '<a href="{0}" target="_blank">{1}</a>'
+                            .format(url_for('seeds.add_redirect',
+                                            old_path=old_path,
+                                            new_path=new_path,
+                                            status_code=301),
+                                    new_path)
+                        ))
         if not form.description.data:
             form.description.data = None
         if form.description.data != cn.description:
@@ -799,6 +1034,7 @@ def edit_seed(seed_id=None):
         edited = False
         form_name = dbify(form.name.data)
         sds = Seed.query.filter_by(_name=form_name).all()
+        old_sd_slug = seed.slug
         for sd in sds:
                 if sd.syn_only:
                     flash('Error: \'{0}\' is already being used as a synonym '
@@ -819,6 +1055,8 @@ def edit_seed(seed_id=None):
             flash('Changed seed name from \'{0}\' to \'{1}\''.
                   format(seed.name, form_name))
             seed.name = form_name
+        new_sd_slug = seed.slug
+        old_cn_slug = seed.common_name.slug
         if not seed.common_name or \
                 form.common_name.data != seed.common_name.id:
             edited = True
@@ -826,6 +1064,7 @@ def edit_seed(seed_id=None):
             flash('Changed common name to \'{0}\' for: {1}'.
                   format(cn.name, seed.fullname))
             seed.common_name = CommonName.query.get(form.common_name.data)
+        new_cn_slug = seed.common_name.slug
         if form.botanical_name.data:
             if not seed.botanical_name or\
                     form.botanical_name.data != seed.botanical_name.id:
@@ -839,12 +1078,15 @@ def edit_seed(seed_id=None):
             seed.botanical_name = None
             flash('Botanical name for \'{0}\' has been removed.'
                   .format(seed.fullname))
-        for cat in seed.categories:
+        cats_removed = []
+        for cat in list(seed.categories):
             if cat.id not in form.categories.data:
                 edited = True
                 flash('Removed category \'{0}\' from: {1}'.
                       format(cat.name, seed.fullname))
                 seed.categories.remove(cat)
+                cats_removed.append(cat)
+        cats_added = []
         for cat_id in form.categories.data:
             if cat_id not in [cat.id for cat in seed.categories]:
                 edited = True
@@ -852,6 +1094,46 @@ def edit_seed(seed_id=None):
                 flash('Added category \'{0}\' to: {1}'.
                       format(cat.name, seed.fullname))
                 seed.categories.append(cat)
+                cats_added.append(cat)
+        if cats_removed:
+            for cat in cats_removed:
+                old_path = url_for('seeds.seed',
+                                   cat_slug=cat.slug,
+                                   cn_slug=old_cn_slug,
+                                   seed_slug=old_sd_slug)
+                urllist = []
+                for ct in seed.categories:
+                    new_path = url_for('seeds.seed',
+                                       cat_slug=ct.slug,
+                                       cn_slug=new_cn_slug,
+                                       seed_slug=new_sd_slug)
+                    urllist.append('<a href="{0}" target="_blank">{1}</a>'
+                                   .format(url_for('seeds.add_redirect',
+                                                   old_path=old_path,
+                                                   new_path=new_path,
+                                                   status_code=301),
+                                           new_path))
+                flash(redirect_warning(old_path, list_to_or_string(urllist)))
+        if old_sd_slug != new_sd_slug or old_cn_slug != new_cn_slug:
+            for cat in seed.categories:
+                if cat not in cats_added:
+                    old_path = url_for('seeds.seed',
+                                       cat_slug=cat.slug,
+                                       cn_slug=old_cn_slug,
+                                       seed_slug=old_sd_slug)
+                    new_path = url_for('seeds.seed',
+                                       cat_slug=cat.slug,
+                                       cn_slug=new_cn_slug,
+                                       seed_slug=new_sd_slug)
+                    flash(redirect_warning(
+                        old_path,
+                        '<a href="{0} target="_blank">{1}</a>'
+                        .format(url_for('seeds.add_redirect',
+                                        old_path=old_path,
+                                        new_path=new_path,
+                                        status_code=301),
+                                new_path)
+                    ))
         if not form.description.data:
             form.description.data = None
         if form.description.data != seed.description:
@@ -1114,7 +1396,10 @@ def index():
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
 def manage():
-    return render_template('seeds/manage.html')
+    pending = Pending(current_app.config.get('PENDING_FILE'))
+    if pending.exists():
+        pending.load()
+    return render_template('seeds/manage.html', pending=pending)
 
 
 @seeds.route('/remove_botanical_name', methods=['GET', 'POST'])
@@ -1176,16 +1461,54 @@ def remove_category(cat_id=None):
     form.set_move_to(cat_id)
     if form.validate_on_submit():
         if form.verify_removal.data:
+            old_cat_slug = category.slug
             cat2 = Category.query.get(form.move_to.data)
+            new_cat_slug = cat2.slug
             flash('Common names and seeds formerly associated with \'{0}\' '
                   'are now associated with \'{1}\'.'
                   .format(category.name, cat2.name))
+            old_path = url_for('seeds.category',
+                               cat_slug=old_cat_slug)
+            new_path = url_for('seeds.category',
+                               cat_slug=old_cat_slug)
             for cn in category.common_names:
                 if cn not in cat2.common_names:
                     cat2.common_names.append(cn)
+                old_path = url_for('seeds.common_name',
+                                   cat_slug=old_cat_slug,
+                                   cn_slug=cn.slug)
+                new_path = url_for('seeds.common_name',
+                                   cat_slug=new_cat_slug,
+                                   cn_slug=cn.slug)
+                flash(redirect_warning(
+                    old_path,
+                    '<a href="{0}" target="_blank">{1}</a>'
+                    .format(url_for('seeds.add_redirect',
+                                    old_path=old_path,
+                                    new_path=new_path,
+                                    status_code=302),
+                            new_path)
+                ))
             for sd in category.seeds:
                 if sd not in cat2.seeds:
                     cat2.seeds.append(sd)
+                    old_path = url_for('seeds.seed',
+                                       cat_slug=old_cat_slug,
+                                       cn_slug=sd.common_name.slug,
+                                       seed_slug=sd.slug)
+                    new_path = url_for('seeds.seed',
+                                       cat_slug=new_cat_slug,
+                                       cn_slug=sd.common_name.slug,
+                                       seed_slug=sd.slug)
+                    flash(redirect_warning(
+                        old_path,
+                        '<a href="{0}" target="_blank">{1}</a>'
+                        .format(url_for('seeds.add_redirect',
+                                        old_path=old_path,
+                                        new_path=new_path,
+                                        status_code=301),
+                                new_path)
+                    ))
             flash('The category \'{1}\' has been removed from the database.'.
                   format(category.id, category.name))
             db.session.delete(category)
@@ -1223,17 +1546,35 @@ def remove_common_name(cn_id=None):
     form.set_move_to(cn_id)
     if form.validate_on_submit():
         if form.verify_removal.data:
+            old_cn_slug = cn.slug
             if cn.synonyms:
                 cn.clear_synonyms()
                 flash('Synonyms for \'{0}\' cleared, and orphaned synonyms '
                       'have been deleted.'.format(cn.name))
             cn2 = CommonName.query.get(form.move_to.data)
+            new_cn_slug = cn2.slug
+            for cat in cn.categories:
+                old_path = url_for('seeds.common_name',
+                                   cat_slug=cat.slug,
+                                   cn_slug=old_cn_slug)
+                urllist = []
+                for cat2 in cn2.categories:
+                    new_path = url_for('seeds.common_name',
+                                       cat_slug=cat2.slug,
+                                       cn_slug=new_cn_slug)
+                    urllist.append('<a href="{0}" target="_blank">{1}</a>'
+                                   .format(url_for('seeds.add_redirect',
+                                                   old_path=old_path,
+                                                   new_path=new_path,
+                                                   status_code=301),
+                                           new_path))
+                flash(redirect_warning(old_path, list_to_or_string(urllist)))
             flash('Botanical names and seeds formerly associated with \'{0}\' '
                   'are now associated with \'{1}\'.'.format(cn.name, cn2.name))
             for bn in cn.botanical_names:
                 if bn not in cn2.botanical_names:
                     cn2.botanical_names.append(bn)
-            for sd in cn.seeds:
+            for sd in list(cn.seeds):
                 if sd not in cn2.seeds:
                     new_fullname = '{0} {1}'.format(sd.name, cn2.name)
                     fns = [seed.fullname for seed in cn2.seeds]
@@ -1252,6 +1593,27 @@ def remove_common_name(cn_id=None):
                                            rem_url)))
                     else:
                         cn2.seeds.append(sd)
+                        for cat in cn.categories:
+                            old_path = url_for('seeds.seed',
+                                               cat_slug=cat.slug,
+                                               cn_slug=old_cn_slug,
+                                               seed_slug=sd.slug)
+                            urllist = []
+                            for cat2 in cn2.categories:
+                                new_path = url_for('seeds.seed',
+                                                   cat_slug=cat2.slug,
+                                                   cn_slug=new_cn_slug,
+                                                   seed_slug=sd.slug)
+                                urllist.append(
+                                    '<a href="{0}" target="_blank">{1}</a>'
+                                    .format(url_for('seeds.add_redirect',
+                                                    old_path=old_path,
+                                                    new_path=new_path,
+                                                    status_code=301),
+                                            new_path)
+                                )
+                            flash(redirect_warning(old_path,
+                                                   list_to_or_string(urllist)))
             flash('Common name {0}: \'{1}\' has been removed from the '
                   'database.'.format(cn.id, cn.name))
             db.session.delete(cn)
@@ -1374,6 +1736,20 @@ def remove_seed(seed_id=None):
                 seed.clear_synonyms()
             flash('The seed \'{0}\' has been deleted. Forever. I hope you\'re '
                   'happy with yourself.'.format(seed.fullname))
+            for cat in seed.categories:
+                old_path = url_for('seeds.seed',
+                                   cat_slug=cat.slug,
+                                   cn_slug=seed.common_name.slug,
+                                   seed_slug=seed.slug)
+                flash(Markup(
+                    'Warning: the path \'{0}\' is no longer valid. <a '
+                    'href="{1}" target="_blank">Click here</a> if you wish to'
+                    'add a redirect for it.'
+                    .format(old_path,
+                            url_for('seeds.add_redirect',
+                                    old_path=old_path,
+                                    status_code=301))
+                ))
             db.session.delete(seed)
             db.session.commit()
             return redirect(url_for('seeds.manage'))

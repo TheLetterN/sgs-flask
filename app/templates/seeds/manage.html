@@ -32,7 +32,8 @@
             <a href="{{ url_for('seeds.add_botanical_name') }}">Botanical Name</a>
             <a href="{{ url_for('seeds.add_series') }}">Series</a>
             <a href="{{ url_for('seeds.add_seed') }}">Seed</a>
-            <a href="{{ url_for('seeds.add_packet') }}">Packets</a>
+            <a href="{{ url_for('seeds.add_packet') }}">Packet</a>
+            <a href="{{ url_for('seeds.add_redirect') }}">Redirect</a>
             <h2>Edit:</h2>
             <a href="{{ url_for('seeds.edit_category') }}">Category</a>
             <a href="{{ url_for('seeds.edit_common_name') }}">Common Name</a>
@@ -47,4 +48,8 @@
             <a href="{{ url_for('seeds.remove_series') }}">Series</a>
             <a href="{{ url_for('seeds.remove_seed') }}">Seed</a>
             <a href="{{ url_for('seeds.remove_packet') }}">Packet</a>
+            {% if pending.changes %}
+            <h2>Changes Pending Restart of Application:</h2>
+            <div class="pending_changes">{{ pending.changes|safe }}</div>
+            {% endif %}
 {% endblock %}

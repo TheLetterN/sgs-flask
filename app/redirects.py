@@ -21,6 +21,7 @@
 
 import json
 import os
+import warnings
 from datetime import datetime
 from flask import redirect
 
@@ -129,6 +130,11 @@ class Redirect(object):
             raise TypeError('date_created should either be a datetime object, '
                             'or None')
 
+    def message(self):
+        """Return a string containing a message describing this redirect."""
+        return 'Redirect from {0} to {1} with status code {2}'\
+            .format(self.old_path, self.new_path, self.status_code)
+
     def redirect_path(self):
         """Return a redirect to the new path."""
         return redirect(self.new_path, self.status_code)
@@ -181,9 +187,17 @@ class RedirectsFile(object):
                 raise ValueError('A redirect already exists from \'{0}\'. If '
                                  'you want to replace it, please remove the '
                                  'old redirect first.'.format(rd.old_path))
+            for redir in self.redirects:
+                # Do not create circular redirects
+                if rd.old_path == redir.new_path and\
+                        rd.new_path == redir.old_path:
+                    self.redirects.remove(redir)
+                warnings.warn('A redirect from {0} to {1} was removed to '
+                              'prevent a circular redirect.'
+                              .format(redir.old_path, redir.new_path), Warning)
             self.redirects.append(rd)
         else:
-            return TypeError('add_redirect can only take Redirect objects!')
+            raise TypeError('add_redirect can only take Redirect objects!')
 
     def remove_redirect(self, rd):
         """Remove a redirect object from the file."""

@@ -21,6 +21,8 @@
     {% for message in messages %}
         {% if 'Error:' in message %}
         <div class="flashed_error">{{ message }}</div>
+        {% elif 'Warning:' in message %}
+        <div class="flashed_warning">{{ message }}</div>
         {% else %}
         <div class="flashed_message">{{ message }}</div>
         {% endif %}

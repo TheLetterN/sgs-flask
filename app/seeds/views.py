@@ -437,7 +437,7 @@ def add_seed():
 def add_series():
     """Add a series to the database."""
     form = AddSeriesForm()
-    form.set_common_names()
+    form.set_common_name()
     if form.validate_on_submit():
         series = Series()
         db.session.add(series)

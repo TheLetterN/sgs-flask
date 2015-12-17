@@ -29,6 +29,8 @@ class Pending(object):
         self.changes = ''
 
     def add_message(self, change):
+        if self.changes:
+            self.changes += '\n'
         self.changes += change
 
     def clear(self):

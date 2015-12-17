@@ -1,17 +1,23 @@
+from unittest import mock
 import pytest
 from wtforms import ValidationError
 from app.seeds.forms import (
     AddBotanicalNameForm,
     AddCommonNameForm,
     AddPacketForm,
+    AddRedirectForm,
     AddSeedForm,
     EditBotanicalNameForm,
     EditCategoryForm,
     EditCommonNameForm,
+    EditSeedForm,
     NotSpace,
+    ReplaceMe,
+    RRPath,
     USDollar
 )
-from app.seeds.models import BotanicalName, Category, CommonName
+from app.redirects import Redirect, RedirectsFile
+from app.seeds.models import BotanicalName, Category, CommonName, Seed, Series
 from tests.conftest import app  # noqa
 
 
@@ -32,6 +38,35 @@ class TestValidators:
         with pytest.raises(ValidationError):
             form.name.data = '\t'
             ns.__call__(form, form.name)
+
+    def test_replaceme(self):
+        """Raise ValidationError if field data contains < and >."""
+        form = AddRedirectForm()
+        form.old_path.data = '/path/to/redirect'
+        rm = ReplaceMe()
+        rm.__call__(form, form.old_path)
+        form.old_path.data = '/path/to/<replace me>'
+        with pytest.raises(ValidationError):
+            rm.__call__(form, form.old_path)
+        form.old_path.data = '/<replace>/to/redirect'
+        with pytest.raises(ValidationError):
+            rm.__call__(form, form.old_path)
+        form.old_path.data = '/path/<replace this>/redirect'
+        with pytest.raises(ValidationError):
+            rm.__call__(form, form.old_path)
+
+    def test_rrpath(self):
+        """Raise ValidationError if field data does not begin with /."""
+        form = AddRedirectForm()
+        form.old_path.data = '/path/to/redirect'
+        rr = RRPath()
+        rr.__call__(form, form.old_path)
+        form.old_path.data = '\\windows\\style\\path'
+        with pytest.raises(ValidationError):
+            rr.__call__(form, form.old_path)
+        form.old_path.data = 'relative/path'
+        with pytest.raises(ValidationError):
+            rr.__call__(form, form.old_path)
 
     def test_usdollar(self, app):
         """Raise validation error if value can't be converted to USD."""
@@ -64,9 +99,10 @@ class TestAddBotanicalNameForm:
         form.synonyms.data = 'Digitalis watchus, Digitalis purpurea'
         with pytest.raises(ValidationError):
             form.validate_synonyms(form.synonyms)
-        form.synonyms.data = 'Digitalis watchus, He just spoke in one long'\
-                             'incredibly unbroken sentence moving from topic'\
-                             'to topic it was quite hypnotic'
+        form.synonyms.data = 'Digitalis watchus, He just kept talking in one '\
+                             'long incredibly unbroken sentence moving from '\
+                             'topic to topic so that no one had a chance to '\
+                             'interrupt'
         with pytest.raises(ValidationError):
             form.validate_synonyms(form.synonyms)
         form.synonyms.data = 'Digitalis watchus, Digitalis Walrus'
@@ -114,6 +150,39 @@ class TestAddPacketForm:
             form.validate_quantity(form.quantity)
 
 
+class TestAddRedirectForm:
+    """Test custom methods of AddRedirectForm."""
+    def test_validate_old_path(self):
+        """Raise ValidationError if a redirect from old_path exists."""
+        with mock.patch('app.seeds.forms.RedirectsFile') as mock_rdf:
+            mock_rdf.exists.return_value = True
+            rd1 = Redirect('/one', '/two', 302)
+            rd2 = Redirect('/three', '/four', 302)
+            rdf = mock.Mock(redirects=[rd1, rd2])
+            mock_rdf.return_value = rdf
+            form = AddRedirectForm()
+            form.old_path.data = '/five'
+            form.validate_old_path(form.old_path)
+            form.old_path.data = '/three'
+            with pytest.raises(ValidationError):
+                form.validate_old_path(form.old_path)
+
+    def test_validate_new_path(self):
+        """Raise ValidationError if new path points to another redirect."""
+        with mock.patch('app.seeds.forms.RedirectsFile') as mock_rdf:
+            mock_rdf.exists.return_value = True
+            rd1 = Redirect('/one', '/two', 302)
+            rd2 = Redirect('/three', '/four', 302)
+            rdf = mock.Mock(redirects=[rd1, rd2])
+            mock_rdf.return_value = rdf
+            form = AddRedirectForm()
+            form.new_path.data = '/five'
+            form.validate_new_path(form.new_path)
+            form.new_path.data = '/three'
+            with pytest.raises(ValidationError):
+                form.validate_new_path(form.new_path)
+
+
 class TestAddSeedForm:
     """Test custom methods of AddSeedForm."""
     def test_validate_synonyms(self, app):
@@ -138,9 +207,55 @@ class TestEditBotanicalNameForm:
         """Populate form from a BotanicalName object."""
         bn = BotanicalName()
         bn.name = 'Asclepias incarnata'
+        bns = BotanicalName()
+        bns.name = 'Innagada davida'
+        bn.synonyms.append(bns)
         form = EditBotanicalNameForm()
         form.populate(bn)
         assert form.name.data == bn.name
+        assert form.synonyms.data == 'Innagada davida'
+
+    def test_validate_name(self):
+        """Raise ValidationError if name doesn't appear to be a binomen."""
+        form = EditBotanicalNameForm()
+        form.name.data = 'Digitalis purpurea'
+        form.validate_name(form.name)
+        form.name.data = 'digitalis watchus'
+        with pytest.raises(ValidationError):
+            form.validate_name(form.name)
+
+    def test_validate_synonyms_same_as_name(self):
+        """Raise ValidationError if any synonyms same as name."""
+        form = EditBotanicalNameForm()
+        form.name.data = 'Digitalis purpurea'
+        form.synonyms.data = 'Digitalis watchus, Innagada davida'
+        form.validate_synonyms(form.synonyms)
+        form.synonyms.data = 'Digitalis purpurea, Digitalis watchus'
+        with pytest.raises(ValidationError):
+            form.validate_synonyms(form.synonyms)
+
+    def test_validate_synonyms_too_long(self):
+        """Raise ValidationError if any synonyms are too long."""
+        form = EditBotanicalNameForm()
+        form.name.data = 'Digitalis purpurea'
+        form.synonyms.data = 'Digitalis watchus, Innagada davida'
+        form.validate_synonyms(form.synonyms)
+        form.synonyms.data = 'Digitalis watchus, He just kept talking in one '\
+                             'long incredibly unbroken sentence moving from '\
+                             'topic to topic so that no one had a chance to '\
+                             'interrupt'
+        with pytest.raises(ValidationError):
+            form.validate_synonyms(form.synonyms)
+
+    def test_validate_synonyms(self):
+        """Raise ValidationError if any synonyms are not valid binomen."""
+        form = EditBotanicalNameForm()
+        form.name.data = 'Digitalis purpurea'
+        form.synonyms.data = 'Digitalis watchus, Innagada davida'
+        form.validate_synonyms(form.synonyms)
+        form.synonyms.data = 'Digitalis watchus, innagada davida'
+        with pytest.raises(ValidationError):
+            form.validate_synonyms(form.synonyms)
 
 
 class TestEditCategoryForm:
@@ -161,9 +276,99 @@ class TestEditCommonNameForm:
     def test_populate(self, app):
         """Populate form from CommonName object."""
         cn = CommonName()
-        cn.name = 'Coleus'
+        cn.id = 1
+        cn.name = 'Dwarf Coleus'
+        cat = Category()
+        cat.id = 1
+        cat.name = 'Perennial Flower'
+        cn.categories.append(cat)
+        cnp = CommonName()
+        cnp.id = 2
+        cnp.name = 'Coleus'
+        cn.parent = cnp
+        cns = CommonName()
+        cns.name = 'Vertically Challenged Coleus'
+        cn.synonyms.append(cns)
+        gwcn = CommonName()
+        gwcn.id = 3
+        gwcn.name = 'Foxglove'
+        cn.gw_common_names.append(gwcn)
+        gwsd = Seed()
+        gwsd.name = 'Foxy'
+        gwsd.id = 1
+        cn.gw_seeds.append(gwsd)
         cn.description = 'Not mint.'
         form = EditCommonNameForm()
         form.populate(cn)
-        assert cn.name == form.name.data
-        assert cn.description == form.description.data
+        assert form.name.data == cn.name
+        assert form.description.data == cn.description
+        assert form.synonyms.data == cns.name
+        assert cat.id in form.categories.data
+        assert gwcn.id in form.gw_common_names.data
+        assert gwsd.id in form.gw_seeds.data
+
+    def test_validate_synonyms_same_as_name(self):
+        """Raise ValidationError if a synonym is the same as name."""
+        form = EditCommonNameForm()
+        form.name.data = 'Foxglove'
+        form.synonyms.data = 'Digitalis'
+        form.validate_synonyms(form.synonyms)
+        form.synonyms.data = 'Digitalis, Foxglove'
+        with pytest.raises(ValidationError):
+            form.validate_synonyms(form.synonyms)
+
+    def test_validate_synonyms_too_long(self):
+        """Raise ValidationError if any synonyms are too long."""
+        form = EditCommonNameForm()
+        form.name.data = 'Foxglove'
+        form.synonyms.data = 'Digitalis'
+        form.validate_synonyms(form.synonyms)
+        form.synonyms.data = 'Digitalis, He just kept talking in one long '\
+                             'incredibly unbroken sentence moving from topic '\
+                             'to topic so that no one had a chance to '\
+                             'interrupt'
+        with pytest.raises(ValidationError):
+            form.validate_synonyms(form.synonyms)
+
+class TestEditSeedForm:
+    """Test custom methods for EditSeedForm."""
+    def test_populate(self):
+        """Populate form with values from a Seed."""
+        form = EditSeedForm()
+        sd = Seed(name='Foxy', description='Like Hendrix!')
+        sd.id = 1
+        bn = BotanicalName(name='Digitalis purpurea')
+        bn.id = 2
+        sd.botanical_name = bn
+        cat = Category(name='Perennial Flower')
+        cat.id = 3
+        sd.categories.append(cat)
+        cn = CommonName(name='Foxglove')
+        cn.id = 4
+        sd.common_name = cn
+        sd.in_stock = True
+        sd.dropped = True
+        gwcn = CommonName(name='Butterfly Weed')
+        gwcn.id = 5
+        sd.gw_common_names.append(gwcn)
+        gwsd = Seed(name='Soulmate')
+        gwsd.common_name = gwcn
+        gwsd.id = 6
+        sd.gw_seeds.append(gwsd)
+        series = Series(name='Spotty')
+        series.id = 7
+        sd.series = series
+        sdsyn = Seed(name='Fauxy')
+        sdsyn.id = 8
+        sd.synonyms.append(sdsyn)
+        form.populate(sd)
+        assert form.name.data == 'Foxy'
+        assert form.description.data == 'Like Hendrix!'
+        assert cat.id in form.categories.data
+        assert form.common_name.data == cn.id
+        assert form.in_stock.data
+        assert form.dropped.data
+        assert gwcn.id in form.gw_common_names.data
+        assert gwsd.id in form.gw_seeds.data
+        assert form.series.data == series.id
+        assert form.synonyms.data == 'Fauxy'

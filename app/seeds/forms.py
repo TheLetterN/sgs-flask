@@ -17,7 +17,7 @@
 
 from decimal import Decimal
 from titlecase import titlecase
-from flask import Markup, url_for
+from flask import current_app, Markup, url_for
 from werkzeug import secure_filename
 from flask.ext.wtf import Form
 from flask.ext.wtf.file import FileAllowed, FileField
@@ -32,6 +32,7 @@ from wtforms import (
 )
 from wtforms.validators import DataRequired, Length
 from app import dbify
+from app.redirects import Redirect, RedirectsFile
 from .models import (
     BotanicalName,
     Category,
@@ -472,6 +473,38 @@ class AddRedirectForm(Form):
                               default=302)
     submit = SubmitField('Add Redirect')
 
+    def validate_old_path(self, field):
+        """Raise a ValidationError if a redirect from old_path exists."""
+        rdf = RedirectsFile(current_app.config.get('REDIRECTS_FILE'))
+        if rdf.exists():
+            rdf.load()
+            old_paths = [rd.old_path for rd in rdf.redirects]
+            if field.data in old_paths:
+                old_rd = rdf.get_redirect_with_old_path(field.data)
+                raise ValidationError('\'{0}\' is already being redirected to '
+                                      '\'{1}\'!'.format(old_rd.old_path,
+                                                        old_rd.new_path))
+
+    def validate_new_path(self, field):
+        """Raise a ValidationError if new path points to another redirect."""
+        rdf = RedirectsFile(current_app.config.get('REDIRECTS_FILE'))
+        if rdf.exists():
+            rdf.load()
+            old_paths = [rd.old_path for rd in rdf.redirects]
+            if field.data in old_paths:
+                old_rd = rdf.get_redirect_with_old_path(field.data)
+                rd_url = url_for('seeds.add_redirect',
+                                 old_path=self.old_path.data,
+                                 new_path=old_rd.new_path,
+                                 status_code=self.status_code.data)
+                raise ValidationError(Markup(
+                    'The path \'{0}\' is being redirected to \'{1}\'. You '
+                    'may wish to <a href="{2}" target="_blank">add a redirect '
+                    'from \'{3}\' to \'{1}\'</a> instead.'
+                    .format(field.data,
+                            old_rd.new_path,
+                            rd_url,
+                            self.old_path.data)))
 
 class AddSeedForm(Form):
     """Form for adding a new seed to the database.
@@ -619,8 +652,8 @@ class AddSeriesForm(Form):
     name = StringField('Series Name', validators=[Length(1, 64), NotSpace()])
     submit = SubmitField('Add Series')
 
-    def set_common_names(self):
-        """Set common names choices with common names from db."""
+    def set_common_name(self):
+        """Set common name choices with common names from db."""
         self.common_name.choices = common_name_select_list()
 
     def validate_name(self, field):

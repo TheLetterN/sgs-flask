@@ -445,15 +445,15 @@ class Category(db.Model):
                             backref='categories')
     slug = db.Column(db.String(64), unique=True)
 
-    def __init__(self, cat_name=None, description=None):
+    def __init__(self, name=None, description=None):
         """Construct an instance of Category.
 
         Args:
-            cat_name (Optional[str]): A category name.
+            name (Optional[str]): A category name.
             description (Optional[str]): A description for this category.
                 This should be in raw HTML to allow for special formatting.
         """
-        self.name = cat_name
+        self.name = name
         self.description = description
 
     def __repr__(self):
@@ -1103,6 +1103,10 @@ class Seed(db.Model):
     __table_args__ = (db.UniqueConstraint('_name',
                                           'common_name_id',
                                           name='_name_common_name_uc'),)
+
+    def __init__(self, name=None, description=None):
+        self.name = name
+        self.description = description
 
     def __repr__(self):
         """Return representation of Seed in human-readable format."""

@@ -21,9 +21,13 @@
 
 import json
 import os
-import warnings
 from datetime import datetime
 from flask import redirect
+
+
+def utcnow():
+    """Use this instead of datetime.utcnow for patchability in tests."""
+    return datetime.utcnow()
 
 
 class Redirect(object):
@@ -123,7 +127,7 @@ class Redirect(object):
     @date_created.setter
     def date_created(self, date):
         if date is None:
-            self._date_created = datetime.utcnow()
+            self._date_created = utcnow()
         elif isinstance(date, datetime):
             self._date_created = date
         else:
@@ -179,22 +183,32 @@ class RedirectsFile(object):
         self.file_name = file_name
         self.redirects = []
 
+    def __repr__(self):
+        return '<{0} \'{1}\'>'.format(self.__class__.__name__, self.file_name)
+
     def add_redirect(self, rd):
         """Add a Redirect object to the file."""
         if isinstance(rd, Redirect):
             old_paths = [rd.old_path for rd in self.redirects]
-            if rd.old_path in old_paths:
-                raise ValueError('A redirect already exists from \'{0}\'. If '
-                                 'you want to replace it, please remove the '
-                                 'old redirect first.'.format(rd.old_path))
             for redir in self.redirects:
-                # Do not create circular redirects
-                if rd.old_path == redir.new_path and\
-                        rd.new_path == redir.old_path:
-                    self.redirects.remove(redir)
-                warnings.warn('A redirect from {0} to {1} was removed to '
-                              'prevent a circular redirect.'
-                              .format(redir.old_path, redir.new_path), Warning)
+                if rd.old_path == redir.old_path:
+                    raise ValueError('A redirect already exists from \'{0}\'. '
+                                     'If you want to replace it, please '
+                                     'remove the old redirect first.'
+                                     .format(rd.old_path))
+                if rd.new_path == redir.old_path:
+                    raise ValueError('You are trying to add a redirect to '
+                                     '{0}, but a redirect from {1} to {2} '
+                                     'already exists. You may wish to add a '
+                                     'redirect from {3} to {2} instead.'
+                                     .format(rd.new_path,
+                                             redir.old_path,
+                                             redir.new_path,
+                                             rd.old_path))
+                if rd.old_path == redir.new_path:
+                    # Don't create redirect chains, edit old redirects to
+                    # new destinations if applicable.
+                    redir.new_path = rd.new_path
             self.redirects.append(rd)
         else:
             raise TypeError('add_redirect can only take Redirect objects!')
@@ -219,17 +233,31 @@ class RedirectsFile(object):
         return None
 
     def load(self, file_name=None):
+        """Load specified file, or self.file_name."""
         if file_name is None:
             file_name = self.file_name
-        with open(file_name, 'r', encoding='utf-8') as inf:
-            json_rds = json.loads(inf.read())
+        with open(file_name, 'r', encoding='utf-8') as ifile:
+            self.load_file(ifile)
+
+    def load_file(self, ifile):
+        """Load JSON data from a file-like object."""
+        json_rds = json.loads(ifile.read())
         self.redirects = [Redirect.from_JSON(rd) for rd in json_rds]
 
     def save(self, file_name=None):
+        """Save specified file, or self.file_name.
+        
+        Raises:
+            ValueError: if there are no redirects to save.
+        """
         if file_name is None:
             file_name = self.file_name
         if self.redirects:
-            with open(file_name, 'w', encoding='utf-8') as outf:
-                outf.write(json.dumps([rd.to_JSON() for rd in self.redirects]))
+            with open(file_name, 'w', encoding='utf-8') as ofile:
+                self.save_file(ofile)
         else:
             raise ValueError('There are no redirects to be saved!')
+
+    def save_file(self, ofile):
+        """Save JSON string to output file."""
+        ofile.write(json.dumps([rd.to_JSON() for rd in self.redirects]))

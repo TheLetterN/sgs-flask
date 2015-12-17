@@ -8,6 +8,7 @@ from app.seeds.forms import (
     AddCommonNameForm,
     AddPacketForm,
     AddSeedForm,
+    AddSeriesForm,
     botanical_name_select_list,
     category_select_list,
     common_name_select_list,
@@ -32,7 +33,8 @@ from app.seeds.models import (
     Image,
     Packet,
     Quantity,
-    Seed
+    Seed,
+    Series
 )
 from tests.conftest import app, db  # noqa
 
@@ -392,6 +394,37 @@ class TestAddSeedFormWithDB:
             form.validate_thumbnail(form.thumbnail)
 
 
+class TestAddSeriesForm:
+    """Test custom methods of AddSeriesForm."""
+    def test_set_common_name(self, db):
+        cn1 = CommonName()
+        cn2 = CommonName()
+        cn3 = CommonName()
+        db.session.add_all([cn1, cn2, cn3])
+        cn1.name = 'Coleus'
+        cn2.name = 'Sunflower'
+        cn3.name = 'Zinnia'
+        db.session.commit()
+        form = AddSeriesForm()
+        form.set_common_name()
+        assert (cn1.id, cn1.name) in form.common_name.choices
+        assert (cn2.id, cn2.name) in form.common_name.choices
+        assert (cn3.id, cn3.name) in form.common_name.choices
+
+    def test_validate_name(self, db):
+        series = Series()
+        series.name = 'Polkadot'
+        db.session.add(series)
+        db.session.commit()
+        form = AddSeriesForm()
+        form.name.data = 'Dalmatian'
+        form.validate_name(form.name)
+        form.name.data = 'Polkadot'
+        with pytest.raises(ValidationError):
+            form.validate_name(form.name)
+
+
+
 class TestEditBotanicalNameFormWithDB:
     """Test custom methods of EditBotanicalNameForm."""
     def test_set_common_name(self, db):
@@ -483,35 +516,6 @@ class TestEditPacketFormWithDB:
 
 class TestEditSeedFormWithDB:
     """Test custom methods of EditSeedForm."""
-    def test_populate(self, db):
-        """Populate form fields with data from a seed object."""
-        seed = Seed()
-        bn = BotanicalName()
-        cn = CommonName()
-        cat = Category()
-        db.session.add_all([seed, bn, cn, cat])
-        seed.name = 'Foxy'
-        seed.description = 'Like that Hendrix song.'
-        seed.in_stock = True
-        seed.dropped = True
-        bn.name = 'Digitalis purpurea'
-        cn.name = 'Foxglove'
-        cat.name = 'Perennial Flower'
-        seed.botanical_name = bn
-        seed.categories.append(cat)
-        seed.common_name = cn
-        db.session.commit()
-        form = EditSeedForm()
-        form.set_selects()
-        form.populate(seed)
-        assert bn.id == form.botanical_name.data
-        assert cat.id in form.categories.data
-        assert cn.id == form.common_name.data
-        assert seed.name in form.name.data
-        assert seed.description in form.description.data
-        assert form.in_stock.data
-        assert form.dropped.data
-
     def test_set_selects(self, db):
         """Set selects with values loaded from database."""
         bn = BotanicalName()
@@ -527,6 +531,22 @@ class TestEditSeedFormWithDB:
         assert (bn.id, bn.name) in form.botanical_name.choices
         assert (cn.id, cn.name) in form.common_name.choices
         assert (cat.id, cat.name) in form.categories.choices
+
+    def test_validate_categories(self, db):
+        """Raise ValidationError if categories not in selected CommonName."""
+        cat1 = Category(name='Perennial Flower')
+        cat2 = Category(name='Annual Flower')
+        cn = CommonName(name='Foxglove')
+        db.session.add_all([cat1, cat2, cn])
+        cn.categories.append(cat1)
+        db.session.commit()
+        form = EditSeedForm()
+        form.common_name.data = cn.id
+        form.categories.data = [cat1.id]
+        form.validate_categories(form.categories)
+        form.categories.data.append(cat2.id)
+        with pytest.raises(ValidationError):
+            form.validate_categories(form.categories)
 
 
 class TestSelectBotanicalFormWithDB:

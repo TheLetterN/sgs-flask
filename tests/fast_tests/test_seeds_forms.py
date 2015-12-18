@@ -11,13 +11,20 @@ from app.seeds.forms import (
     EditCategoryForm,
     EditCommonNameForm,
     EditCultivarForm,
+    EditSeriesForm,
     NotSpace,
     ReplaceMe,
     RRPath,
     USDollar
 )
-from app.redirects import Redirect, RedirectsFile
-from app.seeds.models import BotanicalName, Category, CommonName, Cultivar, Series
+from app.redirects import Redirect
+from app.seeds.models import (
+    BotanicalName,
+    Category,
+    CommonName,
+    Cultivar,
+    Series
+)
 from tests.conftest import app  # noqa
 
 
@@ -330,6 +337,7 @@ class TestEditCommonNameForm:
         with pytest.raises(ValidationError):
             form.validate_synonyms(form.synonyms)
 
+
 class TestEditCultivarForm:
     """Test custom methods for EditCultivarForm."""
     def test_populate(self):
@@ -372,3 +380,40 @@ class TestEditCultivarForm:
         assert gwcv.id in form.gw_cultivars.data
         assert form.series.data == series.id
         assert form.synonyms.data == 'Fauxy'
+
+    def test_validate_synonyms_same_name(self):
+        """Raise ValidationError if any synonym same as name."""
+        form = EditCultivarForm()
+        form.name.data = 'Foxy'
+        form.synonyms.data = 'Fauxy, Fawksy'
+        form.validate_synonyms(form.synonyms)
+        form.synonyms.data = 'Fauxy, Fawksy, Foxy'
+        with pytest.raises(ValidationError):
+            form.validate_synonyms(form.synonyms)
+
+    def test_validate_synonyms_too_long(self):
+        """Raise ValidationError if any synonym is too long."""
+        form = EditCultivarForm()
+        form.name.data = 'Foxy'
+        form.synonyms.data = 'Fauxy, Fawksy'
+        form.validate_synonyms(form.synonyms)
+        form.synonyms.data = 'Fauxy, He just kept talking in one long '\
+                             'incredibly unbroken sentence moving from topic '\
+                             'to topic so that no one had a chance to '\
+                             'interrupt.'
+        with pytest.raises(ValidationError):
+            form.validate_synonyms(form.synonyms)
+
+
+class TestEditSeriesForm:
+    """Test custom methods in EditSeriesForm."""
+    def test_populate(self):
+        """Populate form with information from a Series object."""
+        form = EditSeriesForm()
+        series = Series(name='Polkadot', description='A bit spotty.')
+        series.common_name = CommonName('Foxglove')
+        series.common_name.id = 1
+        form.populate(series)
+        assert form.name.data == 'Polkadot'
+        assert form.common_name.data == 1
+        assert form.description.data == 'A bit spotty.'

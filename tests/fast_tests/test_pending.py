@@ -1,13 +1,13 @@
 from unittest import mock
-import pytest
 from app.pending import Pending
+
 
 class TestPending:
     """Contains tests for the pending module."""
 
     def test_add_message(self):
         """Adding a message should concatenate message to changes.
-        
+
         It should also add a newline before new data if previous data exists.
         """
         pd = Pending('/tmp/foo.txt')

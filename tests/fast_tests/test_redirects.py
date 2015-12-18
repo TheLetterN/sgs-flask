@@ -1,10 +1,10 @@
 import json
 from io import StringIO
-from datetime import datetime, timedelta
+from datetime import datetime
 from unittest import mock
 import pytest
 from app.redirects import Redirect, RedirectsFile
-from tests.conftest import app
+from tests.conftest import app  # noqa
 
 
 class TestRedirect:
@@ -129,7 +129,7 @@ class TestRedirect:
     def test_add_to_app(self, app):
         """Add a url_rule for redirect to given app."""
         rd = Redirect('/old/path', '/new/path', 302)
-        with app.test_client() as tc:
+        with app.test_client():
             assert '/old/path' not in [rule.rule for
                                        rule in
                                        app.url_map.iter_rules()]
@@ -149,9 +149,9 @@ class TestRedirect:
 class TestRedirectsFile:
     """Test methods of RedirectsFile from the redirects module."""
     def test_repr(self):
-       """Return a string representing the redirects file."""
-       rdf = RedirectsFile('/tmp/redirects.json')
-       assert rdf.__repr__() == '<RedirectsFile \'/tmp/redirects.json\'>'
+        """Return a string representing the redirects file."""
+        rdf = RedirectsFile('/tmp/redirects.json')
+        assert rdf.__repr__() == '<RedirectsFile \'/tmp/redirects.json\'>'
 
     def test_add_redirect_new_path_redirected_from(self):
         """Raise ValueError if a redirect already exists from a new path.
@@ -323,4 +323,3 @@ class TestRedirectsFile:
         rdf.save_file(json_ofile)
         json_ofile.seek(0)
         assert json_file.read() == json_ofile.read()
-

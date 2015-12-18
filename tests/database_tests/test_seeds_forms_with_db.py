@@ -15,16 +15,18 @@ from app.seeds.forms import (
     EditBotanicalNameForm,
     EditCategoryForm,
     EditCommonNameForm,
-    EditPacketForm,
     EditCultivarForm,
+    EditPacketForm,
+    EditSeriesForm,
     packet_select_list,
     cultivar_select_list,
     syn_parents_links,
     SelectBotanicalNameForm,
     SelectCategoryForm,
     SelectCommonNameForm,
+    SelectCultivarForm,
     SelectPacketForm,
-    SelectCultivarForm
+    SelectSeriesForm
 )
 from app.seeds.models import (
     BotanicalName,
@@ -185,7 +187,6 @@ class TestFunctionsWithDB:
         foo = 'woof'
         rv = syn_parents_links(foo)
         assert rv == ''
-
 
 
 class TestAddBotanicalNameFormWithDB:
@@ -424,7 +425,6 @@ class TestAddSeriesForm:
             form.validate_name(form.name)
 
 
-
 class TestEditBotanicalNameFormWithDB:
     """Test custom methods of EditBotanicalNameForm."""
     def test_set_common_name(self, db):
@@ -489,31 +489,6 @@ class TestEditCategoryFormWithDB:
         assert form.description.data == category.description
 
 
-class TestEditPacketFormWithDB:
-    """Test custom methods of EditPacketForm."""
-    def test_populate(self, db):
-        """Populate form with info from database."""
-        pkt = Packet()
-        db.session.add(pkt)
-        pkt.price = Decimal('2.99')
-        pkt.quantity = Quantity(value=100, units='seeds')
-        pkt.sku = '8675309'
-        db.session.commit()
-        form = EditPacketForm()
-        form.populate(pkt)
-        assert form.price.data == pkt.price
-        assert form.units.data == pkt.quantity.units
-        assert form.quantity.data == pkt.quantity.value
-        assert form.sku.data == pkt.sku
-
-    def test_validate_quantity(self, db):
-        """Raise a ValidationError if field.data can't be used as quantity."""
-        form = EditPacketForm()
-        form.quantity.data = 'Forty-two'
-        with pytest.raises(ValidationError):
-            form.validate_quantity(form.quantity)
-
-
 class TestEditCultivarFormWithDB:
     """Test custom methods of EditCultivarForm."""
     def test_set_selects(self, db):
@@ -547,6 +522,47 @@ class TestEditCultivarFormWithDB:
         form.categories.data.append(cat2.id)
         with pytest.raises(ValidationError):
             form.validate_categories(form.categories)
+
+
+class TestEditPacketFormWithDB:
+    """Test custom methods of EditPacketForm."""
+    def test_populate(self, db):
+        """Populate form with info from database."""
+        pkt = Packet()
+        db.session.add(pkt)
+        pkt.price = Decimal('2.99')
+        pkt.quantity = Quantity(value=100, units='seeds')
+        pkt.sku = '8675309'
+        db.session.commit()
+        form = EditPacketForm()
+        form.populate(pkt)
+        assert form.price.data == pkt.price
+        assert form.units.data == pkt.quantity.units
+        assert form.quantity.data == pkt.quantity.value
+        assert form.sku.data == pkt.sku
+
+    def test_validate_quantity(self, db):
+        """Raise a ValidationError if field.data can't be used as quantity."""
+        form = EditPacketForm()
+        form.quantity.data = 'Forty-two'
+        with pytest.raises(ValidationError):
+            form.validate_quantity(form.quantity)
+
+
+class TestEditSeriesFormWithDB:
+    """Test custom methods of EditSeriesForm."""
+    def test_set_common_name(self, db):
+        """Populate common_name select with ids from database."""
+        cn1 = CommonName(name='Foxglove')
+        cn2 = CommonName(name='Butterfly Weed')
+        cn3 = CommonName(name='Tomato')
+        db.session.add_all([cn1, cn2, cn3])
+        db.session.commit()
+        form = EditSeriesForm()
+        form.set_common_name()
+        assert (cn1.id, cn1.name) in form.common_name.choices
+        assert (cn2.id, cn2.name) in form.common_name.choices
+        assert (cn3.id, cn3.name) in form.common_name.choices
 
 
 class TestSelectBotanicalFormWithDB:
@@ -606,6 +622,25 @@ class TestSelectCommonNameFormWithDB:
         assert (cn3.id, cn3.name) in form.common_name.choices
 
 
+class TestSelectCultivarFormWithDB:
+    """Test custom methods of SelectCultivarForm."""
+    def test_set_cultivar(self, db):
+        """Set select with cultivars loaded from database."""
+        cv1 = Cultivar()
+        cv2 = Cultivar()
+        cv3 = Cultivar()
+        db.session.add_all([cv1, cv2, cv3])
+        cv1.name = 'Soulmate'
+        cv2.name = 'Tumbling Tom'
+        cv2.name = 'Foxy'
+        db.session.commit()
+        form = SelectCultivarForm()
+        form.set_cultivar()
+        assert (cv1.id, cv1.name) in form.cultivar.choices
+        assert (cv2.id, cv2.name) in form.cultivar.choices
+        assert (cv3.id, cv3.name) in form.cultivar.choices
+
+
 class TestSelectPacketFormWithDB:
     """Test custom methods of SelectPacketForm."""
     def test_set_packet(self, db):
@@ -629,20 +664,16 @@ class TestSelectPacketFormWithDB:
             form.packet.choices
 
 
-class TestSelectCultivarFormWithDB:
-    """Test custom methods of SelectCultivarForm."""
-    def test_set_cultivar(self, db):
-        """Set select with cultivars loaded from database."""
-        cv1 = Cultivar()
-        cv2 = Cultivar()
-        cv3 = Cultivar()
-        db.session.add_all([cv1, cv2, cv3])
-        cv1.name = 'Soulmate'
-        cv2.name = 'Tumbling Tom'
-        cv2.name = 'Foxy'
-        db.session.commit()
-        form = SelectCultivarForm()
-        form.set_cultivar()
-        assert (cv1.id, cv1.name) in form.cultivar.choices
-        assert (cv2.id, cv2.name) in form.cultivar.choices
-        assert (cv3.id, cv3.name) in form.cultivar.choices
+class TestSelectSeriesFormWithDB:
+    """Test custom methods of SelectSeriesForm."""
+    def test_set_series(self, db):
+        """Populate series with choices from database."""
+        s1 = Series(name='Dalmatian')
+        s2 = Series(name='Polkadot')
+        s3 = Series(name='World')
+        db.session.add_all([s1, s2, s3])
+        form = SelectSeriesForm()
+        form.set_series()
+        assert (s1.id, s1.name) in form.series.choices
+        assert (s2.id, s2.name) in form.series.choices
+        assert (s3.id, s3.name) in form.series.choices

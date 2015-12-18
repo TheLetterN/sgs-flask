@@ -840,51 +840,6 @@ class EditCommonNameForm(Form):
                                           'of 64 characters long!')
 
 
-class EditPacketForm(Form):
-    """Form for adding a packet to a cultivar.
-
-    Attributes:
-        price (StringField): Field for price in US Dollars.
-        quantity (StringField): Field for amount of seed in a packet.
-        units (StringField): Field for unit of measurement.
-        sku (StringField): Field for product SKU.
-        submit (SubmitField): Submit button.
-    """
-    price = StringField('Price in US dollars',
-                        validators=[DataRequired(), NotSpace(), USDollar()])
-    quantity = StringField('Quantity', validators=[DataRequired(), NotSpace()])
-    units = StringField('Unit of measurement',
-                        validators=[Length(1, 32), NotSpace()])
-    sku = StringField('SKU', validators=[Length(1, 32), NotSpace()])
-    submit = SubmitField('Edit Packet')
-
-    def populate(self, packet):
-        """Populate form elements with data from database.
-
-        Args:
-            packet (Packet): The packet to populate this form with.
-        """
-        self.price.data = packet.price
-        self.units.data = packet.quantity.units
-        self.quantity.data = packet.quantity.value
-        self.sku.data = packet.sku
-
-    def validate_quantity(self, field):
-        """Raise ValidationError if quantity cannot be parsed as valid.
-
-        Raises:
-            ValidationError: If value of quantity cannot be determined to be a
-                valid decimal, fraction, or integer.
-        """
-        if field.data:
-            try:
-                Quantity(value=field.data.strip())
-            except ValueError:
-                raise ValidationError('Field must be a valid numerical value. '
-                                      '(integer, decimal, fraction, or mixed '
-                                      'number)')
-
-
 class EditCultivarForm(Form):
     """Form for editing an existing cultivar in the database.
 
@@ -1009,6 +964,51 @@ class EditCultivarForm(Form):
                                           'of 64 characters long!')
 
 
+class EditPacketForm(Form):
+    """Form for adding a packet to a cultivar.
+
+    Attributes:
+        price (StringField): Field for price in US Dollars.
+        quantity (StringField): Field for amount of seed in a packet.
+        units (StringField): Field for unit of measurement.
+        sku (StringField): Field for product SKU.
+        submit (SubmitField): Submit button.
+    """
+    price = StringField('Price in US dollars',
+                        validators=[DataRequired(), NotSpace(), USDollar()])
+    quantity = StringField('Quantity', validators=[DataRequired(), NotSpace()])
+    units = StringField('Unit of measurement',
+                        validators=[Length(1, 32), NotSpace()])
+    sku = StringField('SKU', validators=[Length(1, 32), NotSpace()])
+    submit = SubmitField('Edit Packet')
+
+    def populate(self, packet):
+        """Populate form elements with data from database.
+
+        Args:
+            packet (Packet): The packet to populate this form with.
+        """
+        self.price.data = packet.price
+        self.units.data = packet.quantity.units
+        self.quantity.data = packet.quantity.value
+        self.sku.data = packet.sku
+
+    def validate_quantity(self, field):
+        """Raise ValidationError if quantity cannot be parsed as valid.
+
+        Raises:
+            ValidationError: If value of quantity cannot be determined to be a
+                valid decimal, fraction, or integer.
+        """
+        if field.data:
+            try:
+                Quantity(value=field.data.strip())
+            except ValueError:
+                raise ValidationError('Field must be a valid numerical value. '
+                                      '(integer, decimal, fraction, or mixed '
+                                      'number)')
+
+
 class EditSeriesForm(Form):
     """Form for editing a Series to the database.
 
@@ -1023,7 +1023,7 @@ class EditSeriesForm(Form):
     name = StringField('Series Name', validators=[Length(1, 64), NotSpace()])
     submit = SubmitField('Edit Series')
 
-    def set_common_names(self):
+    def set_common_name(self):
         """Set common name choices with common names from db."""
         self.common_name.choices = common_name_select_list()
 

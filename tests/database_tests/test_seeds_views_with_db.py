@@ -233,9 +233,9 @@ class TestAddCultivarRouteWithDB:
 
     @mock.patch('werkzeug.FileStorage.save')
     def test_add_cultivar_successful_submit_in_stock_and_active(self,
-                                                            mock_save,
-                                                            app,
-                                                            db):
+                                                                mock_save,
+                                                                app,
+                                                                db):
         """Add cultivar and flash messages for added items."""
         user = seed_manager()
         bn = BotanicalName()
@@ -272,9 +272,9 @@ class TestAddCultivarRouteWithDB:
 
     @mock.patch('werkzeug.FileStorage.save')
     def test_add_cultivar_successful_submit_no_stock_and_dropped(self,
-                                                             mock_save,
-                                                             app,
-                                                             db):
+                                                                 mock_save,
+                                                                 app,
+                                                                 db):
         """Flash messages if cultivar is not in stock and has been dropped."""
         user = seed_manager()
         bn = BotanicalName()
@@ -386,6 +386,89 @@ class TestCommonNameRouteWithDB:
                                 cat_slug=cat.slug,
                                 cn_slug=cn.slug))
         assert 'Do foxes really wear these?' in str(rv.data)
+
+
+class TestCultivarRouteWithDB:
+    """Test seeds.cultivar."""
+    def test_cultivar_bad_slugs(self, app, db):
+        """Return 404 if any slug given does not correspond to a db entry."""
+        cat = Category()
+        cn = CommonName()
+        cultivar = Cultivar()
+        db.session.add_all([cat, cn, cultivar])
+        cat.name = 'Perennial Flower'
+        cn.name = 'Foxglove'
+        cultivar.name = 'Foxy'
+        cultivar.categories.append(cat)
+        cultivar.common_name = cn
+        cultivar.description = 'Like that Hendrix song.'
+        db.session.commit()
+        with app.test_client() as tc:
+            rv = tc.get(url_for('seeds.cultivar',
+                                cat_slug=cat.slug,
+                                cn_slug=cn.slug,
+                                cv_slug='no-biscuit'))
+        assert rv.status_code == 404
+        with app.test_client() as tc:
+            rv = tc.get(url_for('seeds.cultivar',
+                                cat_slug='no_biscuit',
+                                cn_slug=cn.slug,
+                                cv_slug=cultivar.slug))
+        assert rv.status_code == 404
+        with app.test_client() as tc:
+            rv = tc.get(url_for('seeds.cultivar',
+                                cat_slug=cat.slug,
+                                cn_slug='no-biscuit',
+                                cv_slug=cultivar.slug))
+        assert rv.status_code == 404
+        with app.test_client() as tc:
+            rv = tc.get(url_for('seeds.cultivar',
+                                cat_slug='no-biscuit',
+                                cn_slug='no-biscuit',
+                                cv_slug='no-biscuit'))
+        assert rv.status_code == 404
+
+    def test_cv_slugs_not_in_cultivar(self, app, db):
+        """Return 404 if slugs return db entries, but entry not in cultivar."""
+        cat1 = Category()
+        cat2 = Category()
+        cn1 = CommonName()
+        cn2 = CommonName()
+        cultivar = Cultivar()
+        db.session.add_all([cat1, cat2, cn1, cn2, cultivar])
+        cat1.name = 'Perennial Flower'
+        cat2.name = 'Long Hair'
+        cn1.name = 'Foxglove'
+        cn2.name = 'Persian'
+        cultivar.name = 'Foxy'
+        cultivar.categories.append(cat1)
+        cultivar.common_name = cn1
+        db.session.commit()
+        with app.test_client() as tc:
+            rv = tc.get(url_for('seeds.cultivar',
+                                cat_slug=cat1.slug,
+                                cn_slug=cn2.slug,
+                                cv_slug=cultivar.slug))
+        assert rv.status_code == 404
+        with app.test_client() as tc:
+            rv = tc.get(url_for('seeds.cultivar',
+                                cat_slug=cat2.slug,
+                                cn_slug=cn1.slug,
+                                cv_slug=cultivar.slug))
+        assert rv.status_code == 404
+
+    def test_cultivar_renders_page(self, app, db):
+        """Render page given valid slugs."""
+        cultivar = foxy_cultivar()
+        db.session.add(cultivar)
+        db.session.commit()
+        print(cultivar.categories[0].slug)
+        with app.test_client() as tc:
+            rv = tc.get(url_for('seeds.cultivar',
+                                cat_slug=cultivar.categories[0].slug,
+                                cn_slug=cultivar.common_name.slug,
+                                cv_slug=cultivar.slug))
+        assert 'Foxy Foxglove' in str(rv.data)
 
 
 class TestEditBotanicalNameRouteWithDB:
@@ -1041,9 +1124,9 @@ class TestEditCultivarRouteWithDB:
 
     @mock.patch('werkzeug.FileStorage.save')
     def test_edit_cultivar_change_thumbnail(self,
-                                        mock_save,
-                                        app,
-                                        db):
+                                            mock_save,
+                                            app,
+                                            db):
         """Flash message if thumbnail changed, and move old one to .images."""
         user = seed_manager()
         cultivar = Cultivar()
@@ -1122,7 +1205,7 @@ class TestEditCultivarRouteWithDB:
         assert 'No changes made' in str(rv.data)
 
     def test_edit_cultivar_no_cultivar(self, app, db):
-        """Redirect to seeds.select_cultivar if no cultivar exists with given id."""
+        """Redirect to seeds.select_cultivar if no cultivar w/ given id."""
         user = seed_manager()
         db.session.add(user)
         db.session.commit()
@@ -1633,9 +1716,9 @@ class TestRemoveCultivarRouteWithDB:
     """Test seeds.remove_cultivar."""
     @mock.patch('app.seeds.models.Image.delete_file')
     def test_remove_cultivar_delete_images_deletes_images(self,
-                                                      mock_delete,
-                                                      app,
-                                                      db):
+                                                          mock_delete,
+                                                          app,
+                                                          db):
         """Delete images and thumbnail if delete_images is checked."""
         user = seed_manager()
         cultivar = foxy_cultivar()
@@ -1685,7 +1768,7 @@ class TestRemoveCultivarRouteWithDB:
                                       _external=True)
 
     def test_remove_cultivar_no_cultivar(self, app, db):
-        """Redirect to seeds.select_cultivar if no cultivar exists with given id."""
+        """Redirect to seeds.select_cultivar if no cultivar w/ given id."""
         user = seed_manager()
         db.session.add(user)
         db.session.commit()
@@ -1726,89 +1809,6 @@ class TestRemoveCultivarRouteWithDB:
             login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.remove_cultivar', cv_id=cultivar.id))
         assert 'Remove Cultivar' in str(rv.data)
-
-
-class TestCultivarRouteWithDB:
-    """Test seeds.cultivar."""
-    def test_cultivar_bad_slugs(self, app, db):
-        """Return 404 if any slug given does not correspond to a db entry."""
-        cat = Category()
-        cn = CommonName()
-        cultivar = Cultivar()
-        db.session.add_all([cat, cn, cultivar])
-        cat.name = 'Perennial Flower'
-        cn.name = 'Foxglove'
-        cultivar.name = 'Foxy'
-        cultivar.categories.append(cat)
-        cultivar.common_name = cn
-        cultivar.description = 'Like that Hendrix song.'
-        db.session.commit()
-        with app.test_client() as tc:
-            rv = tc.get(url_for('seeds.cultivar',
-                                cat_slug=cat.slug,
-                                cn_slug=cn.slug,
-                                cv_slug='no-biscuit'))
-        assert rv.status_code == 404
-        with app.test_client() as tc:
-            rv = tc.get(url_for('seeds.cultivar',
-                                cat_slug='no_biscuit',
-                                cn_slug=cn.slug,
-                                cv_slug=cultivar.slug))
-        assert rv.status_code == 404
-        with app.test_client() as tc:
-            rv = tc.get(url_for('seeds.cultivar',
-                                cat_slug=cat.slug,
-                                cn_slug='no-biscuit',
-                                cv_slug=cultivar.slug))
-        assert rv.status_code == 404
-        with app.test_client() as tc:
-            rv = tc.get(url_for('seeds.cultivar',
-                                cat_slug='no-biscuit',
-                                cn_slug='no-biscuit',
-                                cv_slug='no-biscuit'))
-        assert rv.status_code == 404
-
-    def test_cv_slugs_not_in_cultivar(self, app, db):
-        """Return 404 if slugs return db entries, but entry not in cultivar."""
-        cat1 = Category()
-        cat2 = Category()
-        cn1 = CommonName()
-        cn2 = CommonName()
-        cultivar = Cultivar()
-        db.session.add_all([cat1, cat2, cn1, cn2, cultivar])
-        cat1.name = 'Perennial Flower'
-        cat2.name = 'Long Hair'
-        cn1.name = 'Foxglove'
-        cn2.name = 'Persian'
-        cultivar.name = 'Foxy'
-        cultivar.categories.append(cat1)
-        cultivar.common_name = cn1
-        db.session.commit()
-        with app.test_client() as tc:
-            rv = tc.get(url_for('seeds.cultivar',
-                                cat_slug=cat1.slug,
-                                cn_slug=cn2.slug,
-                                cv_slug=cultivar.slug))
-        assert rv.status_code == 404
-        with app.test_client() as tc:
-            rv = tc.get(url_for('seeds.cultivar',
-                                cat_slug=cat2.slug,
-                                cn_slug=cn1.slug,
-                                cv_slug=cultivar.slug))
-        assert rv.status_code == 404
-
-    def test_cultivar_renders_page(self, app, db):
-        """Render page given valid slugs."""
-        cultivar = foxy_cultivar()
-        db.session.add(cultivar)
-        db.session.commit()
-        print(cultivar.categories[0].slug)
-        with app.test_client() as tc:
-            rv = tc.get(url_for('seeds.cultivar',
-                                cat_slug=cultivar.categories[0].slug,
-                                cn_slug=cultivar.common_name.slug,
-                                cv_slug=cultivar.slug))
-        assert 'Foxy Foxglove' in str(rv.data)
 
 
 class TestSelectBotanicalNameRouteWithDB:
@@ -1949,6 +1949,45 @@ class TestSelectCommonNameRouteWithDB:
                                       _external=True)
 
 
+class TestSelectCultivarRouteWithDB:
+    """Test seeds.select_cultivar."""
+    def test_select_cultivar_no_dest(self, app, db):
+        """Redirect to seeds.manage given no dest."""
+        user = seed_manager()
+        db.session.add(user)
+        db.session.commit()
+        with app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.get(url_for('seeds.select_cultivar'))
+        assert rv.location == url_for('seeds.manage', _external=True)
+
+    def test_select_cultivar_renders_page(self, app, db):
+        """Render form page given a dest."""
+        user = seed_manager()
+        db.session.add(user)
+        db.session.commit()
+        with app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.get(url_for('seeds.select_cultivar',
+                                dest='seeds.add_packet'))
+        assert 'Select Cultivar' in str(rv.data)
+
+    def test_select_seed_successful_submission(self, app, db):
+        """Redirect to dest on valid form submission."""
+        user = seed_manager()
+        cultivar = Cultivar()
+        db.session.add_all([user, cultivar])
+        cultivar.name = 'Foxy'
+        db.session.commit()
+        dest = 'seeds.add_packet'
+        with app.test_client() as tc:
+            login(user.name, 'hunter2', tc=tc)
+            rv = tc.post(url_for('seeds.select_cultivar', dest=dest),
+                         data=dict(cultivar=cultivar.id))
+        assert rv.location == url_for(dest, cv_id=str(cultivar.id),
+                                      _external=True)
+
+
 class TestSelectPacketRouteWithDB:
     """Test seeds.select_packet."""
     def test_select_packet_no_dest(self, app, db):
@@ -1997,42 +2036,4 @@ class TestSelectPacketRouteWithDB:
                          data=dict(packet=packet.id))
         assert rv.location == url_for('seeds.edit_packet',
                                       pkt_id=packet.id,
-                                      _external=True)
-
-
-class TestSelectCultivarRouteWithDB:
-    """Test seeds.select_cultivar."""
-    def test_select_cultivar_no_dest(self, app, db):
-        """Redirect to seeds.manage given no dest."""
-        user = seed_manager()
-        db.session.add(user)
-        db.session.commit()
-        with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
-            rv = tc.get(url_for('seeds.select_cultivar'))
-        assert rv.location == url_for('seeds.manage', _external=True)
-
-    def test_select_cultivar_renders_page(self, app, db):
-        """Render form page given a dest."""
-        user = seed_manager()
-        db.session.add(user)
-        db.session.commit()
-        with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
-            rv = tc.get(url_for('seeds.select_cultivar', dest='seeds.add_packet'))
-        assert 'Select Cultivar' in str(rv.data)
-
-    def test_select_seed_successful_submission(self, app, db):
-        """Redirect to dest on valid form submission."""
-        user = seed_manager()
-        cultivar = Cultivar()
-        db.session.add_all([user, cultivar])
-        cultivar.name = 'Foxy'
-        db.session.commit()
-        dest = 'seeds.add_packet'
-        with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
-            rv = tc.post(url_for('seeds.select_cultivar', dest=dest),
-                         data=dict(cultivar=cultivar.id))
-        assert rv.location == url_for(dest, cv_id=str(cultivar.id),
                                       _external=True)

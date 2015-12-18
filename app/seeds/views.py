@@ -1302,7 +1302,7 @@ def edit_series(series_id=None):
         return redirect(url_for('seeds.select_series',
                                 dest='seeds.edit_series'))
     form = EditSeriesForm()
-    form.set_common_names()
+    form.set_common_name()
     if form.validate_on_submit():
         edited = False
         if dbify(form.name.data) != series.name:

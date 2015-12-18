@@ -21,12 +21,12 @@
 {# block head: 2 indentations of 4 spaces each. (8 spaces total.) #}
 {# block main: 3 indentations of 4 spaces each. (12 spaces total.) #}
 {% block head %}
-        <title>Add Seed</title>
+        <title>Add Cultivar</title>
         <meta name="robots" content="noindex, nofollow">
-        <link rel="canonical" href="{{ url_for('seeds.add_seed', _external=True) }}">
+        <link rel="canonical" href="{{ url_for('seeds.add_cultivar', _external=True) }}">
 {% endblock %}
 {% block main %}
-            <h1>Add a Seed:</h1>
+            <h1>Add a Cultivar:</h1>
             <form method="POST" enctype="multipart/form-data">
                 {{ form.hidden_tag() }}
                 <ol>
@@ -66,7 +66,7 @@
                             {{ form_field(form.gw_common_names)|indent(28)|safe }}
                         </li>
                         <li>
-                            {{ form_field(form.gw_seeds)|indent(28)|safe }}
+                            {{ form_field(form.gw_cultivars)|indent(28)|safe }}
                         </li>
                     </fieldset>
                     <fieldset>

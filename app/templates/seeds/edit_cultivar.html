@@ -21,11 +21,11 @@
 {# block head: 2 indentations of 4 spaces each. (8 spaces total.) #}
 {# block main: 3 indentations of 4 spaces each. (12 spaces total.) #}
 {% block head %}
-        <title>Edit Seed</title>
+        <title>Edit Cultivar</title>
         <meta name="robots" content="noindex, nofollow">
 {% endblock %}
 {% block main %}
-        <h1>Edit Seed: {{ seed.fullname }}</h1>
+        <h1>Edit Cultivar: {{ cultivar.fullname }}</h1>
             <form method="POST" enctype="multipart/form-data">
                 {{ form.hidden_tag() }}
                 <ol>
@@ -50,7 +50,7 @@
                             {{ form_field(form.name)|indent(28)|safe }}
                         </li>
                         <div>Current thumbnail:</div>
-                        <div><img src="{{ url_for('static', filename=seed.thumbnail_path) }}"></div>
+                        <div><img src="{{ url_for('static', filename=cultivar.thumbnail_path) }}"></div>
                         <li>
                             {{ form_field(form.thumbnail)|indent(28)|safe }}
                         </li>
@@ -66,7 +66,7 @@
                             {{ form_field(form.gw_common_names)|indent(28)|safe }}
                         </li>
                         <li>
-                            {{ form_field(form.gw_seeds)|indent(28)|safe }}
+                            {{ form_field(form.gw_cultivars)|indent(28)|safe }}
                         </li>
                     </fieldset>
                     <fieldset>

@@ -7,7 +7,7 @@ from app.seeds.forms import (
     AddCategoryForm,
     AddCommonNameForm,
     AddPacketForm,
-    AddSeedForm,
+    AddCultivarForm,
     AddSeriesForm,
     botanical_name_select_list,
     category_select_list,
@@ -16,15 +16,15 @@ from app.seeds.forms import (
     EditCategoryForm,
     EditCommonNameForm,
     EditPacketForm,
-    EditSeedForm,
+    EditCultivarForm,
     packet_select_list,
-    seed_select_list,
+    cultivar_select_list,
     syn_parents_links,
     SelectBotanicalNameForm,
     SelectCategoryForm,
     SelectCommonNameForm,
     SelectPacketForm,
-    SelectSeedForm
+    SelectCultivarForm
 )
 from app.seeds.models import (
     BotanicalName,
@@ -33,7 +33,7 @@ from app.seeds.models import (
     Image,
     Packet,
     Quantity,
-    Seed,
+    Cultivar,
     Series
 )
 from tests.conftest import app, db  # noqa
@@ -91,12 +91,12 @@ class TestFunctionsWithDB:
         pkt1 = Packet()
         pkt2 = Packet()
         pkt3 = Packet()
-        sd1 = Seed()
-        sd2 = Seed()
-        sd3 = Seed()
+        cv1 = Cultivar()
+        cv2 = Cultivar()
+        cv3 = Cultivar()
         cn1 = CommonName()
         cn2 = CommonName()
-        db.session.add_all([pkt1, pkt2, pkt3, sd1, sd2, sd3, cn1, cn2])
+        db.session.add_all([pkt1, pkt2, pkt3, cv1, cv2, cv3, cn1, cn2])
         pkt1.price = Decimal('1.99')
         pkt2.price = Decimal('2.99')
         pkt3.price = Decimal('3.99')
@@ -106,17 +106,17 @@ class TestFunctionsWithDB:
         pkt1.sku = 'F41'
         pkt2.sku = 'F42'
         pkt3.sku = 'B13'
-        sd1.name = 'Foxy'
-        sd2.name = 'Snow Thimble'
-        sd3.name = 'Soulmate'
+        cv1.name = 'Foxy'
+        cv2.name = 'Snow Thimble'
+        cv3.name = 'Soulmate'
         cn1.name = 'Foxglove'
         cn2.name = 'Butterfly Weed'
-        sd1.common_name = cn1
-        sd2.common_name = cn1
-        sd3.common_name = cn2
-        sd1.packets.append(pkt1)
-        sd2.packets.append(pkt2)
-        sd3.packets.append(pkt3)
+        cv1.common_name = cn1
+        cv2.common_name = cn1
+        cv3.common_name = cn2
+        cv1.packets.append(pkt1)
+        cv2.packets.append(pkt2)
+        cv3.packets.append(pkt3)
         db.session.commit()
         pktlst = packet_select_list()
         expected = [(pkt3.id,
@@ -127,20 +127,20 @@ class TestFunctionsWithDB:
                      'Foxglove, Snow Thimble: SKU #F42: $2.99 for 200 seeds')]
         assert pktlst == expected
 
-    def test_seed_select_list(self, db):
-        """Generate correct list of tuples from seeds in db."""
-        sd1 = Seed()
-        sd2 = Seed()
-        sd3 = Seed()
-        db.session.add_all([sd1, sd2, sd3])
-        sd1.name = 'Soulmate'
-        sd2.name = 'Superfine Rainbow'
-        sd3.name = 'Tumbling Tom'
+    def test_cultivar_select_list(self, db):
+        """Generate correct list of tuples from cultivars in db."""
+        cv1 = Cultivar()
+        cv2 = Cultivar()
+        cv3 = Cultivar()
+        db.session.add_all([cv1, cv2, cv3])
+        cv1.name = 'Soulmate'
+        cv2.name = 'Superfine Rainbow'
+        cv3.name = 'Tumbling Tom'
         db.session.commit()
-        seedlist = seed_select_list()
-        assert (sd1.id, sd1.name) in seedlist
-        assert (sd2.id, sd2.name) in seedlist
-        assert (sd3.id, sd3.name) in seedlist
+        cultivarlist = cultivar_select_list()
+        assert (cv1.id, cv1.name) in cultivarlist
+        assert (cv2.id, cv2.name) in cultivarlist
+        assert (cv3.id, cv3.name) in cultivarlist
 
     def test_syn_parents_links(self, db):
         """Generate list of links to parents of synonyms."""
@@ -150,28 +150,28 @@ class TestFunctionsWithDB:
         cn1 = CommonName()
         cn2 = CommonName()
         cn3 = CommonName()
-        sd1 = Seed()
-        sd2 = Seed()
-        sd3 = Seed()
-        db.session.add_all([bn1, bn2, bn3, cn1, cn2, cn3, sd1, sd2, sd3])
+        cv1 = Cultivar()
+        cv2 = Cultivar()
+        cv3 = Cultivar()
+        db.session.add_all([bn1, bn2, bn3, cn1, cn2, cn3, cv1, cv2, cv3])
         bn1.name = 'Digitalis purpurea'
         bn2.name = 'Asclepias incarnata'
         bn3.name = 'Innagada davida'
         cn1.name = 'Foxglove'
         cn2.name = 'Butterfly Weed'
         cn3.name = 'Smith'
-        sd1.name = 'Foxy'
-        sd1.common_name = cn1
-        sd2.name = 'Soulmate'
-        sd2.common_name = cn2
-        sd3.name = 'John'
-        sd3.common_name = cn3
+        cv1.name = 'Foxy'
+        cv1.common_name = cn1
+        cv2.name = 'Soulmate'
+        cv2.common_name = cn2
+        cv3.name = 'John'
+        cv3.common_name = cn3
         bn1.syn_parents.append(bn2)
         bn1.syn_parents.append(bn3)
         cn1.syn_parents.append(cn2)
         cn1.syn_parents.append(cn3)
-        sd1.syn_parents.append(sd2)
-        sd1.syn_parents.append(sd3)
+        cv1.syn_parents.append(cv2)
+        cv1.syn_parents.append(cv3)
         db.session.commit()
         rv = syn_parents_links(bn1)
         assert bn2.name in rv
@@ -179,9 +179,9 @@ class TestFunctionsWithDB:
         rv = syn_parents_links(cn1)
         assert cn2.name in rv
         assert cn3.name in rv
-        rv = syn_parents_links(sd1)
-        assert sd2.name in rv
-        assert sd3.name in rv
+        rv = syn_parents_links(cv1)
+        assert cv2.name in rv
+        assert cv3.name in rv
         foo = 'woof'
         rv = syn_parents_links(foo)
         assert rv == ''
@@ -260,15 +260,15 @@ class TestAddCommonNameFormWithDB:
         cat2 = Category()
         cn1 = CommonName()
         cn2 = CommonName()
-        sd1 = Seed()
-        sd2 = Seed()
-        db.session.add_all([cat1, cat2, cn1, cn2, sd1, sd2])
+        cv1 = Cultivar()
+        cv2 = Cultivar()
+        db.session.add_all([cat1, cat2, cn1, cn2, cv1, cv2])
         cat1.name = 'Annual Flower'.title()
         cat2.name = 'Perennial Flower'.title()
         cn1.name = 'Foxglove'
         cn2.name = 'Butterfly Weed'
-        sd1.name = 'Foxy'
-        sd2.name = 'Soulmate'
+        cv1.name = 'Foxy'
+        cv2.name = 'Soulmate'
         db.session.commit()
         form = AddCommonNameForm()
         form.set_selects()
@@ -276,8 +276,8 @@ class TestAddCommonNameFormWithDB:
         assert (cat2.id, cat2.name) in form.categories.choices
         assert (cn1.id, cn1.name) in form.gw_common_names.choices
         assert (cn2.id, cn2.name) in form.gw_common_names.choices
-        assert (sd1.id, sd1.name) in form.gw_seeds.choices
-        assert (sd2.id, sd2.name) in form.gw_seeds.choices
+        assert (cv1.id, cv1.name) in form.gw_cultivars.choices
+        assert (cv2.id, cv2.name) in form.gw_cultivars.choices
 
     def test_validate_name(self, db):
         """Raise a Validation error if common name already in db."""
@@ -307,11 +307,11 @@ class TestAddPacketFormWithDB:
     def test_validate_sku(self, db):
         """Raise ValidationError if SKU already exists in db."""
         packet = Packet()
-        seed = Seed()
-        db.session.add_all([packet, seed])
+        cultivar = Cultivar()
+        db.session.add_all([packet, cultivar])
         packet.sku = '8675309'
-        seed.name = 'Jenny'
-        packet.seed = seed
+        cultivar.name = 'Jenny'
+        packet.cultivar = cultivar
         db.session.commit()
         form = AddPacketForm()
         form.sku.data = '8675309'
@@ -319,8 +319,8 @@ class TestAddPacketFormWithDB:
             form.validate_sku(form.sku)
 
 
-class TestAddSeedFormWithDB:
-    """Test custom methods of AddSeedForm."""
+class TestAddCultivarFormWithDB:
+    """Test custom methods of AddCultivarForm."""
     def test_set_selects(self, db):
         """Selects should be set from database."""
         bn = BotanicalName()
@@ -331,7 +331,7 @@ class TestAddSeedFormWithDB:
         cat.name = 'Perennial Flower'
         cn.name = 'Butterfly Weed'
         db.session.commit()
-        form = AddSeedForm()
+        form = AddCultivarForm()
         form.set_selects()
         assert (bn.id, bn.name) in form.botanical_name.choices
         assert (cat.id, cat.name) in form.categories.choices
@@ -348,7 +348,7 @@ class TestAddSeedFormWithDB:
         cat2.name = 'Rock'
         cn.categories.append(cat1)
         db.session.commit()
-        form = AddSeedForm()
+        form = AddCultivarForm()
         form.common_name.data = cn.id
         form.categories.data = [cat1.id]
         form.validate_categories(form.categories)
@@ -358,21 +358,21 @@ class TestAddSeedFormWithDB:
 
     def test_validate_name(self, db):
         """Raise error if name is already in the database."""
-        seed = Seed()
+        cultivar = Cultivar()
         cn = CommonName()
-        sd2 = Seed()
-        sd3 = Seed()
-        db.session.add_all([cn, seed, sd2, sd3])
-        seed.name = 'Soulmate'
-        sd2.name = 'Foxy'
-        sd3.name = 'Lady'
-        sd3.syn_only = True
-        sd2.synonyms.append(sd3)
+        cv2 = Cultivar()
+        cv3 = Cultivar()
+        db.session.add_all([cn, cultivar, cv2, cv3])
+        cultivar.name = 'Soulmate'
+        cv2.name = 'Foxy'
+        cv3.name = 'Lady'
+        cv3.syn_only = True
+        cv2.synonyms.append(cv3)
         cn.name = 'Butterfly Weed'
-        sd2.common_name = cn
-        seed.common_name = cn
+        cv2.common_name = cn
+        cultivar.common_name = cn
         db.session.commit()
-        form = AddSeedForm()
+        form = AddCultivarForm()
         form.name.data = 'Soulmate'
         form.common_name.data = cn.id
         with pytest.raises(ValidationError):
@@ -387,7 +387,7 @@ class TestAddSeedFormWithDB:
         db.session.add(image)
         image.filename = secure_filename('frogfacts.png')
         db.session.commit()
-        form = AddSeedForm()
+        form = AddCultivarForm()
         form.thumbnail.data = FileStorage()
         form.thumbnail.data.filename = 'frogfacts.png'
         with pytest.raises(ValidationError):
@@ -452,15 +452,15 @@ class TestEditCommonNameFormWithDB:
         cat2 = Category()
         cn1 = CommonName()
         cn2 = CommonName()
-        sd1 = Seed()
-        sd2 = Seed()
-        db.session.add_all([cat1, cat2, cn1, cn2, sd1, sd2])
+        cv1 = Cultivar()
+        cv2 = Cultivar()
+        db.session.add_all([cat1, cat2, cn1, cn2, cv1, cv2])
         cat1.name = 'Annual Flower'.title()
         cat2.name = 'Perennial Flower'.title()
         cn1.name = 'Foxglove'
         cn2.name = 'Butterfly Weed'
-        sd1.name = 'Foxy'
-        sd2.name = 'Soulmate'
+        cv1.name = 'Foxy'
+        cv2.name = 'Soulmate'
         db.session.commit()
         form = EditCommonNameForm()
         form.set_selects()
@@ -468,8 +468,8 @@ class TestEditCommonNameFormWithDB:
         assert (cat2.id, cat2.name) in form.categories.choices
         assert (cn1.id, cn1.name) in form.gw_common_names.choices
         assert (cn2.id, cn2.name) in form.gw_common_names.choices
-        assert (sd1.id, sd1.name) in form.gw_seeds.choices
-        assert (sd2.id, sd2.name) in form.gw_seeds.choices
+        assert (cv1.id, cv1.name) in form.gw_cultivars.choices
+        assert (cv2.id, cv2.name) in form.gw_cultivars.choices
         assert (cn1.id, cn1.name) in form.parent_cn.choices
         assert (cn2.id, cn2.name) in form.parent_cn.choices
 
@@ -514,8 +514,8 @@ class TestEditPacketFormWithDB:
             form.validate_quantity(form.quantity)
 
 
-class TestEditSeedFormWithDB:
-    """Test custom methods of EditSeedForm."""
+class TestEditCultivarFormWithDB:
+    """Test custom methods of EditCultivarForm."""
     def test_set_selects(self, db):
         """Set selects with values loaded from database."""
         bn = BotanicalName()
@@ -526,7 +526,7 @@ class TestEditSeedFormWithDB:
         cn.name = 'Foxglove'
         cat.name = 'Foxy'
         db.session.commit()
-        form = EditSeedForm()
+        form = EditCultivarForm()
         form.set_selects()
         assert (bn.id, bn.name) in form.botanical_name.choices
         assert (cn.id, cn.name) in form.common_name.choices
@@ -540,7 +540,7 @@ class TestEditSeedFormWithDB:
         db.session.add_all([cat1, cat2, cn])
         cn.categories.append(cat1)
         db.session.commit()
-        form = EditSeedForm()
+        form = EditCultivarForm()
         form.common_name.data = cn.id
         form.categories.data = [cat1.id]
         form.validate_categories(form.categories)
@@ -610,17 +610,17 @@ class TestSelectPacketFormWithDB:
     """Test custom methods of SelectPacketForm."""
     def test_set_packet(self, db):
         """Set select with packets loaded from database."""
-        seed = Seed()
+        cultivar = Cultivar()
         cn = CommonName()
         packet = Packet()
-        db.session.add_all([seed, cn, packet])
-        seed.name = 'Foxy'
+        db.session.add_all([cultivar, cn, packet])
+        cultivar.name = 'Foxy'
         cn.name = 'Foxglove'
         packet.price = Decimal('2.99')
         packet.quantity = Quantity(value=100, units='seeds')
         packet.sku = '8675309'
-        seed.common_name = cn
-        seed.packets.append(packet)
+        cultivar.common_name = cn
+        cultivar.packets.append(packet)
         db.session.commit()
         form = SelectPacketForm()
         form.set_packet()
@@ -629,20 +629,20 @@ class TestSelectPacketFormWithDB:
             form.packet.choices
 
 
-class TestSelectSeedFormWithDB:
-    """Test custom methods of SelectSeedForm."""
-    def test_set_seed(self, db):
-        """Set select with seeds loaded from database."""
-        sd1 = Seed()
-        sd2 = Seed()
-        sd3 = Seed()
-        db.session.add_all([sd1, sd2, sd3])
-        sd1.name = 'Soulmate'
-        sd2.name = 'Tumbling Tom'
-        sd2.name = 'Foxy'
+class TestSelectCultivarFormWithDB:
+    """Test custom methods of SelectCultivarForm."""
+    def test_set_cultivar(self, db):
+        """Set select with cultivars loaded from database."""
+        cv1 = Cultivar()
+        cv2 = Cultivar()
+        cv3 = Cultivar()
+        db.session.add_all([cv1, cv2, cv3])
+        cv1.name = 'Soulmate'
+        cv2.name = 'Tumbling Tom'
+        cv2.name = 'Foxy'
         db.session.commit()
-        form = SelectSeedForm()
-        form.set_seed()
-        assert (sd1.id, sd1.name) in form.seed.choices
-        assert (sd2.id, sd2.name) in form.seed.choices
-        assert (sd3.id, sd3.name) in form.seed.choices
+        form = SelectCultivarForm()
+        form.set_cultivar()
+        assert (cv1.id, cv1.name) in form.cultivar.choices
+        assert (cv2.id, cv2.name) in form.cultivar.choices
+        assert (cv3.id, cv3.name) in form.cultivar.choices

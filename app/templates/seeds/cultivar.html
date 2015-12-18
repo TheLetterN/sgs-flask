@@ -16,37 +16,17 @@
    Copyright Swallowtail Garden Seeds, Inc 
 #}
 {% extends "main/base.html" %}
-{% from "includes/form_field.html" import form_field %}
 {# HTML within blocks should be indented as follows for consistency: #}
 {# block head: 2 indentations of 4 spaces each. (8 spaces total.) #}
 {# block main: 3 indentations of 4 spaces each. (12 spaces total.) #}
+{% from 'includes/cultivar_box.html' import cultivar_box with context %}
 {% block head %}
-        <title>Add Packet</title>
-        <meta name="robots" content="noindex, nofollow">
+        <title>Swallowtail Garden Seeds - {{ cultivar.fullname }}</title>
+        <link rel="canonical" href="{{ url_for('seeds.cultivar', cat_slug=cat_slug, cn_slug=cn_slug, cv_slug=cultivar.slug, _external=True) }}">
 {% endblock %}
 {% block main %}
-<h1>Add a Packet to: {{ cultivar.fullname }}</h1>
-            <form method="POST">
-                {{ form.hidden_tag() }}
-                <ol>
-                    <li>
-                        {{ form_field(form.sku)|indent(24)|safe }}
-                    </li>
-                    <li>
-                        {{ form_field(form.price)|indent(24)|safe }}
-                    </li>
-                    <li>
-                        {{ form_field(form.quantity)|indent(24)|safe }}
-                    </li>
-                    <li>
-                        {{ form_field(form.units)|indent(24)|safe }}
-                    </li>
-                    <li>
-                        {{ form_field(form.again)|indent(24)|safe }}
-                    </li>
-                    <li>
-                        {{ form.submit }}
-                    </li>
-                </ol>
-            </form>
+            <div>
+                <h1>{{ cultivar.fullname }}</h1>
+            {{ cultivar_box(cultivar)|indent(12)|safe }}
 {% endblock %}
+

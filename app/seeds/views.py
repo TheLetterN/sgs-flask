@@ -42,7 +42,7 @@ from .models import (
     Image,
     Packet,
     Quantity,
-    Seed,
+    Cultivar,
     Series,
     USDInt
 )
@@ -52,25 +52,25 @@ from .forms import (
     AddCommonNameForm,
     AddPacketForm,
     AddRedirectForm,
-    AddSeedForm,
+    AddCultivarForm,
     AddSeriesForm,
     EditBotanicalNameForm,
     EditCategoryForm,
     EditCommonNameForm,
     EditPacketForm,
-    EditSeedForm,
+    EditCultivarForm,
     EditSeriesForm,
     RemoveBotanicalNameForm,
     RemoveCategoryForm,
     RemoveCommonNameForm,
     RemovePacketForm,
     RemoveSeriesForm,
-    RemoveSeedForm,
+    RemoveCultivarForm,
     SelectBotanicalNameForm,
     SelectCategoryForm,
     SelectCommonNameForm,
     SelectPacketForm,
-    SelectSeedForm,
+    SelectCultivarForm,
     SelectSeriesForm,
     syn_parents_links
 )
@@ -235,12 +235,12 @@ def add_common_name():
                 gw_cn.gw_common_names.append(cn)
                 flash('\'{0}\' added to Grows With for \'{1}\', and vice '
                       'versa.'.format(gw_cn.name, cn.name))
-        if form.gw_seeds.data:
-            for sd_id in form.gw_seeds.data:
-                gw_sd = Seed.query.get(sd_id)
-                cn.gw_seeds.append(gw_sd)
+        if form.gw_cultivars.data:
+            for cv_id in form.gw_cultivars.data:
+                gw_cv = Cultivar.query.get(cv_id)
+                cn.gw_cultivars.append(gw_cv)
                 flash('\'{0}\' added to Grows With for \'{1}\', and vice '
-                      'versa.'.format(gw_sd.fullname, cn.name))
+                      'versa.'.format(gw_cv.fullname, cn.name))
         if form.parent_cn.data:
             cn.parent = CommonName.query.get(form.parent_cn.data)
             flash('\'{0}\' has been set as a subcategory of \'{1}\'.'
@@ -259,21 +259,23 @@ def add_common_name():
 
 
 @seeds.route('/add_packet', methods=['GET', 'POST'])
-@seeds.route('/add_packet/<seed_id>', methods=['GET', 'POST'])
+@seeds.route('/add_packet/<cv_id>', methods=['GET', 'POST'])
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
-def add_packet(seed_id=None):
+def add_packet(cv_id=None):
     """Add a packet to the database."""
-    if seed_id is None:
-        return redirect(url_for('seeds.select_seed', dest='seeds.add_packet'))
-    seed = Seed.query.get(seed_id)
-    if not seed:
-        return redirect(url_for('seeds.select_seed', dest='seeds.add_packet'))
+    if cv_id is None:
+        return redirect(url_for('seeds.select_cultivar',
+                                dest='seeds.add_packet'))
+    cv = Cultivar.query.get(cv_id)
+    if not cv:
+        return redirect(url_for('seeds.select_cultivar',
+                                dest='seeds.add_packet'))
     form = AddPacketForm()
     if form.validate_on_submit():
         packet = Packet()
         db.session.add(packet)
-        packet.seed = seed
+        packet.cultivar = cv
         packet.price = form.price.data.strip()
         fq = Quantity.for_cmp(form.quantity.data)
         fu = form.units.data.strip()
@@ -285,9 +287,9 @@ def add_packet(seed_id=None):
             packet.quantity = Quantity(value=fq, units=fu)
         packet.sku = form.sku.data.strip()
         db.session.commit()
-        flash('Packet {0} added to {1}.'.format(packet.info, seed.fullname))
+        flash('Packet {0} added to {1}.'.format(packet.info, cv.fullname))
         if form.again.data:
-            return redirect(url_for('seeds.add_packet', seed_id=seed_id))
+            return redirect(url_for('seeds.add_packet', cv_id=cv_id))
         else:
             return redirect(url_for('seeds.manage'))
     crumbs = make_breadcrumbs(
@@ -296,13 +298,13 @@ def add_packet(seed_id=None):
         (url_for('seeds.add_common_name'), 'Add Common Name'),
         (url_for('seeds.add_botanical_name'), 'Add Botanical Name'),
         (url_for('seeds.add_series'), 'Add Series'),
-        (url_for('seeds.add_seed'), 'Add Seed'),
+        (url_for('seeds.add_cultivar'), 'Add Cultivar'),
         (url_for('seeds.add_packet'), 'Add Packet')
     )
     return render_template('seeds/add_packet.html',
                            crumbs=crumbs,
                            form=form,
-                           seed=seed)
+                           cultivar=cv)
 
 
 @seeds.route('/add_redirect', methods=['GET', 'POST'])
@@ -344,91 +346,91 @@ def add_redirect():
     return render_template('seeds/add_redirect.html', crumbs=crumbs, form=form)
 
 
-@seeds.route('/add_seed', methods=['GET', 'POST'])
+@seeds.route('/add_cultivar', methods=['GET', 'POST'])
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
-def add_seed():
-    """Add a seed to the database."""
-    form = AddSeedForm()
+def add_cultivar():
+    """Add a cultivar to the database."""
+    form = AddCultivarForm()
     form.set_selects()
     if form.validate_on_submit():
-        seed = Seed()
-        db.session.add(seed)
-        seed.name = dbify(form.name.data)
-        seed.common_name = CommonName.query.get(form.common_name.data)
+        cv = Cultivar()
+        db.session.add(cv)
+        cv.name = dbify(form.name.data)
+        cv.common_name = CommonName.query.get(form.common_name.data)
         if form.botanical_name.data:
-            seed.botanical_name = BotanicalName.query\
+            cv.botanical_name = BotanicalName.query\
                 .get(form.botanical_name.data)
             flash('Botanical name for \'{0}\' set to: {1}'
-                  .format(seed.fullname, seed.botanical_name.name))
+                  .format(cv.fullname, cv.botanical_name.name))
         if form.categories.data:
             for cat_id in form.categories.data:
                 cat = Category.query.get(cat_id)
                 flash('\'{0}\' added to categories for {1}.'.
                       format(cat.name, form.name.data))
-                seed.categories.append(cat)
+                cv.categories.append(cat)
         else:
             flash('No categories specified, will use categories from common '
-                  ' name \'{0}\''.format(seed.common_name.name))
-            for cat in seed.common_name.categories:
-                seed.categories.append(cat)
+                  ' name \'{0}\''.format(cv.common_name.name))
+            for cat in cv.common_name.categories:
+                cv.categories.append(cat)
         if form.gw_common_names.data:
             for cn_id in form.gw_common_names.data:
                 gw_cn = CommonName.query.get(cn_id)
-                seed.gw_common_names.append(gw_cn)
+                cv.gw_common_names.append(gw_cn)
                 flash('\'{0}\' added to Grows With for \'{1}\', and vice '
-                      'versa.'.format(gw_cn.name, seed.name))
-        if form.gw_seeds.data:
-            for sd_id in form.gw_seeds.data:
-                gw_sd = Seed.query.get(sd_id)
-                seed.gw_seeds.append(gw_sd)
-                gw_sd.gw_seeds.append(seed)
+                      'versa.'.format(gw_cn.name, cv.name))
+        if form.gw_cultivars.data:
+            for cv_id in form.gw_cultivars.data:
+                gw_cv = Cultivar.query.get(cv_id)
+                cv.gw_cultivars.append(gw_cv)
+                gw_cv.gw_cultivars.append(cv)
                 flash('\'{0}\' added to Grows With for \'{1}\', and vice '
-                      'versa.'.format(gw_sd.fullname, seed.name))
+                      'versa.'.format(gw_cv.fullname, cv.name))
         if form.series.data:
-            seed.series = Series.query.get(form.series.data)
-            flash('Series set to: {0}'.format(seed.series.name))
+            cv.series = Series.query.get(form.series.data)
+            flash('Series set to: {0}'.format(cv.series.name))
         if form.synonyms.data:
-            seed.set_synonyms_from_string_list(form.synonyms.data)
+            cv.set_synonyms_from_string_list(form.synonyms.data)
             flash('Synonyms for \'{0}\' set to: {1}'
-                  .format(seed.fullname, seed.list_synonyms_as_string()))
+                  .format(cv.fullname, cv.list_synonyms_as_string()))
         if form.thumbnail.data:
             thumb_name = secure_filename(form.thumbnail.data.filename)
             upload_path = os.path.join(current_app.config.get('IMAGES_FOLDER'),
                                        thumb_name)
-            seed.thumbnail = Image(filename=thumb_name)
+            cv.thumbnail = Image(filename=thumb_name)
             flash('Thumbnail uploaded as: {0}'.format(thumb_name))
             form.thumbnail.data.save(upload_path)
         if form.description.data:
-            seed.description = form.description.data
-            flash('Description set to: {0}'.format(seed.description))
+            cv.description = form.description.data
+            flash('Description set to: {0}'.format(cv.description))
         if form.in_stock.data:
-            seed.in_stock = True
-            flash('\'{0}\' is in stock.'.format(seed.fullname))
+            cv.in_stock = True
+            flash('\'{0}\' is in stock.'.format(cv.fullname))
         else:
-            flash('\'{0}\' is not in stock.'.format(seed.fullname))
-            seed.in_stock = False
+            flash('\'{0}\' is not in stock.'.format(cv.fullname))
+            cv.in_stock = False
         if form.dropped.data:
             flash('\'{0}\' is currently dropped/inactive.'.
-                  format(seed.fullname))
-            seed.dropped = True
+                  format(cv.fullname))
+            cv.dropped = True
         else:
             flash('\'{0}\' is currently active.'.
-                  format(seed.fullname))
-            seed.dropped = False
-        flash('New seed \'{0}\' has been added to the database.'.
-              format(seed.fullname))
+                  format(cv.fullname))
+            cv.dropped = False
+        flash('New cultivar \'{0}\' has been added to the database.'.
+              format(cv.fullname))
         db.session.commit()
-        return redirect(url_for('seeds.add_packet', seed_id=seed.id))
+        return redirect(url_for('seeds.add_packet', cv_id=cv.id))
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
         (url_for('seeds.add_category'), 'Add Category'),
         (url_for('seeds.add_common_name'), 'Add Common Name'),
         (url_for('seeds.add_botanical_name'), 'Add Botanical Name'),
         (url_for('seeds.add_series'), 'Add Series'),
-        (url_for('seeds.add_seed'), 'Add Seed')
+        (url_for('seeds.add_cultivar'), 'Add Cultivar')
     )
-    return render_template('seeds/add_seed.html', crumbs=crumbs, form=form)
+    return render_template('seeds/add_cultivar.html', crumbs=crumbs, form=form)
 
 
 @seeds.route('/add_series', methods=['GET', 'POST'])
@@ -632,15 +634,15 @@ def edit_category(cat_id=None):
                                         status_code=301),
                                 new_path)
                     ))
-                for sd in category.seeds:
-                    old_path = url_for('seeds.seed',
+                for cv in category.cultivars:
+                    old_path = url_for('seeds.cultivar',
                                        cat_slug=old_slug,
-                                       cn_slug=sd.common_name.slug,
-                                       seed_slug=sd.slug)
-                    new_path = url_for('seeds.seed',
+                                       cn_slug=cv.common_name.slug,
+                                       cv_slug=cv.slug)
+                    new_path = url_for('seeds.cultivar',
                                        cat_slug=new_slug,
-                                       cn_slug=sd.common_name.slug,
-                                       seed_slug=sd.slug)
+                                       cn_slug=cv.common_name.slug,
+                                       cv_slug=cv.slug)
                     flash(redirect_warning(
                         old_path,
                         '<a href="{0}" target="_blank">{1}</a>'
@@ -734,17 +736,18 @@ def edit_common_name(cn_id=None):
                 flash('\'{0}\' removed from categories associated with {1}.'.
                       format(cat.name, cn.name))
                 cn.categories.remove(cat)
-                for sd in cn.seeds:
-                    if cat in sd.categories:
-                        sd.categories.remove(cat)
+                for cv in cn.cultivars:
+                    if cat in cv.categories:
+                        cv.categories.remove(cat)
                         flash(Markup(
                             'Warning: the category \'{0}\' has also been '
-                            'removed from the seed \'{1}\'. You may wish to '
-                            '<a href="{2}" target="_blank">edit {1}</a> to '
+                            'removed from the cultivar \'{1}\'. You may wish '
+                            'to <a href="{2}" target="_blank">edit {1}</a> to '
                             'ensure it is in the correct categories.'
                             .format(cat.name,
-                                    sd.fullname,
-                                    url_for('seeds.edit_seed', seed_id=sd.id))
+                                    cv.fullname,
+                                    url_for('seeds.edit_cultivar',
+                                            cv_id=cv.id))
                         ))
         cat_ids = [cat.id for cat in cn.categories]
         cats_added = []
@@ -756,18 +759,19 @@ def edit_common_name(cn_id=None):
                       .format(cat.name, cn.name))
                 cn.categories.append(cat)
                 cats_added.append(cat)
-                for sd in cn.seeds:
-                    if not sd.categories:
-                        sd.categories.append(cat)
+                for cv in cn.cultivars:
+                    if not cv.categories:
+                        cv.categories.append(cat)
                         flash(Markup(
-                            'Warning: the seed \'{0}\' had no categories '
+                            'Warning: the cultivar \'{0}\' had no categories '
                             'associated with it, so \'{1}\' has been added to '
                             'it to ensure it is not orphaned. You may wish to '
                             '<a href="{2}" target="_blank">edit {0}</a> to '
                             'ensure it is in the correct categories.'
-                            .format(sd.fullname,
+                            .format(cv.fullname,
                                     cat.name,
-                                    url_for('seeds.edit_seed', seed_id=sd.id))
+                                    url_for('seeds.edit_cultivar',
+                                            cv_id=cv.id))
                         ))
         if cats_removed:
             for cat in cats_removed:
@@ -786,17 +790,17 @@ def edit_common_name(cn_id=None):
                                                    status_code=301),
                                            new_path))
                 flash(redirect_warning(old_path, list_to_or_string(urllist)))
-                for sd in cn.seeds:
-                    old_path = url_for('seeds.seed',
+                for cv in cn.cultivars:
+                    old_path = url_for('seeds.cultivar',
                                        cat_slug=cat.slug,
                                        cn_slug=old_cn_slug,
-                                       seed_slug=sd.slug)
+                                       cv_slug=cv.slug)
                     urllist = []
                     for cn_cat in cn.categories:
-                        new_path = url_for('seeds.seed',
+                        new_path = url_for('seeds.cultivar',
                                            cat_slug=cn_cat.slug,
                                            cn_slug=new_cn_slug,
-                                           seed_slug=sd.slug)
+                                           cv_slug=cv.slug)
                         urllist.append('<a href="{0}" target="_blank">{1}</a>'
                                        .format(url_for('seeds.add_redirect',
                                                        old_path=old_path,
@@ -823,15 +827,15 @@ def edit_common_name(cn_id=None):
                                         status_code=301),
                                 new_path)
                     ))
-                    for sd in cn.seeds:
-                        old_path = url_for('seeds.seed',
+                    for cv in cn.cultivars:
+                        old_path = url_for('seeds.cultivar',
                                            cat_slug=cat.slug,
                                            cn_slug=old_cn_slug,
-                                           seed_slug=sd.slug)
-                        new_path = url_for('seeds.seed',
+                                           cv_slug=cv.slug)
+                        new_path = url_for('seeds.cultivar',
                                            cat_slug=cat.slug,
                                            cn_slug=new_cn_slug,
-                                           seed_slug=sd.slug)
+                                           cv_slug=cv.slug)
                         flash(redirect_warning(
                             old_path,
                             '<a href="{0}" target="_blank">{1}</a>'
@@ -872,22 +876,22 @@ def edit_common_name(cn_id=None):
                               'vice versa.'.format(gw_cn.name, cn.name))
                         cn.gw_common_names.append(gw_cn)
                         gw_cn.gw_common_names.append(cn)
-        if cn.gw_seeds:
-            for gw_sd in list(cn.gw_seeds):
-                if gw_sd.id not in form.gw_seeds.data:
+        if cn.gw_cultivars:
+            for gw_cv in list(cn.gw_cultivars):
+                if gw_cv.id not in form.gw_cultivars.data:
                     edited = True
                     flash('\'{0}\' removed from Grows With for \'{1}\', and '
-                          'vice versa'.format(gw_sd.name, cn.name))
-                    cn.gw_seeds.remove(gw_sd)
-        if form.gw_seeds.data:
-            for gw_sd_id in form.gw_seeds.data:
-                if gw_sd_id != 0:
-                    gw_sd = Seed.query.get(gw_sd_id)
-                    if gw_sd not in cn.gw_seeds:
+                          'vice versa'.format(gw_cv.name, cn.name))
+                    cn.gw_cultivars.remove(gw_cv)
+        if form.gw_cultivars.data:
+            for gw_cv_id in form.gw_cultivars.data:
+                if gw_cv_id != 0:
+                    gw_cv = Cultivar.query.get(gw_cv_id)
+                    if gw_cv not in cn.gw_cultivars:
                         edited = True
                         flash('\'{0}\' added to Grows With for \'{1}\', and '
-                              'vice versa.'.format(gw_sd.fullname, cn.name))
-                        cn.gw_seeds.append(gw_sd)
+                              'vice versa.'.format(gw_cv.fullname, cn.name))
+                        cn.gw_cultivars.append(gw_cv)
         if not form.instructions.data:
             form.instructions.data = None
         if form.instructions.data != cn.instructions:
@@ -960,7 +964,7 @@ def edit_packet(pkt_id=None):
                 flash(Markup('Error: SKU already in use by {0} in packet {1}. '
                              '<a href="{2}">Click here</a> if you would like '
                              'to edit it.'
-                             .format(pkt2.seed.fullname,
+                             .format(pkt2.cultivar.fullname,
                                      pkt2.info,
                                      url_for('seeds.edit_packet',
                                              pkt_id=pkt2.id))))
@@ -1013,7 +1017,7 @@ def edit_packet(pkt_id=None):
         (url_for('seeds.edit_common_name'), 'Edit Common Name'),
         (url_for('seeds.edit_botanical_name'), 'Edit Botanical Name'),
         (url_for('seeds.edit_series'), 'Edit Series'),
-        (url_for('seeds.edit_seed'), 'Edit Seed'),
+        (url_for('seeds.edit_cultivar'), 'Edit Cultivar'),
         (url_for('seeds.edit_packet'), 'Edit Packet')
     )
     return render_template('seeds/edit_packet.html',
@@ -1021,96 +1025,98 @@ def edit_packet(pkt_id=None):
                            form=form)
 
 
-@seeds.route('/edit_seed', methods=['GET', 'POST'])
-@seeds.route('/edit_seed/<seed_id>', methods=['GET', 'POST'])
+@seeds.route('/edit_cultivar', methods=['GET', 'POST'])
+@seeds.route('/edit_cultivar/<cv_id>', methods=['GET', 'POST'])
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
-def edit_seed(seed_id=None):
-    """Edit a seed stored in the database."""
-    if seed_id is None:
-        return redirect(url_for('seeds.select_seed', dest='seeds.edit_seed'))
-    seed = Seed.query.get(seed_id)
-    if seed is None:
-        return redirect(url_for('seeds.select_seed', dest='seeds.edit_seed'))
-    form = EditSeedForm()
+def edit_cultivar(cv_id=None):
+    """Edit a cultivar stored in the database."""
+    if cv_id is None:
+        return redirect(url_for('seeds.select_cultivar',
+                                dest='seeds.edit_cultivar'))
+    cv = Cultivar.query.get(cv_id)
+    if cv is None:
+        return redirect(url_for('seeds.select_cultivar',
+                                dest='seeds.edit_cultivar'))
+    form = EditCultivarForm()
     form.set_selects()
     if form.validate_on_submit():
         edited = False
         form_name = dbify(form.name.data)
-        sds = Seed.query.filter_by(_name=form_name).all()
-        old_sd_slug = seed.slug
-        for sd in sds:
-                if sd.syn_only:
+        cvs = Cultivar.query.filter_by(_name=form_name).all()
+        old_cv_slug = cv.slug
+        for cv in cvs:
+                if cv.syn_only:
                     flash('Error: \'{0}\' is already being used as a synonym '
-                          'for: \'{1}\'. If you wish to rename this seed to '
-                          'it, you will need to remove it from synonyms for '
-                          '\'{1}\' first.'
-                          .format(sd.name, sd.list_syn_parents_as_string()))
-                    return redirect(url_for('seeds.edit_seed',
-                                            seed_id=seed_id))
-                elif sd.id != seed.id and sd.name == form_name and\
-                        sd.common_name.id == form.common_name.data:
+                          'for: \'{1}\'. If you wish to rename this cultivar '
+                          'to it, you will need to remove it from synonyms '
+                          'for \'{1}\' first.'
+                          .format(cv.name, cv.list_syn_parents_as_string()))
+                    return redirect(url_for('seeds.edit_cultivar',
+                                            cv_id=cv_id))
+                elif cv.id != cv.id and cv.name == form_name and\
+                        cv.common_name.id == form.common_name.data:
                     flash('Error: There is already another \'{0}\'!'
-                          .format(sd.fullname))
-                    return redirect(url_for('seeds.edit_seed',
-                                            seed_id=seed_id))
-        if seed.name != form_name:
+                          .format(cv.fullname))
+                    return redirect(url_for('seeds.edit_cultivar',
+                                            cv_id=cv_id))
+        if cv.name != form_name:
             edited = True
-            flash('Changed seed name from \'{0}\' to \'{1}\''.
-                  format(seed.name, form_name))
-            seed.name = form_name
-        new_sd_slug = seed.slug
-        old_cn_slug = seed.common_name.slug
-        if not seed.common_name or \
-                form.common_name.data != seed.common_name.id:
+            flash('Changed cultivar name from \'{0}\' to \'{1}\''.
+                  format(cv.name, form_name))
+            cv.name = form_name
+        new_cv_slug = cv.slug
+        old_cn_slug = cv.common_name.slug
+        if not cv.common_name or \
+                form.common_name.data != cv.common_name.id:
             edited = True
             cn = CommonName.query.get(form.common_name.data)
             flash('Changed common name to \'{0}\' for: {1}'.
-                  format(cn.name, seed.fullname))
-            seed.common_name = CommonName.query.get(form.common_name.data)
-        new_cn_slug = seed.common_name.slug
+                  format(cn.name, cv.fullname))
+            cv.common_name = CommonName.query.get(form.common_name.data)
+        new_cn_slug = cv.common_name.slug
         if form.botanical_name.data:
-            if not seed.botanical_name or\
-                    form.botanical_name.data != seed.botanical_name.id:
+            if not cv.botanical_name or\
+                    form.botanical_name.data != cv.botanical_name.id:
                 edited = True
-                seed.botanical_name = BotanicalName.query\
+                cv.botanical_name = BotanicalName.query\
                     .get(form.botanical_name.data)
                 flash('Changed botanical name for \'{0}\' to \'{1}\''
-                      .format(seed.fullname, seed.botanical_name.name))
-        elif seed.botanical_name:
+                      .format(cv.fullname, cv.botanical_name.name))
+        elif cv.botanical_name:
             edited = True
-            seed.botanical_name = None
+            cv.botanical_name = None
             flash('Botanical name for \'{0}\' has been removed.'
-                  .format(seed.fullname))
+                  .format(cv.fullname))
         cats_removed = []
-        for cat in list(seed.categories):
+        for cat in list(cv.categories):
             if cat.id not in form.categories.data:
                 edited = True
                 flash('Removed category \'{0}\' from: {1}'.
-                      format(cat.name, seed.fullname))
-                seed.categories.remove(cat)
+                      format(cat.name, cv.fullname))
+                cv.categories.remove(cat)
                 cats_removed.append(cat)
         cats_added = []
         for cat_id in form.categories.data:
-            if cat_id not in [cat.id for cat in seed.categories]:
+            if cat_id not in [cat.id for cat in cv.categories]:
                 edited = True
                 cat = Category.query.get(cat_id)
                 flash('Added category \'{0}\' to: {1}'.
-                      format(cat.name, seed.fullname))
-                seed.categories.append(cat)
+                      format(cat.name, cv.fullname))
+                cv.categories.append(cat)
                 cats_added.append(cat)
         if cats_removed:
             for cat in cats_removed:
-                old_path = url_for('seeds.seed',
+                old_path = url_for('seeds.cultivar',
                                    cat_slug=cat.slug,
                                    cn_slug=old_cn_slug,
-                                   seed_slug=old_sd_slug)
+                                   cv_slug=old_cv_slug)
                 urllist = []
-                for ct in seed.categories:
-                    new_path = url_for('seeds.seed',
+                for ct in cv.categories:
+                    new_path = url_for('seeds.cultivar',
                                        cat_slug=ct.slug,
                                        cn_slug=new_cn_slug,
-                                       seed_slug=new_sd_slug)
+                                       cv_slug=new_cv_slug)
                     urllist.append('<a href="{0}" target="_blank">{1}</a>'
                                    .format(url_for('seeds.add_redirect',
                                                    old_path=old_path,
@@ -1118,17 +1124,17 @@ def edit_seed(seed_id=None):
                                                    status_code=301),
                                            new_path))
                 flash(redirect_warning(old_path, list_to_or_string(urllist)))
-        if old_sd_slug != new_sd_slug or old_cn_slug != new_cn_slug:
-            for cat in seed.categories:
+        if old_cv_slug != new_cv_slug or old_cn_slug != new_cn_slug:
+            for cat in cv.categories:
                 if cat not in cats_added:
-                    old_path = url_for('seeds.seed',
+                    old_path = url_for('seeds.cultivar',
                                        cat_slug=cat.slug,
                                        cn_slug=old_cn_slug,
-                                       seed_slug=old_sd_slug)
-                    new_path = url_for('seeds.seed',
+                                       cv_slug=old_cv_slug)
+                    new_path = url_for('seeds.cultivar',
                                        cat_slug=cat.slug,
                                        cn_slug=new_cn_slug,
-                                       seed_slug=new_sd_slug)
+                                       cv_slug=new_cv_slug)
                     flash(redirect_warning(
                         old_path,
                         '<a href="{0} target="_blank">{1}</a>'
@@ -1140,145 +1146,146 @@ def edit_seed(seed_id=None):
                     ))
         if not form.description.data:
             form.description.data = None
-        if form.description.data != seed.description:
+        if form.description.data != cv.description:
             edited = True
             if form.description.data:
-                seed.description = form.description.data
+                cv.description = form.description.data
                 flash('Changed description for \'{0}\' to: {1}'.
-                      format(seed.fullname, seed.description))
+                      format(cv.fullname, cv.description))
             else:
-                seed.description = None
+                cv.description = None
                 flash('Description for \'{0}\' has been cleared.'
-                      .format(seed.fullname))
-        if seed.gw_common_names:
-            for gw_cn in list(seed.gw_common_names):
+                      .format(cv.fullname))
+        if cv.gw_common_names:
+            for gw_cn in list(cv.gw_common_names):
                 if gw_cn.id not in form.gw_common_names.data:
                     edited = True
                     flash('\'{0}\' removed from Grows With for \'{1}\', and '
-                          'vice versa.'.format(gw_cn.name, seed.fullname))
-                    seed.gw_common_names.remove(gw_cn)
+                          'vice versa.'.format(gw_cn.name, cv.fullname))
+                    cv.gw_common_names.remove(gw_cn)
         if form.gw_common_names.data:
             for gw_cn_id in form.gw_common_names.data:
                 if gw_cn_id != 0:
                     gw_cn = CommonName.query.get(gw_cn_id)
-                    if gw_cn not in seed.gw_common_names:
+                    if gw_cn not in cv.gw_common_names:
                         edited = True
                         flash('\'{0}\' added to Grows With for \'{1}\', and '
-                              'vice versa.'.format(gw_cn.name, seed.fullname))
-                        seed.gw_common_names.append(gw_cn)
-        if seed.gw_seeds:
-            for gw_sd in list(seed.gw_seeds):
-                if gw_sd.id not in form.gw_seeds.data:
+                              'vice versa.'.format(gw_cn.name, cv.fullname))
+                        cv.gw_common_names.append(gw_cn)
+        if cv.gw_cultivars:
+            for gw_cv in list(cv.gw_cultivars):
+                if gw_cv.id not in form.gw_cultivars.data:
                     edited = True
                     flash('\'{0}\' removed from Grows With for \'{1}\', and '
-                          'vice versa'.format(gw_sd.fullname, seed.fullname))
-                    if seed in gw_sd.gw_seeds:
-                        gw_sd.gw_seeds.remove(seed)
-                    seed.gw_seeds.remove(gw_sd)
-        if form.gw_seeds.data:
-            for gw_sd_id in form.gw_seeds.data:
-                if gw_sd_id != 0 and gw_sd_id != seed.id:
-                    gw_sd = Seed.query.get(gw_sd_id)
-                    if gw_sd not in seed.gw_seeds:
+                          'vice versa'.format(gw_cv.fullname, cv.fullname))
+                    if cv in gw_cv.gw_cultivars:
+                        gw_cv.gw_cultivars.remove(cv)
+                    cv.gw_cultivars.remove(gw_cv)
+        if form.gw_cultivars.data:
+            for gw_cv_id in form.gw_cultivars.data:
+                if gw_cv_id != 0 and gw_cv_id != cv.id:
+                    gw_cv = Cultivar.query.get(gw_cv_id)
+                    if gw_cv not in cv.gw_cultivars:
                         edited = True
                         flash('\'{0}\' added to Grows With for \'{1}\', and '
-                              'vice versa.'.format(gw_sd.fullname,
-                                                   seed.fullname))
-                        seed.gw_seeds.append(gw_sd)
-                        gw_sd.gw_seeds.append(seed)
-        if seed.series:
-            if form.series.data != seed.series.id:
+                              'vice versa.'.format(gw_cv.fullname,
+                                                   cv.fullname))
+                        cv.gw_cultivars.append(gw_cv)
+                        gw_cv.gw_cultivars.append(cv)
+        if cv.series:
+            if form.series.data != cv.series.id:
                 edited = True
                 if form.series.data == 0:
                     flash('Series for \'{0}\' has been unset.'
-                          .format(seed.fullname))
-                    seed.series = None
+                          .format(cv.fullname))
+                    cv.series = None
                 else:
                     series = Series.query.get(form.series.data)
-                    seed.series = series
+                    cv.series = series
                     flash('Series for \'{0}\' has been set to: {1}'
-                          .format(seed.fullname, seed.series.name))
+                          .format(cv.fullname, cv.series.name))
         else:
             if form.series.data != 0:
                 edited = True
                 series = Series.query.get(form.series.data)
-                seed.series = series
+                cv.series = series
                 flash('Series for \'{0}\' has been set to: {1}'
-                      .format(seed.fullname, seed.series.name))
+                      .format(cv.fullname, cv.series.name))
         if form.in_stock.data:
-            if not seed.in_stock:
+            if not cv.in_stock:
                 edited = True
-                flash('\'{0}\' is now in stock.'.format(seed.fullname))
-                seed.in_stock = True
+                flash('\'{0}\' is now in stock.'.format(cv.fullname))
+                cv.in_stock = True
         else:
-            if seed.in_stock:
+            if cv.in_stock:
                 edited = True
-                flash('\'{0}\' is now out of stock.'.format(seed.fullname))
-                seed.in_stock = False
+                flash('\'{0}\' is now out of stock.'.format(cv.fullname))
+                cv.in_stock = False
         if form.dropped.data:
-            if not seed.dropped:
+            if not cv.dropped:
                 edited = True
-                flash('\'{0}\' has been dropped.'.format(seed.fullname))
-                seed.dropped = True
+                flash('\'{0}\' has been dropped.'.format(cv.fullname))
+                cv.dropped = True
         else:
-            if seed.dropped:
+            if cv.dropped:
                 edited = True
                 flash('\'{0}\' is now active/no longer dropped.'.
-                      format(seed.fullname))
-                seed.dropped = False
-        if form.synonyms.data != seed.list_synonyms_as_string():
+                      format(cv.fullname))
+                cv.dropped = False
+        if form.synonyms.data != cv.list_synonyms_as_string():
             edited = True
-            seed.set_synonyms_from_string_list(form.synonyms.data)
+            cv.set_synonyms_from_string_list(form.synonyms.data)
             flash('Synonyms for \'{0}\' set to: {1}'
-                  .format(seed.fullname, seed.list_synonyms_as_string()))
+                  .format(cv.fullname, cv.list_synonyms_as_string()))
         if form.thumbnail.data:
             thumb_name = secure_filename(form.thumbnail.data.filename)
             img = Image.query.filter_by(filename=thumb_name).first()
-            if img and img != seed.thumbnail and img not in seed.images:
+            if img and img != cv.thumbnail and img not in cv.images:
                 flash('Error: The filename \'{0}\' is already in use by '
-                      'another seed. Please rename it and try again.'
+                      'another cultivar. Please rename it and try again.'
                       .format(thumb_name))
                 db.session.rollback()
-                return redirect(url_for('seeds.edit_seed', seed_id=seed.id))
+                return redirect(url_for('seeds.edit_cultivar', cv_id=cv.id))
             else:
                 edited = True
                 flash('New thumbnail for \'{0}\' uploaded as: \'{1}\''.
-                      format(seed.fullname, thumb_name))
+                      format(cv.fullname, thumb_name))
                 upload_path = os.path.join(current_app.config.
                                            get('IMAGES_FOLDER'),
                                            thumb_name)
-                if seed.thumbnail is not None:
+                if cv.thumbnail is not None:
                     # Do not delete or orphan thumbnail, move to images.
-                    # Do not directly add seed.thumbnail to seed.images, as
-                    # that will cause a CircularDependencyError.
-                    tb = seed.thumbnail
-                    seed.thumbnail = None
-                    seed.images.append(tb)
-                if img in seed.images:
-                    seed.thumbnail = img
-                    seed.images.remove(img)
+                    # Do not directly add cultivar.thumbnail to
+                    # cultivar.images, as that will cause a
+                    # CircularDependencyError.
+                    tb = cv.thumbnail
+                    cv.thumbnail = None
+                    cv.images.append(tb)
+                if img in cv.images:
+                    cv.thumbnail = img
+                    cv.images.remove(img)
                 if not img:
-                    seed.thumbnail = Image(filename=thumb_name)
+                    cv.thumbnail = Image(filename=thumb_name)
                 form.thumbnail.data.save(upload_path)
         if edited:
             db.session.commit()
             return redirect(url_for('seeds.manage'))
         else:
-            flash('No changes made to \'{0}\'.'.format(seed.fullname))
-            return redirect(url_for('seeds.edit_seed', seed_id=seed_id))
-    form.populate(seed)
+            flash('No changes made to \'{0}\'.'.format(cv.fullname))
+            return redirect(url_for('seeds.edit_cultivar', cv_id=cv_id))
+    form.populate(cv)
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
         (url_for('seeds.edit_category'), 'Edit Category'),
         (url_for('seeds.edit_common_name'), 'Edit Common Name'),
         (url_for('seeds.edit_botanical_name'), 'Edit Botanical Name'),
         (url_for('seeds.edit_series'), 'Edit Series'),
-        (url_for('seeds.edit_seed'), 'Edit Seed')
+        (url_for('seeds.edit_cultivar'), 'Edit Cultivar')
     )
-    return render_template('seeds/edit_seed.html',
+    return render_template('seeds/edit_cultivar.html',
                            crumbs=crumbs,
                            form=form,
-                           seed=seed)
+                           cultivar=cv)
 
 
 @seeds.route('/edit_series', methods=['GET', 'POST'])
@@ -1346,45 +1353,45 @@ def edit_series(series_id=None):
                            series=series)
 
 
-@seeds.route('/flip_dropped/<seed_id>')
+@seeds.route('/flip_dropped/<cv_id>')
 @seeds.route('/flip_dropped')
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
-def flip_dropped(seed_id=None):
-    """Reverse dropped status of given seed."""
-    if seed_id is None:
+def flip_dropped(cv_id=None):
+    """Reverse dropped status of given cultivar."""
+    if cv_id is None:
         abort(404)
-    seed = Seed.query.get(seed_id)
-    if seed is None:
+    cv = Cultivar.query.get(cv_id)
+    if cv is None:
         abort(404)
-    if seed.dropped:
+    if cv.dropped:
         flash('\'{0}\' has been returned to active status.'.
-              format(seed.fullname))
-        seed.dropped = False
+              format(cv.fullname))
+        cv.dropped = False
     else:
         flash('\'{0}\' has been dropped.'.
-              format(seed.fullname))
-        seed.dropped = True
+              format(cv.fullname))
+        cv.dropped = True
     db.session.commit()
     return redirect(request.args.get('next') or url_for('seeds.manage'))
 
 
-@seeds.route('/flip_in_stock/<seed_id>')
+@seeds.route('/flip_in_stock/<cv_id>')
 @seeds.route('/flip_in_stock')
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
-def flip_in_stock(seed_id=None):
-    if seed_id is None:
+def flip_in_stock(cv_id=None):
+    if cv_id is None:
         abort(404)
-    seed = Seed.query.get(seed_id)
-    if seed is None:
+    cv = Cultivar.query.get(cv_id)
+    if cv is None:
         abort(404)
-    if seed.in_stock:
-        flash('\'{0}\' is now out of stock.'.format(seed.fullname))
-        seed.in_stock = False
+    if cv.in_stock:
+        flash('\'{0}\' is now out of stock.'.format(cv.fullname))
+        cv.in_stock = False
     else:
-        flash('\'{0}\' is now in stock.'.format(seed.fullname))
-        seed.in_stock = True
+        flash('\'{0}\' is now in stock.'.format(cv.fullname))
+        cv.in_stock = True
     db.session.commit()
     return redirect(request.args.get('next') or url_for('seeds.manage'))
 
@@ -1502,17 +1509,17 @@ def remove_category(cat_id=None):
                                     status_code=302),
                             new_path)
                 ))
-            for sd in category.seeds:
-                if sd not in cat2.seeds:
-                    cat2.seeds.append(sd)
-                    old_path = url_for('seeds.seed',
+            for cv in category.cultivars:
+                if cv not in cat2.cultivars:
+                    cat2.cultivars.append(cv)
+                    old_path = url_for('seeds.cultivar',
                                        cat_slug=old_cat_slug,
-                                       cn_slug=sd.common_name.slug,
-                                       seed_slug=sd.slug)
-                    new_path = url_for('seeds.seed',
+                                       cn_slug=cv.common_name.slug,
+                                       cv_slug=cv.slug)
+                    new_path = url_for('seeds.cultivar',
                                        cat_slug=new_cat_slug,
-                                       cn_slug=sd.common_name.slug,
-                                       seed_slug=sd.slug)
+                                       cn_slug=cv.common_name.slug,
+                                       cv_slug=cv.slug)
                     flash(redirect_warning(
                         old_path,
                         '<a href="{0}" target="_blank">{1}</a>'
@@ -1587,36 +1594,36 @@ def remove_common_name(cn_id=None):
             for bn in cn.botanical_names:
                 if bn not in cn2.botanical_names:
                     cn2.botanical_names.append(bn)
-            for sd in list(cn.seeds):
-                if sd not in cn2.seeds:
-                    new_fullname = '{0} {1}'.format(sd.name, cn2.name)
-                    fns = [seed.fullname for seed in cn2.seeds]
+            for cv in list(cn.cultivars):
+                if cv not in cn2.cultivars:
+                    new_fullname = '{0} {1}'.format(cv.name, cn2.name)
+                    fns = [cv.fullname for cv in cn2.cultivars]
                     if new_fullname in fns:
-                        ed_url = url_for('seeds.edit_seed', seed_id=sd.id)
-                        rem_url = url_for('seeds.remove_seed', seed_id=sd.id)
+                        ed_url = url_for('seeds.edit_cultivar', cv_id=cv.id)
+                        rem_url = url_for('seeds.remove_cultivar', cv_id=cv.id)
                         flash(
                             Markup('Warning: \'{0}\' could not be changed to '
                                    '\'{1}\' because \'{1}\' already exists! '
                                    '<a href="{2}">Click here</a> to edit the '
-                                   'orphaned seed, or <a href="{3}">click '
+                                   'orphaned cultivar, or <a href="{3}">click '
                                    'here</a> to remove it from the database.'
-                                   .format(sd.fullname,
+                                   .format(cv.fullname,
                                            new_fullname,
                                            ed_url,
                                            rem_url)))
                     else:
-                        cn2.seeds.append(sd)
+                        cn2.cultivars.append(cv)
                         for cat in cn.categories:
-                            old_path = url_for('seeds.seed',
+                            old_path = url_for('seeds.cultivar',
                                                cat_slug=cat.slug,
                                                cn_slug=old_cn_slug,
-                                               seed_slug=sd.slug)
+                                               cv_slug=cv.slug)
                             urllist = []
                             for cat2 in cn2.categories:
-                                new_path = url_for('seeds.seed',
+                                new_path = url_for('seeds.cultivar',
                                                    cat_slug=cat2.slug,
                                                    cn_slug=new_cn_slug,
-                                                   seed_slug=sd.slug)
+                                                   cv_slug=cv.slug)
                                 urllist.append(
                                     '<a href="{0}" target="_blank">{1}</a>'
                                     .format(url_for('seeds.add_redirect',
@@ -1681,7 +1688,7 @@ def remove_packet(pkt_id=None):
         (url_for('seeds.remove_common_name'), 'Remove Common Name'),
         (url_for('seeds.remove_botanical_name'), 'Remove Botanical Name'),
         (url_for('seeds.remove_series'), 'Remove Series'),
-        (url_for('seeds.remove_seed'), 'Remove Seed'),
+        (url_for('seeds.remove_cultivar'), 'Remove Cultivar'),
         (url_for('seeds.remove_packet'), 'Remove Packet')
     )
     return render_template('seeds/remove_packet.html',
@@ -1690,26 +1697,28 @@ def remove_packet(pkt_id=None):
                            packet=packet)
 
 
-@seeds.route('/remove_seed', methods=['GET', 'POST'])
-@seeds.route('/remove_seed/<seed_id>', methods=['GET', 'POST'])
+@seeds.route('/remove_cultivar', methods=['GET', 'POST'])
+@seeds.route('/remove_cultivar/<cv_id>', methods=['GET', 'POST'])
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
-def remove_seed(seed_id=None):
-    if seed_id is None:
-        return redirect(url_for('seeds.select_seed', dest='seeds.remove_seed'))
-    seed = Seed.query.get(seed_id)
-    if seed is None:
-        return redirect(url_for('seeds.select_seed', dest='seeds.remove_seed'))
-    form = RemoveSeedForm()
+def remove_cultivar(cv_id=None):
+    if cv_id is None:
+        return redirect(url_for('seeds.select_cultivar',
+                                dest='seeds.remove_cultivar'))
+    cv = Cultivar.query.get(cv_id)
+    if cv is None:
+        return redirect(url_for('seeds.select_cultivar',
+                                dest='seeds.remove_cultivar'))
+    form = RemoveCultivarForm()
     if form.validate_on_submit():
         if not form.verify_removal.data:
             flash('No changes made. Check the box labeled \'Yes\' if you '
-                  'would like to remove this seed.')
-            return redirect(url_for('seeds.remove_seed', seed_id=seed_id))
+                  'would like to remove this cultivar.')
+            return redirect(url_for('seeds.remove_cultivar', cv_id=cv_id))
         if form.delete_images:
             rollback = False
-            if seed.images:
-                for image in seed.images:
+            if cv.images:
+                for image in cv.images:
                     try:
                         image.delete_file()
                         flash('Image file \'{0}\' deleted.'.
@@ -1723,37 +1732,37 @@ def remove_seed(seed_id=None):
                             flash('Error: Attempting to delete image \'{0}\' '
                                   'raised an exception: {1}'
                                   .format(image.filename, e))
-            if seed.thumbnail:
+            if cv.thumbnail:
                 try:
-                    seed.thumbnail.delete_file()
+                    cv.thumbnail.delete_file()
                     flash('Thumbnail image \'{0}\' has been deleted.'.
-                          format(seed.thumbnail.filename))
-                    db.session.delete(seed.thumbnail)
+                          format(cv.thumbnail.filename))
+                    db.session.delete(cv.thumbnail)
                 except OSError as e:
                     if e.errno == 2:    # No such file or directory
-                        db.session.delete(seed.thumbnail)
+                        db.session.delete(cv.thumbnail)
                     else:
                         rollback = True
                         flash('Error: Attempting to delete thumbnail \'{0}\' '
                               'raised an exception: {1}'
-                              .format(seed.thumbnail.filename, e))
+                              .format(cv.thumbnail.filename, e))
         if rollback:
-            flash('Error: Seed could not be deleted due to problems deleting '
-                  'associated images.')
+            flash('Error: Cultivar could not be deleted due to problems '
+                  'deleting associated images.')
             db.session.rollback()
-            return redirect(url_for('seeds.remove_seed', seed_id=seed_id))
+            return redirect(url_for('seeds.remove_cultivar', cv_id=cv_id))
         else:
-            if seed.synonyms:
+            if cv.synonyms:
                 flash('Synonyms for \'{0}\' cleared, and orphaned synonyms '
-                      'have been deleted.'.format(seed.fullname))
-                seed.clear_synonyms()
-            flash('The seed \'{0}\' has been deleted. Forever. I hope you\'re '
-                  'happy with yourself.'.format(seed.fullname))
-            for cat in seed.categories:
-                old_path = url_for('seeds.seed',
+                      'have been deleted.'.format(cv.fullname))
+                cv.clear_synonyms()
+            flash('The cultivar \'{0}\' has been deleted. Forever. I hope '
+                  'you\'re happy with yourself.'.format(cv.fullname))
+            for cat in cv.categories:
+                old_path = url_for('seeds.cultivar',
                                    cat_slug=cat.slug,
-                                   cn_slug=seed.common_name.slug,
-                                   seed_slug=seed.slug)
+                                   cn_slug=cv.common_name.slug,
+                                   cv_slug=cv.slug)
                 flash(Markup(
                     'Warning: the path \'{0}\' is no longer valid. <a '
                     'href="{1}" target="_blank">Click here</a> if you wish to'
@@ -1763,7 +1772,7 @@ def remove_seed(seed_id=None):
                                     old_path=old_path,
                                     status_code=301))
                 ))
-            db.session.delete(seed)
+            db.session.delete(cv)
             db.session.commit()
             return redirect(url_for('seeds.manage'))
     form.delete_images.data = True
@@ -1773,12 +1782,12 @@ def remove_seed(seed_id=None):
         (url_for('seeds.remove_common_name'), 'Remove Common Name'),
         (url_for('seeds.remove_series'), 'Remove Series'),
         (url_for('seeds.remove_botanical_name'), 'Remove Botanical Name'),
-        (url_for('seeds.remove_seed'), 'Remove Seed')
+        (url_for('seeds.remove_cultivar'), 'Remove Cultivar')
     )
-    return render_template('seeds/remove_seed.html',
+    return render_template('seeds/remove_cultivar.html',
                            crumbs=crumbs,
                            form=form,
-                           seed=seed)
+                           cultivar=cv)
 
 
 @seeds.route('/remove_series', methods=['GET', 'POST'])
@@ -1820,31 +1829,31 @@ def remove_series(series_id=None):
                            series=series)
 
 
-@seeds.route('/<cat_slug>/<cn_slug>/<seed_slug>')
-def seed(cat_slug=None, cn_slug=None, seed_slug=None):
-    """Display a page for a given seed."""
+@seeds.route('/<cat_slug>/<cn_slug>/<cv_slug>')
+def cultivar(cat_slug=None, cn_slug=None, cv_slug=None):
+    """Display a page for a given cultivar."""
     cat = Category.query.filter_by(slug=cat_slug).first()
     cn = CommonName.query.filter_by(slug=cn_slug).first()
-    seed = Seed.query.filter(Seed.slug == seed_slug,
-                             Seed.common_name == cn).first()
-    if (cat is not None and cn is not None and seed is not None) and \
-            (cat in seed.categories and cn is seed.common_name):
+    cv = Cultivar.query.filter(Cultivar.slug == cv_slug,
+                               Cultivar.common_name == cn).first()
+    if (cat is not None and cn is not None and cv is not None) and \
+            (cat in cv.categories and cn is cv.common_name):
         crumbs = make_breadcrumbs(
             (url_for('seeds.index'), 'All Seeds'),
             (url_for('seeds.category', cat_slug=cat_slug), cat.header),
             (url_for('seeds.common_name', cat_slug=cat_slug, cn_slug=cn_slug),
              cn.name),
-            (url_for('seeds.seed',
+            (url_for('seeds.cultivar',
                      cat_slug=cat_slug,
                      cn_slug=cn_slug,
-                     seed_slug=seed_slug),
-             seed.name)
+                     cv_slug=cv_slug),
+             cv.name)
         )
-        return render_template('seeds/seed.html',
+        return render_template('seeds/cultivar.html',
                                cat_slug=cat_slug,
                                cn_slug=cn_slug,
                                crumbs=crumbs,
-                               seed=seed)
+                               cultivar=cv)
     else:
         abort(404)
 
@@ -1954,28 +1963,28 @@ def select_packet():
                            form=form)
 
 
-@seeds.route('/select_seed', methods=['GET', 'POST'])
+@seeds.route('/select_cultivar', methods=['GET', 'POST'])
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
-def select_seed():
-    """Select a seed to load on another page.
+def select_cultivar():
+    """Select a cultivar to load on another page.
 
     Request Args:
-        dest (str): The route to redirect to once seed is selected.
+        dest (str): The route to redirect to once cultivar is selected.
     """
     dest = request.args.get('dest')
     if dest is None:
         flash('Error: No destination page was specified!')
         return redirect(url_for('seeds.manage'))
-    form = SelectSeedForm()
-    form.set_seed()
+    form = SelectCultivarForm()
+    form.set_cultivar()
     if form.validate_on_submit():
-        return redirect(url_for(dest, seed_id=form.seed.data))
+        return redirect(url_for(dest, cv_id=form.cultivar.data))
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
-        (url_for('seeds.select_seed', dest=dest), 'Select Seed')
+        (url_for('seeds.select_cultivar', dest=dest), 'Select Cultivar')
     )
-    return render_template('seeds/select_seed.html',
+    return render_template('seeds/select_cultivar.html',
                            crumbs=crumbs,
                            form=form)
 

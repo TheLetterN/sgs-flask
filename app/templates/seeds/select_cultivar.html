@@ -16,17 +16,25 @@
    Copyright Swallowtail Garden Seeds, Inc 
 #}
 {% extends "main/base.html" %}
+{% from "includes/form_field.html" import form_field %}
 {# HTML within blocks should be indented as follows for consistency: #}
 {# block head: 2 indentations of 4 spaces each. (8 spaces total.) #}
 {# block main: 3 indentations of 4 spaces each. (12 spaces total.) #}
-{% from 'includes/seed_box.html' import seed_box with context %}
 {% block head %}
-        <title>Swallowtail Garden Seeds - {{ seed.fullname }}</title>
-        <link rel="canonical" href="{{ url_for('seeds.seed', cat_slug=cat_slug, cn_slug=cn_slug, seed_slug=seed.slug, _external=True) }}">
+        <title>Select Cultivar</title>
+        <meta name="robots" content="noindex, nofollow">
 {% endblock %}
 {% block main %}
-            <div>
-                <h1>{{ seed.fullname }}</h1>
-            {{ seed_box(seed)|indent(12)|safe }}
+            <h1>Select a Cultivar</h1>
+            <form method="POST">
+                {{ form.hidden_tag() }}
+                <ol>
+                    <li>
+                        {{ form_field(form.cultivar, show_label=False)|indent(24)|safe }}
+                    </li>
+                    <li>
+                        {{ form.submit }}
+                    </li>
+                </ol>
+            </form>
 {% endblock %}
-

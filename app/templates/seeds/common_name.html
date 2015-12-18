@@ -19,7 +19,7 @@
 {# HTML within blocks should be indented as follows for consistency: #}
 {# block head: 2 indentations of 4 spaces each. (8 spaces total.) #}
 {# block main: 3 indentations of 4 spaces each. (12 spaces total.) #}
-{% from 'includes/seed_box.html' import seed_box with context %}
+{% from 'includes/cultivar_box.html' import cultivar_box with context %}
 {% from 'includes/grows_with.html' import grows_with %}
 {% block head %}
         <title>Swallowtail Garden Seeds - {{ cn.header }}</title>
@@ -29,11 +29,11 @@
             <div>
                 <h1>{{ cn.header }}</h1>
                     <p class="description">{{ cn.description|safe }}</p>
-                    {% if cn.gw_common_names or cn.gw_seeds %}<p class="grows_with">Grows nicely with: {{ grows_with(cn) }}.</p>{% endif %}
+                    {% if cn.gw_common_names or cn.gw_cultivars %}<p class="grows_with">Grows nicely with: {{ grows_with(cn) }}.</p>{% endif %}
             </div>
-            {% for seed in cn.seeds %}
-            {% if not seed.syn_only %}
-            {{ seed_box(seed)|indent(12)|safe }}
+            {% for cultivar in cn.cultivars %}
+            {% if not cultivar.syn_only %}
+            {{ cultivar_box(cultivar)|indent(12)|safe }}
             {% endif %}
             {% endfor %}
 {% endblock %}

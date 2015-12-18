@@ -189,7 +189,6 @@ class RedirectsFile(object):
     def add_redirect(self, rd):
         """Add a Redirect object to the file."""
         if isinstance(rd, Redirect):
-            old_paths = [rd.old_path for rd in self.redirects]
             for redir in self.redirects:
                 if rd.old_path == redir.old_path:
                     raise ValueError('A redirect already exists from \'{0}\'. '
@@ -246,7 +245,7 @@ class RedirectsFile(object):
 
     def save(self, file_name=None):
         """Save specified file, or self.file_name.
-        
+
         Raises:
             ValueError: if there are no redirects to save.
         """

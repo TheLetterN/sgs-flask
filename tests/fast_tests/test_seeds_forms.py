@@ -6,18 +6,18 @@ from app.seeds.forms import (
     AddCommonNameForm,
     AddPacketForm,
     AddRedirectForm,
-    AddSeedForm,
+    AddCultivarForm,
     EditBotanicalNameForm,
     EditCategoryForm,
     EditCommonNameForm,
-    EditSeedForm,
+    EditCultivarForm,
     NotSpace,
     ReplaceMe,
     RRPath,
     USDollar
 )
 from app.redirects import Redirect, RedirectsFile
-from app.seeds.models import BotanicalName, Category, CommonName, Seed, Series
+from app.seeds.models import BotanicalName, Category, CommonName, Cultivar, Series
 from tests.conftest import app  # noqa
 
 
@@ -183,11 +183,11 @@ class TestAddRedirectForm:
                 form.validate_new_path(form.new_path)
 
 
-class TestAddSeedForm:
-    """Test custom methods of AddSeedForm."""
+class TestAddCultivarForm:
+    """Test custom methods of AddCultivarForm."""
     def test_validate_synonyms(self, app):
         """Raise ValidationError if any synonyms are invalid."""
-        form = AddSeedForm()
+        form = AddCultivarForm()
         form.name.data = 'Foxy'
         form.synonyms.data = 'Digitalis'
         form.validate_synonyms(form.synonyms)
@@ -293,10 +293,10 @@ class TestEditCommonNameForm:
         gwcn.id = 3
         gwcn.name = 'Foxglove'
         cn.gw_common_names.append(gwcn)
-        gwsd = Seed()
-        gwsd.name = 'Foxy'
-        gwsd.id = 1
-        cn.gw_seeds.append(gwsd)
+        gwcv = Cultivar()
+        gwcv.name = 'Foxy'
+        gwcv.id = 1
+        cn.gw_cultivars.append(gwcv)
         cn.description = 'Not mint.'
         form = EditCommonNameForm()
         form.populate(cn)
@@ -305,7 +305,7 @@ class TestEditCommonNameForm:
         assert form.synonyms.data == cns.name
         assert cat.id in form.categories.data
         assert gwcn.id in form.gw_common_names.data
-        assert gwsd.id in form.gw_seeds.data
+        assert gwcv.id in form.gw_cultivars.data
 
     def test_validate_synonyms_same_as_name(self):
         """Raise ValidationError if a synonym is the same as name."""
@@ -330,38 +330,38 @@ class TestEditCommonNameForm:
         with pytest.raises(ValidationError):
             form.validate_synonyms(form.synonyms)
 
-class TestEditSeedForm:
-    """Test custom methods for EditSeedForm."""
+class TestEditCultivarForm:
+    """Test custom methods for EditCultivarForm."""
     def test_populate(self):
-        """Populate form with values from a Seed."""
-        form = EditSeedForm()
-        sd = Seed(name='Foxy', description='Like Hendrix!')
-        sd.id = 1
+        """Populate form with values from a Cultivar."""
+        form = EditCultivarForm()
+        cv = Cultivar(name='Foxy', description='Like Hendrix!')
+        cv.id = 1
         bn = BotanicalName(name='Digitalis purpurea')
         bn.id = 2
-        sd.botanical_name = bn
+        cv.botanical_name = bn
         cat = Category(name='Perennial Flower')
         cat.id = 3
-        sd.categories.append(cat)
+        cv.categories.append(cat)
         cn = CommonName(name='Foxglove')
         cn.id = 4
-        sd.common_name = cn
-        sd.in_stock = True
-        sd.dropped = True
+        cv.common_name = cn
+        cv.in_stock = True
+        cv.dropped = True
         gwcn = CommonName(name='Butterfly Weed')
         gwcn.id = 5
-        sd.gw_common_names.append(gwcn)
-        gwsd = Seed(name='Soulmate')
-        gwsd.common_name = gwcn
-        gwsd.id = 6
-        sd.gw_seeds.append(gwsd)
+        cv.gw_common_names.append(gwcn)
+        gwcv = Cultivar(name='Soulmate')
+        gwcv.common_name = gwcn
+        gwcv.id = 6
+        cv.gw_cultivars.append(gwcv)
         series = Series(name='Spotty')
         series.id = 7
-        sd.series = series
-        sdsyn = Seed(name='Fauxy')
-        sdsyn.id = 8
-        sd.synonyms.append(sdsyn)
-        form.populate(sd)
+        cv.series = series
+        cvsyn = Cultivar(name='Fauxy')
+        cvsyn.id = 8
+        cv.synonyms.append(cvsyn)
+        form.populate(cv)
         assert form.name.data == 'Foxy'
         assert form.description.data == 'Like Hendrix!'
         assert cat.id in form.categories.data
@@ -369,6 +369,6 @@ class TestEditSeedForm:
         assert form.in_stock.data
         assert form.dropped.data
         assert gwcn.id in form.gw_common_names.data
-        assert gwsd.id in form.gw_seeds.data
+        assert gwcv.id in form.gw_cultivars.data
         assert form.series.data == series.id
         assert form.synonyms.data == 'Fauxy'

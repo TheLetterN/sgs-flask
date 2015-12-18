@@ -428,8 +428,8 @@ label:after {
 }
 /* END forms */
 
-/* BEGIN seed_box */
-div.seed_box {
+/* BEGIN cultivar_box */
+div.cultivar_box {
     display: block;
     border-style: solid;
     border-width: 1px;
@@ -440,43 +440,43 @@ div.seed_box {
     overflow: auto;
 }
 
-div.seed_box img {
+div.cultivar_box img {
     float: right;
     margin-left: 1em;
 }
 
-div.seed_box h3 {
+div.cultivar_box h3 {
     display: block;
     font-weight: bold;
     font-size: 1.2em;
     vertical-align: top;
 }
 
-div.seed_box em {
+div.cultivar_box em {
     font-style: italic;
 }
 
-div.seed_box i {
+div.cultivar_box i {
     font-style: italic;
 }
 
-div.seed_box p {
+div.cultivar_box p {
     margin-right: 1em;
 }
 
-div.seed_box div.seed_info {
+div.cultivar_box div.cultivar_info {
     display: block;
 }
 
-div.seed_box div.seed_info i {
+div.cultivar_box div.cultivar_info i {
     display: block;
     font-size: 0.8em;
 }
 
-div.seed_box div.packet_info {
+div.cultivar_box div.packet_info {
     clear: both;
 }
-/* END seed_box */
+/* END cultivar_box */
 
 /* BEGIN fractions */
 span.fraction sup {

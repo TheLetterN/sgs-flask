@@ -2,7 +2,7 @@ from app.seeds.models import (
     BotanicalName,
     Category,
     Image,
-    Seed
+    Cultivar
 )
 from tests.conftest import app, db  # noqa
 
@@ -37,23 +37,23 @@ class TestCategoryWithDB:
         assert Category.query.filter_by(name='Rock').first() is cat3
 
 
-class TestSeedWithDB:
-    """Test Seed model methods that require database access."""
+class TestCultivarWithDB:
+    """Test Cultivar model methods that require database access."""
     def test_thumbnail_path_with_thumbnail(self, db):
         """Return path to thumbnail if it exists."""
-        seed = Seed()
+        cultivar = Cultivar()
         thumb = Image()
-        db.session.add_all([seed, thumb])
-        seed.name = 'Foxy'
+        db.session.add_all([cultivar, thumb])
+        cultivar.name = 'Foxy'
         thumb.filename = 'hello.jpg'
-        seed.thumbnail = thumb
+        cultivar.thumbnail = thumb
         db.session.commit()
-        assert seed.thumbnail_path == 'images/hello.jpg'
+        assert cultivar.thumbnail_path == 'images/hello.jpg'
 
     def test_thumbnail_path_no_thumbnail(self, db):
-        """Return path to defaulth thumbnail if seed has none."""
-        seed = Seed()
-        db.session.add(seed)
-        seed.name = 'Foxy'
+        """Return path to defaulth thumbnail if cultivar has none."""
+        cultivar = Cultivar()
+        db.session.add(cultivar)
+        cultivar.name = 'Foxy'
         db.session.commit()
-        assert seed.thumbnail_path == 'images/default_thumb.jpg'
+        assert cultivar.thumbnail_path == 'images/default_thumb.jpg'

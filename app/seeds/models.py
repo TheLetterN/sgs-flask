@@ -36,11 +36,11 @@ botanical_name_synonyms = db.Table(
 )
 
 
-categories_to_seeds = db.Table(
-    'categories_to_seeds',
+categories_to_cultivars = db.Table(
+    'categories_to_cultivars',
     db.Model.metadata,
     db.Column('categories_id', db.Integer, db.ForeignKey('categories.id')),
-    db.Column('seeds_id', db.Integer, db.ForeignKey('seeds.id'))
+    db.Column('cultivars_id', db.Integer, db.ForeignKey('cultivars.id'))
 )
 
 
@@ -72,27 +72,27 @@ cns_to_gw_cns = db.Table(
 )
 
 
-gw_common_names_to_gw_seeds = db.Table(
-    'gw_common_names_to_gw_seeds',
+gw_common_names_to_gw_cultivars = db.Table(
+    'gw_common_names_to_gw_cultivars',
     db.Model.metadata,
     db.Column('common_names_id', db.Integer, db.ForeignKey('common_names.id')),
-    db.Column('seeds_id', db.Integer, db.ForeignKey('seeds.id'))
+    db.Column('cultivars_id', db.Integer, db.ForeignKey('cultivars.id'))
 )
 
 
-seeds_to_gw_seeds = db.Table(
-    'seeds_to_gw_seeds',
+cultivars_to_gw_cultivars = db.Table(
+    'cultivars_to_gw_cultivars',
     db.Model.metadata,
-    db.Column('seed_id', db.Integer, db.ForeignKey('seeds.id')),
-    db.Column('gw_seed_id', db.Integer, db.ForeignKey('seeds.id'))
+    db.Column('cultivar_id', db.Integer, db.ForeignKey('cultivars.id')),
+    db.Column('gw_cultivar_id', db.Integer, db.ForeignKey('cultivars.id'))
 )
 
 
-seed_synonyms = db.Table(
-    'seed_synonyms',
+cultivar_synonyms = db.Table(
+    'cultivar_synonyms',
     db.Model.metadata,
-    db.Column('syn_parents_id', db.Integer, db.ForeignKey('seeds.id')),
-    db.Column('synonyms_id', db.Integer, db.ForeignKey('seeds.id'))
+    db.Column('syn_parents_id', db.Integer, db.ForeignKey('cultivars.id')),
+    db.Column('synonyms_id', db.Integer, db.ForeignKey('cultivars.id'))
 )
 
 
@@ -432,7 +432,7 @@ class Category(db.Model):
         description (str): HTML description information for the category.
         _name (str): The name for the category itself, such as 'Herb'
             or 'Perennial Flower'.
-        seeds (relationship): Seeds that fall under this category.
+        cultivars (relationship): Cultivars that fall under this category.
             categories (backref): Categories belonging to a seed.
         slug (str): URL-friendly version of the category name.
     """
@@ -440,9 +440,9 @@ class Category(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     description = db.Column(db.Text)
     _name = db.Column(db.String(64), unique=True)
-    seeds = db.relationship('Seed',
-                            secondary=categories_to_seeds,
-                            backref='categories')
+    cultivars = db.relationship('Cultivar',
+                                secondary=categories_to_cultivars,
+                                backref='categories')
     slug = db.Column(db.String(64), unique=True)
 
     def __init__(self, name=None, description=None):
@@ -502,7 +502,7 @@ class CommonName(db.Model):
     belongs to.
 
     Attributes:
-        __tablename__ (str): Name of the table: 'seed_types'
+        __tablename__ (str): Name of the table: 'common_names'
         id (int): Auto-incremented ID # for use as primary_key.
         categories (relationship): The categories this common name falls under.
             common_names (backref): The common names associated with a
@@ -659,18 +659,19 @@ class CommonName(db.Model):
 class Image(db.Model):
     """Table for image information.
 
-    Any image uploaded to be used with the seed model should utilize this
+    Any image uploaded to be used with the cultivar model should utilize this
     table for important image data like filename and location.
     __tablename__ (str): Name of the table: 'images'
     id (int): Auto-incremended ID # for use as primary key.
     filename (str): File name of an image.
-    seed_id (int): Foreign key from Seed to allow Seed to have a OtM
-        relationship with Image.
+    cultivar_id (int): Foreign key from Cultivar to allow Cultivar to have a
+        OtM relationship with Image.
     """
     __tablename__ = 'images'
     id = db.Column(db.Integer, primary_key=True)
     filename = db.Column(db.String(32), unique=True)
-    seed_id = db.Column(db.Integer, db.ForeignKey('seeds.id', use_alter=True))
+    cultivar_id = db.Column(db.Integer,
+                            db.ForeignKey('cultivars.id', use_alter=True))
 
     def __init__(self, filename=None):
         self.filename = filename
@@ -699,6 +700,201 @@ class Image(db.Model):
         return os.path.exists(self.full_path)
 
 
+class Cultivar(db.Model):
+    """Table for cultivar data.
+
+    This table contains the primary identifying information for a cultivar of
+    seed we sell. Generally, this is the table called to get and display
+    cultivar data on the website.
+
+    Attributes:
+        __tablename__ (str): Name of the table: 'cultivars'
+        id (int): Auto-incremented ID # for use as primary key.
+        botanical_name_id (int): ForeignKey for botanical_name relationship.
+        botanical_name (relationship): Botanical name for this cultivar.
+        common_name_id (int): ForeignKey for common_name relationship.
+        common_name (relationship): Common name this cultivar belongs to.
+        description (str): Product description in HTML format.
+        dropped (bool): False if the cultivar will be re-stocked when low,
+            False if it will be discontinued when low.
+        gw_common_names (relationship): Common names this cultivar grows well
+            with. gw_cultivars (backref): Cultivars that grow well with a
+            common name.
+        gw_cultivars (relationship): Other cultivars this one grows well with.
+        images (relationship): Images associated with this cultivar.
+        in_stock (bool): True if a cultivar is in stock, False if not.
+        _name (str): The name of the cultivar; the main product name.
+        packets (relationship): Packets for sale of this cultivar.
+        series_id (int): ForeignKey for series relationship.
+        series (relationship): Series this cultivar belongs to.
+            cultivars (backref): Cultivars in given series.
+        slug (str): A URL-friendly version of _name.
+        syn_only (bool): Whether or not this cultivar only exists as a synonym.
+        syn_parents (relationship): Cultivars that have this one as a synonym.
+            synonyms (backref): Synonyms of this cultivar.
+        thumbnail_id (int): ForeignKey of Image, used with thumbnail.
+        thumbnail (relationship): MtO relationship with Image for specifying
+            a thumbnail for cultivar.
+        __table_args__: Table-wide arguments, such as constraints.
+    """
+    __tablename__ = 'cultivars'
+    id = db.Column(db.Integer, primary_key=True)
+    botanical_name_id = db.Column(db.Integer,
+                                  db.ForeignKey('botanical_names.id'))
+    botanical_name = db.relationship('BotanicalName',
+                                     backref='cultivars')
+    common_name_id = db.Column(db.Integer, db.ForeignKey('common_names.id'))
+    common_name = db.relationship('CommonName', backref='cultivars')
+    description = db.Column(db.Text)
+    dropped = db.Column(db.Boolean)
+    gw_common_names = db.relationship(
+        'CommonName',
+        secondary=gw_common_names_to_gw_cultivars,
+        backref='gw_cultivars'
+    )
+    gw_cultivars = db.relationship(
+        'Cultivar',
+        secondary=cultivars_to_gw_cultivars,
+        primaryjoin=id == cultivars_to_gw_cultivars.c.cultivar_id,
+        secondaryjoin=id == cultivars_to_gw_cultivars.c.gw_cultivar_id
+    )
+    images = db.relationship('Image', foreign_keys=Image.cultivar_id)
+    in_stock = db.Column(db.Boolean)
+    _name = db.Column(db.String(64))
+    packets = db.relationship('Packet',
+                              cascade='all, delete-orphan',
+                              backref='cultivar')
+    series_id = db.Column(db.Integer, db.ForeignKey('series.id'))
+    series = db.relationship('Series', backref='cultivars')
+    slug = db.Column(db.String(64))
+    syn_only = db.Column(db.Boolean, default=False)
+    syn_parents = db.relationship(
+        'Cultivar',
+        secondary=cultivar_synonyms,
+        backref='synonyms',
+        primaryjoin=id == cultivar_synonyms.c.syn_parents_id,
+        secondaryjoin=id == cultivar_synonyms.c.synonyms_id
+    )
+    thumbnail_id = db.Column(db.Integer, db.ForeignKey('images.id'))
+    thumbnail = db.relationship('Image', foreign_keys=thumbnail_id)
+    __table_args__ = (db.UniqueConstraint('_name',
+                                          'common_name_id',
+                                          name='_name_common_name_uc'),)
+
+    def __init__(self, name=None, description=None):
+        self.name = name
+        self.description = description
+
+    def __repr__(self):
+        """Return representation of Cultivar in human-readable format."""
+        return '<{0} \'{1}\'>'.format(self.__class__.__name__,
+                                      self.name)
+
+    @hybrid_property
+    def fullname(self):
+        """str: Full name of cultivar including common name and series."""
+        fn = []
+        if self.series:
+            fn.append(self.series.name)
+        if self._name:
+            fn.append(self._name)
+        if self.common_name:
+            fn.append(self.common_name.name)
+        if fn:
+            return ' '.join(fn)
+        else:
+            return None
+
+    @hybrid_property
+    def name(self):
+        """str: contents _name.
+
+        Setter:
+            Sets ._name, and generates a slug and sets .slug.
+        """
+        return self._name
+
+    @name.setter
+    def name(self, value):
+        self._name = value
+        if value is not None:
+            self.slug = slugify(value)
+        else:
+            self.slug = None
+
+    @hybrid_property
+    def thumbnail_path(self):
+        """str: The path to this cultivar's thumbnail file.
+
+        Returns:
+            str: Local path to thumbnail if it exists, path to default thumb
+                image if it does not.
+        """
+        if self.thumbnail:
+            return os.path.join('images',
+                                self.thumbnail.filename)
+        else:
+            return os.path.join('images', 'default_thumb.jpg')
+
+    def clear_synonyms(self):
+        """Remove all synonyms, deleting any that end up with no parent."""
+        for synonym in list(self.synonyms):
+            self.synonyms.remove(synonym)
+            if not synonym.syn_parents and synonym.syn_only:
+                db.session.delete(synonym)
+
+    def list_syn_parents_as_string(self):
+        """Return a string listing the parents of this if it is a synonym.
+
+        Returns:
+            str: A list of cultivars this is a synonym of delineated by commas,
+                or a blank string if it is not a synonym.
+        """
+        if self.syn_parents:
+            return ', '.join([sp.name for sp in self.syn_parents])
+        else:
+            return ''
+
+    def list_synonyms_as_string(self):
+        """Return a string listing of synonyms delineated by commas.
+
+        Returns:
+            str: A list of synonyms of this cultivar separated by commas, or a
+            blank string if it has none.
+        """
+        if self.synonyms:
+            return ', '.join([syn.name for syn in self.synonyms])
+        else:
+            return ''
+
+    def set_synonyms_from_string_list(self, synlist):
+        """Set synonyms with data from a string list delineated by commas.
+
+        Args:
+            synlist (str): A string listing synonyms separated by commas.
+        """
+        syns = synlist.split(', ')
+        syns = [dbify(syn) for syn in syns]
+        if self.synonyms:
+            for synonym in list(self.synonyms):
+                if synonym.name not in syns:
+                    self.synonyms.remove(synonym)
+                    if not synonym.syn_parents and synonym.syn_only:
+                        db.session.delete(synonym)
+                        db.session.commit()
+        for syn in syns:
+            synonym = Cultivar.query.filter_by(_name=syn).first()
+            if synonym:
+                if synonym not in self.synonyms:
+                    self.synonyms.append(synonym)
+            else:
+                if syn and not syn.isspace():
+                    synonym = Cultivar()
+                    synonym.name = syn
+                    synonym.syn_only = True
+                    self.synonyms.append(synonym)
+
+
 class Packet(db.Model):
     """Table for seed packet information.
 
@@ -714,7 +910,7 @@ class Packet(db.Model):
         quantity_id (int): ForeignKey for quantity relationship.
         quantity (relationship): Quantity (number and units) of seeds in this
             packet.
-        seed_id (int): ForeignKey for relationship with seeds.
+        cultivar_id (int): ForeignKey for relationship with cultivars.
         sku (str): Product SKU for the packet.
     """
     __tablename__ = 'packets'
@@ -722,7 +918,7 @@ class Packet(db.Model):
     price = db.Column(USDInt)
     quantity_id = db.Column(db.ForeignKey('quantities.id'))
     quantity = db.relationship('Quantity', backref='packets')
-    seed_id = db.Column(db.Integer, db.ForeignKey('seeds.id'))
+    cultivar_id = db.Column(db.Integer, db.ForeignKey('cultivars.id'))
     sku = db.Column(db.String(32), unique=True)
 
     def __repr__(self):
@@ -1026,205 +1222,13 @@ class Quantity(db.Model):
             self._float = None
 
 
-class Seed(db.Model):
-    """Table for seed data.
-
-    This table contains the primary identifying information for a seed
-    we sell. Generally, this is the table called to get and display seed
-    data on the website.
-
-    Attributes:
-        __tablename__ (str): Name of the table: 'seeds'
-        id (int): Auto-incremented ID # for use as primary key.
-        botanical_name_id (int): ForeignKey for botanical_name relationship.
-        botanical_name (relationship): Botanical name for this seed.
-        common_name_id (int): ForeignKey for common_name relationship.
-        common_name (relationship): Common name this seed belongs to.
-        description (str): Product description in HTML format.
-        dropped (bool): False if the seed will be re-stocked when low, False
-            if it will be discontinued when low.
-        gw_common_names (relationship): Common names this seed grows well with.
-            gw_seeds (backref): Seeds that grow well with a common name.
-        gw_seeds (relationship): Other seeds this one grows well with.
-        images (relationship): Images associated with this seed.
-        in_stock (bool): True if a seed is in stock, False if not.
-        _name (str): The name of the seed (cultivar); the main product name.
-        packets (relationship): Packets for sale of this seed.
-        series_id (int): ForeignKey for series relationship.
-        series (relationship): Series this seed belongs to.
-            seeds (backref): Seeds in given series.
-        slug (str): A URL-friendly version of _name.
-        syn_only (bool): Whether or not this seed only exists as a synonym.
-        syn_parents (relationship): Seeds that have this one as a synonym.
-            synonyms (backref): Synonyms of this seed.
-        thumbnail_id (int): ForeignKey of Image, used with thumbnail.
-        thumbnail (relationship): MtO relationship with Image for specifying
-            a thumbnail for seed.
-        __table_args__: Table-wide arguments, such as constraints.
-    """
-    __tablename__ = 'seeds'
-    id = db.Column(db.Integer, primary_key=True)
-    botanical_name_id = db.Column(db.Integer,
-                                  db.ForeignKey('botanical_names.id'))
-    botanical_name = db.relationship('BotanicalName',
-                                     backref='seeds')
-    common_name_id = db.Column(db.Integer, db.ForeignKey('common_names.id'))
-    common_name = db.relationship('CommonName', backref='seeds')
-    description = db.Column(db.Text)
-    dropped = db.Column(db.Boolean)
-    gw_common_names = db.relationship('CommonName',
-                                      secondary=gw_common_names_to_gw_seeds,
-                                      backref='gw_seeds')
-    gw_seeds = db.relationship(
-        'Seed',
-        secondary=seeds_to_gw_seeds,
-        primaryjoin=id == seeds_to_gw_seeds.c.seed_id,
-        secondaryjoin=id == seeds_to_gw_seeds.c.gw_seed_id
-    )
-    images = db.relationship('Image', foreign_keys=Image.seed_id)
-    in_stock = db.Column(db.Boolean)
-    _name = db.Column(db.String(64))
-    packets = db.relationship('Packet',
-                              cascade='all, delete-orphan',
-                              backref='seed')
-    series_id = db.Column(db.Integer, db.ForeignKey('series.id'))
-    series = db.relationship('Series', backref='seeds')
-    slug = db.Column(db.String(64))
-    syn_only = db.Column(db.Boolean, default=False)
-    syn_parents = db.relationship(
-        'Seed',
-        secondary=seed_synonyms,
-        backref='synonyms',
-        primaryjoin=id == seed_synonyms.c.syn_parents_id,
-        secondaryjoin=id == seed_synonyms.c.synonyms_id
-    )
-    thumbnail_id = db.Column(db.Integer, db.ForeignKey('images.id'))
-    thumbnail = db.relationship('Image', foreign_keys=thumbnail_id)
-    __table_args__ = (db.UniqueConstraint('_name',
-                                          'common_name_id',
-                                          name='_name_common_name_uc'),)
-
-    def __init__(self, name=None, description=None):
-        self.name = name
-        self.description = description
-
-    def __repr__(self):
-        """Return representation of Seed in human-readable format."""
-        return '<{0} \'{1}\'>'.format(self.__class__.__name__,
-                                      self.name)
-
-    @hybrid_property
-    def fullname(self):
-        """str: Full name of seed including common name and series."""
-        fn = []
-        if self.series:
-            fn.append(self.series.name)
-        if self._name:
-            fn.append(self._name)
-        if self.common_name:
-            fn.append(self.common_name.name)
-        if fn:
-            return ' '.join(fn)
-        else:
-            return None
-
-    @hybrid_property
-    def name(self):
-        """str: contents _name.
-
-        Setter:
-            Sets ._name, and generates a slug and sets .slug.
-        """
-        return self._name
-
-    @name.setter
-    def name(self, value):
-        self._name = value
-        if value is not None:
-            self.slug = slugify(value)
-        else:
-            self.slug = None
-
-    @hybrid_property
-    def thumbnail_path(self):
-        """str: The path to this seed's thumbnail file.
-
-        Returns:
-            str: Local path to thumbnail if it exists, path to default thumb
-                image if it does not.
-        """
-        if self.thumbnail:
-            return os.path.join('images',
-                                self.thumbnail.filename)
-        else:
-            return os.path.join('images', 'default_thumb.jpg')
-
-    def clear_synonyms(self):
-        """Remove all synonyms, deleting any that end up with no parent."""
-        for synonym in list(self.synonyms):
-            self.synonyms.remove(synonym)
-            if not synonym.syn_parents and synonym.syn_only:
-                db.session.delete(synonym)
-
-    def list_syn_parents_as_string(self):
-        """Return a string listing the parents of this if it is a synonym.
-
-        Returns:
-            str: A list of seeds this is a synonym of delineated by commas, or
-                a blank string if it is not a synonym.
-        """
-        if self.syn_parents:
-            return ', '.join([sp.name for sp in self.syn_parents])
-        else:
-            return ''
-
-    def list_synonyms_as_string(self):
-        """Return a string listing of synonyms delineated by commas.
-
-        Returns:
-            str: A list of synonyms of this seed separated by commas, or a
-            blank string if it has none.
-        """
-        if self.synonyms:
-            return ', '.join([syn.name for syn in self.synonyms])
-        else:
-            return ''
-
-    def set_synonyms_from_string_list(self, synlist):
-        """Set synonyms with data from a string list delineated by commas.
-
-        Args:
-            synlist (str): A string listing synonyms separated by commas.
-        """
-        syns = synlist.split(', ')
-        syns = [dbify(syn) for syn in syns]
-        if self.synonyms:
-            for synonym in list(self.synonyms):
-                if synonym.name not in syns:
-                    self.synonyms.remove(synonym)
-                    if not synonym.syn_parents and synonym.syn_only:
-                        db.session.delete(synonym)
-                        db.session.commit()
-        for syn in syns:
-            synonym = Seed.query.filter_by(_name=syn).first()
-            if synonym:
-                if synonym not in self.synonyms:
-                    self.synonyms.append(synonym)
-            else:
-                if syn and not syn.isspace():
-                    synonym = Seed()
-                    synonym.name = syn
-                    synonym.syn_only = True
-                    self.synonyms.append(synonym)
-
-
 class Series(db.Model):
     """Table for seed series.
 
-    A series is an optional subclass of a given seed type, usually created by
-    the company that created the cultivars within the series. Examples include
-    Benary's Giant (zinnias), Superfine Rainbow (coleus), and Heat Elite Mambo
-    (petunias).
+    A series is an optional subclass of a given cultivar type, usually created
+    by the company that created the cultivars within the series. Examples
+    include Benary's Giant (zinnias), Superfine Rainbow (coleus), and Heat
+    Elite Mambo (petunias).
 
     Attributes:
         __tablename__ (str): Name of the table: 'series'

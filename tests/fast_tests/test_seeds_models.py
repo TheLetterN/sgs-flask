@@ -12,7 +12,7 @@ from app.seeds.models import (
     Category,
     CommonName,
     Image,
-    Seed,
+    Cultivar,
     USDInt
 )
 from tests.conftest import app  # noqa
@@ -223,40 +223,40 @@ class TestImage:
                          image.filename)
 
 
-class TestSeed:
-    """Test methods of Seed in the seeds model."""
+class TestCultivar:
+    """Test methods of Cultivar in the seeds model."""
     def test_repr(self, app):
-        """Return a string formatted <Seed '<name>'>"""
-        seed = Seed()
-        seed.name = 'Soulmate'
-        assert seed.__repr__() == '<Seed \'Soulmate\'>'
+        """Return a string formatted <Cultivar '<name>'>"""
+        cultivar = Cultivar()
+        cultivar.name = 'Soulmate'
+        assert cultivar.__repr__() == '<Cultivar \'Soulmate\'>'
 
     def test_fullname_getter(self, app):
         """.fullname returns ._name, or a string with name and common name."""
         cn = CommonName()
-        seed = Seed()
+        cultivar = Cultivar()
         cn._name = 'Foxglove'
-        seed._name = 'Foxy'
-        assert seed.fullname == 'Foxy'
-        seed.common_name = cn
-        assert seed.fullname == 'Foxy Foxglove'
+        cultivar._name = 'Foxy'
+        assert cultivar.fullname == 'Foxy'
+        cultivar.common_name = cn
+        assert cultivar.fullname == 'Foxy Foxglove'
 
     def test_name_getter(self, app):
         """Return ._name"""
-        seed = Seed()
-        seed._name = 'Foxy'
-        assert seed.name == 'Foxy'
+        cultivar = Cultivar()
+        cultivar._name = 'Foxy'
+        assert cultivar.name == 'Foxy'
 
     def test_name_setter(self, app):
         """Set ._name and a slugified version of name to .slug"""
-        seed = Seed()
-        seed.name = u'Cafe Crème'
-        assert seed._name == u'Cafe Crème'
-        assert seed.slug == slugify(u'Cafe Crème')
+        cultivar = Cultivar()
+        cultivar.name = u'Cafe Crème'
+        assert cultivar._name == u'Cafe Crème'
+        assert cultivar.slug == slugify(u'Cafe Crème')
 
     def test_name_setter_none(self, app):
         """Set ._name and slug to None if .name set to None."""
-        seed = Seed()
-        seed.name = None
-        assert seed._name is None
-        assert seed.slug is None
+        cultivar = Cultivar()
+        cultivar.name = None
+        assert cultivar._name is None
+        assert cultivar.slug is None

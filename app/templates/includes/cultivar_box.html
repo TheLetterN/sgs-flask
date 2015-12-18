@@ -1,0 +1,66 @@
+{# This file is part of SGS-Flask.
+
+   SGS-Flask is free software: you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
+ 
+   SGS-Flask is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+ 
+   You should have received a copy of the GNU General Public License
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ 
+   Copyright Swallowtail Garden Seeds, Inc 
+#}
+{% macro cultivar_box(cultivar) %}
+{% from 'includes/grows_with.html' import grows_with %}
+{% if not cultivar.dropped or current_user.can(Permission.MANAGE_SEEDS) %}
+<div class="cultivar_box">
+    <img src="{{ url_for('static', filename=cultivar.thumbnail_path) }}">
+    <div class="cultivar_info">
+        {% if current_user.can(Permission.MANAGE_SEEDS) %}
+        <span id='cultivar_admin'>
+            Manage this cultivar: 
+            {% if cultivar.in_stock %}
+            Cultivar is in stock. <a href="{{ url_for('seeds.flip_in_stock', cv_id=cultivar.id, next=request.path) }}">Set as Out of Stock</a>
+            {% else %}
+            Cultivar is out of stock. <a href="{{ url_for('seeds.flip_in_stock', cv_id=cultivar.id, next=request.path) }}">Set as In Stock</a>
+            {% endif %}
+            {% if cultivar.dropped %}
+            Cultivar is dropped. <a href="{{ url_for('seeds.flip_dropped', cv_id=cultivar.id, next=request.path) }}">Make Active</a>
+            {% else %}
+            Cultivar is active. <a href="{{ url_for('seeds.flip_dropped', cv_id=cultivar.id, next=request.path) }}">Drop</a> | 
+            {% endif %}
+            <a href="{{ url_for('seeds.edit_cultivar', cv_id=cultivar.id) }}">Edit</a>
+            <a href="{{ url_for('seeds.remove_cultivar', cv_id=cultivar.id) }}">Remove</a>
+        </span>
+        {% endif %}
+        {% if not cat_slug %}{% set cat_slug = cultivar.categories[0].slug %}{% endif %}
+        {% if not cn_slug %}{% set cn_slug = cultivar.common_name.slug %}{% endif %}
+        <h3><a href="{{ url_for('seeds.cultivar', cat_slug=cat_slug, cn_slug=cn_slug, cv_slug=cultivar.slug)}}">{{ cultivar.name }}</a></h3>
+        <em>{{ cultivar.common_name.header }}</em>
+        <i>{{ cultivar.botanical_name.name }}</i>
+        <p>{{ cultivar.description }}</p>
+        {% if cultivar.gw_common_names or cultivar.gw_cultivars %}<p class="grows_with">Grows nicely with: {{ grows_with(cultivar) }}.</p>{% endif %}
+    </div>
+    {% if current_user.can(Permission.MANAGE_SEEDS) %}
+    <a href="{{ url_for('seeds.add_packet', cv_id=cultivar.id) }}">Add Packet</a>
+    {% endif %}
+    {% if cultivar.packets %}
+    <div class="packet_info">
+        {% for packet in cultivar.packets %}
+        {% if current_user.can(Permission.MANAGE_SEEDS) %}
+        <span id="packet_admin">
+            <a href="{{ url_for('seeds.edit_packet', pkt_id=packet.id) }}">Edit Packet</a>
+            <a href="{{ url_for('seeds.remove_packet', pkt_id=packet.id) }}">Remove Packet</a>
+        </span>
+        {% endif %}
+        <div>{{ packet.sku }}: {{ packet.quantity.html_value|safe }} {{ packet.quantity.units }} - ${{ packet.price }}</div>
+        <div>TODO: Cart quantity and submit button</div>{% endfor %} 
+    </div>{% endif %}
+</div>
+{% endif %}
+{% endmacro %}

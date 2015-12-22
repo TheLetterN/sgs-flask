@@ -17,7 +17,7 @@
 
 
 import os
-from decimal import Decimal
+from decimal import Decimal, ROUND_DOWN
 from flask import current_app
 from fractions import Fraction
 from inflection import pluralize
@@ -234,7 +234,7 @@ class USDInt(db.TypeDecorator):
         if isinstance(val, str):
             val = val.replace('$', '').strip()
         try:
-            return Decimal(val).quantize(Decimal('1.00'))
+            return Decimal(val).quantize(Decimal('1.00'), rounding=ROUND_DOWN)
         except:
             raise ValueError('Value could not be converted to a decimal '
                              'number.')
@@ -399,24 +399,27 @@ class BotanicalName(db.Model):
             synlist (str): A string containing a list of synonyms separated by
                 commas.
         """
-        syns = synlist.split(', ')
-        if self.synonyms:
-            for synonym in list(self.synonyms):
-                if synonym.name not in syns:
-                    self.synonyms.remove(synonym)
-                    if not synonym.syn_parents and synonym.syn_only:
-                        db.session.delete(synonym)
-        for syn in syns:
-            synonym = BotanicalName.query.filter_by(_name=syn).first()
-            if synonym:
-                if synonym not in self.synonyms:
-                    self.synonyms.append(synonym)
-            else:
-                if syn and not syn.isspace():
-                    synonym = BotanicalName()
-                    synonym.name = syn
-                    synonym.syn_only = True
-                    self.synonyms.append(synonym)
+        if not synlist or synlist.isspace():
+            self.clear_synonyms()
+        else:
+            syns = synlist.split(', ')
+            if self.synonyms:
+                for synonym in list(self.synonyms):
+                    if synonym.name not in syns:
+                        self.synonyms.remove(synonym)
+                        if not synonym.syn_parents and synonym.syn_only:
+                            db.session.delete(synonym)
+            for syn in syns:
+                synonym = BotanicalName.query.filter_by(_name=syn).first()
+                if synonym:
+                    if synonym not in self.synonyms:
+                        self.synonyms.append(synonym)
+                else:
+                    if syn and not syn.isspace():
+                        synonym = BotanicalName()
+                        synonym.name = syn
+                        synonym.syn_only = True
+                        self.synonyms.append(synonym)
 
 
 class Category(db.Model):
@@ -632,28 +635,29 @@ class CommonName(db.Model):
         Args:
             synlist (str): A string listing synonyms separated by commas.
         """
-        if not synlist:
-            self.synonyms = None
-        syns = synlist.split(', ')
-        syns = [dbify(syn) for syn in syns]
-        if self.synonyms:
-            for synonym in list(self.synonyms):
-                if synonym.name not in syns:
-                    self.synonyms.remove(synonym)
-                    if not synonym.syn_parents and synonym.syn_only:
-                        db.session.delete(synonym)
-                        db.session.commit()
-        for syn in syns:
-            synonym = CommonName.query.filter_by(_name=syn).first()
-            if synonym:
-                if synonym not in self.synonyms:
-                    self.synonyms.append(synonym)
-            else:
-                if syn and not syn.isspace():
-                    synonym = CommonName()
-                    synonym.name = syn
-                    synonym.syn_only = True
-                    self.synonyms.append(synonym)
+        if not synlist or synlist.isspace():
+            self.clear_synonyms()
+        else:
+            syns = synlist.split(', ')
+            syns = [dbify(syn) for syn in syns]
+            if self.synonyms:
+                for synonym in list(self.synonyms):
+                    if synonym.name not in syns:
+                        self.synonyms.remove(synonym)
+                        if not synonym.syn_parents and synonym.syn_only:
+                            db.session.delete(synonym)
+                            db.session.commit()
+            for syn in syns:
+                synonym = CommonName.query.filter_by(_name=syn).first()
+                if synonym:
+                    if synonym not in self.synonyms:
+                        self.synonyms.append(synonym)
+                else:
+                    if syn and not syn.isspace():
+                        synonym = CommonName()
+                        synonym.name = syn
+                        synonym.syn_only = True
+                        self.synonyms.append(synonym)
 
 
 class Image(db.Model):
@@ -873,26 +877,29 @@ class Cultivar(db.Model):
         Args:
             synlist (str): A string listing synonyms separated by commas.
         """
-        syns = synlist.split(', ')
-        syns = [dbify(syn) for syn in syns]
-        if self.synonyms:
-            for synonym in list(self.synonyms):
-                if synonym.name not in syns:
-                    self.synonyms.remove(synonym)
-                    if not synonym.syn_parents and synonym.syn_only:
-                        db.session.delete(synonym)
-                        db.session.commit()
-        for syn in syns:
-            synonym = Cultivar.query.filter_by(_name=syn).first()
-            if synonym:
-                if synonym not in self.synonyms:
-                    self.synonyms.append(synonym)
-            else:
-                if syn and not syn.isspace():
-                    synonym = Cultivar()
-                    synonym.name = syn
-                    synonym.syn_only = True
-                    self.synonyms.append(synonym)
+        if not synlist or synlist.isspace():
+            self.clear_synonyms()
+        else:
+            syns = synlist.split(', ')
+            syns = [dbify(syn) for syn in syns]
+            if self.synonyms:
+                for synonym in list(self.synonyms):
+                    if synonym.name not in syns:
+                        self.synonyms.remove(synonym)
+                        if not synonym.syn_parents and synonym.syn_only:
+                            db.session.delete(synonym)
+                            db.session.commit()
+            for syn in syns:
+                synonym = Cultivar.query.filter_by(_name=syn).first()
+                if synonym:
+                    if synonym not in self.synonyms:
+                        self.synonyms.append(synonym)
+                else:
+                    if syn and not syn.isspace():
+                        synonym = Cultivar()
+                        synonym.name = syn
+                        synonym.syn_only = True
+                        self.synonyms.append(synonym)
 
 
 class Packet(db.Model):
@@ -1160,7 +1167,7 @@ class Quantity(db.Model):
             elif self.value == Fraction(1, 6):
                 return '&#8537;'
             elif self.value == Fraction(5, 6):
-                return '&#8537;'
+                return '&#8538;'
             elif self.value == Fraction(1, 8):
                 return '&#8539;'
             elif self.value == Fraction(3, 8):
@@ -1173,7 +1180,7 @@ class Quantity(db.Model):
                 return '<span class="fraction"><sup>{0}</sup>&frasl;'\
                     '<sub>{1}</sub></span>'.format(self._numerator,
                                                    self._denominator)
-        return self.value
+        return str(self.value)
 
     @hybrid_property
     def value(self):
@@ -1209,6 +1216,7 @@ class Quantity(db.Model):
                 self._numerator = None
                 self._denominator = None
             else:
+                self.is_decimal = False
                 if isinstance(val, str):
                     frac = Quantity.str_to_fraction(val)
                 else:
@@ -1217,6 +1225,7 @@ class Quantity(db.Model):
                 self._denominator = frac.denominator
                 self._float = float(frac)
         else:
+            self.is_decimal = None
             self._numerator = None
             self._denominator = None
             self._float = None
@@ -1243,7 +1252,7 @@ class Series(db.Model):
     common_name_id = db.Column(db.Integer, db.ForeignKey('common_names.id'))
     common_name = db.relationship('CommonName', backref='series')
     description = db.Column(db.Text)
-    name = db.Column(db.String(64), unique=True)
+    name = db.Column(db.String(64))
 
     @property
     def fullname(self):

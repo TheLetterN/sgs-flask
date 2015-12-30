@@ -23,6 +23,7 @@ from flask.ext.wtf import Form
 from flask.ext.wtf.file import FileAllowed, FileField
 from wtforms import (
     BooleanField,
+    RadioField,
     SelectField,
     SelectMultipleField,
     StringField,
@@ -217,12 +218,17 @@ class AddBotanicalNameForm(Form):
         common_name (SelectField): Field to select a common name to associate
             with this botanical name.
         name (StringField): Field for botanical name.
+        next_page (RadioField): The next page to move on to after submit.
         submit (SubmitField): Submit button.
         synonyms (StringField): Field for synonyms.
     """
     common_name = SelectField('Select Common Name', coerce=int)
     name = StringField('Botanical Name',
                        validators=[Length(1, 64), NotSpace()])
+    next_page = RadioField('After submission, go to',
+                           choices=[('add_series', 'Add Series (optional)'),
+                                    ('add_cultivar', 'Add Cultivar')],
+                           default='add_cultivar')
     submit = SubmitField('Add Botanical Name')
     synonyms = StringField('Synonyms', validators=[NotSpace()])
 
@@ -327,6 +333,7 @@ class AddCommonNameForm(Form):
             grow well with this common name.
         instructions (TextAreaField): Field for planting instructions.
         name (StringField): Field for the common name itself.
+        next_page (RadioField): Page to move on to after form submission.
         parent_cn (SelectField)" Field to optionally make this common name a
             subcategory of another.
         submit (SubmitField): Submit button.
@@ -341,6 +348,13 @@ class AddCommonNameForm(Form):
     instructions = TextAreaField('Planting Instructions',
                                  validators=[NotSpace()])
     name = StringField('Common Name', validators=[Length(1, 64), NotSpace()])
+    next_page = RadioField(
+        'After submission, go to',
+        choices=[('add_botanical_name', 'Add Botanical Name (optional)'),
+                 ('add_series', 'Add Series (optional)'),
+                 ('add_cultivar', 'Add Cultivar')],
+        default='add_cultivar'
+    )
     parent_cn = SelectField('Subcategory of', coerce=int)
     submit = SubmitField('Add Common Name')
     synonyms = StringField('Synonyms', validators=[NotSpace()])

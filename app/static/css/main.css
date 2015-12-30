@@ -417,6 +417,10 @@ label:after {
     content: ": ";
 }
 
+input[type=radio] + label:after {
+    content: None;
+}
+
 .form_error {
     background-color: #faa;
     padding-left: 0.4em;
@@ -488,3 +492,9 @@ span.fraction sub {
     font-size: 0.6em;
 }
 /* END fractions */
+
+/* BEGIN last commit */
+div.last_commit {
+    text-align: center;
+}   
+/* END last commit */

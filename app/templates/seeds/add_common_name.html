@@ -66,6 +66,9 @@
                     <li>
                         {{ form.submit }}
                     </li>
+                    <li>
+                        {{ form_field(form.next_page)|indent(24)|safe }}
+                    </li>
                 </ol>
             </form>
 {% endblock %}

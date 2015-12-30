@@ -52,4 +52,7 @@
             <h2>Changes Pending Restart of Application:</h2>
             <div class="pending_changes">{{ pending.changes|safe }}</div>
             {% endif %}
+            {% if lc %}
+            <div class="last_commit">Last changes to source code made: {{ lc.timestamp }}</div>
+            {% endif %}
 {% endblock %}

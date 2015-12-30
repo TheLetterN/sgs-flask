@@ -35,6 +35,7 @@ from app.pending import Pending
 from app.redirects import Redirect, RedirectsFile
 from app.auth.models import Permission
 from . import seeds
+from ..lastcommit import LastCommit
 from .models import (
     BotanicalName,
     Category,
@@ -161,7 +162,7 @@ def add_botanical_name():
         db.session.commit()
         flash('Botanical name \'{0}\' belonging to \'{1}\' has been added.'.
               format(bn.name, cn.name))
-        return redirect(url_for('seeds.manage'))
+        return redirect(url_for('seeds.{0}'.format(form.next_page.data)))
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
         (url_for('seeds.add_category'), 'Add Category'),
@@ -190,7 +191,7 @@ def add_category():
         db.session.commit()
         flash('New category \'{0}\' has been added to the database.'.
               format(category.name))
-        return redirect(url_for('seeds.manage'))
+        return redirect(url_for('seeds.add_common_name'))
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
         (url_for('seeds.add_category'), 'Add Category')
@@ -250,7 +251,7 @@ def add_common_name():
         db.session.commit()
         flash('The common name \'{0}\' has been added to the database.'.
               format(cn.name, category.plural))
-        return redirect(url_for('seeds.manage'))
+        return redirect(url_for('seeds.{0}'.format(form.next_page.data)))
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
         (url_for('seeds.add_category'), 'Add Category'),
@@ -451,7 +452,7 @@ def add_series():
         flash('New series \'{0}\' added to: {1}.'.
               format(series.name, series.common_name.name))
         db.session.commit()
-        return redirect(url_for('seeds.manage'))
+        return redirect(url_for('seeds.add_cultivar'))
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
         (url_for('seeds.add_category'), 'Add Category'),
@@ -555,7 +556,6 @@ def edit_botanical_name(bn_id=None):
                 bn.set_synonyms_from_string_list(form.synonyms.data)
                 flash('Synonyms for \'{0}\' set to: {1}'
                       .format(bn.name, bn.list_synonyms_as_string()))
-                print('{0}, {1}'.format(bn.synonyms[0].name, bn.synonyms[0].id))
             else:
                 bn.clear_synonyms()
                 flash('Synonyms for \'{0}\' cleared.'.format(bn.name))
@@ -1400,9 +1400,10 @@ def index():
 @permission_required(Permission.MANAGE_SEEDS)
 def manage():
     pending = Pending(current_app.config.get('PENDING_FILE'))
+    lc = LastCommit()
     if pending.exists():
         pending.load()
-    return render_template('seeds/manage.html', pending=pending)
+    return render_template('seeds/manage.html', pending=pending, lc=lc)
 
 
 @seeds.route('/remove_botanical_name', methods=['GET', 'POST'])

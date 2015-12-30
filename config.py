@@ -103,6 +103,7 @@ class TestingConfig(Config):
     Our test use this mode to keep from interfering with databases/files used
     by other modes.
     """
+    LOGIN_DISABLED = True
     TESTING = True
     WTF_CSRF_ENABLED = False
     PENDING_FILE = os.path.join(TEMPDIR, 'pending.txt')

@@ -3,7 +3,7 @@ from app import create_app
 from app import db as _db
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope='module')
 def app(request):
     print('\n\n\nsetting up app')
     _app = create_app('testing')

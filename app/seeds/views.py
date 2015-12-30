@@ -224,6 +224,8 @@ def add_common_name():
             cn.instructions = form.instructions.data
             flash('Planting instructions for \'{0}\' set to: {1}'
                   .format(cn.name, cn.instructions))
+        else:
+            cn.instructions = None
         if form.synonyms.data:
             cn.set_synonyms_from_string_list(form.synonyms.data)
             flash('Synonyms for \'{0}\' set to: {1}'
@@ -553,6 +555,7 @@ def edit_botanical_name(bn_id=None):
                 bn.set_synonyms_from_string_list(form.synonyms.data)
                 flash('Synonyms for \'{0}\' set to: {1}'
                       .format(bn.name, bn.list_synonyms_as_string()))
+                print('{0}, {1}'.format(bn.synonyms[0].name, bn.synonyms[0].id))
             else:
                 bn.clear_synonyms()
                 flash('Synonyms for \'{0}\' cleared.'.format(bn.name))
@@ -977,7 +980,7 @@ def edit_packet(pkt_id=None):
             packet.price = dec_p
         fq = Quantity.for_cmp(form.quantity.data)
         fu = form.units.data.strip()
-        if fq != packet.quantity.value:
+        if fq != packet.quantity.value or fu != packet.quantity.units:
             edited = True
             oldqty = packet.quantity
             qty = Quantity.query.filter(Quantity.value == fq,
@@ -985,24 +988,12 @@ def edit_packet(pkt_id=None):
             if qty:
                 packet.quantity = qty
             else:
-                qty = Quantity()
-                qty.value = fq
-                qty.units = fu
-                packet.quantity = qty
+                if fu != packet.quantity.units:
+                    packet.quantity.units = fu
+                if fq != packet.quantity.value:
+                    packet.quantity.value = fq
             if not oldqty.packets:
                 db.session.delete(oldqty)
-        if fu != packet.quantity.units:
-            edited = True
-            qty = Quantity.query.filter(Quantity.value == fq,
-                                        Quantity.units == fu).first()
-            if qty:
-                if qty != packet.quantity:
-                    oldqty = packet.quantity
-                    packet.quantity = qty
-                    if not oldqty.packets:
-                        db.session.delete(oldqty)
-            else:
-                packet.quantity.units = fu
         if edited:
             db.session.commit()
             flash('Packet changed to: {0}'.format(packet.info))
@@ -1045,17 +1036,18 @@ def edit_cultivar(cv_id=None):
         form_name = dbify(form.name.data)
         cvs = Cultivar.query.filter_by(_name=form_name).all()
         old_cv_slug = cv.slug
-        for cv in cvs:
-                if cv.syn_only:
+        for cult in cvs:
+                if cult.syn_only:
                     flash('Error: \'{0}\' is already being used as a synonym '
                           'for: \'{1}\'. If you wish to rename this cultivar '
                           'to it, you will need to remove it from synonyms '
                           'for \'{1}\' first.'
-                          .format(cv.name, cv.list_syn_parents_as_string()))
+                          .format(cult.name,
+                                  cult.list_syn_parents_as_string()))
                     return redirect(url_for('seeds.edit_cultivar',
                                             cv_id=cv_id))
-                elif cv.id != cv.id and cv.name == form_name and\
-                        cv.common_name.id == form.common_name.data:
+                elif cult.id != cv.id and cult.name == form_name and\
+                        cult.common_name.id == form.common_name.data:
                     flash('Error: There is already another \'{0}\'!'
                           .format(cv.fullname))
                     return redirect(url_for('seeds.edit_cultivar',

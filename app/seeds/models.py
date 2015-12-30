@@ -558,16 +558,18 @@ class CommonName(db.Model):
         secondaryjoin=id == common_name_synonyms.c.synonyms_id
     )
 
-    def __init__(self, name=None, description=None):
+    def __init__(self, name=None, description=None, instructions=None):
         """Construct an instance of CommonName
 
         Args:
             name (Optional[str]): The common name for a seed or group of seeds.
             description (Optional[str]): An optional description for use on
-            pages listing seeds of a given common name.
+                pages listing seeds of a given common name.
+            instructions(Optional[str]): Optional planting instructions.
         """
         self.name = name
         self.description = description
+        self.instructions = instructions
 
     def __repr__(self):
         return '<{0} \'{1}\'>'.format(self.__class__.__name__, self.name)
@@ -1138,7 +1140,8 @@ class Quantity(db.Model):
                             return frac + whole
                         except:
                             pass
-            raise ValueError('val could not be converted to Fraction')
+            raise ValueError('value {0} of type {1} could not be converted to '
+                             'Fraction'.format(val, type(val)))
         else:
             raise TypeError('val must be a str')
 

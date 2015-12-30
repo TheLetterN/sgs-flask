@@ -413,6 +413,7 @@ class TestManageUserWithDB:
         user.confirmed = True
         db.session.add(user)
         db.session.commit()
+        app.config['TESTING'] = False  # Trigger permission_required
         with app.test_client() as tc:
             login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('auth.manage_user'), follow_redirects=False)

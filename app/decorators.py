@@ -17,7 +17,7 @@
 
 
 from functools import wraps
-from flask import abort
+from flask import abort, current_app
 from flask.ext.login import current_user
 
 
@@ -32,7 +32,8 @@ def permission_required(permission):
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            if not current_user.can(permission):
+            if not current_user.can(permission) and \
+                    not current_app.config.get('TESTING'):
                 abort(403)
             return f(*args, **kwargs)
         return decorated_function

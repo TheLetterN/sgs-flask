@@ -3,33 +3,16 @@ import os
 from decimal import Decimal
 from flask import current_app, url_for
 from unittest import mock
-from app.auth.models import Permission, User
 from app.seeds.models import (
     BotanicalName,
     Category,
     CommonName,
+    Cultivar,
     Image,
     Packet,
     Quantity,
-    Cultivar
+    Series
 )
-from tests.database_tests.test_auth_views_with_db import login
-from tests.conftest import app, db  # noqa
-
-
-def seed_manager():
-    """Generate a user with MANAGE_SEEDS permission.
-
-    Returns:
-        User: A confirmed user with MANAGE_SEEDS permission.
-    """
-    user = User()
-    user.name = 'AzureDiamond'
-    user.set_password('hunter2')
-    user.email = 'gullible@bash.org'
-    user.confirmed = True
-    user.grant_permission(Permission.MANAGE_SEEDS)
-    return user
 
 
 def foxy_cultivar():
@@ -54,30 +37,32 @@ class TestAddBotanicalNameRouteWithDB:
     """Test seeds.add_botanical_name."""
     def test_add_botanical_name_adds_to_database(self, app, db):
         """Add a botanical name to the db on successful form submission."""
-        user = seed_manager()
-        db.session.add(user)
         cn = CommonName()
         db.session.add(cn)
         cn.name = 'Butterfly Weed'
         db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.add_botanical_name'),
                          data=dict(name='Asclepias incarnata',
-                                   common_name=cn.id),
+                                   common_name=cn.id,
+                                   synonyms='Innagada davida, Canis lupus'),
                          follow_redirects=True)
         bn = BotanicalName.query.filter_by(name='Asclepias incarnata').first()
         assert bn is not None
         assert cn is bn.common_name
+        syn1 = BotanicalName.query.filter_by(name='Innagada davida').first()
+        syn2 = BotanicalName.query.filter_by(name='Canis lupus').first()
+        assert syn1 in bn.synonyms
+        assert syn2 in bn.synonyms
+        assert bn in syn1.syn_parents
+        assert bn in syn2.syn_parents
+        assert syn1.syn_only
+        assert syn2.syn_only
         assert 'Botanical name &#39;Asclepias incarnata&#39;' in str(rv.data)
 
     def test_add_botanical_name_renders_page(self, app, db):
         """Render the Add Botanical Name page given no form data."""
-        user = seed_manager()
-        db.session.add(user)
-        db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.add_botanical_name'),
                         follow_redirects=True)
         assert 'Add Botanical Name' in str(rv.data)
@@ -87,11 +72,7 @@ class TestAddCategoryRouteWithDB:
     """Test seeds.add_category."""
     def test_add_category_adds_to_database(self, app, db):
         """Add new Category to the database on successful form submit."""
-        user = seed_manager()
-        db.session.add(user)
-        db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.add_category'),
                          data=dict(category='Perennial Flower',
                                    description='Built to last.'),
@@ -101,133 +82,78 @@ class TestAddCategoryRouteWithDB:
         assert cat.description == 'Built to last.'
         assert 'has been added to the database' in str(rv.data)
 
-    def test_add_category_renders_page(self, app, db):
-        """Render the Add Category page given no form data."""
-        user = seed_manager()
-        db.session.add(user)
-        db.session.commit()
-        with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
-            rv = tc.get(url_for('seeds.add_category'), follow_redirects=True)
-        assert 'Add Category' in str(rv.data)
-
 
 class TestAddCommonNameRouteWithDB:
     """Test seeds.add_common_name."""
     def test_add_common_name_adds_common_name_to_database(self, app, db):
         """Add CommonName to db on successful form submit."""
-        user = seed_manager()
-        db.session.add(user)
         cat = Category()
-        db.session.add(cat)
+        pcn = CommonName('Plant')
+        gwcn = CommonName(name='Butterfly Weed')
+        gwcv = Cultivar(name='Soulmate')
+        gwcv.common_name = gwcn
+        db.session.add_all([cat, gwcn, gwcv, pcn])
         cat.name = 'Perennial Flower'
         db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.add_common_name'),
                          data=dict(name='Foxglove',
-                                   parent_cn=0,
+                                   parent_cn=pcn.id,
                                    categories=[cat.id],
-                                   description='Foxy!'),
+                                   description='Foxy!',
+                                   instructions='Put in ground.',
+                                   synonyms='Digitalis',
+                                   gw_common_names=[gwcn.id],
+                                   gw_cultivars=[gwcv.id]),
                          follow_redirects=True)
         cn = CommonName.query.filter_by(name='Foxglove').first()
         assert cn is not None
         assert cat in cn.categories
+        assert 'has been added to the category' in str(rv.data)
+        assert cn.description == 'Foxy!'
+        assert 'Description for &#39;Foxglove&#39; set to' in str(rv.data)
+        assert cn.instructions == 'Put in ground.'
+        assert 'Planting instructions for' in str(rv.data)
+        syn = CommonName.query.filter_by(name='Digitalis').first()
+        assert syn in cn.synonyms
+        assert 'Synonyms for' in str(rv.data)
+        assert gwcn in cn.gw_common_names
+        assert '&#39;Butterfly Weed&#39; added to Grows With' in str(rv.data)
+        assert gwcv in cn.gw_cultivars
+        assert '&#39;Soulmate Butterfly Weed&#39; added to Grow'\
+            in str(rv.data)
         assert '&#39;Foxglove&#39; has been added to' in str(rv.data)
+        assert 'subcategory of &#39;Plant&#39;' in str(rv.data)
+
+    def test_add_common_name_blanks(self, app, db):
+        """Set description and instructions to None if given a blank string."""
+        cat = Category(name='Perennial Flower')
+        db.session.add(cat)
+        db.session.commit()
+        with app.test_client() as tc:
+            rv = tc.post(url_for('seeds.add_common_name'),
+                         data=dict(name='Foxglove',
+                                   parent_cn=0,
+                                   categories=[cat.id],
+                                   description='',
+                                   instructions=''),
+                         follow_redirects=True)
+            cn = CommonName.query.filter_by(name='Foxglove').first()
+            assert cn.description is None
+            assert 'Description for' not in str(rv.data)
 
     def test_add_common_name_renders_page(self, app, db):
-        """"Render the Add Common Name page given no form data."""
-        user = seed_manager()
-        db.session.add(user)
-        db.session.commit()
+        """Render form page for add_common_name."""
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
-            rv = tc.get(url_for('seeds.add_common_name'),
-                        follow_redirects=True)
+            rv = tc.get(url_for('seeds.add_common_name'))
         assert 'Add Common Name' in str(rv.data)
-
-
-class TestAddPacketRouteWithDB:
-    """Test seeds.add_packet."""
-    def test_add_packet_no_cv_id(self, app, db):
-        """Redirect to seeds.select_cultivar if no cv_id given."""
-        user = seed_manager()
-        db.session.add(user)
-        db.session.commit()
-        with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
-            rv = tc.get(url_for('seeds.add_packet'))
-        assert rv.location == url_for('seeds.select_cultivar',
-                                      dest='seeds.add_packet',
-                                      _external=True)
-
-    def test_add_packet_success_redirect_with_again(self, app, db):
-        """Redirect to seeds.add_packet w/ same cv_id if again selected."""
-        user = seed_manager()
-        cultivar = Cultivar()
-        cn = CommonName()
-        db.session.add_all([user, cultivar, cn])
-        cultivar.name = 'Foxy'
-        cn.name = 'Foxglove'
-        cultivar.common_name = cn
-        db.session.commit()
-        with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
-            rv = tc.post(url_for('seeds.add_packet', cv_id=cultivar.id),
-                         data=(dict(price='2.99',
-                                    prices=0,
-                                    quantity='100',
-                                    quantities='0',
-                                    unit='seeds',
-                                    units=0,
-                                    sku='8675309',
-                                    again=True)))
-        assert rv.location == url_for('seeds.add_packet',
-                                      cv_id=cultivar.id,
-                                      _external=True)
-
-    def test_add_packet_success_with_inputs(self, app, db):
-        """Flash a message on successful submission with data in inputs."""
-        user = seed_manager()
-        cultivar = Cultivar()
-        cn = CommonName()
-        db.session.add_all([user, cultivar, cn])
-        cultivar.name = 'Foxy'
-        cn.name = 'Foxglove'
-        cultivar.common_name = cn
-        db.session.commit()
-        with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
-            rv = tc.post(url_for('seeds.add_packet', cv_id=cultivar.id),
-                         data=(dict(price='2.99',
-                                    quantity='100',
-                                    units='seeds',
-                                    sku='8675309')),
-                         follow_redirects=True)
-        assert 'Packet SKU #8675309' in str(rv.data)
-
-    def test_add_packet_renders_page(self, app, db):
-        """Render form page given a valid cv_id."""
-        user = seed_manager()
-        cultivar = Cultivar()
-        db.session.add_all([user, cultivar])
-        cultivar.name = 'Foxy'
-        db.session.commit()
-        with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
-            rv = tc.get(url_for('seeds.add_packet', cv_id=cultivar.id))
-        assert 'Add a Packet' in str(rv.data)
 
 
 class TestAddCultivarRouteWithDB:
     """Test seeds.add_cultivar."""
     def test_add_cultivar_renders_page(self, app, db):
         """Render form page with no form data submitted."""
-        user = seed_manager()
-        db.session.add(user)
-        db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.add_cultivar'))
         assert 'Add Cultivar' in str(rv.data)
 
@@ -237,18 +163,20 @@ class TestAddCultivarRouteWithDB:
                                                                 app,
                                                                 db):
         """Add cultivar and flash messages for added items."""
-        user = seed_manager()
         bn = BotanicalName()
         cn = CommonName()
         cat = Category()
-        db.session.add_all([user, bn, cn, cat])
+        series = Series(name='Spotty')
+        gwcn = CommonName(name='Fauxglove')
+        gwcv = Cultivar(name='Fauxy')
+        gwcv.common_name = gwcn
+        db.session.add_all([bn, cn, cat, gwcn, gwcv, series])
         bn.name = 'Digitalis purpurea'
         cat.name = 'Perennial Flower'
         cn.name = 'Foxglove'
         cn.categories.append(cat)
         db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.add_cultivar'),
                          data=dict(botanical_name=str(bn.id),
                                    categories=[str(cat.id)],
@@ -256,16 +184,23 @@ class TestAddCultivarRouteWithDB:
                                    description='Very foxy.',
                                    dropped='',
                                    in_stock='y',
-                                   series='0',
+                                   gw_common_names=[str(gwcn.id)],
+                                   gw_cultivars=[str(gwcv.id)],
+                                   series=str(series.id),
+                                   synonyms='Digitalis',
                                    thumbnail=(io.BytesIO(b'fawks'),
                                               'foxy.jpg'),
                                    name='Foxy'),
                          follow_redirects=True)
         assert '&#39;Perennial Flower&#39; added' in str(rv.data)
-        assert '&#39;Foxy Foxglove&#39; is in stock' in str(rv.data)
-        assert '&#39;Foxy Foxglove&#39; is currently active' in str(rv.data)
+        assert 'Foxy Foxglove&#39; is in stock' in str(rv.data)
+        assert 'Foxy Foxglove&#39; is currently active' in str(rv.data)
+        assert '&#39;Fauxglove&#39; added to Grows With for' in str(rv.data)
+        assert '&#39;Fauxy Fauxglove&#39; added to Grows With' in str(rv.data)
+        assert 'Synonyms for &#39;Spotty Foxy Foxglove&#39; set to: Digitalis'\
+            in str(rv.data)
         assert 'Thumbnail uploaded' in str(rv.data)
-        assert 'New cultivar &#39;Foxy Foxglove&#39; has been' in str(rv.data)
+        assert 'New cultivar &#39;Spotty Foxy Foxglove&#39;' in str(rv.data)
         mock_save.assert_called_with(os.path.join(current_app.config.
                                                   get('IMAGES_FOLDER'),
                                                   'foxy.jpg'))
@@ -276,18 +211,16 @@ class TestAddCultivarRouteWithDB:
                                                                  app,
                                                                  db):
         """Flash messages if cultivar is not in stock and has been dropped."""
-        user = seed_manager()
         bn = BotanicalName()
         cn = CommonName()
         cat = Category()
-        db.session.add_all([user, bn, cn, cat])
+        db.session.add_all([bn, cn, cat])
         bn.name = 'Digitalis purpurea'
         cat.name = 'Perennial Flower'
         cn.name = 'Foxglove'
         cn.categories.append(cat)
         db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.add_cultivar'),
                          data=dict(botanical_name=str(bn.id),
                                    categories=[str(cat.id)],
@@ -303,6 +236,119 @@ class TestAddCultivarRouteWithDB:
         assert '&#39;Foxy Foxglove&#39; is not in stock' in str(rv.data)
         assert '&#39;Foxy Foxglove&#39; is currently dropped/inactive' in\
             str(rv.data)
+
+    def test_add_cultivar_successful_submit_no_categories(self, app, db):
+        """Set categories from common name if none selected in form."""
+        bn = BotanicalName(name='Digitalis purpurea')
+        cn = CommonName(name='Foxglove')
+        cat = Category(name='Perennial Flower')
+        db.session.add_all([bn, cn, cat])
+        cn.categories.append(cat)
+        db.session.commit()
+        with app.test_client() as tc:
+            rv = tc.post(url_for('seeds.add_cultivar'),
+                         data=dict(botanical_name=str(bn.id),
+                                   common_name=str(cn.id),
+                                   description='Very foxy',
+                                   dropped='',
+                                   in_stock='',
+                                   name='Foxy',
+                                   series='0'),
+                         follow_redirects=True)
+        assert 'No categories specified' in str(rv.data)
+        cv = Cultivar.query.filter_by(name='Foxy').first()
+        assert cat in cv.categories
+
+
+class TestAddPacketRouteWithDB:
+    """Test seeds.add_packet."""
+    def test_add_packet_bad_cv_id(self, app, db):
+        """Redirect to seeds.select_cultivar if invalid cv_id given."""
+        with app.test_client() as tc:
+            rv = tc.get(url_for('seeds.add_packet', cv_id=42))
+        assert rv.location == url_for('seeds.select_cultivar',
+                                      dest='seeds.add_packet',
+                                      _external=True)
+
+    def test_add_packet_success_redirect_with_again(self, app, db):
+        """Redirect to seeds.add_packet w/ same cv_id if again selected."""
+        cultivar = foxy_cultivar()
+        db.session.add(cultivar)
+        db.session.commit()
+        with app.test_client() as tc:
+            rv = tc.post(url_for('seeds.add_packet', cv_id=cultivar.id),
+                         data=dict(price='2.99',
+                                   prices=0,
+                                   quantity='100',
+                                   quantities='0',
+                                   unit='seeds',
+                                   units=0,
+                                   sku='8675309',
+                                   again=True))
+        assert rv.location == url_for('seeds.add_packet',
+                                      cv_id=cultivar.id,
+                                      _external=True)
+
+    def test_add_packet_success_with_inputs(self, app, db):
+        """Flash a message on successful submission with data in inputs."""
+        cultivar = foxy_cultivar()
+        db.session.add(cultivar)
+        db.session.commit()
+        with app.test_client() as tc:
+            rv = tc.post(url_for('seeds.add_packet', cv_id=cultivar.id),
+                         data=dict(price='2.99',
+                                   quantity='100',
+                                   units='seeds',
+                                   sku='8675309'),
+                         follow_redirects=True)
+        assert 'Packet SKU #8675309' in str(rv.data)
+
+    def test_add_packet_successs_with_existing_quantity(self, app, db):
+        """Load existing quantity if it has the same values as submitted."""
+        cultivar = foxy_cultivar()
+        qty = Quantity(value=100, units='seeds')
+        db.session.add_all([cultivar, qty])
+        db.session.commit()
+        with app.test_client() as tc:
+            tc.post(url_for('seeds.add_packet', cv_id=cultivar.id),
+                    data=dict(price='2.99',
+                              quantity='100',
+                              units='seeds',
+                              sku='8675309'))
+        pkt = Packet.query.filter_by(sku='8675309').first()
+        assert pkt.quantity is qty
+
+    def test_add_packet_renders_page(self, app, db):
+        """Render form page given a valid cv_id."""
+        cultivar = Cultivar()
+        db.session.add(cultivar)
+        cultivar.name = 'Foxy'
+        db.session.commit()
+        with app.test_client() as tc:
+            rv = tc.get(url_for('seeds.add_packet', cv_id=cultivar.id))
+        assert 'Add a Packet' in str(rv.data)
+
+
+class TestAddSeriesRouteWithDB:
+    """Test add_series route."""
+    def test_add_series_renders_page(self, app, db):
+        """Render form page."""
+        with app.test_client() as tc:
+            rv = tc.get(url_for('seeds.add_series'))
+        assert 'Add Series' in str(rv.data)
+
+    def test_add_series_successful_submit(self, app, db):
+        """Flash message on successful form submission."""
+        cn = CommonName(name='Foxglove')
+        db.session.add(cn)
+        db.session.commit()
+        with app.test_client() as tc:
+            rv = tc.post(url_for('seeds.add_series'),
+                         data=dict(common_name=cn.id,
+                                   name='Spotty',
+                                   description='More dots!'),
+                         follow_redirects=True)
+        assert 'New series &#39;Spotty&#39; added to: Foxglove' in str(rv.data)
 
 
 class TestCategoryRouteWithDB:
@@ -462,7 +508,6 @@ class TestCultivarRouteWithDB:
         cultivar = foxy_cultivar()
         db.session.add(cultivar)
         db.session.commit()
-        print(cultivar.categories[0].slug)
         with app.test_client() as tc:
             rv = tc.get(url_for('seeds.cultivar',
                                 cat_slug=cultivar.categories[0].slug,
@@ -475,10 +520,7 @@ class TestEditBotanicalNameRouteWithDB:
     """Test seeds.edit_botanical_name."""
     def test_edit_botanical_name_bad_id(self, app, db):
         """Redirect to seeds.select_botanical_name given a non-digit bn_id."""
-        user = seed_manager()
-        db.session.add(user)
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.edit_botanical_name', bn_id='frogs'))
         assert rv.location == url_for('seeds.select_botanical_name',
                                       dest='seeds.edit_botanical_name',
@@ -486,10 +528,7 @@ class TestEditBotanicalNameRouteWithDB:
 
     def test_edit_botanical_name_does_not_exist(self, app, db):
         """Redirect if bn_id does not correspond to a BotanicalName.id."""
-        user = seed_manager()
-        db.session.add(user)
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.edit_botanical_name', bn_id=42))
         assert rv.location == url_for('seeds.select_botanical_name',
                                       dest='seeds.edit_botanical_name',
@@ -497,16 +536,14 @@ class TestEditBotanicalNameRouteWithDB:
 
     def test_edit_botanical_name_no_changes(self, app, db):
         """Redirect to self and flash a message if no changes made."""
-        user = seed_manager()
         bn = BotanicalName()
         cn = CommonName()
-        db.session.add_all([user, bn, cn])
+        db.session.add_all([bn, cn])
         bn.name = 'Asclepias incarnata'
         cn.name = 'Butterly Weed'
         bn.common_name = cn
         db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.edit_botanical_name', bn_id=bn.id),
                          data=dict(name=bn.name,
                                    common_name=[cn.id]),
@@ -515,10 +552,7 @@ class TestEditBotanicalNameRouteWithDB:
 
     def test_edit_botanical_name_no_id(self, app, db):
         """Redirect to seeds.select_botanical_name if given no bn_id."""
-        user = seed_manager()
-        db.session.add(user)
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.edit_botanical_name'))
         assert rv.status_code == 302
         assert rv.location == url_for('seeds.select_botanical_name',
@@ -527,13 +561,11 @@ class TestEditBotanicalNameRouteWithDB:
 
     def test_edit_botanical_name_renders_page(self, app, db):
         """Render the page for editing botanical names given valid bn_id."""
-        user = seed_manager()
         bn = BotanicalName()
-        db.session.add_all([bn, user])
+        db.session.add(bn)
         bn.name = 'Asclepias incarnata'
         db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.edit_botanical_name', bn_id=bn.id),
                         follow_redirects=True)
         assert 'Edit Botanical Name' in str(rv.data)
@@ -543,15 +575,13 @@ class TestEditBotanicalNameRouteWithDB:
         bn = BotanicalName()
         cn1 = CommonName()
         cn2 = CommonName()
-        user = seed_manager()
-        db.session.add_all([bn, cn1, cn2, user])
+        db.session.add_all([bn, cn1, cn2])
         bn.name = 'Asclepias incarnata'
         cn1.name = 'Butterfly Weed'
         cn2.name = 'Milkweed'
         bn.common_name = cn1
         db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.edit_botanical_name', bn_id=bn.id),
                          data=dict(name='Asclepias tuberosa',
                                    common_name=cn2.id),
@@ -564,41 +594,114 @@ class TestEditBotanicalNameRouteWithDB:
             'tuberosa&#39; changed from &#39;Butterfly Weed&#39; to: '\
             '&#39;Milkweed&#39;.' in str(rv.data)
 
+    def test_edit_botanical_name_other_with_name(self, app, db):
+        """Flash an error and redirect if edited to name alread in use."""
+        bn1 = BotanicalName(name='Digitalis purpurea')
+        bn2 = BotanicalName(name='Digitalis über alles')
+        cn = CommonName(name='Foxglove')
+        db.session.add_all([bn1, bn2, cn])
+        bn1.common_name = cn
+        bn2.common_name = cn
+        db.session.commit()
+        with app.test_client() as tc:
+            rv = tc.post(url_for('seeds.edit_botanical_name', bn_id=bn1.id),
+                         data=dict(name='Digitalis über alles',
+                                   common_name=cn.id),
+                         follow_redirects=True)
+        assert 'is already in use' in str(rv.data)
+
+    def test_edit_botanical_name_synonym_with_name(self, app, db):
+        """Flash an error and redirect if edited to name alread in use."""
+        bn1 = BotanicalName(name='Digitalis purpurea')
+        bn2 = BotanicalName(name='Digitalis über alles')
+        bn3 = BotanicalName(name='Innagada davida')
+        bn3.synonyms.append(bn2)
+        bn2.syn_only = True
+        cn = CommonName(name='Foxglove')
+        db.session.add_all([bn1, bn2, cn])
+        bn1.common_name = cn
+        db.session.commit()
+        with app.test_client() as tc:
+            rv = tc.post(url_for('seeds.edit_botanical_name', bn_id=bn1.id),
+                         data=dict(name='Digitalis über alles',
+                                   common_name=cn.id),
+                         follow_redirects=True)
+        assert 'exists as a synonym of' in str(rv.data)
+
+    def test_edit_botanical_name_same_as_synonym_of_self(self, app, db):
+        """Clear synonyms if new BotanicalName same as one of them."""
+        bn1 = BotanicalName(name='Digitalis purpurea')
+        bn2 = BotanicalName(name='Digitalis watchus')
+        bn2.syn_only = True
+        bn3 = BotanicalName(name='Innagada davida')
+        bn3.syn_only = True
+        bn4 = BotanicalName(name='Nothing here')
+        bn1.synonyms = [bn2, bn3]
+        cn = CommonName(name='Foxglove')
+        db.session.add_all([bn1, bn2, bn3, bn4, cn])
+        bn1.common_name = cn
+        bn2.common_name = cn
+        bn3.common_name = cn
+        bn4.synonyms = [bn2]
+        db.session.commit()
+        dw = BotanicalName.query.filter_by(name='Digitalis watchus').first()
+        assert dw == bn2
+        assert bn2 in bn1.synonyms
+        assert bn3 in bn1.synonyms
+        with app.test_client() as tc:
+            tc.post(url_for('seeds.edit_botanical_name', bn_id=bn1.id),
+                    data=dict(name='Innagada davida',
+                              common_name=cn.id,
+                              synonyms='Digitalis watchus'),
+                    follow_redirects=True)
+        assert bn2 in bn1.synonyms
+        assert bn3 not in bn1.synonyms
+
+    def test_edit_botanical_name_clears_synonyms(self, app, db):
+        """Clear synonyms if synonyms field is empty."""
+        bn1 = BotanicalName(name='Digitalis purpurea')
+        bn2 = BotanicalName(name='Digitalis über alles')
+        bn3 = BotanicalName(name='Digitalis watchus')
+        cn = CommonName(name='Foxglove')
+        bn1.common_name = cn
+        bn1.synonyms = [bn2, bn3]
+        db.session.add_all([bn1, bn2, bn3, cn])
+        db.session.commit()
+        with app.test_client() as tc:
+            rv = tc.post(url_for('seeds.edit_botanical_name', bn_id=bn1.id),
+                         data=dict(name='Digitalis purpurea',
+                                   common_name=cn.id,
+                                   synonyms=''),
+                         follow_redirects=True)
+        assert 'Synonyms for &#39;Digitalis purpurea&#39; clea' in str(rv.data)
+
 
 class TestEditCategoryRouteWithDB:
     """Test seeds.edit_category."""
     def test_edit_category_bad_id(self, app, db):
-        """Redirect if category_id is not an integer."""
-        user = seed_manager()
-        db.session.add(user)
+        """Redirect if cat_id is not an integer."""
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
-            rv = tc.get(url_for('seeds.edit_category', category_id='frogs'))
+            rv = tc.get(url_for('seeds.edit_category', cat_id='frogs'))
         assert rv.location == url_for('seeds.select_category',
                                       dest='seeds.edit_category',
                                       _external=True)
 
     def test_edit_category_does_not_exist(self, app, db):
-        """Redirect if no Category.id corresponds with category_id."""
-        user = seed_manager()
-        db.session.add(user)
+        """Redirect if no Category.id corresponds with cat_id."""
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
-            rv = tc.get(url_for('seeds.edit_category', category_id=42))
+            rv = tc.get(url_for('seeds.edit_category', cat_id=42))
         assert rv.location == url_for('seeds.select_category',
                                       dest='seeds.edit_category',
                                       _external=True)
 
     def test_edit_category_no_changes(self, app, db):
         """Redirect to self and flash a message if no changes are made."""
-        user = seed_manager()
         cat = Category()
-        db.session.add_all([user, cat])
+        db.session.add(cat)
         cat.name = 'Annual Flower'
         cat.description = 'Not really built to last.'
         db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.edit_category', cat_id=cat.id),
                          data=dict(category=cat.name,
                                    description=cat.description),
@@ -606,11 +709,8 @@ class TestEditCategoryRouteWithDB:
         assert 'No changes made' in str(rv.data)
 
     def test_edit_category_no_id(self, app, db):
-        """Redirect to seeds.select_category if no category_id specified."""
-        user = seed_manager()
-        db.session.add(user)
+        """Redirect to seeds.select_category if no cat_id specified."""
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.edit_category'))
         assert rv.status_code == 302
         assert rv.location == url_for('seeds.select_category',
@@ -618,28 +718,24 @@ class TestEditCategoryRouteWithDB:
                                       _external=True)
 
     def test_edit_category_renders_page(self, app, db):
-        """Render the page for editing a category given valid category_id."""
-        user = seed_manager()
+        """Render the page for editing a category given valid cat_id."""
         cat = Category()
-        db.session.add_all([user, cat])
+        db.session.add(cat)
         cat.name = 'Vegetable'
         db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.edit_category', cat_id=cat.id),
                         follow_redirects=True)
         assert 'Edit Category' in str(rv.data)
 
     def test_edit_category_successful_edit(self, app, db):
         """Change Category in db if edited successfully."""
-        user = seed_manager()
         cat = Category()
-        db.session.add_all([user, cat])
+        db.session.add(cat)
         cat.name = 'Annual Flowers'
         cat.description = 'Not really built to last.'
         db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.edit_category', cat_id=cat.id),
                          data=dict(category='Perennial Flowers',
                                    description='Built to last.'),
@@ -650,33 +746,180 @@ class TestEditCategoryRouteWithDB:
         assert 'Description for &#39;Perennial Flowers&#39; changed to' in\
             str(rv.data)
 
+    def test_edit_category_already_exists(self, app, db):
+        """Flash an error if changing category name would conflict."""
+        cat1 = Category(name='Vegetable')
+        cat2 = Category(name='Herb')
+        db.session.add_all([cat1, cat2])
+        db.session.commit()
+        with app.test_client() as tc:
+            rv = tc.post(url_for('seeds.edit_category', cat_id=cat1.id),
+                         data=dict(category='Herb'),
+                         follow_redirects=True)
+        assert 'already exists' in str(rv.data)
+        assert cat1.name == 'Vegetable'
+
+    def test_edit_category_suggests_redirect(self, app, db):
+        """Flash a message linking to add_redirect if paths change."""
+        cat = Category(name='Perennial')
+        cn = CommonName(name='Foxglove')
+        cv = Cultivar(name='Foxy')
+        cat.common_names.append(cn)
+        cn.cultivars.append(cv)
+        cat.cultivars.append(cv)
+        db.session.add_all([cat, cn, cv])
+        db.session.commit()
+        cat_slug = cat.slug
+        with app.test_client() as tc:
+            rv = tc.post(url_for('seeds.edit_category', cat_id=cat.id),
+                         data=dict(category='Perennial Flower'),
+                         follow_redirects=True)
+        assert url_for('seeds.common_name',
+                       cat_slug=cat_slug,
+                       cn_slug=cn.slug) in str(rv.data)
+        assert cat_slug != cat.slug
+        assert url_for('seeds.common_name',
+                       cat_slug=cat.slug,
+                       cn_slug=cn.slug) in str(rv.data)
+        assert url_for('seeds.cultivar',
+                       cat_slug=cat_slug,
+                       cn_slug=cn.slug,
+                       cv_slug=cv.slug) in str(rv.data)
+        assert url_for('seeds.cultivar',
+                       cat_slug=cat_slug,
+                       cn_slug=cn.slug,
+                       cv_slug=cv.slug) in str(rv.data)
+
 
 class TestEditCommonNameRouteWithDB:
     """Test seeds.edit_common_name."""
     def test_edit_common_name_bad_id(self, app, db):
         """Redirect given a cn_id that isn't an integer."""
-        user = seed_manager()
-        db.session.add(user)
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.edit_common_name', cn_id='frogs'))
         assert rv.location == url_for('seeds.select_common_name',
                                       dest='seeds.edit_common_name',
                                       _external=True)
 
+    def test_edit_common_name_blank_description_instructions(self, app, db):
+        """Set description/instructions to none if it it is a blank string."""
+        cn = CommonName(name='Foxglove',
+                        description='Foxy!',
+                        instructions='Put in ground')
+        cat = Category(name='Perennial Flower')
+        cn.categories.append(cat)
+        db.session.add_all([cn, cat])
+        db.session.commit()
+        assert cn.description is not None
+        with app.test_client() as tc:
+            rv = tc.post(url_for('seeds.edit_common_name', cn_id=cn.id),
+                         data=dict(name='Foxglove',
+                                   categories=[cat.id],
+                                   description='',
+                                   instructions='',
+                                   parent_cn=0),
+                         follow_redirects=True)
+        assert 'Description for &#39;Foxglove&#39; has been cleared'\
+            in str(rv.data)
+        assert cn.description is None
+        assert 'Planting instructions for &#39;Foxglove&#39; have been clear'\
+            in str(rv.data)
+
+    def test_edit_common_name_name_exists(self, app, db):
+        """Flash an error if name is changed to existing common name."""
+        cn1 = CommonName(name='Fauxglove')
+        cn2 = CommonName(name='Foxglove')
+        cat = Category(name='Perennial Flower')
+        cn1.categories.append(cat)
+        cn2.categories.append(cat)
+        db.session.add_all([cn1, cn2, cat])
+        db.session.commit()
+        with app.test_client() as tc:
+            rv = tc.post(url_for('seeds.edit_common_name', cn_id=cn1.id),
+                         data=dict(name='Foxglove',
+                                   categories=[cat.id],
+                                   parent_cn=0),
+                         follow_redirects=True)
+        assert 'is already in use' in str(rv.data)
+
+    def test_edit_common_name_clears_synonyms(self, app, db):
+        """Clear synonyms if form field is blank."""
+        cn1 = CommonName(name='Foxglove')
+        cn2 = CommonName(name='Digitalis')
+        cn2.syn_only = True
+        cn1.synonyms.append(cn2)
+        cat = Category('Flower')
+        cn1.categories.append(cat)
+        db.session.add_all([cn1, cn2, cat])
+        db.session.commit()
+        assert cn2 in cn1.synonyms
+        with app.test_client() as tc:
+            rv = tc.post(url_for('seeds.edit_common_name', cn_id=cn1.id),
+                         data=dict(name='Foxglove',
+                                   categories=[cat.id],
+                                   parent_cn=0,
+                                   synonyms=''),
+                         follow_redirects=True)
+        assert 'Synonyms for &#39;Foxglove&#39; cleared' in str(rv.data)
+        assert not cn1.synonyms
+
+    def test_edit_common_name_exists_as_synonym(self, app, db):
+        """Flash an error if name changed to existing synonym."""
+        cn1 = CommonName(name='Fauxglove')
+        cn2 = CommonName(name='Foxglove')
+        cn3 = CommonName(name='Digitalis')
+        cn3.syn_only = True
+        cn2.synonyms = [cn3]
+        cat = Category(name='Perennial Flower')
+        cn1.categories.append(cat)
+        cn2.categories.append(cat)
+        db.session.add_all([cn1, cn2, cn3, cat])
+        db.session.commit()
+        with app.test_client() as tc:
+            rv = tc.post(url_for('seeds.edit_common_name', cn_id=cn1.id),
+                         data=dict(name='Digitalis',
+                                   categories=[cat.id],
+                                   parent_cn=0),
+                         follow_redirects=True)
+        assert 'already exists as a synonym of' in str(rv.data)
+
+    def test_edit_common_name_synonym_of_self(self, app, db):
+        """Clear synonyms before setting name if name is same as a synonym.
+
+        This way we don't get unique constraint failures when the session is
+        committed near the end of the function. This also allows setting the
+        old name as a synonym.
+        """
+        cn1 = CommonName(name='Digitalis')
+        cn2 = CommonName(name='Foxglove')
+        cn2.syn_only = True
+        cn3 = CommonName(name='Fauxglove')
+        cn3.syn_only = True
+        cn1.synonyms = [cn2, cn3]
+        cat = Category(name='Perennial Flower')
+        cn1.categories.append(cat)
+        db.session.add_all([cn1, cn2, cn3, cat])
+        db.session.commit()
+        with app.test_client() as tc:
+            tc.post(url_for('seeds.edit_common_name', cn_id=cn1.id),
+                    data=dict(name='Foxglove',
+                              categories=[cat.id],
+                              parent_cn=0,
+                              synonyms='Fauxglove, Digitalis'),
+                    follow_redirects=True)
+        assert cn1.list_synonyms_as_string() == 'Fauxglove, Digitalis'
+
     def test_edit_common_name_no_changes(self, app, db):
         """Redirect to self and flash message if no changes made."""
-        user = seed_manager()
         cn = CommonName()
         cat = Category()
-        db.session.add_all([user, cn, cat])
+        db.session.add_all([cn, cat])
         cn.name = 'Butterfly Weed'
         cn.description = 'Butterflies love this stuff.'
         cat.name = 'Perennial Flower'
         cn.categories.append(cat)
         db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.edit_common_name', cn_id=cn.id),
                          data=dict(name='Butterfly Weed',
                                    description='Butterflies love this stuff.',
@@ -687,10 +930,7 @@ class TestEditCommonNameRouteWithDB:
 
     def test_edit_common_name_no_id(self, app, db):
         """Redirect to seeds.select_common_name given no cn_id."""
-        user = seed_manager()
-        db.session.add(user)
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.edit_common_name'))
         assert rv.status_code == 302
         assert rv.location == url_for('seeds.select_common_name',
@@ -699,37 +939,251 @@ class TestEditCommonNameRouteWithDB:
 
     def test_edit_common_name_renders_page(self, app, db):
         """Render the page to edit common name given valid cn_id."""
-        user = seed_manager()
         cn = CommonName()
-        db.session.add_all([user, cn])
+        db.session.add(cn)
         cn.name = 'Butterfly Weed'
         db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.edit_common_name', cn_id=cn.id),
                         follow_redirects=True)
         assert 'Edit Common Name' in str(rv.data)
 
+    def test_edit_common_name_remove_category_removes_from_cv(self, app, db):
+        """Remove category from any cultivars w/ common name."""
+        cn = CommonName(name='Foxglove')
+        cat1 = Category(name='Plant')
+        cat2 = Category(name='Perennial Flower')
+        cv = Cultivar(name='Foxy')
+        cn.categories.append(cat1)
+        cv.categories.append(cat1)
+        cv.common_name = cn
+        db.session.add_all([cn, cat1, cat2, cv])
+        db.session.commit()
+        assert cat1 in cv.categories
+        with app.test_client() as tc:
+            rv = tc.post(url_for('seeds.edit_common_name', cn_id=cn.id),
+                         data=dict(name='Foxglove',
+                                   categories=[cat2.id],
+                                   parent_cn=0),
+                         follow_redirects=True)
+        assert 'has also been removed from the cultivar' in str(rv.data)
+        assert cat1 not in cv.categories
+
+    def test_edit_common_name_adds_parent(self, app, db):
+        """Add parent if specified by form."""
+        cn1 = CommonName(name='Dwarf Coleus')
+        cn2 = CommonName(name='Coleus')
+        cat = Category(name='Perennial Flower')
+        cn1.categories.append(cat)
+        cn2.categories.append(cat)
+        db.session.add_all([cn1, cn2, cat])
+        db.session.commit()
+        assert not cn1.parent
+        with app.test_client() as tc:
+            rv = tc.post(url_for('seeds.edit_common_name', cn_id=cn1.id),
+                         data=dict(name='Dwarf Coleus',
+                                   categories=[cat.id],
+                                   parent_cn=cn2.id),
+                         follow_redirects=True)
+        assert 'is now a subcategory of' in str(rv.data)
+        assert cn1.parent == cn2
+
+    def test_edit_common_name_changes_parent(self, app, db):
+        """Replace parent if changed."""
+        cn1 = CommonName(name='Dwarf Coleus')
+        cn2 = CommonName(name='Plant')
+        cn3 = CommonName(name='Coleus')
+        cat = Category('Flower')
+        cn1.categories.append(cat)
+        cn2.categories.append(cat)
+        cn3.categories.append(cat)
+        cn1.parent = cn2
+        db.session.add_all([cn1, cn2, cn3, cat])
+        db.session.commit()
+        assert cn1.parent == cn2
+        with app.test_client() as tc:
+            rv = tc.post(url_for('seeds.edit_common_name', cn_id=cn1.id),
+                         data=dict(name='Dwarf Coleus',
+                                   categories=[cat.id],
+                                   parent_cn=cn3.id),
+                         follow_redirects=True)
+        assert 'is now a subcategory of' in str(rv.data)
+        assert cn1.parent == cn3
+
+    def test_edit_common_name_removes_parent(self, app, db):
+        """Remove parent if 0 selected in parent_cn."""
+        cn1 = CommonName(name='Dwarf Coleus')
+        cn2 = CommonName(name='Coleus')
+        cat = Category('Flower')
+        cn1.categories.append(cat)
+        cn2.categories.append(cat)
+        cn1.parent = cn2
+        db.session.add_all([cn1, cn2, cat])
+        db.session.commit()
+        assert cn1.parent == cn2
+        with app.test_client() as tc:
+            rv = tc.post(url_for('seeds.edit_common_name', cn_id=cn1.id),
+                         data=dict(name='Dwarf Coleus',
+                                   categories=[cat.id],
+                                   parent_cn=0),
+                         follow_redirects=True)
+        assert 'is no longer a subcategory of any other' in str(rv.data)
+        assert not cn1.parent
+
+    def test_edit_common_name_recommends_redirects(self, app, db):
+        """Flash messages recommending redirects be created if paths change."""
+        cn = CommonName(name='Fauxglove')
+        cat = Category(name='Perennial Flower')
+        cv = Cultivar(name='Foxy')
+        cn.categories.append(cat)
+        cv.categories.append(cat)
+        cv.common_name = cn
+        db.session.add_all([cn, cat, cv])
+        db.session.commit()
+        cn_slug = cn.slug
+        with app.test_client() as tc:
+            rv = tc.post(url_for('seeds.edit_common_name', cn_id=cn.id),
+                         data=dict(name='Foxglove',
+                                   categories=[cat.id],
+                                   parent_cn=0),
+                         follow_redirects=True)
+        assert cn_slug != cn.slug
+        assert url_for('seeds.common_name',
+                       cat_slug=cat.slug,
+                       cn_slug=cn_slug) in str(rv.data)
+        assert url_for('seeds.common_name',
+                       cat_slug=cat.slug,
+                       cn_slug=cn.slug) in str(rv.data)
+        assert url_for('seeds.cultivar',
+                       cat_slug=cat.slug,
+                       cn_slug=cn_slug,
+                       cv_slug=cv.slug) in str(rv.data)
+        assert url_for('seeds.cultivar',
+                       cat_slug=cat.slug,
+                       cn_slug=cn.slug,
+                       cv_slug=cv.slug) in str(rv.data)
+
+    def test_edit_common_name_adds_gw_common_names(self, app, db):
+        """Add gw_common_names not already in common_name."""
+        cn1 = CommonName(name='Foxglove')
+        cn2 = CommonName(name='Butterfly Weed')
+        cn3 = CommonName(name='Tomato')
+        cn1.gw_common_names.append(cn2)
+        cat = Category(name='Perennial Flower')
+        cat.common_names = [cn1, cn2, cn3]
+        db.session.add_all([cn1, cn2, cn3, cat])
+        db.session.commit()
+        assert cn2 in cn1.gw_common_names
+        assert cn3 not in cn1.gw_common_names
+        with app.test_client() as tc:
+            rv = tc.post(url_for('seeds.edit_common_name', cn_id=cn1.id),
+                         data=dict(name='Foxglove',
+                                   categories=[cat.id],
+                                   parent_cn=0,
+                                   gw_common_names=[cn2.id, cn3.id]),
+                         follow_redirects=True)
+        assert 'added to Grows With' in str(rv.data)
+        assert cn3 in cn1.gw_common_names
+
+    def test_edit_common_name_removes_gw_common_names(self, app, db):
+        """Remove gw_common_names not selected."""
+        cn1 = CommonName(name='Foxglove')
+        cn2 = CommonName(name='Butterfly Weed')
+        cn3 = CommonName(name='Tomato')
+        cat = Category(name='Perennial Flower')
+        cn1.categories.append(cat)
+        cn2.categories.append(cat)
+        cn3.categories.append(cat)
+        cn1.gw_common_names = [cn2, cn3]
+        cn2.gw_common_names = [cn1, cn3]
+        cn3.gw_common_names = [cn1, cn2]
+        db.session.add_all([cn1, cn2, cn3, cat])
+        db.session.commit()
+        assert cn2 in cn1.gw_common_names
+        assert cn3 in cn1.gw_common_names
+        assert cn1 in cn3.gw_common_names
+        with app.test_client() as tc:
+            rv = tc.post(url_for('seeds.edit_common_name', cn_id=cn1.id),
+                         data=dict(name='Foxglove',
+                                   parent_cn=0,
+                                   categories=[cat.id],
+                                   gw_common_names=[cn2.id]),
+                         follow_redirects=True)
+        assert 'removed from Grows With' in str(rv.data)
+        assert cn2 in cn1.gw_common_names
+        assert cn3 not in cn1.gw_common_names
+        assert cn1 not in cn3.gw_common_names
+
+    def test_edit_common_name_adds_gw_cultivars(self, app, db):
+        """Add selected gw_cultivars not already present."""
+        cn = CommonName(name='Foxglove')
+        cv1 = Cultivar(name='Soulmate')
+        cv1.common_name = CommonName(name='Butterfly Weeed')
+        cv2 = Cultivar(name='Tumbling Tom')
+        cv2.common_name = CommonName(name='Tomato')
+        cat = Category(name='Perennial Flower')
+        cn.categories.append(cat)
+        cn.gw_cultivars.append(cv1)
+        db.session.add_all([cn, cv1, cv2, cat])
+        db.session.commit()
+        assert cv1 in cn.gw_cultivars
+        assert cv2 not in cn.gw_cultivars
+        with app.test_client() as tc:
+            rv = tc.post(url_for('seeds.edit_common_name', cn_id=cn.id),
+                         data=dict(name='Foxglove',
+                                   parent_cn=0,
+                                   categories=[cat.id],
+                                   gw_cultivars=[cv1.id, cv2.id]),
+                         follow_redirects=True)
+        assert 'added to Grows With' in str(rv.data)
+        assert cv1 in cn.gw_cultivars
+        assert cv2 in cn.gw_cultivars
+
+    def test_edit_common_name_removes_gw_cultivars(self, app, db):
+        """Remove gw_cultivars not selected."""
+        cn = CommonName(name='Foxglove')
+        cv1 = Cultivar(name='Soulmate')
+        cv1.common_name = CommonName(name='Butterfly Weed')
+        cv2 = Cultivar(name='Tumbling Tom')
+        cv2.common_name = CommonName(name='Tomato')
+        cat = Category(name='PerennialFlower')
+        cn.categories.append(cat)
+        cn.gw_cultivars = [cv1, cv2]
+        db.session.add_all([cn, cv1, cv2, cat])
+        db.session.commit()
+        assert cv1 in cn.gw_cultivars
+        assert cv2 in cn.gw_cultivars
+        with app.test_client() as tc:
+            rv = tc.post(url_for('seeds.edit_common_name', cn_id=cn.id),
+                         data=dict(name='Foxglove',
+                                   parent_cn=0,
+                                   categories=[cat.id],
+                                   gw_cultivars=[cv1.id]),
+                         follow_redirects=True)
+        assert 'removed from Grows With' in str(rv.data)
+        assert cv1 in cn.gw_cultivars
+        assert cv2 not in cn.gw_cultivars
+
     def test_edit_common_name_successful_edit(self, app, db):
         """Change CommonName in database upon successful edit."""
-        user = seed_manager()
         cn = CommonName()
         cat1 = Category()
         cat2 = Category()
         cat3 = Category()
-        db.session.add_all([user, cn, cat1, cat2, cat3])
+        db.session.add_all([cn, cat1, cat2, cat3])
         cn.name = 'Butterfly Weed'
         cn.description = 'Butterflies _really_ like this.'
+        cn.instructions = 'Put them in the ground.'
         cat1.name = 'Annual Flower'
         cat2.name = 'Vegetable'
         cat3.name = 'Herb'
         cn.categories.append(cat1)
         db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.edit_common_name', cn_id=cn.id),
                          data=dict(name='Celery',
                                    description='Crunchy!',
+                                   instructions='Do not eat.',
                                    parent_cn=0,
                                    categories=[cat2.id, cat3.id]),
                          follow_redirects=True)
@@ -740,6 +1194,8 @@ class TestEditCommonNameRouteWithDB:
         assert 'Common name &#39;Butterfly Weed&#39;' in str(rv.data)
         assert 'added to categories' in str(rv.data)
         assert 'removed from categories' in str(rv.data)
+        assert 'Planting instructions for &#39;Celery&#39; changed'\
+            in str(rv.data)
         assert 'Description for &#39;Celery&#39; changed' in str(rv.data)
 
 
@@ -747,11 +1203,7 @@ class TestEditPacketRouteWithDB:
     """Test seeds.edit_packet."""
     def test_edit_packet_no_id(self, app, db):
         """Redirect to select_packet given no pkt_id."""
-        user = seed_manager()
-        db.session.add(user)
-        db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.edit_packet'))
         assert rv.location == url_for('seeds.select_packet',
                                       dest='seeds.edit_packet',
@@ -759,11 +1211,7 @@ class TestEditPacketRouteWithDB:
 
     def test_edit_packet_no_packet(self, app, db):
         """Redirect to select if no packet exists with pkt_id."""
-        user = seed_manager()
-        db.session.add(user)
-        db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.edit_packet', pkt_id=42))
         assert rv.location == url_for('seeds.select_packet',
                                       dest='seeds.edit_packet',
@@ -771,10 +1219,9 @@ class TestEditPacketRouteWithDB:
 
     def test_edit_packet_renders_page(self, app, db):
         """Render form page with valid pkt_id and no post data."""
-        user = seed_manager()
         cultivar = Cultivar()
         packet = Packet()
-        db.session.add_all([user, packet, cultivar])
+        db.session.add_all([packet, cultivar])
         packet.price = Decimal('2.99')
         packet.quantity = Quantity(value=100, units='seeds')
         packet.sku = '8675309'
@@ -783,21 +1230,18 @@ class TestEditPacketRouteWithDB:
         cultivar.packets.append(packet)
         db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.edit_packet', pkt_id=packet.id))
         assert 'Edit Packet' in str(rv.data)
 
     def test_edit_packet_submission_change_inputs(self, app, db):
         """Change packet and flash message if new values present in inputs."""
-        user = seed_manager()
         packet = Packet()
-        db.session.add_all([user, packet])
+        db.session.add(packet)
         packet.price = Decimal('1.99')
         packet.quantity = Quantity(value=100, units='seeds')
         packet.sku = '8675309'
         db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.edit_packet', pkt_id=packet.id),
                          data=dict(price='2.99',
                                    quantity='2.5',
@@ -813,10 +1257,9 @@ class TestEditPacketRouteWithDB:
 
     def test_edit_packet_submission_no_changes(self, app, db):
         """Flash a message if no changes are made in a form submission."""
-        user = seed_manager()
         cultivar = Cultivar()
         packet = Packet()
-        db.session.add_all([user, packet, cultivar])
+        db.session.add(packet, cultivar)
         packet.price = Decimal('2.99')
         packet.quantity = Quantity(value=100, units='seeds')
         packet.sku = '8675309'
@@ -825,7 +1268,6 @@ class TestEditPacketRouteWithDB:
         cultivar.packets.append(packet)
         db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.edit_packet', pkt_id=packet.id),
                          data=dict(price=packet.price,
                                    quantity=str(packet.quantity.value),
@@ -834,19 +1276,57 @@ class TestEditPacketRouteWithDB:
                          follow_redirects=True)
         assert 'No changes made' in str(rv.data)
 
+    def test_edit_packet_uses_existing_quantity(self, app, db):
+        """Use existing quantity if it has same values as form fields."""
+        cv = foxy_cultivar()
+        qty = Quantity(value=100, units='seeds')
+        pkt = Packet(sku='8675309', price='3.50')
+        pkt.cultivar = cv
+        pkt.quantity = Quantity(value='1/2', units='grams')
+        db.session.add_all([cv, qty, pkt])
+        db.session.commit()
+        assert pkt.quantity is not qty
+        with app.test_client() as tc:
+            tc.post(url_for('seeds.edit_packet', pkt_id=pkt.id),
+                    data=dict(price='3.50',
+                              sku='8675309',
+                              quantity='100',
+                              units='seeds'))
+        assert pkt.quantity is qty
+
+    def test_edit_packet_sku_in_use(self, app, db):
+        """Flash error and redirect if new SKU in use by other packet."""
+        cv = Cultivar(name='Foxy')
+        cv.common_name = CommonName(name='Foxglove')
+        pkt1 = Packet(sku='8675309', price='3.50')
+        pkt1.quantity = Quantity(value=100, units='seeds')
+        pkt2 = Packet(sku='12345', price='2.99')
+        pkt2.quantity = Quantity(value='1/2', units='gram')
+        pkt1.cultivar = cv
+        pkt2.cultivar = cv
+        db.session.add_all([cv, pkt1, pkt2])
+        db.session.commit()
+        with app.test_client() as tc:
+            rv = tc.post(url_for('seeds.edit_packet', pkt_id=pkt1.id),
+                         data=dict(price='3.50',
+                                   quantity='100',
+                                   units='seeds',
+                                   sku='12345'),
+                         follow_redirects=True)
+        assert 'SKU already in use' in str(rv.data)
+
 
 class TestEditCultivarRouteWithDB:
     """Test seeds.edit_cultivar."""
     def test_edit_cultivar_change_botanical_name(self, app, db):
         """Flash messages if botanical name is changed."""
-        user = seed_manager()
         cultivar = Cultivar()
         bn = BotanicalName()
         bn2 = BotanicalName()
         cat = Category()
         cn = CommonName()
         thumb = Image()
-        db.session.add_all([user, bn, bn2, cat, cn])
+        db.session.add_all([bn, bn2, cat, cn])
         bn.name = 'Digitalis purpurea'
         bn2.name = 'Innagada davida'
         cn.name = 'Foxglove'
@@ -861,7 +1341,6 @@ class TestEditCultivarRouteWithDB:
         cultivar.thumbnail = thumb
         db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.edit_cultivar', cv_id=cultivar.id),
                          data=dict(botanical_name=str(bn2.id),
                                    categories=[str(cat.id)],
@@ -875,14 +1354,13 @@ class TestEditCultivarRouteWithDB:
 
     def test_edit_cultivar_change_categories(self, app, db):
         """Flash messages if categories added or removed."""
-        user = seed_manager()
         cultivar = Cultivar()
         bn = BotanicalName()
         cat = Category()
         cat2 = Category()
         cn = CommonName()
         thumb = Image()
-        db.session.add_all([user, bn, cat, cat2, cn])
+        db.session.add_all([bn, cat, cat2, cn])
         bn.name = 'Digitalis purpurea'
         cn.name = 'Foxglove'
         cat.name = 'Perennial Flower'
@@ -898,7 +1376,6 @@ class TestEditCultivarRouteWithDB:
         cultivar.thumbnail = thumb
         db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.edit_cultivar', cv_id=cultivar.id),
                          data=dict(botanical_name=str(bn.id),
                                    categories=[str(cat2.id)],
@@ -914,14 +1391,13 @@ class TestEditCultivarRouteWithDB:
 
     def test_edit_cultivar_change_common_name(self, app, db):
         """Flash message if common name changed."""
-        user = seed_manager()
         cultivar = Cultivar()
         bn = BotanicalName()
         cat = Category()
         cn = CommonName()
         cn2 = CommonName()
         thumb = Image()
-        db.session.add_all([user, bn, cat, cn, cn2])
+        db.session.add_all([bn, cat, cn, cn2])
         bn.name = 'Digitalis purpurea'
         cn.name = 'Foxglove'
         cn2.name = 'Vulpinemitten'
@@ -937,7 +1413,6 @@ class TestEditCultivarRouteWithDB:
         cultivar.thumbnail = thumb
         db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.edit_cultivar', cv_id=cultivar.id),
                          data=dict(botanical_name=str(bn.id),
                                    categories=[str(cat.id)],
@@ -952,13 +1427,12 @@ class TestEditCultivarRouteWithDB:
 
     def test_edit_cultivar_change_description(self, app, db):
         """Flash message if description changed."""
-        user = seed_manager()
         cultivar = Cultivar()
         bn = BotanicalName()
         cat = Category()
         cn = CommonName()
         thumb = Image()
-        db.session.add_all([user, bn, cat, cn])
+        db.session.add_all([bn, cat, cn])
         bn.name = 'Digitalis purpurea'
         cn.name = 'Foxglove'
         cat.name = 'Perennial Flower'
@@ -972,7 +1446,6 @@ class TestEditCultivarRouteWithDB:
         cultivar.thumbnail = thumb
         db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.edit_cultivar', cv_id=cultivar.id),
                          data=dict(botanical_name=str(bn.id),
                                    categories=[str(cat.id)],
@@ -986,13 +1459,12 @@ class TestEditCultivarRouteWithDB:
 
     def test_edit_cultivar_change_dropped(self, app, db):
         """Flash message if dropped status changed."""
-        user = seed_manager()
         cultivar = Cultivar()
         bn = BotanicalName()
         cat = Category()
         cn = CommonName()
         thumb = Image()
-        db.session.add_all([user, bn, cat, cn])
+        db.session.add_all([bn, cat, cn])
         bn.name = 'Digitalis purpurea'
         cn.name = 'Foxglove'
         cat.name = 'Perennial Flower'
@@ -1008,7 +1480,6 @@ class TestEditCultivarRouteWithDB:
         cultivar.thumbnail = thumb
         db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.edit_cultivar', cv_id=cultivar.id),
                          data=dict(botanical_name=str(bn.id),
                                    categories=[str(cat.id)],
@@ -1022,7 +1493,6 @@ class TestEditCultivarRouteWithDB:
         assert '&#39;Foxy Foxglove&#39; has been dropped.' in str(rv.data)
         assert cultivar.dropped
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.edit_cultivar', cv_id=cultivar.id),
                          data=dict(botanical_name=str(bn.id),
                                    categories=[str(cat.id)],
@@ -1038,13 +1508,12 @@ class TestEditCultivarRouteWithDB:
 
     def test_edit_cultivar_change_in_stock(self, app, db):
         """Flash message if in_stock status changed."""
-        user = seed_manager()
         cultivar = Cultivar()
         bn = BotanicalName()
         cat = Category()
         cn = CommonName()
         thumb = Image()
-        db.session.add_all([user, bn, cat, cn])
+        db.session.add_all([bn, cat, cn])
         bn.name = 'Digitalis purpurea'
         cn.name = 'Foxglove'
         cat.name = 'Perennial Flower'
@@ -1060,7 +1529,6 @@ class TestEditCultivarRouteWithDB:
         cultivar.thumbnail = thumb
         db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.edit_cultivar', cv_id=cultivar.id),
                          data=dict(botanical_name=str(bn.id),
                                    categories=[str(cat.id)],
@@ -1074,7 +1542,6 @@ class TestEditCultivarRouteWithDB:
         assert '&#39;Foxy Foxglove&#39; is now in stock' in str(rv.data)
         assert cultivar.in_stock
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.edit_cultivar', cv_id=cultivar.id),
                          data=dict(botanical_name=str(bn.id),
                                    categories=[str(cat.id)],
@@ -1090,13 +1557,12 @@ class TestEditCultivarRouteWithDB:
 
     def test_edit_cultivar_change_name(self, app, db):
         """Flash message if name changed."""
-        user = seed_manager()
         cultivar = Cultivar()
         bn = BotanicalName()
         cat = Category()
         cn = CommonName()
         thumb = Image()
-        db.session.add_all([user, bn, cat, cn])
+        db.session.add_all([bn, cat, cn])
         bn.name = 'Digitalis purpurea'
         cn.name = 'Foxglove'
         cat.name = 'Perennial Flower'
@@ -1110,7 +1576,6 @@ class TestEditCultivarRouteWithDB:
         cultivar.thumbnail = thumb
         db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.edit_cultivar', cv_id=cultivar.id),
                          data=dict(botanical_name=str(bn.id),
                                    categories=[str(cat.id)],
@@ -1128,13 +1593,12 @@ class TestEditCultivarRouteWithDB:
                                             app,
                                             db):
         """Flash message if thumbnail changed, and move old one to .images."""
-        user = seed_manager()
         cultivar = Cultivar()
         bn = BotanicalName()
         cat = Category()
         cn = CommonName()
         thumb = Image()
-        db.session.add_all([user, bn, cat, cn])
+        db.session.add_all([bn, cat, cn])
         bn.name = 'Digitalis purpurea'
         cn.name = 'Foxglove'
         cat.name = 'Perennial Flower'
@@ -1148,7 +1612,6 @@ class TestEditCultivarRouteWithDB:
         cultivar.thumbnail = thumb
         db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.edit_cultivar', cv_id=cultivar.id),
                          data=dict(botanical_name=str(bn.id),
                                    categories=[str(cat.id)],
@@ -1166,15 +1629,307 @@ class TestEditCultivarRouteWithDB:
                                                   get('IMAGES_FOLDER'),
                                                   'fawksy.jpg'))
 
+    @mock.patch('werkzeug.FileStorage.save')
+    def test_edit_cultivar_existing_thumbnail(self, mock_save, app, db):
+        """Flash an error message if filename is used by other cult.."""
+        cv = Cultivar(name='Foxy')
+        cv2 = Cultivar(name='Fauxy')
+        cat = Category(name='Perennial')
+        cn = CommonName(name='Foxglove')
+        cv.categories.append(cat)
+        cv2.categories.append(cat)
+        cn.categories.append(cat)
+        cv.common_name = cn
+        cv2.common_name = cn
+        thumb = Image()
+        thumb.filename = 'foxy.jpg'
+        cv2.thumbnail = thumb
+        db.session.add_all([cv, cv2, cn, cat, thumb])
+        db.session.commit()
+        with app.test_client() as tc:
+            rv = tc.post(url_for('seeds.edit_cultivar', cv_id=cv.id),
+                         data=dict(name='Foxy',
+                                   botanical_name='0',
+                                   common_name=str(cn.id),
+                                   categories=[str(cat.id)],
+                                   series='0',
+                                   thumbnail=(io.BytesIO(b'fawks'),
+                                              'foxy.jpg')),
+                         follow_redirects=True)
+        assert 'The filename &#39;foxy.jpg&#39; is already in use'\
+            in str(rv.data)
+        assert not mock_save.called
+
+    @mock.patch('werkzeug.FileStorage.save')
+    def test_edit_cultivar_reupload(self, mock_save, app, db):
+        """Allow uploading thumbnail with same name as existing."""
+        cv = Cultivar(name='Foxy')
+        cat = Category(name='Perennial')
+        cn = CommonName(name='Foxglove')
+        cv.categories.append(cat)
+        cn.categories.append(cat)
+        cv.common_name = cn
+        thumb = Image()
+        thumb.filename = 'foxy.jpg'
+        cv.thumbnail = thumb
+        db.session.add_all([cv, cat, cn, thumb])
+        db.session.commit()
+        with app.test_client() as tc:
+            rv = tc.post(url_for('seeds.edit_cultivar', cv_id=cv.id),
+                         data=dict(name='Foxy',
+                                   botanical_name='0',
+                                   common_name=str(cn.id),
+                                   categories=[str(cat.id)],
+                                   series='0',
+                                   thumbnail=(io.BytesIO(b'fawks'),
+                                              'foxy.jpg')),
+                         follow_redirects=True)
+        assert 'New thumbnail for' in str(rv.data)
+        assert mock_save.called
+
+    def test_edit_cultivar_change_gw_common_names(self, app, db):
+        """Change grows with common names according to form data."""
+        cv = Cultivar(name='Foxy')
+        cn1 = CommonName(name='Foxglove')
+        cn2 = CommonName(name='Plant')
+        cn3 = CommonName(name='Butterfly Weed')
+        cat = Category(name='Perennial')
+        cv.categories.append(cat)
+        cn1.categories.append(cat)
+        cn2.categories.append(cat)
+        cn3.categories.append(cat)
+        cv.common_name = cn1
+        cv.gw_common_names.append(cn2)
+        db.session.add_all([cv, cn2, cn3, cat])
+        db.session.commit()
+        assert cn2 in cv.gw_common_names
+        assert cn3 not in cv.gw_common_names
+        with app.test_client() as tc:
+            rv = tc.post(url_for('seeds.edit_cultivar', cv_id=cv.id),
+                         data=dict(name='Foxy',
+                                   botanical_name=0,
+                                   common_name=cn1.id,
+                                   categories=[cat.id],
+                                   series='0',
+                                   gw_common_names=[cn3.id]),
+                         follow_redirects=True)
+        assert 'added to Grows With for' in str(rv.data)
+        assert 'removed from Grows With for' in str(rv.data)
+        assert cn2 not in cv.gw_common_names
+        assert cn3 in cv.gw_common_names
+
+    def test_edit_cultivar_change_gw_cultivars(self, app, db):
+        """Set gw_cultivars to ones in form select.
+
+        This should also set the gw_cultivars for any cultivars added to or
+        removed from cultivar.gw_cultivars.
+        """
+        cv1 = Cultivar(name='Foxy')
+        cv2 = Cultivar(name='Soulmate')
+        cv3 = Cultivar(name='Milkmaid')
+        cn1 = CommonName(name='Foxglove')
+        cn2 = CommonName(name='Butterfly Weed')
+        cv1.common_name = cn1
+        cv2.common_name = cn2
+        cv3.common_name = cn2
+        cat = Category(name='Perennial')
+        cv1.categories.append(cat)
+        cv2.categories.append(cat)
+        cv3.categories.append(cat)
+        cn1.categories.append(cat)
+        cn2.categories.append(cat)
+        cv2.gw_cultivars.append(cv1)
+        cv1.gw_cultivars.append(cv2)
+        db.session.add_all([cv1, cv2, cv3, cn1, cn2, cat])
+        db.session.commit()
+        assert cv2 in cv1.gw_cultivars
+        assert cv1 in cv2.gw_cultivars
+        assert cv3 not in cv1.gw_cultivars
+        with app.test_client() as tc:
+            rv = tc.post(url_for('seeds.edit_cultivar', cv_id=cv1.id),
+                         data=dict(name='Foxy',
+                                   botanical_name=0,
+                                   common_name=cn1.id,
+                                   categories=[cat.id],
+                                   series=0,
+                                   gw_cultivars=[cv3.id]),
+                         follow_redirects=True)
+        assert 'removed from Grows With for' in str(rv.data)
+        assert 'added to Grows With for' in str(rv.data)
+        assert cv2 not in cv1.gw_cultivars
+        assert cv1 not in cv2.gw_cultivars
+        assert cv3 in cv1.gw_cultivars
+        assert cv1 in cv3.gw_cultivars
+
+    def test_edit_cultivar_change_series(self, app, db):
+        """Clear series if 0 selected, otherwise change series."""
+        cv = Cultivar(name='Foxy')
+        cn = CommonName(name='Foxglove')
+        cat = Category(name='Perennial')
+        sr1 = Series(name='Polkadot')
+        sr2 = Series(name='Spotty')
+        cv.categories.append(cat)
+        cn.categories.append(cat)
+        cv.common_name = cn
+        db.session.add_all([cv, cn, cat, sr1, sr2])
+        db.session.commit()
+        assert cv.series is None
+        with app.test_client() as tc:
+            rv = tc.post(url_for('seeds.edit_cultivar', cv_id=cv.id),
+                         data=dict(name='Foxy',
+                                   botanical_name=0,
+                                   categories=[cat.id],
+                                   common_name=cn.id,
+                                   series=sr1.id),
+                         follow_redirects=True)
+        print(rv.data)
+        assert 'Series for &#39;Polkadot Foxy Foxglove&#39; has been set to'\
+            in str(rv.data)
+        assert cv.series is sr1
+        with app.test_client() as tc:
+            rv = tc.post(url_for('seeds.edit_cultivar', cv_id=cv.id),
+                         data=dict(name='Foxy',
+                                   botanical_name=0,
+                                   categories=[cat.id],
+                                   common_name=cn.id,
+                                   series=sr2.id),
+                         follow_redirects=True)
+        assert cv.series is sr2
+        assert 'Series for &#39;Spotty Foxy Foxglove&#39; has been set to'\
+            in str(rv.data)
+        with app.test_client() as tc:
+            rv = tc.post(url_for('seeds.edit_cultivar', cv_id=cv.id),
+                         data=dict(name='Foxy',
+                                   botanical_name=0,
+                                   categories=[cat.id],
+                                   common_name=cn.id,
+                                   series=0),
+                         follow_redirects=True)
+        assert 'Series for &#39;Spotty Foxy Foxglove&#39; has been unset'\
+            in str(rv.data)
+        assert cv.series is None
+
+    def test_edit_cultivar_changes_synonyms(self, app, db):
+        """If synonyms in form are different, change them."""
+        cv = Cultivar(name='Foxy')
+        syn1 = Cultivar(name='Fauxy')
+        syn2 = Cultivar(name='Fawksy')
+        syn1.syn_only = True
+        syn2.syn_only = True
+        cv.synonyms.append(syn1)
+        cn = CommonName(name='Foxglove')
+        cat = Category(name='Perennial')
+        cv.categories.append(cat)
+        cn.categories.append(cat)
+        cv.common_name = cn
+        db.session.add_all([cv, syn1, syn2, cn, cat])
+        db.session.commit()
+        with app.test_client() as tc:
+            rv = tc.post(url_for('seeds.edit_cultivar', cv_id=cv.id),
+                         data=dict(name='Foxy',
+                                   botanical_name=0,
+                                   categories=[cat.id],
+                                   common_name=cn.id,
+                                   synonyms='Fawksy',
+                                   series=0),
+                         follow_redirects=True)
+        assert 'Synonyms for &#39;Foxy Foxglove&#39; set to' in str(rv.data)
+        assert syn1 not in cv.synonyms
+        assert syn2 in cv.synonyms
+
+    def test_edit_cultivar_clears_description(self, app, db):
+        """Set description to none if form fields empty."""
+        cv = Cultivar(name='Foxy')
+        cv.description = 'Like Hendrix!'
+        cn = CommonName(name='Foxglove')
+        cat = Category(name='Perennial')
+        cv.categories.append(cat)
+        cn.categories.append(cat)
+        cv.common_name = cn
+        db.session.add_all([cv, cn, cat])
+        db.session.commit()
+        with app.test_client() as tc:
+            rv = tc.post(url_for('seeds.edit_cultivar', cv_id=cv.id),
+                         data=dict(name='Foxy',
+                                   botanical_name=0,
+                                   common_name=cn.id,
+                                   categories=[cat.id],
+                                   description='',
+                                   series=0),
+                         follow_redirects=True)
+        assert 'Description for &#39;Foxy Foxglove&#39; has been cleared.'\
+            in str(rv.data)
+        assert cv.description is None
+
+    def test_edit_cultivar_exists(self, app, db):
+        """Flash an error if a cultivar with the same name/cn combo exists."""
+        cv1 = Cultivar(name='Foxy')
+        cv2 = Cultivar(name='Fauxy')
+        cv3 = Cultivar(name='Fawksy')
+        cn1 = CommonName(name='Foxglove')
+        cn2 = CommonName(name='Plant')
+        cv1.common_name = cn1
+        cv2.common_name = cn2
+        cv3.common_name = cn1
+        cat = Category('Perennial')
+        cv1.categories.append(cat)
+        cv2.categories.append(cat)
+        cv3.categories.append(cat)
+        cn1.categories.append(cat)
+        cn2.categories.append(cat)
+        db.session.add_all([cv1, cv2, cv3, cn1, cn2, cat])
+        db.session.commit()
+        with app.test_client() as tc:
+            rv = tc.post(url_for('seeds.edit_cultivar', cv_id=cv1.id),
+                         data=dict(name='Fauxy',
+                                   botanical_name=0,
+                                   common_name=cv1.common_name.id,
+                                   categories=[cat.id],
+                                   series=0))
+        assert rv.location == url_for('seeds.manage', _external=True)
+        assert cv1.name == 'Fauxy'
+        assert cv1.common_name == cn1
+        with app.test_client() as tc:
+            rv = tc.post(url_for('seeds.edit_cultivar', cv_id=cv1.id),
+                         data=dict(name='Fawksy',
+                                   botanical_name=0,
+                                   common_name=cv1.common_name.id,
+                                   categories=[cat.id],
+                                   series=0),
+                         follow_redirects=True)
+        assert 'Error: There is already another' in str(rv.data)
+        assert cv1.name != 'Fawksy'
+
+    def test_edit_cultivar_exists_as_synonym(self, app, db):
+        """Flash an error if trying to use a name of a synonym."""
+        cv1 = Cultivar(name='Foxy')
+        cv2 = Cultivar(name='Fauxy')
+        cv2.syn_only = True
+        cn = CommonName(name='Foxglove')
+        cat = Category('Perennial')
+        cv1.categories.append(cat)
+        cn.categories.append(cat)
+        cv1.common_name = cn
+        db.session.add_all([cv1, cv2, cn, cat])
+        db.session.commit()
+        with app.test_client() as tc:
+            rv = tc.post(url_for('seeds.edit_cultivar', cv_id=cv1.id),
+                         data=dict(categories=[cat.id],
+                                   common_name=cn.id,
+                                   name='Fauxy',
+                                   botanical_name=0,
+                                   series=0),
+                         follow_redirects=True)
+            assert 'is already being used as a synonym' in str(rv.data)
+
     def test_edit_cultivar_no_changes(self, app, db):
         """Submission with no changes flashes relevant message."""
-        user = seed_manager()
         cultivar = Cultivar()
         bn = BotanicalName()
         cat = Category()
         cn = CommonName()
         thumb = Image()
-        db.session.add_all([user, bn, cat, cn])
+        db.session.add_all([bn, cat, cn])
         bn.name = 'Digitalis purpurea'
         cn.name = 'Foxglove'
         cat.name = 'Perennial Flower'
@@ -1190,7 +1945,6 @@ class TestEditCultivarRouteWithDB:
         cultivar.thumbnail = thumb
         db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.edit_cultivar', cv_id=cultivar.id),
                          data=dict(botanical_name=str(bn.id),
                                    categories=[str(cat.id)],
@@ -1201,16 +1955,11 @@ class TestEditCultivarRouteWithDB:
                                    name=cultivar.name,
                                    series='0'),
                          follow_redirects=True)
-        print(rv.data)
         assert 'No changes made' in str(rv.data)
 
     def test_edit_cultivar_no_cultivar(self, app, db):
         """Redirect to seeds.select_cultivar if no cultivar w/ given id."""
-        user = seed_manager()
-        db.session.add(user)
-        db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.edit_cultivar', cv_id=42))
         assert rv.location == url_for('seeds.select_cultivar',
                                       dest='seeds.edit_cultivar',
@@ -1218,65 +1967,74 @@ class TestEditCultivarRouteWithDB:
 
     def test_edit_cultivar_no_cv_id(self, app, db):
         """Redirect to seeds.select_cultivar if no id given."""
-        user = seed_manager()
-        db.session.add(user)
-        db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.edit_cultivar'))
         assert rv.location == url_for('seeds.select_cultivar',
                                       dest='seeds.edit_cultivar',
                                       _external=True)
+
+    def test_edit_cultivar_removes_botanical_name(self, app, db):
+        """Remove botanical name if form set to 0."""
+        cv = Cultivar(name='Foxy')
+        bn = BotanicalName(name='Digitalis purpurea')
+        cn = CommonName(name='Foxglove')
+        cat = Category(name='Perennial')
+        cv.botanical_name = bn
+        cv.common_name = cn
+        cv.categories.append(cat)
+        cn.categories.append(cat)
+        db.session.add_all([cv, bn, cn, cat])
+        db.session.commit()
+        assert cv.botanical_name == bn
+        with app.test_client() as tc:
+            rv = tc.post(url_for('seeds.edit_cultivar', cv_id=cv.id),
+                         data=dict(name='Foxy',
+                                   botanical_name=0,
+                                   common_name=cn.id,
+                                   categories=[cat.id],
+                                   series=0),
+                         follow_redirects=True)
+        assert cv.botanical_name is None
+        assert 'Botanical name for &#39;Foxy Foxglove&#39; has been removed'\
+            in str(rv.data)
 
 
 class TestFlipDroppedRouteWithDB:
     """Test seeds.flip_dropped."""
     def test_flip_dropped_no_cultivar(self, app, db):
         """Return 404 if no cultivar exists with given id."""
-        user = seed_manager()
-        db.session.add(user)
-        db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.flip_dropped', cv_id=42))
         assert rv.status_code == 404
 
     def test_flip_dropped_no_cv_id(self, app, db):
         """Return 404 if no cv_id given."""
-        user = seed_manager()
-        db.session.add(user)
         db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.flip_dropped'))
         assert rv.status_code == 404
 
     def test_flip_dropped_success(self, app, db):
         """Set dropped to the opposite of its current value and redirect."""
-        user = seed_manager()
         cultivar = foxy_cultivar()
         cultivar.dropped = False
-        db.session.add_all([cultivar, user])
+        db.session.add(cultivar)
         db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.flip_dropped', cv_id=cultivar.id))
         assert rv.location == url_for('seeds.manage', _external=True)
         assert cultivar.dropped
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.flip_dropped',
                                 cv_id=cultivar.id,
                                 next=url_for('seeds.index')))
         assert rv.location == url_for('seeds.index', _external=True)
         assert not cultivar.dropped
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.flip_dropped', cv_id=cultivar.id),
                         follow_redirects=True)
         assert '&#39;Foxy Foxglove&#39; has been dropped.' in str(rv.data)
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.flip_dropped', cv_id=cultivar.id),
                         follow_redirects=True)
         assert '&#39;Foxy Foxglove&#39; has been returned to active' in\
@@ -1287,50 +2045,37 @@ class TestFlipInStockRouteWithDB:
     """Test seeds.flip_in_stock."""
     def test_flip_in_stock_no_cultivar(self, app, db):
         """Return 404 if no cultivar exists with given id."""
-        user = seed_manager()
-        db.session.add(user)
-        db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.flip_in_stock', cv_id=42))
         assert rv.status_code == 404
 
     def test_flip_in_stock_no_cv_id(self, app, db):
         """Return 404 if no cv_id given."""
-        user = seed_manager()
-        db.session.add(user)
-        db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.flip_in_stock'))
         assert rv.status_code == 404
 
     def test_flip_in_stock_success(self, app, db):
         """Reverse value of in_stock and redirect on successful submit."""
-        user = seed_manager()
         cultivar = foxy_cultivar()
         cultivar.in_stock = False
-        db.session.add_all([cultivar, user])
+        db.session.add(cultivar)
         db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.flip_in_stock', cv_id=cultivar.id))
         assert rv.location == url_for('seeds.manage', _external=True)
         assert cultivar.in_stock
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.flip_in_stock',
                                 cv_id=cultivar.id,
                                 next=url_for('seeds.index')))
         assert rv.location == url_for('seeds.index', _external=True)
         assert not cultivar.in_stock
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.flip_in_stock', cv_id=cultivar.id),
                         follow_redirects=True)
         assert '&#39;Foxy Foxglove&#39; is now in stock' in str(rv.data)
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.flip_in_stock', cv_id=cultivar.id),
                         follow_redirects=True)
         assert '&#39;Foxy Foxglove&#39; is now out of stock.' in str(rv.data)
@@ -1350,10 +2095,7 @@ class TestManageRouteWithDB:
     """Test seeds.manage."""
     def test_manage_renders_page(self, app, db):
         """Render the page with no redirects."""
-        user = seed_manager()
-        db.session.add(user)
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.manage'))
         assert rv.status_code == 200
         assert rv.location is None
@@ -1364,10 +2106,7 @@ class TestRemoveBotanicalNameRouteWithDB:
     """Test seeds.manage."""
     def test_remove_botanical_name_bad_id(self, app, db):
         """Redirect given a non-integer bn_id."""
-        user = seed_manager()
-        db.session.add(user)
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.remove_botanical_name', bn_id='frogs'))
         assert rv.location == url_for('seeds.select_botanical_name',
                                       dest='seeds.remove_botanical_name',
@@ -1375,10 +2114,7 @@ class TestRemoveBotanicalNameRouteWithDB:
 
     def test_remove_botanical_name_does_not_exist(self, app, db):
         """Redirect if no BotanicalName corresponds to bn_id."""
-        user = seed_manager()
-        db.session.add(user)
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.remove_botanical_name', bn_id=42))
         assert rv.location == url_for('seeds.select_botanical_name',
                                       dest='seeds.remove_botanical_name',
@@ -1386,10 +2122,7 @@ class TestRemoveBotanicalNameRouteWithDB:
 
     def test_remove_botanical_name_no_id(self, app, db):
         """Redirect to seeds.select_botanical_name given no bn_id."""
-        user = seed_manager()
-        db.session.add(user)
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.remove_botanical_name'))
         assert rv.status_code == 302
         assert rv.location == url_for('seeds.select_botanical_name',
@@ -1398,13 +2131,11 @@ class TestRemoveBotanicalNameRouteWithDB:
 
     def test_remove_botanical_name_not_verified(self, app, db):
         """Redirect to self and flash message if verify_removal unchecked."""
-        user = seed_manager()
         bn = BotanicalName()
-        db.session.add_all([user, bn])
         bn.name = 'Asclepias incarnata'
+        db.session.add(bn)
         db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.remove_botanical_name', bn_id=bn.id),
                          data=dict(verify_removal=''))
         assert rv.status_code == 302
@@ -1412,7 +2143,6 @@ class TestRemoveBotanicalNameRouteWithDB:
                                       bn_id=bn.id,
                                       _external=True)
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.remove_botanical_name', bn_id=bn.id),
                          data=dict(verify_removal=''),
                          follow_redirects=True)
@@ -1420,26 +2150,22 @@ class TestRemoveBotanicalNameRouteWithDB:
 
     def test_remove_botanical_name_renders_page(self, app, db):
         """Render seeds/remove_botanical_name.html with valid bn_id."""
-        user = seed_manager()
         bn = BotanicalName()
-        db.session.add_all([user, bn])
+        db.session.add(bn)
         bn.name = 'Asclepias incarnata'
         db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.remove_botanical_name', bn_id=bn.id))
         assert 'Remove Botanical Name' in str(rv.data)
 
     def test_remove_botanical_name_verified(self, app, db):
         """Delete BotanicalName from db if verify_removal checked."""
-        user = seed_manager()
         bn = BotanicalName()
-        db.session.add_all([user, bn])
+        db.session.add(bn)
         bn.name = 'Asclepias incarnata'
         db.session.commit()
         assert BotanicalName.query.count() == 1
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.remove_botanical_name', bn_id=bn.id),
                          data=dict(verify_removal=True),
                          follow_redirects=True)
@@ -1450,33 +2176,24 @@ class TestRemoveBotanicalNameRouteWithDB:
 class TestRemoveCategoryRouteWithDB:
     """Test seeds.remove_category."""
     def test_remove_category_bad_id(self, app, db):
-        """Redirect given a non-integer category_id."""
-        user = seed_manager()
-        db.session.add(user)
+        """Redirect given a non-integer cat_id."""
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.remove_category', cat_id='frogs'))
         assert rv.location == url_for('seeds.select_category',
                                       dest='seeds.remove_category',
                                       _external=True)
 
     def test_remove_category_does_not_exist(self, app, db):
-        """Redirect if no Category corresponds to category_id."""
-        user = seed_manager()
-        db.session.add(user)
+        """Redirect if no Category corresponds to cat_id."""
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.remove_category', cat_id=42))
         assert rv.location == url_for('seeds.select_category',
                                       dest='seeds.remove_category',
                                       _external=True)
 
     def test_remove_category_no_id(self, app, db):
-        """Redirect to seeds.select_category if no category_id."""
-        user = seed_manager()
-        db.session.add(user)
+        """Redirect to seeds.select_category if no cat_id."""
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.remove_category'))
         assert rv.location == url_for('seeds.select_category',
                                       dest='seeds.remove_category',
@@ -1484,52 +2201,45 @@ class TestRemoveCategoryRouteWithDB:
 
     def test_remove_category_not_verified(self, app, db):
         """Redirect to self if verify_removal not checked."""
-        user = seed_manager()
         cat = Category()
         cat2 = Category()
-        db.session.add_all([user, cat, cat2])
+        db.session.add_all([cat, cat2])
         cat.name = 'Annual Flower'
         cat2.name = 'Herb'
         db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.remove_category', cat_id=cat.id),
                          data=dict(verify_removal='', move_to=cat2.id))
         assert rv.location == url_for('seeds.remove_category',
                                       cat_id=cat.id,
                                       _external=True)
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.remove_category', cat_id=cat.id),
                          data=dict(verify_removal='', move_to=cat2.id),
                          follow_redirects=True)
         assert 'No changes made' in str(rv.data)
 
     def test_remove_category_renders_page(self, app, db):
-        """Render seeds/remove_category.html with valid category_id."""
-        user = seed_manager()
+        """Render seeds/remove_category.html with valid cat_id."""
         cat = Category()
-        db.session.add_all([user, cat])
+        db.session.add(cat)
         cat.name = 'Annual Flower'
         db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.remove_category', cat_id=cat.id))
         assert rv.status_code == 200
         assert 'Remove Category' in str(rv.data)
 
     def test_remove_category_verified(self, app, db):
         """Remove Category from db if verify_removal is checked."""
-        user = seed_manager()
         cat = Category()
         cat2 = Category()
-        db.session.add_all([user, cat, cat2])
+        db.session.add_all([cat, cat2])
         cat.name = 'Annual Flower'
         cat2.name = 'Herb'
         db.session.commit()
         assert cat in Category.query.all()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.remove_category', cat_id=cat.id),
                          data=dict(verify_removal=True, move_to=cat2.id),
                          follow_redirects=True)
@@ -1541,10 +2251,7 @@ class TestRemoveCommonNameRouteWithDB:
     """Test seeds.remove_common_name."""
     def test_remove_common_name_bad_id(self, app, db):
         """Redirect to select given a non-integer cn_id."""
-        user = seed_manager()
-        db.session.add(user)
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.remove_common_name', cn_id='frogs'))
         assert rv.location == url_for('seeds.select_common_name',
                                       dest='seeds.remove_common_name',
@@ -1552,10 +2259,7 @@ class TestRemoveCommonNameRouteWithDB:
 
     def test_remove_common_name_does_not_exist(self, app, db):
         """Redirect to select if no CommonName corresponds to cn_id."""
-        user = seed_manager()
-        db.session.add(user)
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.remove_common_name', cn_id=42))
         assert rv.location == url_for('seeds.select_common_name',
                                       dest='seeds.remove_common_name',
@@ -1563,10 +2267,7 @@ class TestRemoveCommonNameRouteWithDB:
 
     def test_remove_common_name_no_id(self, app, db):
         """Redirect to seeds.select_common_name with no cn_id."""
-        user = seed_manager()
-        db.session.add(user)
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.remove_common_name'))
         assert rv.location == url_for('seeds.select_common_name',
                                       dest='seeds.remove_common_name',
@@ -1574,23 +2275,20 @@ class TestRemoveCommonNameRouteWithDB:
 
     def test_remove_common_name_not_verified(self, app, db):
         """Redirect to self with flash if verify_removal not checked."""
-        user = seed_manager()
         cn = CommonName()
         cn2 = CommonName()
-        db.session.add_all([user, cn, cn2])
+        db.session.add_all([cn, cn2])
         cn.name = 'Coleus'
         cn2.name = 'Kingus'
         db.session.commit()
         assert cn in CommonName.query.all()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.remove_common_name', cn_id=cn.id),
                          data=dict(verify_removal='', move_to=cn2.id))
         assert rv.location == url_for('seeds.remove_common_name',
                                       cn_id=cn.id,
                                       _external=True)
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.remove_common_name', cn_id=cn.id),
                          data=dict(verify_removal='', move_to=cn2.id),
                          follow_redirects=True)
@@ -1599,29 +2297,25 @@ class TestRemoveCommonNameRouteWithDB:
 
     def test_remove_common_name_renders_page(self, app, db):
         """Render seeds/remove_common_name.html given valid cn_id."""
-        user = seed_manager()
         cn = CommonName()
-        db.session.add_all([user, cn])
+        db.session.add(cn)
         cn.name = 'Coleus'
         db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.remove_common_name', cn_id=cn.id))
         assert rv.status_code == 200
         assert 'Remove Common Name' in str(rv.data)
 
     def test_remove_common_name_verified(self, app, db):
         """Delete CommonName from db on successful submit."""
-        user = seed_manager()
         cn = CommonName()
         cn2 = CommonName()
-        db.session.add_all([user, cn, cn2])
+        db.session.add_all([cn, cn2])
         cn.name = 'Coleus'
         cn2.name = 'Kingus'
         db.session.commit()
         assert cn in CommonName.query.all()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.remove_common_name', cn_id=cn.id),
                          data=dict(verify_removal=True, move_to=cn2.id),
                          follow_redirects=True)
@@ -1633,11 +2327,7 @@ class TestRemovePacketRouteWithDB:
     """Test seeds.remove_packet."""
     def test_remove_packet_no_id(self, app, db):
         """Redirect to select_packet given no pkt_id."""
-        user = seed_manager()
-        db.session.add(user)
-        db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.remove_packet',
                                 dest='seeds.remove_packet'))
         assert rv.location == url_for('seeds.select_packet',
@@ -1646,11 +2336,7 @@ class TestRemovePacketRouteWithDB:
 
     def test_remove_packet_no_packet(self, app, db):
         """Redirect back to select if no packet corresponds to pkt_id."""
-        user = seed_manager()
-        db.session.add(user)
-        db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.remove_packet', pkt_id=42))
         assert rv.location == url_for('seeds.select_packet',
                                       dest='seeds.remove_packet',
@@ -1658,36 +2344,31 @@ class TestRemovePacketRouteWithDB:
 
     def test_remove_packet_renders_page(self, app, db):
         """Render form page given a valid packet id."""
-        user = seed_manager()
         packet = Packet()
-        db.session.add_all([packet, user])
+        db.session.add(packet)
         packet.price = Decimal('1.99')
         packet.quantity = Quantity(value=100, units='seeds')
         packet.sku = '8675309'
         db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.remove_packet', pkt_id=packet.id))
         assert 'Remove Packet' in str(rv.data)
 
     def test_remove_packet_submission_no_changes(self, app, db):
         """Redirect and flash a message if verify_removal unchecked."""
-        user = seed_manager()
         packet = Packet()
-        db.session.add_all([packet, user])
+        db.session.add(packet)
         packet.price = Decimal('1.99')
         packet.quantity = Quantity(value=100, units='seeds')
         packet.sku = '8675309'
         db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.remove_packet', pkt_id=packet.id),
                          data=dict(verify_removal=None))
         assert rv.location in url_for('seeds.remove_packet',
                                       pkt_id=packet.id,
                                       _external=True)
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.remove_packet', pkt_id=packet.id),
                          data=dict(verify_removal=None),
                          follow_redirects=True)
@@ -1695,15 +2376,13 @@ class TestRemovePacketRouteWithDB:
 
     def test_remove_packet_submission_verified(self, app, db):
         """Delete packet and flash a message if verify_removal is checked."""
-        user = seed_manager()
         packet = Packet()
-        db.session.add_all([packet, user])
+        db.session.add(packet)
         packet.price = Decimal('1.99')
         packet.quantity = Quantity(value=100, units='seeds')
         packet.sku = '8675309'
         db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.remove_packet', pkt_id=packet.id),
                          data=dict(verify_removal=True),
                          follow_redirects=True)
@@ -1720,7 +2399,6 @@ class TestRemoveCultivarRouteWithDB:
                                                           app,
                                                           db):
         """Delete images and thumbnail if delete_images is checked."""
-        user = seed_manager()
         cultivar = foxy_cultivar()
         img = Image()
         img.filename = 'foxee.jpg'
@@ -1728,10 +2406,9 @@ class TestRemoveCultivarRouteWithDB:
         thumb.filename = 'foxy.jpg'
         cultivar.images.append(img)
         cultivar.thumbnail = thumb
-        db.session.add_all([user, cultivar])
+        db.session.add_all([cultivar, img, thumb])
         db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.remove_cultivar', cv_id=cultivar.id),
                          data=dict(verify_removal=True, delete_images=True),
                          follow_redirects=True)
@@ -1742,12 +2419,10 @@ class TestRemoveCultivarRouteWithDB:
 
     def test_remove_cultivar_deletes_cultivar(self, app, db):
         """Delete cultivar from the database on successful submission."""
-        user = seed_manager()
         cultivar = foxy_cultivar()
-        db.session.add_all([user, cultivar])
+        db.session.add(cultivar)
         db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.remove_cultivar', cv_id=cultivar.id),
                          data=dict(verify_removal=True),
                          follow_redirects=True)
@@ -1757,11 +2432,7 @@ class TestRemoveCultivarRouteWithDB:
 
     def test_remove_cultivar_no_id(self, app, db):
         """Redirect to seeds.select_cultivar given no cv_id."""
-        user = seed_manager()
-        db.session.add(user)
-        db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.remove_cultivar'))
         assert rv.location == url_for('seeds.select_cultivar',
                                       dest='seeds.remove_cultivar',
@@ -1769,11 +2440,7 @@ class TestRemoveCultivarRouteWithDB:
 
     def test_remove_cultivar_no_cultivar(self, app, db):
         """Redirect to seeds.select_cultivar if no cultivar w/ given id."""
-        user = seed_manager()
-        db.session.add(user)
-        db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.remove_cultivar', cv_id=42))
         assert rv.location == url_for('seeds.select_cultivar',
                                       dest='seeds.remove_cultivar',
@@ -1781,19 +2448,16 @@ class TestRemoveCultivarRouteWithDB:
 
     def test_remove_cultivar_not_verified(self, app, db):
         """Redirect and flash message if verify_removal not checked."""
-        user = seed_manager()
         cultivar = foxy_cultivar()
-        db.session.add_all([user, cultivar])
+        db.session.add(cultivar)
         db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.remove_cultivar', cv_id=cultivar.id),
                          data=dict(verify_removal=None))
         assert rv.location == url_for('seeds.remove_cultivar',
                                       cv_id=cultivar.id,
                                       _external=True)
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.remove_cultivar', cv_id=cultivar.id),
                          data=dict(verify_removal=None),
                          follow_redirects=True)
@@ -1801,12 +2465,10 @@ class TestRemoveCultivarRouteWithDB:
 
     def test_remove_cultivar_renders_page(self, app, db):
         """Render remove cultivar form page given valid cultivar id."""
-        user = seed_manager()
         cultivar = foxy_cultivar()
-        db.session.add_all([user, cultivar])
+        db.session.add(cultivar)
         db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.remove_cultivar', cv_id=cultivar.id))
         assert 'Remove Cultivar' in str(rv.data)
 
@@ -1815,25 +2477,18 @@ class TestSelectBotanicalNameRouteWithDB:
     """Test seeds.select_botanical_name."""
     def test_select_botanical_name_no_dest(self, app, db):
         """Redirect to seeds.manage if no dest given."""
-        user = seed_manager()
-        db.session.add(user)
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.select_botanical_name'))
         assert rv.status_code == 302
         assert rv.location == url_for('seeds.manage', _external=True)
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.select_botanical_name'),
                         follow_redirects=True)
         assert 'Error: No destination' in str(rv.data)
 
     def test_select_botanical_name_renders_page(self, app, db):
         """Render seeds/select_botanical_name.html given no form data."""
-        user = seed_manager()
-        db.session.add(user)
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.select_botanical_name',
                                 dest='seeds.edit_botanical_name'))
         assert rv.status_code == 200
@@ -1841,13 +2496,11 @@ class TestSelectBotanicalNameRouteWithDB:
 
     def test_select_botanical_name_selected(self, app, db):
         """Redirect to dest if a botanical name is selected."""
-        user = seed_manager()
         bn = BotanicalName()
-        db.session.add_all([user, bn])
+        db.session.add(bn)
         bn.name = 'Asclepias incarnata'
         db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.select_botanical_name',
                                  dest='seeds.edit_botanical_name'),
                          data=dict(botanical_name=bn.id))
@@ -1861,39 +2514,30 @@ class TestSelectCategoryRouteWithDB:
     """Test seeds.select_category."""
     def test_select_category_no_dest(self, app, db):
         """Redirect to seeds.manage given no dest."""
-        user = seed_manager()
-        db.session.add(user)
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.select_category'))
         assert rv.status_code == 302
         assert rv.location == url_for('seeds.manage', _external=True)
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.select_category'),
                         follow_redirects=True)
         assert 'Error: No destination' in str(rv.data)
 
     def test_select_category_renders_page(self, app, db):
         """Render seeds/select_category.html given no form data."""
-        user = seed_manager()
-        db.session.add(user)
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.select_category',
                                 dest='seeds.edit_category'))
         assert rv.status_code == 200
         assert 'Select Category' in str(rv.data)
 
     def test_select_category_success(self, app, db):
-        """Redirect to dest with category_id selected by form."""
-        user = seed_manager()
+        """Redirect to dest with cat_id selected by form."""
         cat = Category()
-        db.session.add_all([user, cat])
+        db.session.add(cat)
         cat.name = 'Annual Flower'
         db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.select_category',
                                  dest='seeds.edit_category'),
                          data=dict(category=cat.id))
@@ -1907,25 +2551,18 @@ class TestSelectCommonNameRouteWithDB:
     """Test seeds.select_common_name."""
     def test_select_common_name_no_dest(self, app, db):
         """Redirect to seeds.manage with an error if no dest given."""
-        user = seed_manager()
-        db.session.add(user)
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.select_common_name'))
         assert rv.status_code == 302
         assert rv.location == url_for('seeds.manage', _external=True)
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.select_common_name'),
                         follow_redirects=True)
         assert 'Error: No destination' in str(rv.data)
 
     def test_select_common_name_renders_page(self, app, db):
         """Render seeds/select_common_name.html given a dest."""
-        user = seed_manager()
-        db.session.add(user)
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.select_common_name',
                                 dest='seeds.edit_common_name'))
         assert rv.status_code == 200
@@ -1933,13 +2570,11 @@ class TestSelectCommonNameRouteWithDB:
 
     def test_select_common_name_success(self, app, db):
         """Redirect to dest with cn_id selected by form."""
-        user = seed_manager()
         cn = CommonName()
-        db.session.add_all([user, cn])
+        db.session.add(cn)
         cn.name = 'Coleus'
         db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.select_common_name',
                                  dest='seeds.edit_common_name'),
                          data=dict(common_name=cn.id))
@@ -1953,35 +2588,25 @@ class TestSelectCultivarRouteWithDB:
     """Test seeds.select_cultivar."""
     def test_select_cultivar_no_dest(self, app, db):
         """Redirect to seeds.manage given no dest."""
-        user = seed_manager()
-        db.session.add(user)
-        db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.select_cultivar'))
         assert rv.location == url_for('seeds.manage', _external=True)
 
     def test_select_cultivar_renders_page(self, app, db):
         """Render form page given a dest."""
-        user = seed_manager()
-        db.session.add(user)
-        db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.select_cultivar',
                                 dest='seeds.add_packet'))
         assert 'Select Cultivar' in str(rv.data)
 
     def test_select_seed_successful_submission(self, app, db):
         """Redirect to dest on valid form submission."""
-        user = seed_manager()
         cultivar = Cultivar()
-        db.session.add_all([user, cultivar])
+        db.session.add(cultivar)
         cultivar.name = 'Foxy'
         db.session.commit()
         dest = 'seeds.add_packet'
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.select_cultivar', dest=dest),
                          data=dict(cultivar=cultivar.id))
         assert rv.location == url_for(dest, cv_id=str(cultivar.id),
@@ -1992,26 +2617,17 @@ class TestSelectPacketRouteWithDB:
     """Test seeds.select_packet."""
     def test_select_packet_no_dest(self, app, db):
         """Flash an error and redirect if no dest specified."""
-        user = seed_manager()
-        db.session.add(user)
-        db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.select_packet'))
         assert rv.location == url_for('seeds.manage', _external=True)
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.select_packet'),
                         follow_redirects=True)
         assert 'No destination' in str(rv.data)
 
     def test_select_packet_renders_page(self, app, db):
         """Render form page if given a dest."""
-        user = seed_manager()
-        db.session.add(user)
-        db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.get(url_for('seeds.select_packet',
                                 dest='seeds.edit_packet'))
         assert 'Select Packet' in str(rv.data)
@@ -2020,8 +2636,7 @@ class TestSelectPacketRouteWithDB:
         """Redirect to dest given valid selection."""
         cultivar = Cultivar()
         packet = Packet()
-        user = seed_manager()
-        db.session.add_all([cultivar, packet, user])
+        db.session.add_all([cultivar, packet])
         cultivar.name = 'Foxy'
         cultivar.common_name = CommonName(name='Foxglove')
         cultivar.packets.append(packet)
@@ -2030,7 +2645,6 @@ class TestSelectPacketRouteWithDB:
         packet.sku = '8675309'
         db.session.commit()
         with app.test_client() as tc:
-            login(user.name, 'hunter2', tc=tc)
             rv = tc.post(url_for('seeds.select_packet',
                                  dest='seeds.edit_packet'),
                          data=dict(packet=packet.id))

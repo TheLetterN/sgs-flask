@@ -29,7 +29,7 @@ path.py==8.1.2
 pep8==1.5.7
 pexpect==4.0.1
 pickleshare==0.5
-psycopg2==2.6.1
+# psycopg2==2.6.1 Needs to be installed by system administrator!
 ptyprocess==0.5
 py==1.4.30
 pyflakes==1.0.0

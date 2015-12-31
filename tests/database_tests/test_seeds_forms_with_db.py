@@ -191,22 +191,6 @@ class TestFunctionsWithDB:
 
 class TestAddBotanicalNameFormWithDB:
     """Test custom methods of AddBotanicalNameForm."""
-    def test_set_common_name(self, db):
-        """Set .common_name.choices with all common names from db."""
-        cn1 = CommonName()
-        cn2 = CommonName()
-        cn3 = CommonName()
-        db.session.add_all([cn1, cn2, cn3])
-        cn1.name = 'Coleus'
-        cn2.name = 'Sunflower'
-        cn3.name = 'Zinnia'
-        db.session.commit()
-        form = AddBotanicalNameForm()
-        form.set_common_name()
-        assert (cn1.id, cn1.name) in form.common_name.choices
-        assert (cn2.id, cn2.name) in form.common_name.choices
-        assert (cn2.id, cn2.name) in form.common_name.choices
-
     def test_validate_name(self, db):
         """Raise error if name in DB or invalid botanical name."""
         bn = BotanicalName()
@@ -326,17 +310,14 @@ class TestAddCultivarFormWithDB:
         """Selects should be set from database."""
         bn = BotanicalName()
         idx = Index()
-        cn = CommonName()
-        db.session.add_all([bn, idx, cn])
+        db.session.add_all([bn, idx])
         bn.name = 'Asclepias incarnata'
         idx.name = 'Perennial Flower'
-        cn.name = 'Butterfly Weed'
         db.session.commit()
         form = AddCultivarForm()
         form.set_selects()
         assert (bn.id, bn.name) in form.botanical_name.choices
         assert (idx.id, idx.name) in form.indexes.choices
-        assert (cn.id, cn.name) in form.common_name.choices
 
     def test_validate_indexes(self, db):
         """Raise validation error if any indexes not in common name."""
@@ -350,8 +331,8 @@ class TestAddCultivarFormWithDB:
         cn.indexes.append(idx1)
         db.session.commit()
         form = AddCultivarForm()
-        form.common_name.data = cn.id
         form.indexes.data = [idx1.id]
+        form.cn_id.data = cn.id
         form.validate_indexes(form.indexes)
         form.indexes.data = [idx1.id, idx2.id]
         with pytest.raises(ValidationError):
@@ -375,7 +356,7 @@ class TestAddCultivarFormWithDB:
         db.session.commit()
         form = AddCultivarForm()
         form.name.data = 'Soulmate'
-        form.common_name.data = cn.id
+        form.cn_id.data = cn.id
         with pytest.raises(ValidationError):
             form.validate_name(form.name)
         form.name.data = 'Lady'
@@ -397,21 +378,6 @@ class TestAddCultivarFormWithDB:
 
 class TestAddSeriesForm:
     """Test custom methods of AddSeriesForm."""
-    def test_set_common_name(self, db):
-        cn1 = CommonName()
-        cn2 = CommonName()
-        cn3 = CommonName()
-        db.session.add_all([cn1, cn2, cn3])
-        cn1.name = 'Coleus'
-        cn2.name = 'Sunflower'
-        cn3.name = 'Zinnia'
-        db.session.commit()
-        form = AddSeriesForm()
-        form.set_common_name()
-        assert (cn1.id, cn1.name) in form.common_name.choices
-        assert (cn2.id, cn2.name) in form.common_name.choices
-        assert (cn3.id, cn3.name) in form.common_name.choices
-
     def test_validate_name(self, db):
         series = Series()
         series.name = 'Polkadot'

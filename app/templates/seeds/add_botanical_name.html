@@ -25,13 +25,10 @@
         <meta name="robots" content="noindex, nofollow">
 {% endblock %}
 {% block main %}
-            <h1>Add a Botanical Name:</h1>
+            <h1>Add a Botanical Name to {{ cn.name }}:</h1>
             <form method="POST">
                 {{ form.hidden_tag() }}
                 <ol>
-                    <li>
-                        {{ form_field(form.common_name)|indent(24)|safe }}
-                    </li>
                     <li>
                         {{ form_field(form.name)|indent(24)|safe }}
                     </li>

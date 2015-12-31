@@ -25,25 +25,16 @@
         <meta name="robots" content="noindex, nofollow">
 {% endblock %}
 {% block main %}
-            <h1>Add a Series:</h1>
+            <h1>Add a Series to {{ cn.name }}:</h1>
             <form method="POST">
                 {{ form.hidden_tag() }}
                 <ol>
-                    <fieldset>
-                        <legend>Select Common Name</legend>
-                        <li>
-                            {{ form_field(form.common_name)|indent(28)|safe }}
-                        </li>
-                    </fieldset>
-                    <fieldset>
-                        <legend>Add Series</legend>
-                        <li>
-                            {{ form_field(form.name)|indent(28)|safe }}
-                        </li>
-                        <li>
-                            {{ form_field(form.description)|indent(28)|safe }}
-                        </li>
-                    </fieldset>
+                    <li>
+                        {{ form_field(form.name)|indent(28)|safe }}
+                    </li>
+                    <li>
+                        {{ form_field(form.description)|indent(28)|safe }}
+                    </li>
                     <li>
                         {{ form.submit }}
                     </li>

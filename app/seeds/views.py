@@ -142,38 +142,6 @@ def make_indexes_available():  # pragma: no cover
     return dict(indexes=indexes)
 
 
-@seeds.route('/add_botanical_name', methods=['GET', 'POST'])
-@login_required
-@permission_required(Permission.MANAGE_SEEDS)
-def add_botanical_name():
-    """Handle web interface for adding BotanicalName objects to database."""
-    form = AddBotanicalNameForm()
-    form.set_common_name()
-    if form.validate_on_submit():
-        bn = BotanicalName()
-        db.session.add(bn)
-        bn.name = form.name.data
-        cn = CommonName.query.get(form.common_name.data)
-        bn.common_name = cn
-        if form.synonyms.data:
-            bn.set_synonyms_from_string_list(form.synonyms.data)
-            flash('Synonyms for \'{0}\' set to: {1}'
-                  .format(bn.name, bn.list_synonyms_as_string()))
-        db.session.commit()
-        flash('Botanical name \'{0}\' belonging to \'{1}\' has been added.'.
-              format(bn.name, cn.name))
-        return redirect(url_for('seeds.{0}'.format(form.next_page.data)))
-    crumbs = make_breadcrumbs(
-        (url_for('seeds.manage'), 'Manage Seeds'),
-        (url_for('seeds.add_index'), 'Add Index'),
-        (url_for('seeds.add_common_name'), 'Add Common Name'),
-        (url_for('seeds.add_botanical_name'), 'Add Botanical Name')
-    )
-    return render_template('seeds/add_botanical_name.html',
-                           crumbs=crumbs,
-                           form=form)
-
-
 @seeds.route('/add_index', methods=['GET', 'POST'])
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
@@ -251,13 +219,191 @@ def add_common_name():
         db.session.commit()
         flash('The common name \'{0}\' has been added to the database.'.
               format(cn.name, index.plural))
-        return redirect(url_for('seeds.{0}'.format(form.next_page.data)))
+        return redirect(url_for('seeds.{0}'.format(form.next_page.data),
+                                cn_id=cn.id))
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
         (url_for('seeds.add_index'), 'Add Index'),
         (url_for('seeds.add_common_name'), 'Add Common Name')
     )
     return render_template('seeds/add_common_name.html', crumbs=crumbs,
+                           form=form)
+
+
+@seeds.route('/add_botanical_name', methods=['GET', 'POST'])
+@seeds.route('/add_botanical_name/<cn_id>', methods=['GET', 'POST'])
+@login_required
+@permission_required(Permission.MANAGE_SEEDS)
+def add_botanical_name(cn_id=None):
+    """Handle web interface for adding BotanicalName objects to database."""
+    if cn_id is None:
+        return redirect(url_for('seeds.select_common_name',
+                                dest='seeds.add_botanical_name'))
+    cn = CommonName.query.get(cn_id)
+    if not cn:
+        return redirect(url_for('seeds.select_common_name',
+                                dest='seeds.add_botanical_name'))
+    form = AddBotanicalNameForm()
+    if form.validate_on_submit():
+        bn = BotanicalName()
+        db.session.add(bn)
+        bn.name = form.name.data
+        bn.common_name = cn
+        if form.synonyms.data:
+            bn.set_synonyms_from_string_list(form.synonyms.data)
+            flash('Synonyms for \'{0}\' set to: {1}'
+                  .format(bn.name, bn.list_synonyms_as_string()))
+        db.session.commit()
+        flash('Botanical name \'{0}\' belonging to \'{1}\' has been added.'.
+              format(bn.name, cn.name))
+        return redirect(url_for('seeds.{0}'.format(form.next_page.data),
+                        cn_id=cn.id))
+    crumbs = make_breadcrumbs(
+        (url_for('seeds.manage'), 'Manage Seeds'),
+        (url_for('seeds.add_index'), 'Add Index'),
+        (url_for('seeds.add_common_name'), 'Add Common Name'),
+        (url_for('seeds.add_botanical_name'), 'Add Botanical Name')
+    )
+    return render_template('seeds/add_botanical_name.html',
+                           crumbs=crumbs,
+                           cn=cn,
+                           form=form)
+
+
+@seeds.route('/add_series', methods=['GET', 'POST'])
+@seeds.route('/add_series/<cn_id>', methods=['GET', 'POST'])
+@login_required
+@permission_required(Permission.MANAGE_SEEDS)
+def add_series(cn_id=None):
+    """Add a series to the database."""
+    if cn_id is None:
+        return redirect(url_for('seeds.select_common_name',
+                                dest='seeds.add_series'))
+    cn = CommonName.query.get(cn_id)
+    if not cn:
+        return redirect(url_for('seeds.select_common_name',
+                                dest='seeds.add_series'))
+    form = AddSeriesForm()
+    if form.validate_on_submit():
+        series = Series()
+        db.session.add(series)
+        series.common_name = cn
+        series.name = dbify(form.name.data)
+        series.description = form.description.data
+        flash('New series \'{0}\' added to: {1}.'.
+              format(series.name, series.common_name.name))
+        db.session.commit()
+        return redirect(url_for('seeds.add_cultivar',
+                        cn_id=cn.id))
+    crumbs = make_breadcrumbs(
+        (url_for('seeds.manage'), 'Manage Seeds'),
+        (url_for('seeds.add_index'), 'Add Index'),
+        (url_for('seeds.add_common_name'), 'Add Common Name'),
+        (url_for('seeds.add_botanical_name'), 'Add Botanical Name'),
+        (url_for('seeds.add_series'), 'Add Series')
+    )
+    return render_template('seeds/add_series.html',
+                           cn=cn,
+                           crumbs=crumbs,
+                           form=form)
+
+
+@seeds.route('/add_cultivar', methods=['GET', 'POST'])
+@seeds.route('/add_cultivar/<cn_id>', methods=['GET', 'POST'])
+@login_required
+@permission_required(Permission.MANAGE_SEEDS)
+def add_cultivar(cn_id=None):
+    """Add a cultivar to the database."""
+    if cn_id is not None:
+        cn = CommonName.query.get(cn_id)
+    else:
+        cn = None
+    if not cn:
+        return redirect(url_for('seeds.select_common_name',
+                                dest='seeds.add_cultivar'))
+    form = AddCultivarForm()
+    form.set_selects()
+    form.cn_id.data = cn_id
+    if form.validate_on_submit():
+        cv = Cultivar()
+        cv.common_name = cn
+        db.session.add(cv)
+        cv.name = dbify(form.name.data)
+        if form.botanical_name.data:
+            cv.botanical_name = BotanicalName.query\
+                .get(form.botanical_name.data)
+            flash('Botanical name for \'{0}\' set to: {1}'
+                  .format(cv.fullname, cv.botanical_name.name))
+        if form.indexes.data:
+            for idx_id in form.indexes.data:
+                idx = Index.query.get(idx_id)
+                flash('\'{0}\' added to indexes for {1}.'.
+                      format(idx.name, form.name.data))
+                cv.indexes.append(idx)
+        else:
+            flash('No indexes specified, will use indexes from common '
+                  ' name \'{0}\''.format(cv.common_name.name))
+            for idx in cv.common_name.indexes:
+                cv.indexes.append(idx)
+        if form.gw_common_names.data:
+            for cn_id in form.gw_common_names.data:
+                gw_cn = CommonName.query.get(cn_id)
+                cv.gw_common_names.append(gw_cn)
+                flash('\'{0}\' added to Grows With for \'{1}\', and vice '
+                      'versa.'.format(gw_cn.name, cv.name))
+        if form.gw_cultivars.data:
+            for cv_id in form.gw_cultivars.data:
+                gw_cv = Cultivar.query.get(cv_id)
+                cv.gw_cultivars.append(gw_cv)
+                gw_cv.gw_cultivars.append(cv)
+                flash('\'{0}\' added to Grows With for \'{1}\', and vice '
+                      'versa.'.format(gw_cv.fullname, cv.name))
+        if form.series.data:
+            cv.series = Series.query.get(form.series.data)
+            flash('Series set to: {0}'.format(cv.series.name))
+        if form.synonyms.data:
+            cv.set_synonyms_from_string_list(form.synonyms.data)
+            flash('Synonyms for \'{0}\' set to: {1}'
+                  .format(cv.fullname, cv.list_synonyms_as_string()))
+        if form.thumbnail.data:
+            thumb_name = secure_filename(form.thumbnail.data.filename)
+            upload_path = os.path.join(current_app.config.get('IMAGES_FOLDER'),
+                                       thumb_name)
+            cv.thumbnail = Image(filename=thumb_name)
+            flash('Thumbnail uploaded as: {0}'.format(thumb_name))
+            form.thumbnail.data.save(upload_path)
+        if form.description.data:
+            cv.description = form.description.data
+            flash('Description set to: {0}'.format(cv.description))
+        if form.in_stock.data:
+            cv.in_stock = True
+            flash('\'{0}\' is in stock.'.format(cv.fullname))
+        else:
+            flash('\'{0}\' is not in stock.'.format(cv.fullname))
+            cv.in_stock = False
+        if form.dropped.data:
+            flash('\'{0}\' is currently dropped/inactive.'.
+                  format(cv.fullname))
+            cv.dropped = True
+        else:
+            flash('\'{0}\' is currently active.'.
+                  format(cv.fullname))
+            cv.dropped = False
+        flash('New cultivar \'{0}\' has been added to the database.'.
+              format(cv.fullname))
+        db.session.commit()
+        return redirect(url_for('seeds.add_packet', cv_id=cv.id))
+    crumbs = make_breadcrumbs(
+        (url_for('seeds.manage'), 'Manage Seeds'),
+        (url_for('seeds.add_index'), 'Add Index'),
+        (url_for('seeds.add_common_name'), 'Add Common Name'),
+        (url_for('seeds.add_botanical_name'), 'Add Botanical Name'),
+        (url_for('seeds.add_series'), 'Add Series'),
+        (url_for('seeds.add_cultivar'), 'Add Cultivar')
+    )
+    return render_template('seeds/add_cultivar.html',
+                           cn=cn,
+                           crumbs=crumbs,
                            form=form)
 
 
@@ -347,120 +493,6 @@ def add_redirect():
         (url_for('seeds.add_redirect'), 'Add Redirect')
     )
     return render_template('seeds/add_redirect.html', crumbs=crumbs, form=form)
-
-
-@seeds.route('/add_cultivar', methods=['GET', 'POST'])
-@login_required
-@permission_required(Permission.MANAGE_SEEDS)
-def add_cultivar():
-    """Add a cultivar to the database."""
-    form = AddCultivarForm()
-    form.set_selects()
-    if form.validate_on_submit():
-        cv = Cultivar()
-        db.session.add(cv)
-        cv.name = dbify(form.name.data)
-        cv.common_name = CommonName.query.get(form.common_name.data)
-        if form.botanical_name.data:
-            cv.botanical_name = BotanicalName.query\
-                .get(form.botanical_name.data)
-            flash('Botanical name for \'{0}\' set to: {1}'
-                  .format(cv.fullname, cv.botanical_name.name))
-        if form.indexes.data:
-            for idx_id in form.indexes.data:
-                idx = Index.query.get(idx_id)
-                flash('\'{0}\' added to indexes for {1}.'.
-                      format(idx.name, form.name.data))
-                cv.indexes.append(idx)
-        else:
-            flash('No indexes specified, will use indexes from common '
-                  ' name \'{0}\''.format(cv.common_name.name))
-            for idx in cv.common_name.indexes:
-                cv.indexes.append(idx)
-        if form.gw_common_names.data:
-            for cn_id in form.gw_common_names.data:
-                gw_cn = CommonName.query.get(cn_id)
-                cv.gw_common_names.append(gw_cn)
-                flash('\'{0}\' added to Grows With for \'{1}\', and vice '
-                      'versa.'.format(gw_cn.name, cv.name))
-        if form.gw_cultivars.data:
-            for cv_id in form.gw_cultivars.data:
-                gw_cv = Cultivar.query.get(cv_id)
-                cv.gw_cultivars.append(gw_cv)
-                gw_cv.gw_cultivars.append(cv)
-                flash('\'{0}\' added to Grows With for \'{1}\', and vice '
-                      'versa.'.format(gw_cv.fullname, cv.name))
-        if form.series.data:
-            cv.series = Series.query.get(form.series.data)
-            flash('Series set to: {0}'.format(cv.series.name))
-        if form.synonyms.data:
-            cv.set_synonyms_from_string_list(form.synonyms.data)
-            flash('Synonyms for \'{0}\' set to: {1}'
-                  .format(cv.fullname, cv.list_synonyms_as_string()))
-        if form.thumbnail.data:
-            thumb_name = secure_filename(form.thumbnail.data.filename)
-            upload_path = os.path.join(current_app.config.get('IMAGES_FOLDER'),
-                                       thumb_name)
-            cv.thumbnail = Image(filename=thumb_name)
-            flash('Thumbnail uploaded as: {0}'.format(thumb_name))
-            form.thumbnail.data.save(upload_path)
-        if form.description.data:
-            cv.description = form.description.data
-            flash('Description set to: {0}'.format(cv.description))
-        if form.in_stock.data:
-            cv.in_stock = True
-            flash('\'{0}\' is in stock.'.format(cv.fullname))
-        else:
-            flash('\'{0}\' is not in stock.'.format(cv.fullname))
-            cv.in_stock = False
-        if form.dropped.data:
-            flash('\'{0}\' is currently dropped/inactive.'.
-                  format(cv.fullname))
-            cv.dropped = True
-        else:
-            flash('\'{0}\' is currently active.'.
-                  format(cv.fullname))
-            cv.dropped = False
-        flash('New cultivar \'{0}\' has been added to the database.'.
-              format(cv.fullname))
-        db.session.commit()
-        return redirect(url_for('seeds.add_packet', cv_id=cv.id))
-    crumbs = make_breadcrumbs(
-        (url_for('seeds.manage'), 'Manage Seeds'),
-        (url_for('seeds.add_index'), 'Add Index'),
-        (url_for('seeds.add_common_name'), 'Add Common Name'),
-        (url_for('seeds.add_botanical_name'), 'Add Botanical Name'),
-        (url_for('seeds.add_series'), 'Add Series'),
-        (url_for('seeds.add_cultivar'), 'Add Cultivar')
-    )
-    return render_template('seeds/add_cultivar.html', crumbs=crumbs, form=form)
-
-
-@seeds.route('/add_series', methods=['GET', 'POST'])
-@login_required
-@permission_required(Permission.MANAGE_SEEDS)
-def add_series():
-    """Add a series to the database."""
-    form = AddSeriesForm()
-    form.set_common_name()
-    if form.validate_on_submit():
-        series = Series()
-        db.session.add(series)
-        series.common_name = CommonName.query.get(form.common_name.data)
-        series.name = dbify(form.name.data)
-        series.description = form.description.data
-        flash('New series \'{0}\' added to: {1}.'.
-              format(series.name, series.common_name.name))
-        db.session.commit()
-        return redirect(url_for('seeds.add_cultivar'))
-    crumbs = make_breadcrumbs(
-        (url_for('seeds.manage'), 'Manage Seeds'),
-        (url_for('seeds.add_index'), 'Add Index'),
-        (url_for('seeds.add_common_name'), 'Add Common Name'),
-        (url_for('seeds.add_botanical_name'), 'Add Botanical Name'),
-        (url_for('seeds.add_series'), 'Add Series')
-    )
-    return render_template('seeds/add_series.html', crumbs=crumbs, form=form)
 
 
 @seeds.route('/<idx_slug>')

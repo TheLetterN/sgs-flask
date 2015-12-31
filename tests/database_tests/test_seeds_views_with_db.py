@@ -42,14 +42,12 @@ class TestAddBotanicalNameRouteWithDB:
         cn.name = 'Butterfly Weed'
         db.session.commit()
         with app.test_client() as tc:
-            rv = tc.post(url_for('seeds.add_botanical_name'),
+            rv = tc.post(url_for('seeds.add_botanical_name', cn_id=cn.id),
                          data=dict(name='Asclepias incarnata',
-                                   common_name=cn.id,
                                    synonyms='Innagada davida, Canis lupus'),
                          follow_redirects=True)
         bn = BotanicalName.query.filter_by(name='Asclepias incarnata').first()
         assert bn is not None
-        assert cn is bn.common_name
         syn1 = BotanicalName.query.filter_by(name='Innagada davida').first()
         syn2 = BotanicalName.query.filter_by(name='Canis lupus').first()
         assert syn1 in bn.synonyms
@@ -59,13 +57,6 @@ class TestAddBotanicalNameRouteWithDB:
         assert syn1.syn_only
         assert syn2.syn_only
         assert 'Botanical name &#39;Asclepias incarnata&#39;' in str(rv.data)
-
-    def test_add_botanical_name_renders_page(self, app, db):
-        """Render the Add Botanical Name page given no form data."""
-        with app.test_client() as tc:
-            rv = tc.get(url_for('seeds.add_botanical_name'),
-                        follow_redirects=True)
-        assert 'Add Botanical Name' in str(rv.data)
 
 
 class TestAddIndexRouteWithDB:
@@ -151,12 +142,6 @@ class TestAddCommonNameRouteWithDB:
 
 class TestAddCultivarRouteWithDB:
     """Test seeds.add_cultivar."""
-    def test_add_cultivar_renders_page(self, app, db):
-        """Render form page with no form data submitted."""
-        with app.test_client() as tc:
-            rv = tc.get(url_for('seeds.add_cultivar'))
-        assert 'Add Cultivar' in str(rv.data)
-
     @mock.patch('werkzeug.FileStorage.save')
     def test_add_cultivar_successful_submit_in_stock_and_active(self,
                                                                 mock_save,
@@ -177,10 +162,9 @@ class TestAddCultivarRouteWithDB:
         cn.indexes.append(idx)
         db.session.commit()
         with app.test_client() as tc:
-            rv = tc.post(url_for('seeds.add_cultivar'),
+            rv = tc.post(url_for('seeds.add_cultivar', cn_id=cn.id),
                          data=dict(botanical_name=str(bn.id),
                                    indexes=[str(idx.id)],
-                                   common_name=str(cn.id),
                                    description='Very foxy.',
                                    dropped='',
                                    in_stock='y',
@@ -221,10 +205,9 @@ class TestAddCultivarRouteWithDB:
         cn.indexes.append(idx)
         db.session.commit()
         with app.test_client() as tc:
-            rv = tc.post(url_for('seeds.add_cultivar'),
+            rv = tc.post(url_for('seeds.add_cultivar', cn_id=cn.id),
                          data=dict(botanical_name=str(bn.id),
                                    indexes=[str(idx.id)],
-                                   common_name=str(cn.id),
                                    description='Very foxy.',
                                    dropped='y',
                                    in_stock='',
@@ -246,9 +229,8 @@ class TestAddCultivarRouteWithDB:
         cn.indexes.append(idx)
         db.session.commit()
         with app.test_client() as tc:
-            rv = tc.post(url_for('seeds.add_cultivar'),
+            rv = tc.post(url_for('seeds.add_cultivar', cn_id=cn.id),
                          data=dict(botanical_name=str(bn.id),
-                                   common_name=str(cn.id),
                                    description='Very foxy',
                                    dropped='',
                                    in_stock='',
@@ -331,19 +313,13 @@ class TestAddPacketRouteWithDB:
 
 class TestAddSeriesRouteWithDB:
     """Test add_series route."""
-    def test_add_series_renders_page(self, app, db):
-        """Render form page."""
-        with app.test_client() as tc:
-            rv = tc.get(url_for('seeds.add_series'))
-        assert 'Add Series' in str(rv.data)
-
     def test_add_series_successful_submit(self, app, db):
         """Flash message on successful form submission."""
         cn = CommonName(name='Foxglove')
         db.session.add(cn)
         db.session.commit()
         with app.test_client() as tc:
-            rv = tc.post(url_for('seeds.add_series'),
+            rv = tc.post(url_for('seeds.add_series', cn_id=cn.id),
                          data=dict(common_name=cn.id,
                                    name='Spotty',
                                    description='More dots!'),

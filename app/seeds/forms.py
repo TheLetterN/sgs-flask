@@ -23,6 +23,7 @@ from flask.ext.wtf import Form
 from flask.ext.wtf.file import FileAllowed, FileField
 from wtforms import (
     BooleanField,
+    HiddenField,
     RadioField,
     SelectField,
     SelectMultipleField,
@@ -211,86 +212,6 @@ def syn_parents_links(obj):
         return ''
 
 
-class AddBotanicalNameForm(Form):
-    """Form for adding a new botanical name to the database.
-
-    Attributes:
-        common_name (SelectField): Field to select a common name to associate
-            with this botanical name.
-        name (StringField): Field for botanical name.
-        next_page (RadioField): The next page to move on to after submit.
-        submit (SubmitField): Submit button.
-        synonyms (StringField): Field for synonyms.
-    """
-    common_name = SelectField('Select Common Name', coerce=int)
-    name = StringField('Botanical Name',
-                       validators=[Length(1, 64), NotSpace()])
-    next_page = RadioField('After submission, go to',
-                           choices=[('add_series', 'Add Series (optional)'),
-                                    ('add_cultivar', 'Add Cultivar')],
-                           default='add_cultivar')
-    submit = SubmitField('Add Botanical Name')
-    synonyms = StringField('Synonyms', validators=[NotSpace()])
-
-    def set_common_name(self):
-        """Set common_name with CommonName objects loaded from db."""
-        self.common_name.choices = common_name_select_list()
-
-    def validate_name(self, field):
-        """Raise a ValidationError if name exists or is invalid.
-
-        Raises:
-            ValidationError: If name is not in valid binomial format, if a
-                botanical name with the same name already exists in the
-                database, or if a synonym with the same name already exists.
-        """
-        if not BotanicalName.validate(field.data):
-            raise ValidationError('\'{0}\' does not appear to be a valid '
-                                  'botanical name. The first word should '
-                                  'begin with a capital letter, and the '
-                                  'second word should be all lowercase.'.
-                                  format(field.data))
-        bn = BotanicalName.query.filter_by(name=field.data).first()
-        if bn is not None:
-            if not bn.syn_only:
-                bn_url = url_for('seeds.edit_botanical_name', bn_id=bn.id)
-                raise ValidationError(
-                    Markup('\'{0}\' already exists as a botanical name for '
-                           '\'{1}\'. <a href="{2}">Click here</a> if you '
-                           'would like to edit it.'
-                           .format(bn.name, bn.common_name.name, bn_url))
-                )
-            else:
-                raise ValidationError(
-                    Markup('The botanical name \'{0}\' already exists as a '
-                           'synonym of \'{1}\'. You will need to remove it as '
-                           'a synonym before adding it here.'
-                           .format(bn.name, syn_parents_links(bn)))
-                )
-
-    def validate_synonyms(self, field):
-        """Raise a ValidationError if synonyms or a synonym are invalid.
-
-        Raises:
-            ValidationError: If botanical name itself is present in synonyms,
-                if any synonym is too long, or if any synonym is not in valid
-                binomial format.
-        """
-        if field.data:
-            synonyms = field.data.split(', ')
-            for synonym in synonyms:
-                if synonym == self.name.data:
-                    raise ValidationError('\'{0}\' can\'t have itself as a '
-                                          'synonym!'.format(self.name.data))
-                if len(synonym) > 64:
-                    raise ValidationError('Each synonym can only be a maximum '
-                                          'of 64 characters long!')
-                if not BotanicalName.validate(synonym):
-                    raise ValidationError('The synonym \'{0}\' does not '
-                                          'appear to be a valid botanical '
-                                          'name!'.format(synonym))
-
-
 class AddIndexForm(Form):
     """Form for adding a new index to the database.
 
@@ -412,16 +333,113 @@ class AddCommonNameForm(Form):
                                           'of 64 characters long!')
 
 
+class AddBotanicalNameForm(Form):
+    """Form for adding a new botanical name to the database.
+
+    Attributes:
+        name (StringField): Field for botanical name.
+        next_page (RadioField): The next page to move on to after submit.
+        submit (SubmitField): Submit button.
+        synonyms (StringField): Field for synonyms.
+    """
+    name = StringField('Botanical Name',
+                       validators=[Length(1, 64), NotSpace()])
+    next_page = RadioField('After submission, go to',
+                           choices=[('add_series', 'Add Series (optional)'),
+                                    ('add_cultivar', 'Add Cultivar')],
+                           default='add_cultivar')
+    submit = SubmitField('Add Botanical Name')
+    synonyms = StringField('Synonyms', validators=[NotSpace()])
+
+    def validate_name(self, field):
+        """Raise a ValidationError if name exists or is invalid.
+
+        Raises:
+            ValidationError: If name is not in valid binomial format, if a
+                botanical name with the same name already exists in the
+                database, or if a synonym with the same name already exists.
+        """
+        if not BotanicalName.validate(field.data):
+            raise ValidationError('\'{0}\' does not appear to be a valid '
+                                  'botanical name. The first word should '
+                                  'begin with a capital letter, and the '
+                                  'second word should be all lowercase.'.
+                                  format(field.data))
+        bn = BotanicalName.query.filter_by(name=field.data).first()
+        if bn is not None:
+            if not bn.syn_only:
+                bn_url = url_for('seeds.edit_botanical_name', bn_id=bn.id)
+                raise ValidationError(
+                    Markup('\'{0}\' already exists as a botanical name for '
+                           '\'{1}\'. <a href="{2}">Click here</a> if you '
+                           'would like to edit it.'
+                           .format(bn.name, bn.common_name.name, bn_url))
+                )
+            else:
+                raise ValidationError(
+                    Markup('The botanical name \'{0}\' already exists as a '
+                           'synonym of \'{1}\'. You will need to remove it as '
+                           'a synonym before adding it here.'
+                           .format(bn.name, syn_parents_links(bn)))
+                )
+
+    def validate_synonyms(self, field):
+        """Raise a ValidationError if synonyms or a synonym are invalid.
+
+        Raises:
+            ValidationError: If botanical name itself is present in synonyms,
+                if any synonym is too long, or if any synonym is not in valid
+                binomial format.
+        """
+        if field.data:
+            synonyms = field.data.split(', ')
+            for synonym in synonyms:
+                if synonym == self.name.data:
+                    raise ValidationError('\'{0}\' can\'t have itself as a '
+                                          'synonym!'.format(self.name.data))
+                if len(synonym) > 64:
+                    raise ValidationError('Each synonym can only be a maximum '
+                                          'of 64 characters long!')
+                if not BotanicalName.validate(synonym):
+                    raise ValidationError('The synonym \'{0}\' does not '
+                                          'appear to be a valid botanical '
+                                          'name!'.format(synonym))
+
+
+class AddSeriesForm(Form):
+    """Form for adding a Series to the database.
+
+    Attributes:
+        description (TextAreaField): Field for series description.
+        name (StringField): Field for series name.
+        submit (SubmitField): Submit button.
+    """
+    description = TextAreaField('Description', validators=[NotSpace()])
+    name = StringField('Series Name', validators=[Length(1, 64), NotSpace()])
+    submit = SubmitField('Add Series')
+
+    def validate_name(self, field):
+        """Raise ValidationError if name already exists in db.
+
+        Raises:
+            ValidationError: If series already exists in database.
+        """
+        if field.data:
+            series = Series.query.filter_by(name=titlecase(field.data)).first()
+            if series is not None:
+                raise ValidationError('The series \'{0}\' already exists!'.
+                                      format(series.name))
+
+
 class AddCultivarForm(Form):
     """Form for adding a new cultivar to the database.
 
     Attributes:
+        cn_id (HiddenField): Store common name id used for this cultivar.
         botanical_name (SelectField): Select field for the botanical name
             associated with this cultivar.
         indexes (SelectMultipleField): Select field for selecting
             indexes associated with cultivar.
-        common_name (SelectField): Select field for the common name associated
-            with this cultivar.
         description (TextAreaField): Field for cultivar product description.
         dropped (BooleanField): Checkbox for whether or not a cultivar is
             active.
@@ -438,11 +456,9 @@ class AddCultivarForm(Form):
         synonyms (StringField): Field for synonyms of this cultivar.
         thumbnail (FileField): Field for uploading thumbnail image.
     """
+    cn_id = HiddenField()
     botanical_name = SelectField('Select Botanical Name', coerce=int)
     indexes = SelectMultipleField('Select Indexes', coerce=int)
-    common_name = SelectField('Select Common Name',
-                              coerce=int,
-                              validators=[DataRequired()])
     description = TextAreaField('Description', validators=[NotSpace()])
     dropped = BooleanField('Dropped/Inactive')
     gw_common_names = SelectMultipleField('Common Names', coerce=int)
@@ -462,7 +478,6 @@ class AddCultivarForm(Form):
         self.botanical_name.choices = botanical_name_select_list()
         self.botanical_name.choices.insert(0, (0, 'None'))
         self.indexes.choices = index_select_list()
-        self.common_name.choices = common_name_select_list()
         self.gw_common_names.choices = common_name_select_list()
         self.gw_cultivars.choices = cultivar_select_list()
         self.series.choices = series_select_list()
@@ -475,7 +490,7 @@ class AddCultivarForm(Form):
             ValidationError: If any selected indexes are not present within
                 the selected CommonName.
         """
-        cn = CommonName.query.get(self.common_name.data)
+        cn = CommonName.query.get(self.cn_id.data)
         idx_ids = [idx.id for idx in cn.indexes]
         for idx_id in field.data:
             if idx_id not in idx_ids:
@@ -497,7 +512,7 @@ class AddCultivarForm(Form):
         for cultivar in cultivars:
             if not cultivar.syn_only:
                 if cultivar and\
-                        cultivar.common_name.id == self.common_name.data:
+                        cultivar.common_name.id == self.cn_id.data:
                     cv_url = url_for('seeds.edit_cultivar', cv_id=cultivar.id)
                     raise ValidationError(
                         Markup('A cultivar named \'{0}\' already exists in '
@@ -654,37 +669,6 @@ class AddRedirectForm(Form):
                             old_rd.new_path,
                             rd_url,
                             self.old_path.data)))
-
-
-class AddSeriesForm(Form):
-    """Form for adding a Series to the database.
-
-    Attributes:
-        common_name (SelectField): Field for selecting a common name.
-        description (TextAreaField): Field for series description.
-        name (StringField): Field for series name.
-        submit (SubmitField): Submit button.
-    """
-    common_name = SelectField('Select Common Name', coerce=int)
-    description = TextAreaField('Description', validators=[NotSpace()])
-    name = StringField('Series Name', validators=[Length(1, 64), NotSpace()])
-    submit = SubmitField('Add Series')
-
-    def set_common_name(self):
-        """Set common name choices with common names from db."""
-        self.common_name.choices = common_name_select_list()
-
-    def validate_name(self, field):
-        """Raise ValidationError if name already exists in db.
-
-        Raises:
-            ValidationError: If series already exists in database.
-        """
-        if field.data:
-            series = Series.query.filter_by(name=titlecase(field.data)).first()
-            if series is not None:
-                raise ValidationError('The series \'{0}\' already exists!'.
-                                      format(series.name))
 
 
 class EditBotanicalNameForm(Form):

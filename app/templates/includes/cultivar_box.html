@@ -38,9 +38,9 @@
             <a href="{{ url_for('seeds.remove_cultivar', cv_id=cultivar.id) }}">Remove</a>
         </span>
         {% endif %}
-        {% if not cat_slug %}{% set cat_slug = cultivar.categories[0].slug %}{% endif %}
+        {% if not idx_slug %}{% set idx_slug = cultivar.indexes[0].slug %}{% endif %}
         {% if not cn_slug %}{% set cn_slug = cultivar.common_name.slug %}{% endif %}
-        <h3><a href="{{ url_for('seeds.cultivar', cat_slug=cat_slug, cn_slug=cn_slug, cv_slug=cultivar.slug)}}">{{ cultivar.name }}</a></h3>
+        <h3><a href="{{ url_for('seeds.cultivar', idx_slug=idx_slug, cn_slug=cn_slug, cv_slug=cultivar.slug)}}">{{ cultivar.name }}</a></h3>
         <em>{{ cultivar.common_name.header }}</em>
         <i>{{ cultivar.botanical_name.name }}</i>
         <p>{{ cultivar.description }}</p>

@@ -21,13 +21,13 @@ class TestModuleFunctions:
             'wish to redirect it to <link to new path>.'
 
 
-class TestAddCategory:
-    """Test add_category route."""
-    def test_add_category_renders_page(self, app):
-        """Render the Add Category page given no form data."""
+class TestAddIndex:
+    """Test add_index route."""
+    def test_add_index_renders_page(self, app):
+        """Render the Add Index page given no form data."""
         with app.test_client() as tc:
-            rv = tc.get(url_for('seeds.add_category'), follow_redirects=True)
-        assert 'Add Category' in str(rv.data)
+            rv = tc.get(url_for('seeds.add_index'), follow_redirects=True)
+        assert 'Add Index' in str(rv.data)
 
 
 class TestAddPacket:

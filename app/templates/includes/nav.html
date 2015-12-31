@@ -21,9 +21,9 @@
                 <span id="nav_home"><a href="{{ url_for('main.index') }}">Home</a></span>
                 <ul id="nav_seeds">
                     <li><a href="{{ url_for('seeds.index') }}">All Seeds</a></li>
-                    {% if categories is not none %}
-                    {% for nav_cat in categories %}
-                    <li><a href="{{ url_for('seeds.category', cat_slug=nav_cat.slug)}}">{{ nav_cat.header }}</a></li>
+                    {% if indexes is not none %}
+                    {% for nav_idx in indexes %}
+                    <li><a href="{{ url_for('seeds.index_page', idx_slug=nav_idx.slug)}}">{{ nav_idx.header }}</a></li>
                     {% endfor %}
                     {% endif %}
                 </ul>

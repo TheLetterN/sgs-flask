@@ -16,24 +16,33 @@
    Copyright Swallowtail Garden Seeds, Inc 
 #}
 {% extends "main/base.html" %}
-{% from "includes/form_field.html" import form_field %}
+{% from "includes/form_errors.html" import form_errors %}
 {# HTML within blocks should be indented as follows for consistency: #}
 {# block head: 2 indentations of 4 spaces each. (8 spaces total.) #}
 {# block main: 3 indentations of 4 spaces each. (12 spaces total.) #}
 {% block head %}
-        <title>Remove Category</title>
+        <title>Add Index</title>
         <meta name="robots" content="noindex, nofollow">
+        <link rel="canonical" href="{{ url_for('seeds.add_index', _external=True) }}">
 {% endblock %}
 {% block main %}
-            <h1>Remove Category</h1>
+            <h1>Add an Index:</h1>
             <form method="POST">
                 {{ form.hidden_tag() }}
                 <ol>
-                    <li><div class="warning">Are you sure you want to remove the category &apos;{{ category.name }}&apos;?</div>
-                        {{ form_field(form.verify_removal)|indent(24)|safe }}
+                    <li>
+                        {{ form.index.label }}
+                        {{ form.index }}
+                        {% if form.index.errors|count > 0 %}
+                        {{ form_errors(form.index) }}
+                        {% endif %}
                     </li>
                     <li>
-                        {{ form_field(form.move_to)|indent(24)|safe }}
+                        {{ form.description.label }}
+                        {{ form.description }}
+                        {% if form.description.errors|count > 0 %}
+                        {{ form_errors(form.description) }}
+                        {% endif %}
                     </li>
                     <li>
                         {{ form.submit }}

@@ -1,6 +1,6 @@
 from app.seeds.models import (
     BotanicalName,
-    Category,
+    Index,
     CommonName,
     Image,
     Cultivar
@@ -72,23 +72,23 @@ class TestBotanicalNameWithDB:
         assert s2 in bn.synonyms
 
 
-class TestCategoryWithDB:
-    """Test Category model methods that require database access."""
-    def test_category_expression(self, db):
+class TestIndexWithDB:
+    """Test Index model methods that require database access."""
+    def test_index_expression(self, db):
         """.name should be usable in filters."""
-        cat1 = Category()
-        cat2 = Category()
-        cat3 = Category()
-        db.session.add_all([cat1, cat2, cat3])
-        cat1.name = 'Annual Flower'
-        cat2.name = 'Perennial Flower'
-        cat3.name = 'Rock'
+        idx1 = Index()
+        idx2 = Index()
+        idx3 = Index()
+        db.session.add_all([idx1, idx2, idx3])
+        idx1.name = 'Annual Flower'
+        idx2.name = 'Perennial Flower'
+        idx3.name = 'Rock'
         db.session.commit()
-        assert Category.query.filter_by(name='Annual Flower')\
-            .first() is cat1
-        assert Category.query.filter_by(name='Perennial Flower')\
-            .first() is cat2
-        assert Category.query.filter_by(name='Rock').first() is cat3
+        assert Index.query.filter_by(name='Annual Flower')\
+            .first() is idx1
+        assert Index.query.filter_by(name='Perennial Flower')\
+            .first() is idx2
+        assert Index.query.filter_by(name='Rock').first() is idx3
 
 
 class TestCommonNameWithDB:

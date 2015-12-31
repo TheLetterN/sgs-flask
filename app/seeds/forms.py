@@ -36,7 +36,7 @@ from app import dbify
 from app.redirects import RedirectsFile
 from .models import (
     BotanicalName,
-    Category,
+    Index,
     CommonName,
     Image,
     Packet,
@@ -118,15 +118,15 @@ def botanical_name_select_list():
     return bn_list
 
 
-def category_select_list():
-    """Generate a list of all Categories for populating Select fields.
+def index_select_list():
+    """Generate a list of all Indexes for populating Select fields.
 
     Returns:
-        list: A list of tuples containing the id and name of each category
+        list: A list of tuples containing the id and name of each index
             in the database.
     """
-    return [(category.id, category.name) for category in
-            Category.query.order_by('_name')]
+    return [(index.id, index.name) for index in
+            Index.query.order_by('_name')]
 
 
 def common_name_select_list():
@@ -291,32 +291,32 @@ class AddBotanicalNameForm(Form):
                                           'name!'.format(synonym))
 
 
-class AddCategoryForm(Form):
-    """Form for adding a new category to the database.
+class AddIndexForm(Form):
+    """Form for adding a new index to the database.
 
     Attributes:
-        category (StringField): Field for the category name.
-        description (TextAreaField): Field for the category's description.
+        index (StringField): Field for the index name.
+        description (TextAreaField): Field for the index's description.
         submit (SubmitField): Submit button.
     """
-    category = StringField('Category', validators=[Length(1, 64), NotSpace()])
+    index = StringField('Index', validators=[Length(1, 64), NotSpace()])
     description = TextAreaField('Description', validators=[NotSpace()])
-    submit = SubmitField('Add Category')
+    submit = SubmitField('Add Index')
 
-    def validate_category(self, field):
-        """Raise a ValidationError if submitted category already exists.
+    def validate_index(self, field):
+        """Raise a ValidationError if submitted index already exists.
 
         Raises:
-            ValidationError: If submitted category already exists in the
+            ValidationError: If submitted index already exists in the
                 database.
         """
-        cat = Category.query.filter_by(name=dbify(field.data)).first()
-        if cat is not None:
-            cat_url = url_for('seeds.edit_category', cat_id=cat.id)
+        idx = Index.query.filter_by(name=dbify(field.data)).first()
+        if idx is not None:
+            idx_url = url_for('seeds.edit_index', idx_id=idx.id)
             raise ValidationError(
                 Markup('\'{0}\' already exists in the database. <a '
                        'href="{1}">Click here</a> to edit it.'
-                       .format(cat.name, cat_url))
+                       .format(idx.name, idx_url))
             )
 
 
@@ -324,7 +324,7 @@ class AddCommonNameForm(Form):
     """Form for adding a new common name to the database.
 
     Attributes:
-        categories (SelectMultipleField): Select field with categories from
+        indexes (SelectMultipleField): Select field with indexes from
             the database to associate with this CommonName.
         description (TextAreaField): Field for description of common name.
         gw_common_names (SelectMultipleField): Select field for common names
@@ -339,9 +339,9 @@ class AddCommonNameForm(Form):
         submit (SubmitField): Submit button.
         synonyms (StringField): Field for synonyms of this common name.
     """
-    categories = SelectMultipleField('Select Categories',
-                                     coerce=int,
-                                     validators=[DataRequired()])
+    indexes = SelectMultipleField('Select Indexes',
+                                  coerce=int,
+                                  validators=[DataRequired()])
     description = TextAreaField('Description', validators=[NotSpace()])
     gw_common_names = SelectMultipleField('Common Names', coerce=int)
     gw_cultivars = SelectMultipleField('Cultivars', coerce=int)
@@ -360,8 +360,8 @@ class AddCommonNameForm(Form):
     synonyms = StringField('Synonyms', validators=[NotSpace()])
 
     def set_selects(self):
-        """Populate categories with Categories from the database."""
-        self.categories.choices = category_select_list()
+        """Populate indexes with Indexes from the database."""
+        self.indexes.choices = index_select_list()
         self.gw_common_names.choices = common_name_select_list()
         self.gw_cultivars.choices = cultivar_select_list()
         self.parent_cn.choices = common_name_select_list()
@@ -418,8 +418,8 @@ class AddCultivarForm(Form):
     Attributes:
         botanical_name (SelectField): Select field for the botanical name
             associated with this cultivar.
-        categories (SelectMultipleField): Select field for selecting
-            categories associated with cultivar.
+        indexes (SelectMultipleField): Select field for selecting
+            indexes associated with cultivar.
         common_name (SelectField): Select field for the common name associated
             with this cultivar.
         description (TextAreaField): Field for cultivar product description.
@@ -439,7 +439,7 @@ class AddCultivarForm(Form):
         thumbnail (FileField): Field for uploading thumbnail image.
     """
     botanical_name = SelectField('Select Botanical Name', coerce=int)
-    categories = SelectMultipleField('Select Categories', coerce=int)
+    indexes = SelectMultipleField('Select Indexes', coerce=int)
     common_name = SelectField('Select Common Name',
                               coerce=int,
                               validators=[DataRequired()])
@@ -458,30 +458,30 @@ class AddCultivarForm(Form):
                                                   'Images only!')])
 
     def set_selects(self):
-        """Sets botanical_names, categories, and common_names from db."""
+        """Sets botanical_names, indexes, and common_names from db."""
         self.botanical_name.choices = botanical_name_select_list()
         self.botanical_name.choices.insert(0, (0, 'None'))
-        self.categories.choices = category_select_list()
+        self.indexes.choices = index_select_list()
         self.common_name.choices = common_name_select_list()
         self.gw_common_names.choices = common_name_select_list()
         self.gw_cultivars.choices = cultivar_select_list()
         self.series.choices = series_select_list()
         self.series.choices.insert(0, (0, 'None'))
 
-    def validate_categories(self, field):
-        """Raise ValidationError if any categories not in selected CommonName.
+    def validate_indexes(self, field):
+        """Raise ValidationError if any indexes not in selected CommonName.
 
         Raises:
-            ValidationError: If any selected categories are not present within
+            ValidationError: If any selected indexes are not present within
                 the selected CommonName.
         """
         cn = CommonName.query.get(self.common_name.data)
-        cat_ids = [cat.id for cat in cn.categories]
-        for cat_id in field.data:
-            if cat_id not in cat_ids:
+        idx_ids = [idx.id for idx in cn.indexes]
+        for idx_id in field.data:
+            if idx_id not in idx_ids:
                 cn_url = url_for('seeds.edit_common_name', cn_id=cn.id)
                 raise ValidationError(
-                    Markup('One or more of selected categories are not '
+                    Markup('One or more of selected indexes are not '
                            'associated with selected common name \'{0}\'. <a '
                            'href="{1}">Click here</a> if you would like to '
                            'edit \'{0}\'.'.format(cn.name, cn_url)))
@@ -754,33 +754,33 @@ class EditBotanicalNameForm(Form):
                                           'name.'.format(synonym))
 
 
-class EditCategoryForm(Form):
-    """Form for editing an existing category in the database.
+class EditIndexForm(Form):
+    """Form for editing an existing index in the database.
 
     Attributes:
-        category (StringField): Field for category name.
+        index (StringField): Field for index name.
         description (TextAreaField): Field for description.
         submit (SubmitField): Submit button.
     """
-    category = StringField('Category', validators=[Length(1, 64), NotSpace()])
+    index = StringField('Index', validators=[Length(1, 64), NotSpace()])
     description = TextAreaField('Description', validators=[NotSpace()])
-    submit = SubmitField('Edit Category')
+    submit = SubmitField('Edit Index')
 
-    def populate(self, category):
-        """Load category from database and populate form with it.
+    def populate(self, index):
+        """Load index from database and populate form with it.
 
         Args:
-            category (Category): A category object to populate the form from.
+            index (Index): A index object to populate the form from.
         """
-        self.category.data = category.name
-        self.description.data = category.description
+        self.index.data = index.name
+        self.description.data = index.description
 
 
 class EditCommonNameForm(Form):
     """Form for editing an existing common name in the database.
 
     Attributes:
-        categories (SelectMultipleField): Select for categories.
+        indexes (SelectMultipleField): Select for indexes.
         description (TextAreaField): Field for description of common name.
         gw_common_names (SelectMultipleField): Field for common names that
             grow well with this one.
@@ -791,9 +791,9 @@ class EditCommonNameForm(Form):
         submit (SubmitField): Submit button.
         synonyms (StringField): Field for synonyms of this common name.
     """
-    categories = SelectMultipleField('Select/Deselect Categories',
-                                     coerce=int,
-                                     validators=[DataRequired()])
+    indexes = SelectMultipleField('Select/Deselect Indexes',
+                                  coerce=int,
+                                  validators=[DataRequired()])
     description = TextAreaField('Description', validators=[NotSpace()])
     gw_common_names = SelectMultipleField('Common Names', coerce=int)
     gw_cultivars = SelectMultipleField('Cultivars', coerce=int)
@@ -817,7 +817,7 @@ class EditCommonNameForm(Form):
             self.parent_cn.data = cn.parent.id
         if cn.synonyms:
             self.synonyms.data = cn.list_synonyms_as_string()
-        self.categories.data = [cat.id for cat in cn.categories]
+        self.indexes.data = [idx.id for idx in cn.indexes]
         if cn.gw_common_names:
             self.gw_common_names.data = [gw_cn.id for gw_cn in
                                          cn.gw_common_names]
@@ -827,8 +827,8 @@ class EditCommonNameForm(Form):
                                       cn.gw_cultivars]
 
     def set_selects(self):
-        """Populate categories with Categories from the database."""
-        self.categories.choices = category_select_list()
+        """Populate indexes with Indexes from the database."""
+        self.indexes.choices = index_select_list()
         self.gw_common_names.choices = common_name_select_list()
         self.gw_common_names.choices.insert(0, (0, 'None'))
         self.gw_cultivars.choices = cultivar_select_list()
@@ -860,7 +860,7 @@ class EditCultivarForm(Form):
     Attributes:
         botanical_name (SelectField): Field for selecting botanical name for
             this cultivar.
-        categories (SelectMultipleField): Field for selecting categories
+        indexes (SelectMultipleField): Field for selecting indexes
             this cultivar belongs to.
         common_name (SelectField): Field for selecting common name for this
             cultivar.
@@ -881,9 +881,9 @@ class EditCultivarForm(Form):
             cultivar.
     """
     botanical_name = SelectField('Botanical Name', coerce=int)
-    categories = SelectMultipleField('Select/Deselect Categories',
-                                     coerce=int,
-                                     validators=[DataRequired()])
+    indexes = SelectMultipleField('Select/Deselect Indexes',
+                                  coerce=int,
+                                  validators=[DataRequired()])
     common_name = SelectField('Common Name',
                               coerce=int,
                               validators=[DataRequired()])
@@ -904,7 +904,7 @@ class EditCultivarForm(Form):
         """Set choices for all select fields with values from database."""
         self.botanical_name.choices = botanical_name_select_list()
         self.botanical_name.choices.insert(0, (0, 'None'))
-        self.categories.choices = category_select_list()
+        self.indexes.choices = index_select_list()
         self.common_name.choices = common_name_select_list()
         self.gw_common_names.choices = common_name_select_list()
         self.gw_common_names.choices.insert(0, (0, 'None'))
@@ -921,7 +921,7 @@ class EditCultivarForm(Form):
         """
         if cultivar.botanical_name:
             self.botanical_name.data = cultivar.botanical_name.id
-        self.categories.data = [cat.id for cat in cultivar.categories]
+        self.indexes.data = [idx.id for idx in cultivar.indexes]
         if cultivar.common_name:
             self.common_name.data = cultivar.common_name.id
         self.description.data = cultivar.description
@@ -942,20 +942,20 @@ class EditCultivarForm(Form):
         if cultivar.synonyms:
             self.synonyms.data = cultivar.list_synonyms_as_string()
 
-    def validate_categories(self, field):
-        """Raise ValidationError if any categories not in selected CommonName.
+    def validate_indexes(self, field):
+        """Raise ValidationError if any indexes not in selected CommonName.
 
         Raises:
-            ValidationError: If any selected categories are not present within
+            ValidationError: If any selected indexes are not present within
                 the selected CommonName.
         """
         cn = CommonName.query.get(self.common_name.data)
-        cat_ids = [cat.id for cat in cn.categories]
-        for cat_id in field.data:
-            if cat_id not in cat_ids:
+        idx_ids = [idx.id for idx in cn.indexes]
+        for idx_id in field.data:
+            if idx_id not in idx_ids:
                 cn_url = url_for('seeds.edit_common_name', cn_id=cn.id)
                 raise ValidationError(
-                    Markup('One or more of selected categories are not '
+                    Markup('One or more of selected indexes are not '
                            'associated with selected common name \'{0}\'. <a '
                            'href="{1}">Click here</a> if you would like to '
                            'edit \'{0}\'.'.format(cn.name, cn_url)))
@@ -1054,21 +1054,21 @@ class RemoveBotanicalNameForm(Form):
     submit = SubmitField('Remove Botanical Name')
 
 
-class RemoveCategoryForm(Form):
-    """Form for removing a category."""
-    move_to = SelectField('Move common names and cultivars in this category '
+class RemoveIndexForm(Form):
+    """Form for removing an index."""
+    move_to = SelectField('Move common names and cultivars in this index '
                           'to', coerce=int)
     verify_removal = BooleanField('Yes')
-    submit = SubmitField('Remove Category')
+    submit = SubmitField('Remove Index')
 
-    def set_move_to(self, cat_id):
-        """Set move_to SelectField with other Categories.
+    def set_move_to(self, idx_id):
+        """Set move_to SelectField with other Indexes.
 
         Args:
-            cat_id: The id of the Category to be removed.
+            idx_id: The id of the Index to be removed.
         """
-        cats = Category.query.filter(Category.id != cat_id).all()
-        self.move_to.choices = [(cat.id, cat.name) for cat in cats]
+        cats = Index.query.filter(Index.id != idx_id).all()
+        self.move_to.choices = [(idx.id, idx.name) for idx in cats]
 
 
 class RemoveCommonNameForm(Form):
@@ -1151,19 +1151,19 @@ class SelectBotanicalNameForm(Form):
         self.botanical_name.choices = botanical_name_select_list()
 
 
-class SelectCategoryForm(Form):
-    """Form for selecting a category.
+class SelectIndexForm(Form):
+    """Form for selecting an index.
 
     Attributes:
-        category (SelectField): Field for selecting a category.
+        index (SelectField): Field for selecting an index.
         submit (SubmitField): Submit button.
     """
-    category = SelectField('Select Category', coerce=int)
+    index = SelectField('Select Index', coerce=int)
     submit = SubmitField('Submit')
 
-    def set_category(self):
-        """Populate category with Categories from the database."""
-        self.category.choices = category_select_list()
+    def set_index(self):
+        """Populate index with Indexes from the database."""
+        self.index.choices = index_select_list()
 
 
 class SelectCommonNameForm(Form):

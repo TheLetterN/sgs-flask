@@ -25,10 +25,10 @@
 {% endblock %}
 {% block main %}
         <h1>Seeds</h1>
-        {% for category in categories %}
-        <div class="category">
-            <h2><a href="{{ url_for('seeds.category', cat_slug=category.slug) }}">{{ category.plural }}</a></h2>
-            <p class="description">{{ category.description|safe }}</p>
+        {% for index in indexes %}
+        <div class="index">
+            <h2><a href="{{ url_for('seeds.index_page', idx_slug=index.slug) }}">{{ index.plural }}</a></h2>
+            <p class="description">{{ index.description|safe }}</p>
         </div>
         {% endfor %}
 {% endblock %}

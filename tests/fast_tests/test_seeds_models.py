@@ -9,7 +9,7 @@ from slugify import slugify
 from unittest import mock
 from app.seeds.models import (
     BotanicalName,
-    Category,
+    Index,
     CommonName,
     Image,
     Cultivar,
@@ -191,38 +191,38 @@ class TestBotanicalName:
         assert BotanicalName.validate('Helianthus anuus')
 
 
-class TestCategory:
-    """Test methods of Category in the seeds model."""
-    def test_category_getter(self, app):
+class TestIndex:
+    """Test methods of Index in the seeds model."""
+    def test_index_getter(self, app):
         """Return ._name."""
-        category = Category()
-        category._name = 'Perennial Flower'
-        assert category.name == 'Perennial Flower'
+        index = Index()
+        index._name = 'Perennial Flower'
+        assert index.name == 'Perennial Flower'
 
-    def test_category_setter(self, app):
+    def test_index_setter(self, app):
         """Set ._name and a pluralized, slugified v. to .slug."""
-        category = Category()
-        category.name = 'Annual Flower'
-        assert category._name == 'Annual Flower'
-        assert category.slug == slugify(pluralize('Annual Flower'))
+        index = Index()
+        index.name = 'Annual Flower'
+        assert index._name == 'Annual Flower'
+        assert index.slug == slugify(pluralize('Annual Flower'))
 
     def test_header(self, app):
         """Return '<._name> Seeds'"""
-        category = Category()
-        category.name = 'Annual Flower'
-        assert category.header == 'Annual Flower Seeds'
+        index = Index()
+        index.name = 'Annual Flower'
+        assert index.header == 'Annual Flower Seeds'
 
     def test_plural(self, app):
         """Return plural version of ._name."""
-        category = Category()
-        category.name = 'Annual Flower'
-        assert category.plural == 'Annual Flowers'
+        index = Index()
+        index.name = 'Annual Flower'
+        assert index.plural == 'Annual Flowers'
 
     def test_repr(self, app):
-        """Return string formatted <Category '<category>'>"""
-        category = Category()
-        category.name = 'vegetable'
-        assert category.__repr__() == '<Category \'vegetable\'>'
+        """Return string formatted <Index '<index>'>"""
+        index = Index()
+        index.name = 'vegetable'
+        assert index.__repr__() == '<Index \'vegetable\'>'
 
 
 class TestCommonName:

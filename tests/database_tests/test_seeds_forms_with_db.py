@@ -4,16 +4,16 @@ from werkzeug import FileStorage, secure_filename
 from wtforms import ValidationError
 from app.seeds.forms import (
     AddBotanicalNameForm,
-    AddCategoryForm,
+    AddIndexForm,
     AddCommonNameForm,
     AddPacketForm,
     AddCultivarForm,
     AddSeriesForm,
     botanical_name_select_list,
-    category_select_list,
+    index_select_list,
     common_name_select_list,
     EditBotanicalNameForm,
-    EditCategoryForm,
+    EditIndexForm,
     EditCommonNameForm,
     EditCultivarForm,
     EditPacketForm,
@@ -22,7 +22,7 @@ from app.seeds.forms import (
     cultivar_select_list,
     syn_parents_links,
     SelectBotanicalNameForm,
-    SelectCategoryForm,
+    SelectIndexForm,
     SelectCommonNameForm,
     SelectCultivarForm,
     SelectPacketForm,
@@ -30,7 +30,7 @@ from app.seeds.forms import (
 )
 from app.seeds.models import (
     BotanicalName,
-    Category,
+    Index,
     CommonName,
     Image,
     Packet,
@@ -58,20 +58,20 @@ class TestFunctionsWithDB:
         assert (bn2.id, bn2.name) in bnlist
         assert (bn3.id, bn3.name) in bnlist
 
-    def test_category_select_list(self, db):
-        """Generate correct list of tuples from categories in db."""
-        cat1 = Category()
-        cat2 = Category()
-        cat3 = Category()
-        db.session.add_all([cat1, cat2, cat3])
-        cat1.name = 'Annual Flower'.title()
-        cat2.name = 'Perennial Flower'.title()
-        cat3.name = 'Vegetable'.title()
+    def test_index_select_list(self, db):
+        """Generate correct list of tuples from indexes in db."""
+        idx1 = Index()
+        idx2 = Index()
+        idx3 = Index()
+        db.session.add_all([idx1, idx2, idx3])
+        idx1.name = 'Annual Flower'.title()
+        idx2.name = 'Perennial Flower'.title()
+        idx3.name = 'Vegetable'.title()
         db.session.commit()
-        catlist = category_select_list()
-        assert (cat1.id, cat1.name) in catlist
-        assert (cat2.id, cat2.name) in catlist
-        assert (cat3.id, cat3.name) in catlist
+        idxlist = index_select_list()
+        assert (idx1.id, idx1.name) in idxlist
+        assert (idx2.id, idx2.name) in idxlist
+        assert (idx3.id, idx3.name) in idxlist
 
     def test_common_name_select_list(self, db):
         """Generate correct list of tuples from common names in db."""
@@ -237,35 +237,35 @@ class TestAddBotanicalNameFormWithDB:
             form.validate_name(form.name)
 
 
-class TestAddCategoryFormWithDB:
-    """Test custom methods of AddCategoryForm."""
-    def test_validate_category(self, db):
-        """Raise a ValidationError if category already in db."""
-        category = Category()
-        db.session.add(category)
-        category.name = 'Annual Flowers'
+class TestAddIndexFormWithDB:
+    """Test custom methods of AddIndexForm."""
+    def test_validate_index(self, db):
+        """Raise a ValidationError if index already in db."""
+        index = Index()
+        db.session.add(index)
+        index.name = 'Annual Flowers'
         db.session.commit()
-        form = AddCategoryForm()
-        form.category.data = 'Perennial Flowers'
-        form.validate_category(form.category)
-        form.category.data = 'annual flowers'
+        form = AddIndexForm()
+        form.index.data = 'Perennial Flowers'
+        form.validate_index(form.index)
+        form.index.data = 'annual flowers'
         with pytest.raises(ValidationError):
-            form.validate_category(form.category)
+            form.validate_index(form.index)
 
 
 class TestAddCommonNameFormWithDB:
     """Test custom methods of AddCommonNameForm."""
     def test_set_selects(self, db):
-        """Set .categories.choices with Categories from the db."""
-        cat1 = Category()
-        cat2 = Category()
+        """Set .indexes.choices with Categories from the db."""
+        idx1 = Index()
+        idx2 = Index()
         cn1 = CommonName()
         cn2 = CommonName()
         cv1 = Cultivar()
         cv2 = Cultivar()
-        db.session.add_all([cat1, cat2, cn1, cn2, cv1, cv2])
-        cat1.name = 'Annual Flower'.title()
-        cat2.name = 'Perennial Flower'.title()
+        db.session.add_all([idx1, idx2, cn1, cn2, cv1, cv2])
+        idx1.name = 'Annual Flower'.title()
+        idx2.name = 'Perennial Flower'.title()
         cn1.name = 'Foxglove'
         cn2.name = 'Butterfly Weed'
         cv1.name = 'Foxy'
@@ -273,8 +273,8 @@ class TestAddCommonNameFormWithDB:
         db.session.commit()
         form = AddCommonNameForm()
         form.set_selects()
-        assert (cat1.id, cat1.name) in form.categories.choices
-        assert (cat2.id, cat2.name) in form.categories.choices
+        assert (idx1.id, idx1.name) in form.indexes.choices
+        assert (idx2.id, idx2.name) in form.indexes.choices
         assert (cn1.id, cn1.name) in form.gw_common_names.choices
         assert (cn2.id, cn2.name) in form.gw_common_names.choices
         assert (cv1.id, cv1.name) in form.gw_cultivars.choices
@@ -325,37 +325,37 @@ class TestAddCultivarFormWithDB:
     def test_set_selects(self, db):
         """Selects should be set from database."""
         bn = BotanicalName()
-        cat = Category()
+        idx = Index()
         cn = CommonName()
-        db.session.add_all([bn, cat, cn])
+        db.session.add_all([bn, idx, cn])
         bn.name = 'Asclepias incarnata'
-        cat.name = 'Perennial Flower'
+        idx.name = 'Perennial Flower'
         cn.name = 'Butterfly Weed'
         db.session.commit()
         form = AddCultivarForm()
         form.set_selects()
         assert (bn.id, bn.name) in form.botanical_name.choices
-        assert (cat.id, cat.name) in form.categories.choices
+        assert (idx.id, idx.name) in form.indexes.choices
         assert (cn.id, cn.name) in form.common_name.choices
 
-    def test_validate_categories(self, db):
-        """Raise validation error if any categories not in common name."""
+    def test_validate_indexes(self, db):
+        """Raise validation error if any indexes not in common name."""
         cn = CommonName()
-        cat1 = Category()
-        cat2 = Category()
-        db.session.add_all([cn, cat1, cat2])
+        idx1 = Index()
+        idx2 = Index()
+        db.session.add_all([cn, idx1, idx2])
         cn.name = 'Foxglove'
-        cat1.name = 'Perennial Flower'
-        cat2.name = 'Rock'
-        cn.categories.append(cat1)
+        idx1.name = 'Perennial Flower'
+        idx2.name = 'Rock'
+        cn.indexes.append(idx1)
         db.session.commit()
         form = AddCultivarForm()
         form.common_name.data = cn.id
-        form.categories.data = [cat1.id]
-        form.validate_categories(form.categories)
-        form.categories.data = [cat1.id, cat2.id]
+        form.indexes.data = [idx1.id]
+        form.validate_indexes(form.indexes)
+        form.indexes.data = [idx1.id, idx2.id]
         with pytest.raises(ValidationError):
-            form.validate_categories(form.categories)
+            form.validate_indexes(form.indexes)
 
     def test_validate_name(self, db):
         """Raise error if name is already in the database."""
@@ -448,15 +448,15 @@ class TestEditCommonNameFormWithDB:
     """Test custom methods of EditCommonNameForm."""
     def test_set_selects(self, db):
         """Set selects with data from the db."""
-        cat1 = Category()
-        cat2 = Category()
+        idx1 = Index()
+        idx2 = Index()
         cn1 = CommonName()
         cn2 = CommonName()
         cv1 = Cultivar()
         cv2 = Cultivar()
-        db.session.add_all([cat1, cat2, cn1, cn2, cv1, cv2])
-        cat1.name = 'Annual Flower'.title()
-        cat2.name = 'Perennial Flower'.title()
+        db.session.add_all([idx1, idx2, cn1, cn2, cv1, cv2])
+        idx1.name = 'Annual Flower'.title()
+        idx2.name = 'Perennial Flower'.title()
         cn1.name = 'Foxglove'
         cn2.name = 'Butterfly Weed'
         cv1.name = 'Foxy'
@@ -464,8 +464,8 @@ class TestEditCommonNameFormWithDB:
         db.session.commit()
         form = EditCommonNameForm()
         form.set_selects()
-        assert (cat1.id, cat1.name) in form.categories.choices
-        assert (cat2.id, cat2.name) in form.categories.choices
+        assert (idx1.id, idx1.name) in form.indexes.choices
+        assert (idx2.id, idx2.name) in form.indexes.choices
         assert (cn1.id, cn1.name) in form.gw_common_names.choices
         assert (cn2.id, cn2.name) in form.gw_common_names.choices
         assert (cv1.id, cv1.name) in form.gw_cultivars.choices
@@ -474,19 +474,19 @@ class TestEditCommonNameFormWithDB:
         assert (cn2.id, cn2.name) in form.parent_cn.choices
 
 
-class TestEditCategoryFormWithDB:
-    """Test custom methods of EditCategoryForm."""
+class TestEditIndexFormWithDB:
+    """Test custom methods of EditIndexForm."""
     def test_populate(self, db):
-        """Populate form from a Category object."""
-        category = Category()
-        db.session.add(category)
-        category.name = 'Annual Flowers'
-        category.description = 'Not really built to last.'
+        """Populate form from a Index object."""
+        index = Index()
+        db.session.add(index)
+        index.name = 'Annual Flowers'
+        index.description = 'Not really built to last.'
         db.session.commit()
-        form = EditCategoryForm()
-        form.populate(category)
-        assert form.category.data == category.name
-        assert form.description.data == category.description
+        form = EditIndexForm()
+        form.populate(index)
+        assert form.index.data == index.name
+        assert form.description.data == index.description
 
 
 class TestEditCultivarFormWithDB:
@@ -495,33 +495,33 @@ class TestEditCultivarFormWithDB:
         """Set selects with values loaded from database."""
         bn = BotanicalName()
         cn = CommonName()
-        cat = Category()
-        db.session.add_all([bn, cn, cat])
+        idx = Index()
+        db.session.add_all([bn, cn, idx])
         bn.name = 'Digitalis purpurea'
         cn.name = 'Foxglove'
-        cat.name = 'Foxy'
+        idx.name = 'Foxy'
         db.session.commit()
         form = EditCultivarForm()
         form.set_selects()
         assert (bn.id, bn.name) in form.botanical_name.choices
         assert (cn.id, cn.name) in form.common_name.choices
-        assert (cat.id, cat.name) in form.categories.choices
+        assert (idx.id, idx.name) in form.indexes.choices
 
-    def test_validate_categories(self, db):
-        """Raise ValidationError if categories not in selected CommonName."""
-        cat1 = Category(name='Perennial Flower')
-        cat2 = Category(name='Annual Flower')
+    def test_validate_indexes(self, db):
+        """Raise ValidationError if indexes not in selected CommonName."""
+        idx1 = Index(name='Perennial Flower')
+        idx2 = Index(name='Annual Flower')
         cn = CommonName(name='Foxglove')
-        db.session.add_all([cat1, cat2, cn])
-        cn.categories.append(cat1)
+        db.session.add_all([idx1, idx2, cn])
+        cn.indexes.append(idx1)
         db.session.commit()
         form = EditCultivarForm()
         form.common_name.data = cn.id
-        form.categories.data = [cat1.id]
-        form.validate_categories(form.categories)
-        form.categories.data.append(cat2.id)
+        form.indexes.data = [idx1.id]
+        form.validate_indexes(form.indexes)
+        form.indexes.data.append(idx2.id)
         with pytest.raises(ValidationError):
-            form.validate_categories(form.categories)
+            form.validate_indexes(form.indexes)
 
 
 class TestEditPacketFormWithDB:
@@ -584,23 +584,23 @@ class TestSelectBotanicalFormWithDB:
         assert (bn3.id, bn3.name) in form.botanical_name.choices
 
 
-class TestSelectCategoryFormWithDB:
-    """Test custom methods of SelectCategoryForm."""
-    def test_set_categories(self, db):
-        """Load all categories from database into select field."""
-        cat1 = Category()
-        cat2 = Category()
-        cat3 = Category()
-        db.session.add_all([cat1, cat2, cat3])
-        cat1.name = 'Perennial Flowers'
-        cat2.name = 'Annual Flowers'
-        cat3.name = 'Vegetables'
+class TestSelectIndexFormWithDB:
+    """Test custom methods of SelectIndexForm."""
+    def test_set_indexes(self, db):
+        """Load all indexes from database into select field."""
+        idx1 = Index()
+        idx2 = Index()
+        idx3 = Index()
+        db.session.add_all([idx1, idx2, idx3])
+        idx1.name = 'Perennial Flowers'
+        idx2.name = 'Annual Flowers'
+        idx3.name = 'Vegetables'
         db.session.commit()
-        form = SelectCategoryForm()
-        form.set_category()
-        assert (cat1.id, cat1.name) in form.category.choices
-        assert (cat2.id, cat2.name) in form.category.choices
-        assert (cat3.id, cat3.name) in form.category.choices
+        form = SelectIndexForm()
+        form.set_index()
+        assert (idx1.id, idx1.name) in form.index.choices
+        assert (idx2.id, idx2.name) in form.index.choices
+        assert (idx3.id, idx3.name) in form.index.choices
 
 
 class TestSelectCommonNameFormWithDB:

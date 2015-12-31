@@ -38,7 +38,7 @@ from . import seeds
 from ..lastcommit import LastCommit
 from .models import (
     BotanicalName,
-    Category,
+    Index,
     CommonName,
     Image,
     Packet,
@@ -49,26 +49,26 @@ from .models import (
 )
 from .forms import (
     AddBotanicalNameForm,
-    AddCategoryForm,
+    AddIndexForm,
     AddCommonNameForm,
     AddPacketForm,
     AddRedirectForm,
     AddCultivarForm,
     AddSeriesForm,
     EditBotanicalNameForm,
-    EditCategoryForm,
+    EditIndexForm,
     EditCommonNameForm,
     EditPacketForm,
     EditCultivarForm,
     EditSeriesForm,
     RemoveBotanicalNameForm,
-    RemoveCategoryForm,
+    RemoveIndexForm,
     RemoveCommonNameForm,
     RemovePacketForm,
     RemoveSeriesForm,
     RemoveCultivarForm,
     SelectBotanicalNameForm,
-    SelectCategoryForm,
+    SelectIndexForm,
     SelectCommonNameForm,
     SelectPacketForm,
     SelectCultivarForm,
@@ -129,17 +129,17 @@ def make_permissions_available():  # pragma: no cover
 
 
 @seeds.context_processor
-def make_categories_available():  # pragma: no cover
-    """Make categories available to Jinja templates.
+def make_indexes_available():  # pragma: no cover
+    """Make indexes available to Jinja templates.
 
     Returns:
-        dict: A list of all Category objects loaded from the database.
+        dict: A list of all Index objects loaded from the database.
     """
     if not current_app.config.get('TESTING'):
-        categories = Category.query.all()
+        indexes = Index.query.all()
     else:
-        categories = None
-    return dict(categories=categories)
+        indexes = None
+    return dict(indexes=indexes)
 
 
 @seeds.route('/add_botanical_name', methods=['GET', 'POST'])
@@ -165,7 +165,7 @@ def add_botanical_name():
         return redirect(url_for('seeds.{0}'.format(form.next_page.data)))
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
-        (url_for('seeds.add_category'), 'Add Category'),
+        (url_for('seeds.add_index'), 'Add Index'),
         (url_for('seeds.add_common_name'), 'Add Common Name'),
         (url_for('seeds.add_botanical_name'), 'Add Botanical Name')
     )
@@ -174,29 +174,29 @@ def add_botanical_name():
                            form=form)
 
 
-@seeds.route('/add_category', methods=['GET', 'POST'])
+@seeds.route('/add_index', methods=['GET', 'POST'])
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
-def add_category():
-    """Handle web interface for adding Category objects to the database."""
-    form = AddCategoryForm()
+def add_index():
+    """Handle web interface for adding Index objects to the database."""
+    form = AddIndexForm()
     if form.validate_on_submit():
-        category = Category()
-        db.session.add(category)
-        category.name = dbify(form.category.data)
+        index = Index()
+        db.session.add(index)
+        index.name = dbify(form.index.data)
         if form.description.data:
-            category.description = form.description.data
+            index.description = form.description.data
             flash('Description for \'{0}\' set to: {1}'
-                  .format(category.name, category.description))
+                  .format(index.name, index.description))
         db.session.commit()
-        flash('New category \'{0}\' has been added to the database.'.
-              format(category.name))
+        flash('New index \'{0}\' has been added to the database.'.
+              format(index.name))
         return redirect(url_for('seeds.add_common_name'))
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
-        (url_for('seeds.add_category'), 'Add Category')
+        (url_for('seeds.add_index'), 'Add Index')
     )
-    return render_template('seeds/add_category.html', crumbs=crumbs, form=form)
+    return render_template('seeds/add_index.html', crumbs=crumbs, form=form)
 
 
 @seeds.route('/add_common_name', methods=['GET', 'POST'])
@@ -210,11 +210,11 @@ def add_common_name():
         cn = CommonName()
         db.session.add(cn)
         cn.name = dbify(form.name.data)
-        for cat_id in form.categories.data:
-            category = Category.query.get(cat_id)
-            cn.categories.append(category)
-            flash('The common name \'{0}\' has been added to the category '
-                  '\'{1}\'.'.format(cn.name, category.name))
+        for idx_id in form.indexes.data:
+            index = Index.query.get(idx_id)
+            cn.indexes.append(index)
+            flash('The common name \'{0}\' has been added to the index '
+                  '\'{1}\'.'.format(cn.name, index.name))
         if form.description.data:
             cn.description = form.description.data
             flash('Description for \'{0}\' set to: {1}'
@@ -250,11 +250,11 @@ def add_common_name():
                   .format(cn.name, cn.parent.name))
         db.session.commit()
         flash('The common name \'{0}\' has been added to the database.'.
-              format(cn.name, category.plural))
+              format(cn.name, index.plural))
         return redirect(url_for('seeds.{0}'.format(form.next_page.data)))
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
-        (url_for('seeds.add_category'), 'Add Category'),
+        (url_for('seeds.add_index'), 'Add Index'),
         (url_for('seeds.add_common_name'), 'Add Common Name')
     )
     return render_template('seeds/add_common_name.html', crumbs=crumbs,
@@ -297,7 +297,7 @@ def add_packet(cv_id=None):
             return redirect(url_for('seeds.manage'))
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
-        (url_for('seeds.add_category'), 'Add Category'),
+        (url_for('seeds.add_index'), 'Add Index'),
         (url_for('seeds.add_common_name'), 'Add Common Name'),
         (url_for('seeds.add_botanical_name'), 'Add Botanical Name'),
         (url_for('seeds.add_series'), 'Add Series'),
@@ -366,17 +366,17 @@ def add_cultivar():
                 .get(form.botanical_name.data)
             flash('Botanical name for \'{0}\' set to: {1}'
                   .format(cv.fullname, cv.botanical_name.name))
-        if form.categories.data:
-            for cat_id in form.categories.data:
-                cat = Category.query.get(cat_id)
-                flash('\'{0}\' added to categories for {1}.'.
-                      format(cat.name, form.name.data))
-                cv.categories.append(cat)
+        if form.indexes.data:
+            for idx_id in form.indexes.data:
+                idx = Index.query.get(idx_id)
+                flash('\'{0}\' added to indexes for {1}.'.
+                      format(idx.name, form.name.data))
+                cv.indexes.append(idx)
         else:
-            flash('No categories specified, will use categories from common '
+            flash('No indexes specified, will use indexes from common '
                   ' name \'{0}\''.format(cv.common_name.name))
-            for cat in cv.common_name.categories:
-                cv.categories.append(cat)
+            for idx in cv.common_name.indexes:
+                cv.indexes.append(idx)
         if form.gw_common_names.data:
             for cn_id in form.gw_common_names.data:
                 gw_cn = CommonName.query.get(cn_id)
@@ -427,7 +427,7 @@ def add_cultivar():
         return redirect(url_for('seeds.add_packet', cv_id=cv.id))
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
-        (url_for('seeds.add_category'), 'Add Category'),
+        (url_for('seeds.add_index'), 'Add Index'),
         (url_for('seeds.add_common_name'), 'Add Common Name'),
         (url_for('seeds.add_botanical_name'), 'Add Botanical Name'),
         (url_for('seeds.add_series'), 'Add Series'),
@@ -455,7 +455,7 @@ def add_series():
         return redirect(url_for('seeds.add_cultivar'))
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
-        (url_for('seeds.add_category'), 'Add Category'),
+        (url_for('seeds.add_index'), 'Add Index'),
         (url_for('seeds.add_common_name'), 'Add Common Name'),
         (url_for('seeds.add_botanical_name'), 'Add Botanical Name'),
         (url_for('seeds.add_series'), 'Add Series')
@@ -463,37 +463,37 @@ def add_series():
     return render_template('seeds/add_series.html', crumbs=crumbs, form=form)
 
 
-@seeds.route('/<cat_slug>')
-def category(cat_slug=None):
-    """Display a category."""
-    category = Category.query.filter_by(slug=cat_slug).first()
-    if category is not None:
+@seeds.route('/<idx_slug>')
+def index_page(idx_slug=None):
+    """Display an index."""
+    index = Index.query.filter_by(slug=idx_slug).first()
+    if index is not None:
         crumbs = make_breadcrumbs(
             (url_for('seeds.index'), 'All Seeds'),
-            (url_for('seeds.category', cat_slug=category.slug),
-             category.header)
+            (url_for('seeds.index_page', idx_slug=index.slug),
+             index.header)
         )
-        return render_template('seeds/category.html',
+        return render_template('seeds/indexes.html',
                                crumbs=crumbs,
-                               category=category)
+                               index=index)
     else:
         abort(404)
 
 
-@seeds.route('/<cat_slug>/<cn_slug>')
-def common_name(cat_slug=None, cn_slug=None):
+@seeds.route('/<idx_slug>/<cn_slug>')
+def common_name(idx_slug=None, cn_slug=None):
     """Display page for a common name."""
-    cat = Category.query.filter_by(slug=cat_slug).first()
+    idx = Index.query.filter_by(slug=idx_slug).first()
     cn = CommonName.query.filter_by(slug=cn_slug).first()
-    if cn is not None and cat is not None:
+    if cn is not None and idx is not None:
         crumbs = make_breadcrumbs(
             (url_for('seeds.index'), 'All Seeds'),
-            (url_for('seeds.category', cat_slug=cat_slug), cat.header),
-            (url_for('seeds.common_name', cat_slug=cat_slug, cn_slug=cn_slug),
+            (url_for('seeds.index_page', idx_slug=idx_slug), idx.header),
+            (url_for('seeds.common_name', idx_slug=idx_slug, cn_slug=cn_slug),
              cn.name)
         )
         return render_template('seeds/common_name.html',
-                               cat=cat,
+                               idx=idx,
                                cn=cn,
                                crumbs=crumbs)
     else:
@@ -569,7 +569,7 @@ def edit_botanical_name(bn_id=None):
     form.populate(bn)
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
-        (url_for('seeds.edit_category'), 'Edit Category'),
+        (url_for('seeds.edit_index'), 'Edit Index'),
         (url_for('seeds.edit_common_name'), 'Edit Common Name'),
         (url_for('seeds.edit_botanical_name'),
          'Edit Botanical Name')
@@ -579,39 +579,39 @@ def edit_botanical_name(bn_id=None):
                            form=form)
 
 
-@seeds.route('/edit_category', methods=['GET', 'POST'])
-@seeds.route('/edit_category/<cat_id>', methods=['GET', 'POST'])
+@seeds.route('/edit_index', methods=['GET', 'POST'])
+@seeds.route('/edit_index/<idx_id>', methods=['GET', 'POST'])
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
-def edit_category(cat_id=None):
-    if cat_id is None:
-        return redirect(url_for('seeds.select_category',
-                                dest='seeds.edit_category'))
-    category = Category.query.get(cat_id)
-    if category is None:
-        return redirect(url_for('seeds.select_category',
-                        dest='seeds.edit_category'))
-    form = EditCategoryForm()
+def edit_index(idx_id=None):
+    if idx_id is None:
+        return redirect(url_for('seeds.select_index',
+                                dest='seeds.edit_index'))
+    index = Index.query.get(idx_id)
+    if index is None:
+        return redirect(url_for('seeds.select_index',
+                        dest='seeds.edit_index'))
+    form = EditIndexForm()
     if form.validate_on_submit():
         edited = False
-        form_cat = dbify(form.category.data)
-        if form_cat != category.name:
-            cat2 = Category.query.filter_by(name=form_cat).first()
-            if cat2:
-                cat2_url = url_for('seeds.edit_category', cat_id=cat2.id)
-                flash(Markup('Error: Category \'{0}\' already exists. <a '
+        form_idx = dbify(form.index.data)
+        if form_idx != index.name:
+            idx2 = Index.query.filter_by(name=form_idx).first()
+            if idx2:
+                idx2_url = url_for('seeds.edit_index', idx_id=idx2.id)
+                flash(Markup('Error: Index \'{0}\' already exists. <a '
                              'href="{1}">Click here</a> if you wish to edit '
-                             'it.'.format(cat2.name, cat2_url)))
-                return redirect(url_for('seeds.edit_category', cat_id=cat_id))
+                             'it.'.format(idx2.name, idx2_url)))
+                return redirect(url_for('seeds.edit_index', idx_id=idx_id))
             else:
                 edited = True
-                flash('Category changed from \'{0}\' to \'{1}\'.'
-                      .format(category.name, form_cat))
-                old_slug = category.slug
-                category.name = form_cat
-                new_slug = category.slug
-                old_path = url_for('seeds.category', cat_slug=old_slug)
-                new_path = url_for('seeds.category', cat_slug=new_slug)
+                flash('Index changed from \'{0}\' to \'{1}\'.'
+                      .format(index.name, form_idx))
+                old_slug = index.slug
+                index.name = form_idx
+                new_slug = index.slug
+                old_path = url_for('seeds.index_page', idx_slug=old_slug)
+                new_path = url_for('seeds.index_page', idx_slug=new_slug)
                 flash(redirect_warning(
                     old_path,
                     '<a href="{0}" target="_blank">{1}</a>'
@@ -621,12 +621,12 @@ def edit_category(cat_id=None):
                                     status_code=301),
                             new_path)
                 ))
-                for cn in category.common_names:
+                for cn in index.common_names:
                     old_path = url_for('seeds.common_name',
-                                       cat_slug=old_slug,
+                                       idx_slug=old_slug,
                                        cn_slug=cn.slug)
                     new_path = url_for('seeds.common_name',
-                                       cat_slug=new_slug,
+                                       idx_slug=new_slug,
                                        cn_slug=cn.slug)
                     flash(redirect_warning(
                         old_path,
@@ -637,13 +637,13 @@ def edit_category(cat_id=None):
                                         status_code=301),
                                 new_path)
                     ))
-                for cv in category.cultivars:
+                for cv in index.cultivars:
                     old_path = url_for('seeds.cultivar',
-                                       cat_slug=old_slug,
+                                       idx_slug=old_slug,
                                        cn_slug=cv.common_name.slug,
                                        cv_slug=cv.slug)
                     new_path = url_for('seeds.cultivar',
-                                       cat_slug=new_slug,
+                                       idx_slug=new_slug,
                                        cn_slug=cv.common_name.slug,
                                        cv_slug=cv.slug)
                     flash(redirect_warning(
@@ -655,28 +655,28 @@ def edit_category(cat_id=None):
                                         status_code=301),
                                 new_path)
                     ))
-        if form.description.data != category.description:
+        if form.description.data != index.description:
             edited = True
             if form.description.data:
-                category.description = form.description.data
+                index.description = form.description.data
                 flash('Description for \'{0}\' changed to: {1}'
-                      .format(category.name, category.description))
+                      .format(index.name, index.description))
             else:
-                category.description = None
+                index.description = None
                 flash('Description for \'{0}\' has been cleared.'
-                      .format(category.name))
+                      .format(index.name))
         if edited:
             db.session.commit()
             return redirect(url_for('seeds.manage'))
         else:
-            flash('No changes made to category: {0}'.format(category.name))
-            return redirect(url_for('seeds.edit_category', cat_id=cat_id))
-    form.populate(category)
+            flash('No changes made to index: {0}'.format(index.name))
+            return redirect(url_for('seeds.edit_index', idx_id=idx_id))
+    form.populate(index)
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
-        (url_for('seeds.edit_category'), 'Edit Category')
+        (url_for('seeds.edit_index'), 'Edit Index')
     )
-    return render_template('seeds/edit_category.html',
+    return render_template('seeds/edit_index.html',
                            crumbs=crumbs,
                            form=form)
 
@@ -731,60 +731,60 @@ def edit_common_name(cn_id=None):
                       format(cn.name, form_name))
                 cn.name = form_name
         new_cn_slug = cn.slug
-        cats_removed = []
-        for cat in list(cn.categories):
-            if cat.id not in form.categories.data:
-                cats_removed.append(cat)
+        idxes_removed = []
+        for idx in list(cn.indexes):
+            if idx.id not in form.indexes.data:
+                idxes_removed.append(idx)
                 edited = True
-                flash('\'{0}\' removed from categories associated with {1}.'.
-                      format(cat.name, cn.name))
-                cn.categories.remove(cat)
+                flash('\'{0}\' removed from indexes associated with {1}.'.
+                      format(idx.name, cn.name))
+                cn.indexes.remove(idx)
                 for cv in cn.cultivars:
-                    if cat in cv.categories:
-                        cv.categories.remove(cat)
+                    if idx in cv.indexes:
+                        cv.indexes.remove(idx)
                         flash(Markup(
-                            'Warning: the category \'{0}\' has also been '
+                            'Warning: the index \'{0}\' has also been '
                             'removed from the cultivar \'{1}\'. You may wish '
                             'to <a href="{2}" target="_blank">edit {1}</a> to '
-                            'ensure it is in the correct categories.'
-                            .format(cat.name,
+                            'ensure it is in the correct indexes.'
+                            .format(idx.name,
                                     cv.fullname,
                                     url_for('seeds.edit_cultivar',
                                             cv_id=cv.id))
                         ))
-        cat_ids = [cat.id for cat in cn.categories]
-        cats_added = []
-        for cat_id in form.categories.data:
-            if cat_id not in cat_ids:
+        idx_ids = [idx.id for idx in cn.indexes]
+        idxes_added = []
+        for idx_id in form.indexes.data:
+            if idx_id not in idx_ids:
                 edited = True
-                cat = Category.query.get(cat_id)
-                flash('\'{0}\' added to categories associated with {1}.'
-                      .format(cat.name, cn.name))
-                cn.categories.append(cat)
-                cats_added.append(cat)
+                idx = Index.query.get(idx_id)
+                flash('\'{0}\' added to indexes associated with {1}.'
+                      .format(idx.name, cn.name))
+                cn.indexes.append(idx)
+                idxes_added.append(idx)
                 for cv in cn.cultivars:
-                    if not cv.categories:
-                        cv.categories.append(cat)
+                    if not cv.indexes:
+                        cv.indexes.append(idx)
                         flash(Markup(
-                            'Warning: the cultivar \'{0}\' had no categories '
+                            'Warning: the cultivar \'{0}\' had no indexes '
                             'associated with it, so \'{1}\' has been added to '
                             'it to ensure it is not orphaned. You may wish to '
                             '<a href="{2}" target="_blank">edit {0}</a> to '
-                            'ensure it is in the correct categories.'
+                            'ensure it is in the correct indexes.'
                             .format(cv.fullname,
-                                    cat.name,
+                                    idx.name,
                                     url_for('seeds.edit_cultivar',
                                             cv_id=cv.id))
                         ))
-        if cats_removed:
-            for cat in cats_removed:
+        if idxes_removed:
+            for idx in idxes_removed:
                 urllist = []
                 old_path = url_for('seeds.common_name',
-                                   cat_slug=cat.slug,
+                                   idx_slug=idx.slug,
                                    cn_slug=old_cn_slug)
-                for cn_cat in cn.categories:
+                for cn_idx in cn.indexes:
                     new_path = url_for('seeds.common_name',
-                                       cat_slug=cn_cat.slug,
+                                       idx_slug=cn_idx.slug,
                                        cn_slug=new_cn_slug)
                     urllist.append('<a href="{0}" target="_blank">{1}</a>'
                                    .format(url_for('seeds.add_redirect',
@@ -795,13 +795,13 @@ def edit_common_name(cn_id=None):
                 flash(redirect_warning(old_path, list_to_or_string(urllist)))
                 for cv in cn.cultivars:
                     old_path = url_for('seeds.cultivar',
-                                       cat_slug=cat.slug,
+                                       idx_slug=idx.slug,
                                        cn_slug=old_cn_slug,
                                        cv_slug=cv.slug)
                     urllist = []
-                    for cn_cat in cn.categories:
+                    for cn_idx in cn.indexes:
                         new_path = url_for('seeds.cultivar',
-                                           cat_slug=cn_cat.slug,
+                                           idx_slug=cn_idx.slug,
                                            cn_slug=new_cn_slug,
                                            cv_slug=cv.slug)
                         urllist.append('<a href="{0}" target="_blank">{1}</a>'
@@ -813,13 +813,13 @@ def edit_common_name(cn_id=None):
                     flash(redirect_warning(old_path,
                                            list_to_or_string(urllist)))
         if new_cn_slug != old_cn_slug:
-            for cat in cn.categories:
-                if cat not in cats_added:
+            for idx in cn.indexes:
+                if idx not in idxes_added:
                     old_path = url_for('seeds.common_name',
-                                       cat_slug=cat.slug,
+                                       idx_slug=idx.slug,
                                        cn_slug=old_cn_slug)
                     new_path = url_for('seeds.common_name',
-                                       cat_slug=cat.slug,
+                                       idx_slug=idx.slug,
                                        cn_slug=new_cn_slug)
                     flash(redirect_warning(
                         old_path,
@@ -832,11 +832,11 @@ def edit_common_name(cn_id=None):
                     ))
                     for cv in cn.cultivars:
                         old_path = url_for('seeds.cultivar',
-                                           cat_slug=cat.slug,
+                                           idx_slug=idx.slug,
                                            cn_slug=old_cn_slug,
                                            cv_slug=cv.slug)
                         new_path = url_for('seeds.cultivar',
-                                           cat_slug=cat.slug,
+                                           idx_slug=idx.slug,
                                            cn_slug=new_cn_slug,
                                            cv_slug=cv.slug)
                         flash(redirect_warning(
@@ -938,7 +938,7 @@ def edit_common_name(cn_id=None):
     form.populate(cn)
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
-        (url_for('seeds.edit_category'), 'Edit Category'),
+        (url_for('seeds.edit_index'), 'Edit Index'),
         (url_for('seeds.edit_common_name'), 'Edit Common Name')
     )
     return render_template('seeds/edit_common_name.html',
@@ -1004,7 +1004,7 @@ def edit_packet(pkt_id=None):
     form.populate(packet)
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
-        (url_for('seeds.edit_category'), 'Edit Category'),
+        (url_for('seeds.edit_index'), 'Edit Index'),
         (url_for('seeds.edit_common_name'), 'Edit Common Name'),
         (url_for('seeds.edit_botanical_name'), 'Edit Botanical Name'),
         (url_for('seeds.edit_series'), 'Edit Series'),
@@ -1080,33 +1080,33 @@ def edit_cultivar(cv_id=None):
             cv.botanical_name = None
             flash('Botanical name for \'{0}\' has been removed.'
                   .format(cv.fullname))
-        cats_removed = []
-        for cat in list(cv.categories):
-            if cat.id not in form.categories.data:
+        idxes_removed = []
+        for idx in list(cv.indexes):
+            if idx.id not in form.indexes.data:
                 edited = True
-                flash('Removed category \'{0}\' from: {1}'.
-                      format(cat.name, cv.fullname))
-                cv.categories.remove(cat)
-                cats_removed.append(cat)
-        cats_added = []
-        for cat_id in form.categories.data:
-            if cat_id not in [cat.id for cat in cv.categories]:
+                flash('Removed index \'{0}\' from: {1}'.
+                      format(idx.name, cv.fullname))
+                cv.indexes.remove(idx)
+                idxes_removed.append(idx)
+        idxes_added = []
+        for idx_id in form.indexes.data:
+            if idx_id not in [idx.id for idx in cv.indexes]:
                 edited = True
-                cat = Category.query.get(cat_id)
-                flash('Added category \'{0}\' to: {1}'.
-                      format(cat.name, cv.fullname))
-                cv.categories.append(cat)
-                cats_added.append(cat)
-        if cats_removed:
-            for cat in cats_removed:
+                idx = Index.query.get(idx_id)
+                flash('Added index \'{0}\' to: {1}'.
+                      format(idx.name, cv.fullname))
+                cv.indexes.append(idx)
+                idxes_added.append(idx)
+        if idxes_removed:
+            for idx in idxes_removed:
                 old_path = url_for('seeds.cultivar',
-                                   cat_slug=cat.slug,
+                                   idx_slug=idx.slug,
                                    cn_slug=old_cn_slug,
                                    cv_slug=old_cv_slug)
                 urllist = []
-                for ct in cv.categories:
+                for ct in cv.indexes:
                     new_path = url_for('seeds.cultivar',
-                                       cat_slug=ct.slug,
+                                       idx_slug=ct.slug,
                                        cn_slug=new_cn_slug,
                                        cv_slug=new_cv_slug)
                     urllist.append('<a href="{0}" target="_blank">{1}</a>'
@@ -1117,14 +1117,14 @@ def edit_cultivar(cv_id=None):
                                            new_path))
                 flash(redirect_warning(old_path, list_to_or_string(urllist)))
         if old_cv_slug != new_cv_slug or old_cn_slug != new_cn_slug:
-            for cat in cv.categories:
-                if cat not in cats_added:
+            for idx in cv.indexes:
+                if idx not in idxes_added:
                     old_path = url_for('seeds.cultivar',
-                                       cat_slug=cat.slug,
+                                       idx_slug=idx.slug,
                                        cn_slug=old_cn_slug,
                                        cv_slug=old_cv_slug)
                     new_path = url_for('seeds.cultivar',
-                                       cat_slug=cat.slug,
+                                       idx_slug=idx.slug,
                                        cn_slug=new_cn_slug,
                                        cv_slug=new_cv_slug)
                     flash(redirect_warning(
@@ -1268,7 +1268,7 @@ def edit_cultivar(cv_id=None):
     form.populate(cv)
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
-        (url_for('seeds.edit_category'), 'Edit Category'),
+        (url_for('seeds.edit_index'), 'Edit Index'),
         (url_for('seeds.edit_common_name'), 'Edit Common Name'),
         (url_for('seeds.edit_botanical_name'), 'Edit Botanical Name'),
         (url_for('seeds.edit_series'), 'Edit Series'),
@@ -1334,7 +1334,7 @@ def edit_series(series_id=None):
     form.populate(series)
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
-        (url_for('seeds.edit_category'), 'Edit Category'),
+        (url_for('seeds.edit_index'), 'Edit Index'),
         (url_for('seeds.edit_common_name'), 'Edit Common Name'),
         (url_for('seeds.edit_botanical_name'), 'Edit Botanical Name'),
         (url_for('seeds.edit_series'), 'Edit Series')
@@ -1391,8 +1391,8 @@ def flip_in_stock(cv_id=None):
 @seeds.route('/')
 def index():
     """Index page for seeds section."""
-    categories = Category.query.all()
-    return render_template('seeds/index.html', categories=categories)
+    indexes = Index.query.all()
+    return render_template('seeds/index.html', indexes=indexes)
 
 
 @seeds.route('/manage')
@@ -1438,7 +1438,7 @@ def remove_botanical_name(bn_id=None):
                                     bn_id=bn_id))
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
-        (url_for('seeds.remove_category'), 'Remove Category'),
+        (url_for('seeds.remove_index'), 'Remove Index'),
         (url_for('seeds.remove_common_name'), 'Remove Common Name'),
         (url_for('seeds.remove_botanical_name'), 'Remove Botanical Name')
     )
@@ -1448,33 +1448,33 @@ def remove_botanical_name(bn_id=None):
                            form=form)
 
 
-@seeds.route('/remove_category', methods=['GET', 'POST'])
-@seeds.route('/remove_category/<cat_id>', methods=['GET', 'POST'])
+@seeds.route('/remove_index', methods=['GET', 'POST'])
+@seeds.route('/remove_index/<idx_id>', methods=['GET', 'POST'])
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
-def remove_category(cat_id=None):
-    """Remove a category from the database."""
-    if cat_id is None:
-        return redirect(url_for('seeds.select_category',
-                                dest='seeds.remove_category'))
-    category = Category.query.get(cat_id)
-    if category is None:
-        return redirect(url_for('seeds.select_category',
-                                dest='seeds.remove_category'))
-    form = RemoveCategoryForm()
-    form.set_move_to(cat_id)
+def remove_index(idx_id=None):
+    """Remove an index from the database."""
+    if idx_id is None:
+        return redirect(url_for('seeds.select_index',
+                                dest='seeds.remove_index'))
+    index = Index.query.get(idx_id)
+    if index is None:
+        return redirect(url_for('seeds.select_index',
+                                dest='seeds.remove_index'))
+    form = RemoveIndexForm()
+    form.set_move_to(idx_id)
     if form.validate_on_submit():
         if form.verify_removal.data:
-            old_cat_slug = category.slug
-            cat2 = Category.query.get(form.move_to.data)
-            new_cat_slug = cat2.slug
+            old_idx_slug = index.slug
+            idx2 = Index.query.get(form.move_to.data)
+            new_idx_slug = idx2.slug
             flash('Common names and seeds formerly associated with \'{0}\' '
                   'are now associated with \'{1}\'.'
-                  .format(category.name, cat2.name))
-            old_path = url_for('seeds.category',
-                               cat_slug=old_cat_slug)
-            new_path = url_for('seeds.category',
-                               cat_slug=new_cat_slug)
+                  .format(index.name, idx2.name))
+            old_path = url_for('seeds.index_page',
+                               idx_slug=old_idx_slug)
+            new_path = url_for('seeds.index_page',
+                               idx_slug=new_idx_slug)
             flash(redirect_warning(
                 old_path,
                 '<a href="{0}">{1}</a>'
@@ -1484,14 +1484,14 @@ def remove_category(cat_id=None):
                                 status_code=301),
                         new_path)
             ))
-            for cn in category.common_names:
-                if cn not in cat2.common_names:
-                    cat2.common_names.append(cn)
+            for cn in index.common_names:
+                if cn not in idx2.common_names:
+                    idx2.common_names.append(cn)
                 old_path = url_for('seeds.common_name',
-                                   cat_slug=old_cat_slug,
+                                   idx_slug=old_idx_slug,
                                    cn_slug=cn.slug)
                 new_path = url_for('seeds.common_name',
-                                   cat_slug=new_cat_slug,
+                                   idx_slug=new_idx_slug,
                                    cn_slug=cn.slug)
                 flash(redirect_warning(
                     old_path,
@@ -1502,15 +1502,15 @@ def remove_category(cat_id=None):
                                     status_code=302),
                             new_path)
                 ))
-            for cv in category.cultivars:
-                if cv not in cat2.cultivars:
-                    cat2.cultivars.append(cv)
+            for cv in index.cultivars:
+                if cv not in idx2.cultivars:
+                    idx2.cultivars.append(cv)
                     old_path = url_for('seeds.cultivar',
-                                       cat_slug=old_cat_slug,
+                                       idx_slug=old_idx_slug,
                                        cn_slug=cv.common_name.slug,
                                        cv_slug=cv.slug)
                     new_path = url_for('seeds.cultivar',
-                                       cat_slug=new_cat_slug,
+                                       idx_slug=new_idx_slug,
                                        cn_slug=cv.common_name.slug,
                                        cv_slug=cv.slug)
                     flash(redirect_warning(
@@ -1522,24 +1522,24 @@ def remove_category(cat_id=None):
                                         status_code=301),
                                 new_path)
                     ))
-            flash('The category \'{1}\' has been removed from the database.'.
-                  format(category.id, category.name))
-            db.session.delete(category)
+            flash('The index \'{1}\' has been removed from the database.'.
+                  format(index.id, index.name))
+            db.session.delete(index)
             db.session.commit()
             return redirect(url_for('seeds.manage'))
         else:
             flash('No changes made. Check the box labeled \'Yes\''
-                  ' if you want to remove this category.')
-            return redirect(url_for('seeds.remove_category',
-                                    cat_id=cat_id))
+                  ' if you want to remove this index.')
+            return redirect(url_for('seeds.remove_index',
+                                    idx_id=idx_id))
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
-        (url_for('seeds.remove_category'), 'Remove Category')
+        (url_for('seeds.remove_index'), 'Remove Index')
     )
-    return render_template('seeds/remove_category.html',
+    return render_template('seeds/remove_index.html',
                            crumbs=crumbs,
                            form=form,
-                           category=category)
+                           index=index)
 
 
 @seeds.route('/remove_common_name', methods=['GET', 'POST'])
@@ -1566,14 +1566,14 @@ def remove_common_name(cn_id=None):
                       'have been deleted.'.format(cn.name))
             cn2 = CommonName.query.get(form.move_to.data)
             new_cn_slug = cn2.slug
-            for cat in cn.categories:
+            for idx in cn.indexes:
                 old_path = url_for('seeds.common_name',
-                                   cat_slug=cat.slug,
+                                   idx_slug=idx.slug,
                                    cn_slug=old_cn_slug)
                 urllist = []
-                for cat2 in cn2.categories:
+                for idx2 in cn2.indexes:
                     new_path = url_for('seeds.common_name',
-                                       cat_slug=cat2.slug,
+                                       idx_slug=idx2.slug,
                                        cn_slug=new_cn_slug)
                     urllist.append('<a href="{0}" target="_blank">{1}</a>'
                                    .format(url_for('seeds.add_redirect',
@@ -1606,15 +1606,15 @@ def remove_common_name(cn_id=None):
                                            rem_url)))
                     else:
                         cn2.cultivars.append(cv)
-                        for cat in cn.categories:
+                        for idx in cn.indexes:
                             old_path = url_for('seeds.cultivar',
-                                               cat_slug=cat.slug,
+                                               idx_slug=idx.slug,
                                                cn_slug=old_cn_slug,
                                                cv_slug=cv.slug)
                             urllist = []
-                            for cat2 in cn2.categories:
+                            for idx2 in cn2.indexes:
                                 new_path = url_for('seeds.cultivar',
-                                                   cat_slug=cat2.slug,
+                                                   idx_slug=idx2.slug,
                                                    cn_slug=new_cn_slug,
                                                    cv_slug=cv.slug)
                                 urllist.append(
@@ -1638,7 +1638,7 @@ def remove_common_name(cn_id=None):
             return redirect(url_for('seeds.remove_common_name', cn_id=cn_id))
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
-        (url_for('seeds.remove_category'), 'Remove Category'),
+        (url_for('seeds.remove_index'), 'Remove Index'),
         (url_for('seeds.remove_common_name'), 'Remove Common Name')
     )
     return render_template('seeds/remove_common_name.html',
@@ -1677,7 +1677,7 @@ def remove_packet(pkt_id=None):
             return redirect(url_for('seeds.remove_packet', pkt_id=pkt_id))
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
-        (url_for('seeds.remove_category'), 'Remove Category'),
+        (url_for('seeds.remove_index'), 'Remove Index'),
         (url_for('seeds.remove_common_name'), 'Remove Common Name'),
         (url_for('seeds.remove_botanical_name'), 'Remove Botanical Name'),
         (url_for('seeds.remove_series'), 'Remove Series'),
@@ -1751,9 +1751,9 @@ def remove_cultivar(cv_id=None):
                 cv.clear_synonyms()
             flash('The cultivar \'{0}\' has been deleted. Forever. I hope '
                   'you\'re happy with yourself.'.format(cv.fullname))
-            for cat in cv.categories:
+            for idx in cv.indexes:
                 old_path = url_for('seeds.cultivar',
-                                   cat_slug=cat.slug,
+                                   idx_slug=idx.slug,
                                    cn_slug=cv.common_name.slug,
                                    cv_slug=cv.slug)
                 flash(Markup(
@@ -1771,7 +1771,7 @@ def remove_cultivar(cv_id=None):
     form.delete_images.data = True
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
-        (url_for('seeds.remove_category'), 'Remove Category'),
+        (url_for('seeds.remove_index'), 'Remove Index'),
         (url_for('seeds.remove_common_name'), 'Remove Common Name'),
         (url_for('seeds.remove_series'), 'Remove Series'),
         (url_for('seeds.remove_botanical_name'), 'Remove Botanical Name'),
@@ -1811,7 +1811,7 @@ def remove_series(series_id=None):
                                     series_id=series_id))
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
-        (url_for('seeds.remove_category'), 'Remove Category'),
+        (url_for('seeds.remove_index'), 'Remove Index'),
         (url_for('seeds.remove_common_name'), 'Remove Common Name'),
         (url_for('seeds.remove_botanical_name'), 'Remove Botanical Name'),
         (url_for('seeds.remove_series'), 'Remove Series')
@@ -1822,28 +1822,28 @@ def remove_series(series_id=None):
                            series=series)
 
 
-@seeds.route('/<cat_slug>/<cn_slug>/<cv_slug>')
-def cultivar(cat_slug=None, cn_slug=None, cv_slug=None):
+@seeds.route('/<idx_slug>/<cn_slug>/<cv_slug>')
+def cultivar(idx_slug=None, cn_slug=None, cv_slug=None):
     """Display a page for a given cultivar."""
-    cat = Category.query.filter_by(slug=cat_slug).first()
+    idx = Index.query.filter_by(slug=idx_slug).first()
     cn = CommonName.query.filter_by(slug=cn_slug).first()
     cv = Cultivar.query.filter(Cultivar.slug == cv_slug,
                                Cultivar.common_name == cn).first()
-    if (cat is not None and cn is not None and cv is not None) and \
-            (cat in cv.categories and cn is cv.common_name):
+    if (idx is not None and cn is not None and cv is not None) and \
+            (idx in cv.indexes and cn is cv.common_name):
         crumbs = make_breadcrumbs(
             (url_for('seeds.index'), 'All Seeds'),
-            (url_for('seeds.category', cat_slug=cat_slug), cat.header),
-            (url_for('seeds.common_name', cat_slug=cat_slug, cn_slug=cn_slug),
+            (url_for('seeds.index_page', idx_slug=idx_slug), idx.header),
+            (url_for('seeds.common_name', idx_slug=idx_slug, cn_slug=cn_slug),
              cn.name),
             (url_for('seeds.cultivar',
-                     cat_slug=cat_slug,
+                     idx_slug=idx_slug,
                      cn_slug=cn_slug,
                      cv_slug=cv_slug),
              cv.name)
         )
         return render_template('seeds/cultivar.html',
-                               cat_slug=cat_slug,
+                               idx_slug=idx_slug,
                                cn_slug=cn_slug,
                                crumbs=crumbs,
                                cultivar=cv)
@@ -1878,28 +1878,28 @@ def select_botanical_name():
                            form=form)
 
 
-@seeds.route('/select_category', methods=['GET', 'POST'])
+@seeds.route('/select_index', methods=['GET', 'POST'])
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
-def select_category():
-    """Select a category to load on another page.
+def select_index():
+    """Select an index to load on another page.
 
     Request Args:
-        dest (str): The route to redirect to once category is selected.
+        dest (str): The route to redirect to once index is selected.
     """
     dest = request.args.get('dest')
     if dest is None:
         flash('Error: No destination page was specified!')
         return redirect(url_for('seeds.manage'))
-    form = SelectCategoryForm()
-    form.set_category()
+    form = SelectIndexForm()
+    form.set_index()
     if form.validate_on_submit():
-        return redirect(url_for(dest, cat_id=form.category.data))
+        return redirect(url_for(dest, idx_id=form.index.data))
     crumbs = make_breadcrumbs(
         (url_for('seeds.manage'), 'Manage Seeds'),
-        (url_for('seeds.select_category', dest=dest), 'Select Category')
+        (url_for('seeds.select_index', dest=dest), 'Select Index')
     )
-    return render_template('seeds/select_category.html',
+    return render_template('seeds/select_index.html',
                            crumbs=crumbs,
                            form=form)
 
@@ -1911,7 +1911,7 @@ def select_common_name():
     """Select a common name to load on another page.
 
     Request Args:
-        dest (str): The route to redirect to once category is selected.
+        dest (str): The route to redirect to once index is selected.
     """
     dest = request.args.get('dest')
     if dest is None:

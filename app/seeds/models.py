@@ -36,21 +36,21 @@ botanical_name_synonyms = db.Table(
 )
 
 
-categories_to_cultivars = db.Table(
-    'categories_to_cultivars',
+indexes_to_cultivars = db.Table(
+    'indexes_to_cultivars',
     db.Model.metadata,
-    db.Column('categories_id', db.Integer, db.ForeignKey('categories.id')),
+    db.Column('indexes_id', db.Integer, db.ForeignKey('indexes.id')),
     db.Column('cultivars_id', db.Integer, db.ForeignKey('cultivars.id'))
 )
 
 
-common_names_to_categories = db.Table(
-    'common_names_to_categories',
+common_names_to_indexes = db.Table(
+    'common_names_to_indexes',
     db.Model.metadata,
     db.Column('common_names_id',
               db.Integer,
               db.ForeignKey('common_names.id')),
-    db.Column('categories_id', db.Integer, db.ForeignKey('categories.id'))
+    db.Column('indexes_id', db.Integer, db.ForeignKey('indexes.id'))
 )
 
 
@@ -422,38 +422,38 @@ class BotanicalName(db.Model):
                         self.synonyms.append(synonym)
 
 
-class Category(db.Model):
-    """Table for seed categories.
+class Index(db.Model):
+    """Table for seed indexes.
 
-    Categories are the first/broadest divisions we use to sort seeds. The
-    category a seed falls under is usually based on what type of plant it is
+    Indexes are the first/broadest divisions we use to sort seeds. The
+    index a seed falls under is usually based on what type of plant it is
     (herb, vegetable) or its life cycle. (perennial flower, annual flower)
 
     Attributes:
-        __tablename__ (str): Name of the table: 'categories'
+        __tablename__ (str): Name of the table: 'indexes'
         id (int): Auto-incremented ID # for use as primary key.
-        description (str): HTML description information for the category.
-        _name (str): The name for the category itself, such as 'Herb'
+        description (str): HTML description information for the index.
+        _name (str): The name for the index itself, such as 'Herb'
             or 'Perennial Flower'.
-        cultivars (relationship): Cultivars that fall under this category.
-            categories (backref): Categories belonging to a seed.
-        slug (str): URL-friendly version of the category name.
+        cultivars (relationship): Cultivars that fall under this index.
+            indexes (backref): Indexes belonging to a seed.
+        slug (str): URL-friendly version of the index name.
     """
-    __tablename__ = 'categories'
+    __tablename__ = 'indexes'
     id = db.Column(db.Integer, primary_key=True)
     description = db.Column(db.Text)
     _name = db.Column(db.String(64), unique=True)
     cultivars = db.relationship('Cultivar',
-                                secondary=categories_to_cultivars,
-                                backref='categories')
+                                secondary=indexes_to_cultivars,
+                                backref='indexes')
     slug = db.Column(db.String(64), unique=True)
 
     def __init__(self, name=None, description=None):
-        """Construct an instance of Category.
+        """Construct an instance of Index.
 
         Args:
-            name (Optional[str]): A category name.
-            description (Optional[str]): A description for this category.
+            name (Optional[str]): A index name.
+            description (Optional[str]): A description for this index.
                 This should be in raw HTML to allow for special formatting.
         """
         self.name = name
@@ -478,38 +478,38 @@ class Category(db.Model):
         return cls._name
 
     @name.setter
-    def name(self, cat_name):
-        self._name = cat_name
-        if cat_name is not None:
-            self.slug = slugify(pluralize(cat_name))
+    def name(self, idx_name):
+        self._name = idx_name
+        if idx_name is not None:
+            self.slug = slugify(pluralize(idx_name))
         else:
             self.slug = None
 
     @property
     def header(self):
-        """str: contents of ._category in a str for headers, titles, etc."""
+        """str: contents of ._index in a str for headers, titles, etc."""
         # TODO : Maybe make the string setable via config?
         return '{0} Seeds'.format(self._name)
 
     @property
     def plural(self):
-        """str: plural form of ._category."""
+        """str: plural form of ._index."""
         return pluralize(self._name)
 
 
 class CommonName(db.Model):
     """Table for common names.
 
-    A CommonName is the next subdivision below Category in how we sort seeds.
+    A CommonName is the next subdivision below Index in how we sort seeds.
     It is usually the common name for the species or group of species a seed
     belongs to.
 
     Attributes:
         __tablename__ (str): Name of the table: 'common_names'
         id (int): Auto-incremented ID # for use as primary_key.
-        categories (relationship): The categories this common name falls under.
+        indexes (relationship): The indexes this common name falls under.
             common_names (backref): The common names associated with a
-                category.
+                index.
         description (str): An optional description for the species/group
             of species with the given common name.
         gw_common_names (relationship): Common names that grow well with this
@@ -522,7 +522,7 @@ class CommonName(db.Model):
         parent (relationship): A common name this is a subcategory of. For
             example, if this common name is 'Dwarf Coleus', it would have
             'Coleus' as its parent.
-            children (backref): Common names that are subcategories of parent.
+            children (backref): Common names that are subindexes of parent.
         slug (str): The URL-friendly version of this common name.
         syn_only (bool): Whether or not this common name only exists as a
             synonym of other common names.
@@ -531,9 +531,9 @@ class CommonName(db.Model):
     """
     __tablename__ = 'common_names'
     id = db.Column(db.Integer, primary_key=True)
-    categories = db.relationship('Category',
-                                 secondary=common_names_to_categories,
-                                 backref='common_names')
+    indexes = db.relationship('Index',
+                              secondary=common_names_to_indexes,
+                              backref='common_names')
     description = db.Column(db.Text)
     gw_common_names = db.relationship(
         'CommonName',

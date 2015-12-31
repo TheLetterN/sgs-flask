@@ -8,7 +8,7 @@ from app.seeds.forms import (
     AddRedirectForm,
     AddCultivarForm,
     EditBotanicalNameForm,
-    EditCategoryForm,
+    EditIndexForm,
     EditCommonNameForm,
     EditCultivarForm,
     EditSeriesForm,
@@ -20,7 +20,7 @@ from app.seeds.forms import (
 from app.redirects import Redirect
 from app.seeds.models import (
     BotanicalName,
-    Category,
+    Index,
     CommonName,
     Cultivar,
     Series
@@ -265,17 +265,17 @@ class TestEditBotanicalNameForm:
             form.validate_synonyms(form.synonyms)
 
 
-class TestEditCategoryForm:
-    """Test custom methods of EditCategoryForm."""
+class TestEditIndexForm:
+    """Test custom methods of EditIndexForm."""
     def test_populate(self, app):
-        """Populate form from a Category object."""
-        category = Category()
-        category.name = 'Annual Flowers'
-        category.description = 'Not really built to last.'
-        form = EditCategoryForm()
-        form.populate(category)
-        assert form.category.data == category.name
-        assert form.description.data == category.description
+        """Populate form from a Index object."""
+        index = Index()
+        index.name = 'Annual Flowers'
+        index.description = 'Not really built to last.'
+        form = EditIndexForm()
+        form.populate(index)
+        assert form.index.data == index.name
+        assert form.description.data == index.description
 
 
 class TestEditCommonNameForm:
@@ -285,10 +285,10 @@ class TestEditCommonNameForm:
         cn = CommonName()
         cn.id = 1
         cn.name = 'Dwarf Coleus'
-        cat = Category()
-        cat.id = 1
-        cat.name = 'Perennial Flower'
-        cn.categories.append(cat)
+        idx = Index()
+        idx.id = 1
+        idx.name = 'Perennial Flower'
+        cn.indexes.append(idx)
         cnp = CommonName()
         cnp.id = 2
         cnp.name = 'Coleus'
@@ -310,7 +310,7 @@ class TestEditCommonNameForm:
         assert form.name.data == cn.name
         assert form.description.data == cn.description
         assert form.synonyms.data == cns.name
-        assert cat.id in form.categories.data
+        assert idx.id in form.indexes.data
         assert gwcn.id in form.gw_common_names.data
         assert gwcv.id in form.gw_cultivars.data
 
@@ -348,9 +348,9 @@ class TestEditCultivarForm:
         bn = BotanicalName(name='Digitalis purpurea')
         bn.id = 2
         cv.botanical_name = bn
-        cat = Category(name='Perennial Flower')
-        cat.id = 3
-        cv.categories.append(cat)
+        idx = Index(name='Perennial Flower')
+        idx.id = 3
+        cv.indexes.append(idx)
         cn = CommonName(name='Foxglove')
         cn.id = 4
         cv.common_name = cn
@@ -372,7 +372,7 @@ class TestEditCultivarForm:
         form.populate(cv)
         assert form.name.data == 'Foxy'
         assert form.description.data == 'Like Hendrix!'
-        assert cat.id in form.categories.data
+        assert idx.id in form.indexes.data
         assert form.common_name.data == cn.id
         assert form.in_stock.data
         assert form.dropped.data

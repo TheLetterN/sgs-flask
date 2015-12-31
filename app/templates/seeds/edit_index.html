@@ -21,20 +21,20 @@
 {# block head: 2 indentations of 4 spaces each. (8 spaces total.) #}
 {# block main: 3 indentations of 4 spaces each. (12 spaces total.) #}
 {% block head %}
-        <title>Edit Category</title>
+        <title>Edit Index</title>
         <meta name="robots" content="noindex, nofollow">
-        <link rel="canonical" href="{{ url_for('seeds.edit_category', _external=True) }}">
+        <link rel="canonical" href="{{ url_for('seeds.edit_index', _external=True) }}">
 {% endblock %}
 {% block main %}
-            <h1>Edit Category</h1>
+            <h1>Edit Index</h1>
             <form method="POST">
                 {{ form.hidden_tag() }}
                 <ol>
                     <li>
-                        {{ form.category.label }}
-                        {{ form.category }}
-                        {% if form.category.errors|count > 0 %}
-                        {{ form_errors(form.category) }}
+                        {{ form.index.label }}
+                        {{ form.index }}
+                        {% if form.index.errors|count > 0 %}
+                        {{ form_errors(form.index) }}
                         {% endif %}
                     </li>
                     <li>

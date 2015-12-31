@@ -19,7 +19,7 @@
 from flask import current_app, render_template
 from . import main
 from app.auth.models import Permission
-from app.seeds.models import Category
+from app.seeds.models import Index
 
 
 @main.context_processor
@@ -33,17 +33,17 @@ def make_permissions_available():
 
 
 @main.context_processor
-def make_categories_available():
-    """Make categories available to Jinja templates.
+def make_indexes_available():
+    """Make indexes available to Jinja templates.
 
     Returns:
-        dict: A list of all Category objects loaded from the database.
+        dict: A list of all Index objects loaded from the database.
     """
     if not current_app.config.get('TESTING'):  # pragma: no cover
-        categories = Category.query.all()
+        indexes = Index.query.all()
     else:
-        categories = None
-    return dict(categories=categories)
+        indexes = None
+    return dict(indexes=indexes)
 
 
 @main.route('/')

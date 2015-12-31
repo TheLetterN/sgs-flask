@@ -54,8 +54,8 @@ class TestAddBotanicalNameRouteWithDB:
         assert syn2 in bn.synonyms
         assert bn in syn1.syn_parents
         assert bn in syn2.syn_parents
-        assert syn1.syn_only
-        assert syn2.syn_only
+        assert syn1.invisible
+        assert syn2.invisible
         assert 'Botanical name &#39;Asclepias incarnata&#39;' in str(rv.data)
 
 
@@ -592,7 +592,7 @@ class TestEditBotanicalNameRouteWithDB:
         bn2 = BotanicalName(name='Digitalis über alles')
         bn3 = BotanicalName(name='Innagada davida')
         bn3.synonyms.append(bn2)
-        bn2.syn_only = True
+        bn2.invisible = True
         cn = CommonName(name='Foxglove')
         db.session.add_all([bn1, bn2, cn])
         bn1.common_name = cn
@@ -608,9 +608,9 @@ class TestEditBotanicalNameRouteWithDB:
         """Clear synonyms if new BotanicalName same as one of them."""
         bn1 = BotanicalName(name='Digitalis purpurea')
         bn2 = BotanicalName(name='Digitalis watchus')
-        bn2.syn_only = True
+        bn2.invisible = True
         bn3 = BotanicalName(name='Innagada davida')
-        bn3.syn_only = True
+        bn3.invisible = True
         bn4 = BotanicalName(name='Nothing here')
         bn1.synonyms = [bn2, bn3]
         cn = CommonName(name='Foxglove')
@@ -822,7 +822,7 @@ class TestEditCommonNameRouteWithDB:
         """Clear synonyms if form field is blank."""
         cn1 = CommonName(name='Foxglove')
         cn2 = CommonName(name='Digitalis')
-        cn2.syn_only = True
+        cn2.invisible = True
         cn1.synonyms.append(cn2)
         idx = Index('Flower')
         cn1.indexes.append(idx)
@@ -844,7 +844,7 @@ class TestEditCommonNameRouteWithDB:
         cn1 = CommonName(name='Fauxglove')
         cn2 = CommonName(name='Foxglove')
         cn3 = CommonName(name='Digitalis')
-        cn3.syn_only = True
+        cn3.invisible = True
         cn2.synonyms = [cn3]
         idx = Index(name='Perennial Flower')
         cn1.indexes.append(idx)
@@ -868,9 +868,9 @@ class TestEditCommonNameRouteWithDB:
         """
         cn1 = CommonName(name='Digitalis')
         cn2 = CommonName(name='Foxglove')
-        cn2.syn_only = True
+        cn2.invisible = True
         cn3 = CommonName(name='Fauxglove')
-        cn3.syn_only = True
+        cn3.invisible = True
         cn1.synonyms = [cn2, cn3]
         idx = Index(name='Perennial Flower')
         cn1.indexes.append(idx)
@@ -1790,8 +1790,8 @@ class TestEditCultivarRouteWithDB:
         cv = Cultivar(name='Foxy')
         syn1 = Cultivar(name='Fauxy')
         syn2 = Cultivar(name='Fawksy')
-        syn1.syn_only = True
-        syn2.syn_only = True
+        syn1.invisible = True
+        syn2.invisible = True
         cv.synonyms.append(syn1)
         cn = CommonName(name='Foxglove')
         idx = Index(name='Perennial')
@@ -1880,7 +1880,7 @@ class TestEditCultivarRouteWithDB:
         """Flash an error if trying to use a name of a synonym."""
         cv1 = Cultivar(name='Foxy')
         cv2 = Cultivar(name='Fauxy')
-        cv2.syn_only = True
+        cv2.invisible = True
         cn = CommonName(name='Foxglove')
         idx = Index('Perennial')
         cv1.indexes.append(idx)

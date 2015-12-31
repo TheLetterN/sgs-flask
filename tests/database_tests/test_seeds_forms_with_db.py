@@ -202,7 +202,7 @@ class TestAddBotanicalNameFormWithDB:
         bn.name = 'Asclepias incarnata'
         bn2.name = 'Canis lupus familiaris'
         bn3.name = 'Canis familiaris'
-        bn3.syn_only = True
+        bn3.invisible = True
         bn2.synonyms.append(bn3)
         bn.common_name = cn
         bn2.common_name = cn
@@ -273,7 +273,7 @@ class TestAddCommonNameFormWithDB:
         cn.name = 'Coleus'
         cn2.name = 'Foxglove'
         cn3.name = 'Digitalis'
-        cn3.syn_only = True
+        cn3.invisible = True
         cn2.synonyms.append(cn3)
         db.session.commit()
         form = AddCommonNameForm()
@@ -348,7 +348,7 @@ class TestAddCultivarFormWithDB:
         cultivar.name = 'Soulmate'
         cv2.name = 'Foxy'
         cv3.name = 'Lady'
-        cv3.syn_only = True
+        cv3.invisible = True
         cv2.synonyms.append(cv3)
         cn.name = 'Butterfly Weed'
         cv2.common_name = cn

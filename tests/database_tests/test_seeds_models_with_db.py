@@ -23,11 +23,11 @@ class TestBotanicalNameWithDB:
         bn1 = BotanicalName(name='Digitalis purpurea')
         bn2 = BotanicalName(name='Digitalis interspecific hybrid')
         s1 = BotanicalName(name='Digitalis watchus')
-        s1.syn_only = True
+        s1.invisible = True
         s2 = BotanicalName(name='Innagada davida')
-        s2.syn_only = True
+        s2.invisible = True
         s3 = BotanicalName(name='Canis lupus')
-        s3.syn_only = True
+        s3.invisible = True
         db.session.add_all([bn1, bn2, s1, s2, s3])
         bn1.synonyms = [s1, s2, s3]
         bn2.synonyms = [s1]
@@ -43,9 +43,9 @@ class TestBotanicalNameWithDB:
         """Remove synonyms not present in list, add present in list."""
         bn = BotanicalName(name='Digitalis purpurea')
         s1 = BotanicalName(name='Digitalis watchus')
-        s1.syn_only = True
+        s1.invisible = True
         s2 = BotanicalName(name='Digitalis über alles')
-        s2.syn_only = True
+        s2.invisible = True
         db.session.add_all([bn, s1, s2])
         bn.synonyms = [s1, s2]
         db.session.commit()
@@ -61,13 +61,13 @@ class TestBotanicalNameWithDB:
         """Create synonym if not in db, or load from db if exist."""
         bn = BotanicalName(name='Digitalis purpurea')
         s1 = BotanicalName(name='Digitalis watchus')
-        s1.syn_only = True
+        s1.invisible = True
         db.session.add_all([bn, s1])
         db.session.commit()
         bn.set_synonyms_from_string_list('Digitalis watchus, Digitalis scalus')
         db.session.commit()
         s2 = BotanicalName.query.filter_by(name='Digitalis scalus').first()
-        assert s2.syn_only
+        assert s2.invisible
         assert s1 in bn.synonyms
         assert s2 in bn.synonyms
 
@@ -98,11 +98,11 @@ class TestCommonNameWithDB:
         cn1 = CommonName(name='Foxglove')
         cn2 = CommonName(name='Digitalis')
         s1 = CommonName(name='Fauxglove')
-        s1.syn_only = True
+        s1.invisible = True
         s2 = CommonName(name='Fawksglove')
-        s2.syn_only = True
+        s2.invisible = True
         s3 = CommonName(name='Focksglove')
-        s3.syn_only = True
+        s3.invisible = True
         db.session.add_all([cn1, cn2, s1, s2, s3])
         cn1.synonyms = [s1, s2, s3]
         cn2.synonyms = [s1, s2]
@@ -119,9 +119,9 @@ class TestCommonNameWithDB:
         """Remove synonyms not present in list, add present ones."""
         cn = CommonName(name='Foxglove')
         s1 = CommonName(name='Fauxglove')
-        s1.syn_only = True
+        s1.invisible = True
         s2 = CommonName(name='Fawksglove')
-        s2.syn_only = True
+        s2.invisible = True
         db.session.add_all([cn, s1])
         cn.synonyms = [s1, s2]
         db.session.commit()
@@ -129,7 +129,7 @@ class TestCommonNameWithDB:
         db.session.commit()
         assert s1 in cn.synonyms
         s3 = CommonName.query.filter_by(name='Focksglove').first()
-        assert s3.syn_only
+        assert s3.invisible
         assert s3 in cn.synonyms
         assert s2 not in cn.synonyms
         assert not CommonName.query.filter_by(name='Fawksglove').first()
@@ -138,12 +138,12 @@ class TestCommonNameWithDB:
         """Add synonyms CN from db if present, otherwise create them."""
         cn = CommonName(name='Foxglove')
         s1 = CommonName(name='Fauxglove')
-        s1.syn_only = True
+        s1.invisible = True
         db.session.add_all([cn, s1])
         db.session.commit()
         cn.set_synonyms_from_string_list('Fauxglove, Fawksglove')
         s2 = CommonName.query.filter_by(name='Fawksglove').first()
-        assert s2.syn_only
+        assert s2.invisible
         assert s1 in cn.synonyms
         assert s2 in cn.synonyms
 
@@ -155,9 +155,9 @@ class TestCultivarWithDB:
         cv1 = Cultivar(name='Foxy')
         cv2 = Cultivar(name='Focksy')
         s1 = Cultivar(name='Fauxy')
-        s1.syn_only = True
+        s1.invisible = True
         s2 = Cultivar(name='Fawksy')
-        s2.syn_only = True
+        s2.invisible = True
         db.session.add_all([cv1, cv2, s1, s2])
         cv1.synonyms = [s1, s2]
         cv2.synonyms = [s1]
@@ -173,9 +173,9 @@ class TestCultivarWithDB:
         """Remove synonyms not present in list, add present ones."""
         cv = Cultivar(name='Foxy')
         s1 = Cultivar(name='Fauxy')
-        s1.syn_only = True
+        s1.invisible = True
         s2 = Cultivar(name='Fawksy')
-        s2.syn_only = True
+        s2.invisible = True
         db.session.add_all([cv, s1, s2])
         cv.synonyms = [s1, s2]
         db.session.commit()
@@ -197,10 +197,10 @@ class TestCultivarWithDB:
         db.session.commit()
         assert s1 in cv.synonyms
         s2 = Cultivar.query.filter_by(name='Fawksy').first()
-        assert s2.syn_only
+        assert s2.invisible
         assert s2 in cv.synonyms
         s3 = Cultivar.query.filter_by(name='Focksy').first()
-        assert s3.syn_only
+        assert s3.invisible
         assert s3 in cv.synonyms
 
     def test_thumbnail_path_with_thumbnail(self, db):

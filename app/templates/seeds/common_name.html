@@ -32,7 +32,7 @@
                     {% if cn.gw_common_names or cn.gw_cultivars %}<p class="grows_with">Grows nicely with: {{ grows_with(cn) }}.</p>{% endif %}
             </div>
             {% for cultivar in cn.cultivars %}
-            {% if not cultivar.syn_only %}
+            {% if not cultivar.invisible %}
             {{ cultivar_box(cultivar)|indent(12)|safe }}
             {% endif %}
             {% endfor %}

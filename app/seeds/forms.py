@@ -114,7 +114,7 @@ def botanical_name_select_list():
     """
     bn_list = []
     for bn in BotanicalName.query.order_by('_name'):
-        if not bn.syn_only:
+        if not bn.invisible:
             bn_list.append((bn.id, bn.name))
     return bn_list
 
@@ -139,7 +139,7 @@ def common_name_select_list():
     """
     cn_list = []
     for cn in CommonName.query.order_by('_name'):
-        if not cn.syn_only:
+        if not cn.invisible:
             cn_list.append((cn.id, cn.name))
     return cn_list
 
@@ -178,7 +178,7 @@ def cultivar_select_list():
     """
     cultivars = []
     for cultivar in Cultivar.query.order_by('_name'):
-        if not cultivar.syn_only:
+        if not cultivar.invisible:
             cultivars.append((cultivar.id, cultivar.fullname))
     return cultivars
 
@@ -300,7 +300,7 @@ class AddCommonNameForm(Form):
         """
         cn = CommonName.query.filter_by(name=titlecase(field.data)).first()
         if cn is not None:
-            if not cn.syn_only:
+            if not cn.invisible:
                 cn_url = url_for('seeds.edit_common_name', cn_id=cn.id)
                 raise ValidationError(
                     Markup('\'{0}\' already exists in the database. <a '
@@ -367,7 +367,7 @@ class AddBotanicalNameForm(Form):
                                   format(field.data))
         bn = BotanicalName.query.filter_by(name=field.data).first()
         if bn is not None:
-            if not bn.syn_only:
+            if not bn.invisible:
                 bn_url = url_for('seeds.edit_botanical_name', bn_id=bn.id)
                 raise ValidationError(
                     Markup('\'{0}\' already exists as a botanical name for '
@@ -510,7 +510,7 @@ class AddCultivarForm(Form):
                 exists as a synonym."""
         cultivars = Cultivar.query.filter_by(_name=titlecase(field.data)).all()
         for cultivar in cultivars:
-            if not cultivar.syn_only:
+            if not cultivar.invisible:
                 if cultivar and\
                         cultivar.common_name.id == self.cn_id.data:
                     cv_url = url_for('seeds.edit_cultivar', cv_id=cultivar.id)
@@ -1077,7 +1077,7 @@ class RemoveCommonNameForm(Form):
             cn_id: The id of the CommonName to be removed.
         """
         cns = CommonName.query.filter(CommonName.id != cn_id,
-                                      ~CommonName.syn_only).all()
+                                      ~CommonName.invisible).all()
         self.move_to.choices = [(cn.id, cn.name) for cn in cns]
 
 

@@ -551,7 +551,7 @@ def edit_botanical_name(bn_id=None):
         if form.name.data != bn.name:
             bn2 = BotanicalName.query.filter_by(_name=form.name.data).first()
             if bn2 and bn2 not in bn.synonyms:
-                if not bn2.syn_only:
+                if not bn2.invisible:
                     bn2_url = url_for('seeds.edit_botanical_name',
                                       bn_id=bn2.id)
                     flash(Markup(('Error: Botanical name \'{0}\' is already '
@@ -740,7 +740,7 @@ def edit_common_name(cn_id=None):
         if form_name != cn.name:
             cn2 = CommonName.query.filter_by(_name=form_name).first()
             if cn2 and cn2 not in cn.synonyms:
-                if not cn2.syn_only:
+                if not cn2.invisible:
                     cn2_url = url_for('seeds.edit_common_name', cn_id=cn2.id)
                     flash(Markup('Error: the common name \'{0}\' is already '
                                  'in use. <a href="{1}">Click here</a> if you '
@@ -1069,7 +1069,7 @@ def edit_cultivar(cv_id=None):
         cvs = Cultivar.query.filter_by(_name=form_name).all()
         old_cv_slug = cv.slug
         for cult in cvs:
-                if cult.syn_only:
+                if cult.invisible:
                     flash('Error: \'{0}\' is already being used as a synonym '
                           'for: \'{1}\'. If you wish to rename this cultivar '
                           'to it, you will need to remove it from synonyms '

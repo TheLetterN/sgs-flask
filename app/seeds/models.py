@@ -95,6 +95,13 @@ cultivar_synonyms = db.Table(
     db.Column('synonyms_id', db.Integer, db.ForeignKey('cultivars.id'))
 )
 
+cultivars_to_custom_pages = db.Table(
+    'cultivars_to_custom_pages',
+    db.Model.metadata,
+    db.Column('cultivar_id', db.Integer, db.ForeignKey('cultivars.id')),
+    db.Column('custom_pages_id', db.Integer, db.ForeignKey('custom_pages.id'))
+)
+
 
 class USDInt(db.TypeDecorator):
     """Type to store US dollar amounts in the database as integers.
@@ -258,7 +265,7 @@ class BotanicalName(db.Model):
                 related common name.
         _name (str): A botanical name associated with one or more seeds. Get
             and set via the name property.
-        syn_only (bool): Whether or not the botanical name exists only as a
+        invisible (bool): Whether or not the botanical name exists only as a
             synonym.
         syn_parents (relationship): The botanical names that this botanical
             name is considered a synonym of.
@@ -269,7 +276,7 @@ class BotanicalName(db.Model):
     common_name_id = db.Column(db.Integer, db.ForeignKey('common_names.id'))
     common_name = db.relationship('CommonName', backref='botanical_names')
     _name = db.Column(db.String(64), unique=True)
-    syn_only = db.Column(db.Boolean, default=False)
+    invisible = db.Column(db.Boolean, default=False)
     syn_parents = db.relationship(
         'BotanicalName',
         secondary=botanical_name_synonyms,
@@ -365,7 +372,7 @@ class BotanicalName(db.Model):
         """Remove all synonyms, deleting any that end up with no parent."""
         for synonym in list(self.synonyms):
             self.synonyms.remove(synonym)
-            if not synonym.syn_parents and synonym.syn_only:
+            if not synonym.syn_parents and synonym.invisible:
                 db.session.delete(synonym)
 
     def list_syn_parents_as_string(self):
@@ -407,7 +414,7 @@ class BotanicalName(db.Model):
                 for synonym in list(self.synonyms):
                     if synonym.name not in syns:
                         self.synonyms.remove(synonym)
-                        if not synonym.syn_parents and synonym.syn_only:
+                        if not synonym.syn_parents and synonym.invisible:
                             db.session.delete(synonym)
             for syn in syns:
                 synonym = BotanicalName.query.filter_by(_name=syn).first()
@@ -418,7 +425,7 @@ class BotanicalName(db.Model):
                     if syn and not syn.isspace():
                         synonym = BotanicalName()
                         synonym.name = syn
-                        synonym.syn_only = True
+                        synonym.invisible = True
                         self.synonyms.append(synonym)
 
 
@@ -524,8 +531,8 @@ class CommonName(db.Model):
             'Coleus' as its parent.
             children (backref): Common names that are subindexes of parent.
         slug (str): The URL-friendly version of this common name.
-        syn_only (bool): Whether or not this common name only exists as a
-            synonym of other common names.
+        invisible (bool): Whether or not to list this common name in
+            automatically generated pages.
         syn_parents (relationship): Common names this is a synonym of.
             synonyms (backref): Synonyms of this common name.
     """
@@ -549,7 +556,7 @@ class CommonName(db.Model):
                              foreign_keys=parent_id,
                              remote_side=[id])
     slug = db.Column(db.String(64), unique=True)
-    syn_only = db.Column(db.Boolean, default=False)
+    invisible = db.Column(db.Boolean, default=False)
     syn_parents = db.relationship(
         'CommonName',
         secondary=common_name_synonyms,
@@ -604,7 +611,7 @@ class CommonName(db.Model):
         """Remove all synonyms, deleting any that end up with no parent."""
         for synonym in list(self.synonyms):
             self.synonyms.remove(synonym)
-            if not synonym.syn_parents and synonym.syn_only:
+            if not synonym.syn_parents and synonym.invisible:
                 db.session.delete(synonym)
 
     def list_syn_parents_as_string(self):
@@ -646,7 +653,7 @@ class CommonName(db.Model):
                 for synonym in list(self.synonyms):
                     if synonym.name not in syns:
                         self.synonyms.remove(synonym)
-                        if not synonym.syn_parents and synonym.syn_only:
+                        if not synonym.syn_parents and synonym.invisible:
                             db.session.delete(synonym)
                             db.session.commit()
             for syn in syns:
@@ -658,7 +665,7 @@ class CommonName(db.Model):
                     if syn and not syn.isspace():
                         synonym = CommonName()
                         synonym.name = syn
-                        synonym.syn_only = True
+                        synonym.invisible = True
                         self.synonyms.append(synonym)
 
 
@@ -735,7 +742,9 @@ class Cultivar(db.Model):
         series (relationship): Series this cultivar belongs to.
             cultivars (backref): Cultivars in given series.
         slug (str): A URL-friendly version of _name.
-        syn_only (bool): Whether or not this cultivar only exists as a synonym.
+        invisible (bool): Whether or not this cultivar should be listed in
+            automatically generated pages. Cultivars set to invisible can still
+            be listed on custom pages.
         syn_parents (relationship): Cultivars that have this one as a synonym.
             synonyms (backref): Synonyms of this cultivar.
         thumbnail_id (int): ForeignKey of Image, used with thumbnail.
@@ -773,7 +782,7 @@ class Cultivar(db.Model):
     series_id = db.Column(db.Integer, db.ForeignKey('series.id'))
     series = db.relationship('Series', backref='cultivars')
     slug = db.Column(db.String(64))
-    syn_only = db.Column(db.Boolean, default=False)
+    invisible = db.Column(db.Boolean, default=False)
     syn_parents = db.relationship(
         'Cultivar',
         secondary=cultivar_synonyms,
@@ -846,7 +855,7 @@ class Cultivar(db.Model):
         """Remove all synonyms, deleting any that end up with no parent."""
         for synonym in list(self.synonyms):
             self.synonyms.remove(synonym)
-            if not synonym.syn_parents and synonym.syn_only:
+            if not synonym.syn_parents and synonym.invisible:
                 db.session.delete(synonym)
 
     def list_syn_parents_as_string(self):
@@ -888,7 +897,7 @@ class Cultivar(db.Model):
                 for synonym in list(self.synonyms):
                     if synonym.name not in syns:
                         self.synonyms.remove(synonym)
-                        if not synonym.syn_parents and synonym.syn_only:
+                        if not synonym.syn_parents and synonym.invisible:
                             db.session.delete(synonym)
                             db.session.commit()
             for syn in syns:
@@ -900,7 +909,7 @@ class Cultivar(db.Model):
                     if syn and not syn.isspace():
                         synonym = Cultivar()
                         synonym.name = syn
-                        synonym.syn_only = True
+                        synonym.invisible = True
                         self.synonyms.append(synonym)
 
 
@@ -1269,6 +1278,33 @@ class Series(db.Model):
             return ' '.join(fn)
         else:
             return None
+
+
+class CustomPage(db.Model):
+    """Table for custom pages that cover edge cases.
+
+    Since there will always be some edge cases in which we may want to create
+    pages that can't easily be automatically generated (for example, a page
+    that lists cultivars from multiple common names) this table allows for
+    generic pages to be made.
+
+    Attributes:
+        __tablename__ (str): Name of the table: 'custom_pages'
+        id (int): Auto-incremented ID # as primary key.
+        title (str): Page title to be used in <title> and for lookups.
+        content (str): The HTML content of the page, including parseable
+            tokens.
+        cultivars (relationship): Relationship to link cultivars to custom
+            pages.
+            backref: custom_pages
+    """
+    __tablename__ = 'custom_pages'
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(64), unique=True)
+    content = db.Column(db.Text)
+    cultivars = db.relationship('Cultivar',
+                                secondary=cultivars_to_custom_pages,
+                                backref='custom_pages')
 
 
 if __name__ == '__main__':  # pragma: no cover

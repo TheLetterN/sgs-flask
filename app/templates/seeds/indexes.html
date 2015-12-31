@@ -31,7 +31,7 @@
         <div id="common_names">
             {% if index.common_names %}
             {% for cn in index.common_names %}
-            {% if not cn.parent and not cn.syn_only %}
+            {% if not cn.parent and not cn.invisible %}
             <div class="common_name">
                 <a href="{{ url_for('seeds.common_name', idx_slug=index.slug, cn_slug=cn.slug) }}">{{ cn.name }}</a>
                 {% if cn.description %}

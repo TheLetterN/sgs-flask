@@ -36,6 +36,16 @@ botanical_name_synonyms = db.Table(
 )
 
 
+botanical_names_to_common_names = db.Table(
+    'botanical_names_to_common_names',
+    db.Model.metadata,
+    db.Column('botanical_names_id',
+              db.Integer,
+              db.ForeignKey('botanical_names.id')),
+    db.Column('common_names_id', db.Integer, db.ForeignKey('common_names.id'))
+)
+
+
 indexes_to_cultivars = db.Table(
     'indexes_to_cultivars',
     db.Model.metadata,
@@ -258,9 +268,8 @@ class BotanicalName(db.Model):
     Attributes:
         __tablename__ (str): Name of the table: 'botanical_names'
         id (int): Auto-incremented ID # for use as a primary key.
-        common_name_id (int): ForeignKey for common_name relationship.
-        common_name (relationship): The common name this botanical name belongs
-            to.
+        common_names (relationship): The common names this botanical name
+            belongs to.
             botanical_names (backref): The botanical names that belong to the
                 related common name.
         _name (str): A botanical name associated with one or more seeds. Get
@@ -273,8 +282,11 @@ class BotanicalName(db.Model):
     """
     __tablename__ = 'botanical_names'
     id = db.Column(db.Integer, primary_key=True)
-    common_name_id = db.Column(db.Integer, db.ForeignKey('common_names.id'))
-    common_name = db.relationship('CommonName', backref='botanical_names')
+    common_names = db.relationship(
+        'CommonName',
+        secondary=botanical_names_to_common_names,
+        backref='botanical_names'
+    )
     _name = db.Column(db.String(64), unique=True)
     invisible = db.Column(db.Boolean, default=False)
     syn_parents = db.relationship(
@@ -794,7 +806,8 @@ class Cultivar(db.Model):
     thumbnail = db.relationship('Image', foreign_keys=thumbnail_id)
     __table_args__ = (db.UniqueConstraint('_name',
                                           'common_name_id',
-                                          name='_name_common_name_uc'),)
+                                          'series_id',
+                                          name='_cultivar_name_cn_series_uc'),)
 
     def __init__(self, name=None, description=None):
         self.name = name
@@ -809,10 +822,8 @@ class Cultivar(db.Model):
     def fullname(self):
         """str: Full name of cultivar including common name and series."""
         fn = []
-        if self.series:
-            fn.append(self.series.name)
-        if self._name:
-            fn.append(self._name)
+        if self.name_with_series:
+            fn.append(self.name_with_series)
         if self.common_name:
             fn.append(self.common_name.name)
         if fn:
@@ -832,10 +843,19 @@ class Cultivar(db.Model):
     @name.setter
     def name(self, value):
         self._name = value
-        if value is not None:
-            self.slug = slugify(value)
+        self.set_slug()
+
+    @hybrid_property
+    def name_with_series(self):
+        """str: contents of _name with series.name included in its position."""
+        if self.series:
+            if self.series.position != Series.AFTER_CULTIVAR or\
+                    'Mix' in self.name:
+                return self.series.name + ' ' + self._name
+            else:
+                return self._name + ' ' + self.series.name
         else:
-            self.slug = None
+            return self._name
 
     @hybrid_property
     def thumbnail_path(self):
@@ -881,6 +901,13 @@ class Cultivar(db.Model):
             return ', '.join([syn.name for syn in self.synonyms])
         else:
             return ''
+
+    def set_slug(self):
+        """Sets self.slug to a slug made from name and series."""
+        if self._name:
+            self.slug = slugify(self.name_with_series)
+        else:
+            self.slug = None
 
     def set_synonyms_from_string_list(self, synlist):
         """Set synonyms with data from a string list delineated by commas.
@@ -1242,6 +1269,13 @@ class Quantity(db.Model):
             self._denominator = None
             self._float = None
 
+    @property
+    def str_value(self):
+        if isinstance(self.value, Fraction):
+            return self.fraction_to_str(self.value)
+        else:
+            return str(self.value)
+
 
 class Series(db.Model):
     """Table for seed series.
@@ -1258,6 +1292,8 @@ class Series(db.Model):
         common_name (relationship): The common name a series belongs to.
         description (str): Column for description of a series.
         name (str): The name of the series.
+        position (int): Int for a constant representing where to put series
+            name in relation to cultivar name.
     """
     __tablename__ = 'series'
     id = db.Column(db.Integer, primary_key=True)
@@ -1265,6 +1301,17 @@ class Series(db.Model):
     common_name = db.relationship('CommonName', backref='series')
     description = db.Column(db.Text)
     name = db.Column(db.String(64))
+    position = db.Column(db.Integer, default=0)
+    __table_args__ = (db.UniqueConstraint('name',
+                                          'common_name_id',
+                                          name='_series_name_cn_uc'),)
+
+    BEFORE_CULTIVAR = 0
+    AFTER_CULTIVAR = 1
+
+    def __repr__(self):
+        """Return a string representing a Series instance."""
+        return '<{0} \'{1}\'>'.format(self.__class__.__name__, self.name)
 
     @property
     def fullname(self):

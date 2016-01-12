@@ -245,10 +245,12 @@ def add_botanical_name(cn_id=None):
                                 dest='seeds.add_botanical_name'))
     form = AddBotanicalNameForm()
     if form.validate_on_submit():
-        bn = BotanicalName()
-        db.session.add(bn)
-        bn.name = form.name.data
-        bn.common_name = cn
+        bn = BotanicalName.query.filter_by(_name=form.name.data).first()
+        if not bn:
+            bn = BotanicalName()
+            db.session.add(bn)
+            bn.name = form.name.data
+        bn.common_names.append(cn)
         if form.synonyms.data:
             bn.set_synonyms_from_string_list(form.synonyms.data)
             flash('Synonyms for \'{0}\' set to: {1}'
@@ -284,12 +286,14 @@ def add_series(cn_id=None):
         return redirect(url_for('seeds.select_common_name',
                                 dest='seeds.add_series'))
     form = AddSeriesForm()
+    form.cn_id.data = cn.id
     if form.validate_on_submit():
         series = Series()
         db.session.add(series)
         series.common_name = cn
         series.name = dbify(form.name.data)
         series.description = form.description.data
+        series.position = form.position.data
         flash('New series \'{0}\' added to: {1}.'.
               format(series.name, series.common_name.name))
         db.session.commit()
@@ -322,7 +326,7 @@ def add_cultivar(cn_id=None):
         return redirect(url_for('seeds.select_common_name',
                                 dest='seeds.add_cultivar'))
     form = AddCultivarForm()
-    form.set_selects()
+    form.set_selects(cn)
     form.cn_id.data = cn_id
     if form.validate_on_submit():
         cv = Cultivar()
@@ -361,6 +365,7 @@ def add_cultivar(cn_id=None):
         if form.series.data:
             cv.series = Series.query.get(form.series.data)
             flash('Series set to: {0}'.format(cv.series.name))
+            cv.set_slug()
         if form.synonyms.data:
             cv.set_synonyms_from_string_list(form.synonyms.data)
             flash('Synonyms for \'{0}\' set to: {1}'
@@ -518,6 +523,8 @@ def common_name(idx_slug=None, cn_slug=None):
     idx = Index.query.filter_by(slug=idx_slug).first()
     cn = CommonName.query.filter_by(slug=cn_slug).first()
     if cn is not None and idx is not None:
+        individuals = [cv for cv in cn.cultivars if not cv.series and
+                       not cv.common_name.parent]
         crumbs = make_breadcrumbs(
             (url_for('seeds.index'), 'All Seeds'),
             (url_for('seeds.index_page', idx_slug=idx_slug), idx.header),
@@ -526,6 +533,7 @@ def common_name(idx_slug=None, cn_slug=None):
         )
         return render_template('seeds/common_name.html',
                                idx=idx,
+                               individuals=individuals,
                                cn=cn,
                                crumbs=crumbs)
     else:
@@ -545,7 +553,7 @@ def edit_botanical_name(bn_id=None):
         return redirect(url_for('seeds.select_botanical_name',
                                 dest='seeds.edit_botanical_name'))
     form = EditBotanicalNameForm()
-    form.set_common_name()
+    form.set_common_names()
     if form.validate_on_submit():
         edited = False
         if form.name.data != bn.name:
@@ -574,14 +582,20 @@ def edit_botanical_name(bn_id=None):
                     bn.clear_synonyms()
                     db.session.commit()
                 bn.name = form.name.data
-        if form.common_name.data != bn.common_name.id:
-            edited = True
-            cn = CommonName.query.get(form.common_name.data)
-            flash('Common name associated with botanical name \'{0}\' changed'
-                  ' from \'{1}\' to: \'{2}\'.'.format(bn.name,
-                                                      bn.common_name.name,
-                                                      cn.name))
-            bn.common_name = cn
+        for cn in list(bn.common_names):
+            if cn.id not in form.common_names.data:
+                edited = True
+                flash('Removed common name \'{0}\' from \'{1}\'.'
+                      .format(cn.name, bn.name))
+                bn.common_names.remove(cn)
+        cnids = [cona.id for cona in bn.common_names]
+        for cnid in form.common_names.data:
+            if cnid not in cnids:
+                edited = True
+                cn = CommonName.query.get(cnid)
+                flash('Added common name \'{0}\' to \'{1}\'.'
+                      .format(cn.name, bn.name))
+                bn.common_names.append(cn)
         if form.synonyms.data != bn.list_synonyms_as_string():
             edited = True
             if form.synonyms.data:
@@ -1068,6 +1082,7 @@ def edit_cultivar(cv_id=None):
         form_name = dbify(form.name.data)
         cvs = Cultivar.query.filter_by(_name=form_name).all()
         old_cv_slug = cv.slug
+        old_cn_slug = cv.common_name.slug
         for cult in cvs:
                 if cult.invisible:
                     flash('Error: \'{0}\' is already being used as a synonym '
@@ -1084,13 +1099,32 @@ def edit_cultivar(cv_id=None):
                           .format(cv.fullname))
                     return redirect(url_for('seeds.edit_cultivar',
                                             cv_id=cv_id))
+        if cv.series:
+            if form.series.data != cv.series.id:
+                edited = True
+                if form.series.data == 0:
+                    flash('Series for \'{0}\' has been unset.'
+                          .format(cv.fullname))
+                    cv.series = None
+                else:
+                    series = Series.query.get(form.series.data)
+                    cv.series = series
+                    flash('Series for \'{0}\' has been set to: {1}'
+                          .format(cv.fullname, cv.series.name))
+        else:
+            if form.series.data != 0:
+                edited = True
+                series = Series.query.get(form.series.data)
+                cv.series = series
+                flash('Series for \'{0}\' has been set to: {1}'
+                      .format(cv.fullname, cv.series.name))
         if cv.name != form_name:
             edited = True
             flash('Changed cultivar name from \'{0}\' to \'{1}\''.
                   format(cv.name, form_name))
             cv.name = form_name
+        cv.set_slug()
         new_cv_slug = cv.slug
-        old_cn_slug = cv.common_name.slug
         if not cv.common_name or \
                 form.common_name.data != cv.common_name.id:
             edited = True
@@ -1216,25 +1250,6 @@ def edit_cultivar(cv_id=None):
                                                    cv.fullname))
                         cv.gw_cultivars.append(gw_cv)
                         gw_cv.gw_cultivars.append(cv)
-        if cv.series:
-            if form.series.data != cv.series.id:
-                edited = True
-                if form.series.data == 0:
-                    flash('Series for \'{0}\' has been unset.'
-                          .format(cv.fullname))
-                    cv.series = None
-                else:
-                    series = Series.query.get(form.series.data)
-                    cv.series = series
-                    flash('Series for \'{0}\' has been set to: {1}'
-                          .format(cv.fullname, cv.series.name))
-        else:
-            if form.series.data != 0:
-                edited = True
-                series = Series.query.get(form.series.data)
-                cv.series = series
-                flash('Series for \'{0}\' has been set to: {1}'
-                      .format(cv.fullname, cv.series.name))
         if form.in_stock.data:
             if not cv.in_stock:
                 edited = True
@@ -1357,6 +1372,18 @@ def edit_series(series_id=None):
             series.common_name = CommonName.query.get(form.common_name.data)
             flash('Common name for \'{0}\' changed to: {1}'.
                   format(series.fullname, series.common_name.name))
+        if form.position.data != series.position:
+            edited = True
+            series.position = form.position.data
+            if form.position.data == Series.BEFORE_CULTIVAR:
+                flash('Series name will now be placed before cultivar name in '
+                      'cultivars in the {0} series.'.format(series.name))
+            elif form.position.data == Series.AFTER_CULTIVAR:
+                flash('Series name will now be placed after cultivar name in '
+                      'cultivars in the {0} series.'.format(series.name))
+            for cv in series.cultivars:
+                # TODO: Handle URL changes
+                cv.set_name_with_series(cv.name)
         if edited:
             db.session.commit()
             return redirect(url_for('seeds.manage'))

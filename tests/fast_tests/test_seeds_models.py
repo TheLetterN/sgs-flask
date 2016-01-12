@@ -300,8 +300,6 @@ class TestCultivar:
         assert cultivar.fullname == 'Foxy'
         cultivar.common_name = cn
         assert cultivar.fullname == 'Foxy Foxglove'
-        cultivar.series = Series(name='Spotty')
-        assert cultivar.fullname == 'Spotty Foxy Foxglove'
 
     def test_name_getter(self, app):
         """Return ._name"""

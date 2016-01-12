@@ -16,8 +16,8 @@
    Copyright Swallowtail Garden Seeds, Inc 
 #}
 {# This macro will take either a Seed or CommonName object, as they both
-contain the members gw_common_names and gw_seeds
+contain the members gw_common_names and gw_cultivars
 #}
 {% macro grows_with(obj) %}
-{% if obj.gw_common_names %}{% for gw_cn in obj.gw_common_names %}<a href="{{ url_for('seeds.common_name', idx_slug=gw_cn.indexes[0].slug, cn_slug=gw_cn.slug) }}">{{ gw_cn.name }}</a>{% if not loop.last or obj.gw_seeds %}, {% endif %}{% endfor %}{% endif %}{% if obj.gw_seeds %}{% for gw_sd in obj.gw_seeds %}<a href="{{ url_for('seeds.seed', idx_slug=gw_sd.indexes[0].slug, cn_slug=gw_sd.common_name.slug, seed_slug=gw_sd.slug) }}">{{ gw_sd.fullname }}</a>{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}
+{% if obj.gw_common_names %}{% for gw_cn in obj.gw_common_names %}<a href="{{ url_for('seeds.common_name', idx_slug=gw_cn.indexes[0].slug, cn_slug=gw_cn.slug) }}">{{ gw_cn.name }}</a>{% if not loop.last or obj.gw_cultivars %}, {% endif %}{% endfor %}{% endif %}{% if obj.gw_cultivars %}{% for gw_sd in obj.gw_cultivars %}<a href="{{ url_for('seeds.cultivar', idx_slug=gw_sd.indexes[0].slug, cn_slug=gw_sd.common_name.slug, cv_slug=gw_sd.slug) }}">{{ gw_sd.fullname }}</a>{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}
 {% endmacro %}

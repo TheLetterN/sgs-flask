@@ -19,12 +19,21 @@
 # Copyright Swallowtail Garden Seeds, Inc
 
 
-import os
+import os, sys
 import pytest
 from flask.ext.migrate import Migrate, MigrateCommand
 from flask.ext.script import Manager, Shell
 from app import create_app, db, mail
 from app.auth.models import User, Permission
+from app.seeds.excel import SeedsWorkbook
+from app.seeds.models import (
+    BotanicalName,
+    CommonName,
+    Cultivar,
+    Index,
+    Packet,
+    Series
+)
 
 app = create_app(os.getenv('SGS_CONFIG') or 'default')
 manager = Manager(app)
@@ -64,6 +73,62 @@ def hello(goodbye=False):
     else:
         print('Why are you talking to a python script?')
 
+
+@manager.option(
+    '-l',
+    '--load',
+    help='Load an excel spreadsheet with given filename.')
+@manager.option(
+    '-s',
+    '--save',
+    help='Save a database dump to an excel spreadsheet with given file name.')
+def excel(load=None, save=None):
+    """Interact with the excel module to utilize spreadsheets."""
+    if load and save:
+        raise ValueError('Cannot load and save at the same time!')
+    if load:
+        if os.path.exists(load):
+            wb = SeedsWorkbook(load)
+        else:
+            raise FileNotFoundError('The file \'{0}\' does not exist!'
+                                    .format(load))
+        # TODO: Implement loading of files.
+    if save:
+        if os.path.exists(save):
+            print('WARNING: The file {0} exists. Would you like to overwrite '
+                  'it?'.format(save))
+            wb = None
+            while wb is None:
+                choice = input('Y/n:  ').upper()
+                if choice == 'Y' or choice == 'YES' or choice == '':
+                    wb = SeedsWorkbook(save)
+                elif choice == 'N' or choice == 'NO':
+                    print('Save cancelled. Exiting.')
+                    sys.exit(0)
+                else:
+                    print('Invalid input, please answer \'Y\' if you want to '
+                          'overwrite the file, or \'N\' if you do not.')
+        else:
+            wb = SeedsWorkbook(save)
+        print('Loading indexes database table into the Indexes worksheet.')
+        wb.load_indexes(Index.query.all())
+        print('Loading common_names database table into the CommonNames '
+              'worksheet.')
+        wb.load_common_names(CommonName.query.all())
+        print('Loading botanical_names database table into the BotanicalNames '
+              'worksheet.')
+        wb.load_botanical_names(BotanicalName.query.all())
+        print('Loading series database table into Series worksheet.')
+        wb.load_series(Series.query.all())
+        print('Loading cultivars database table into the Cultivars worksheet.')
+        wb.load_cultivars(Cultivar.query.all())
+        print('Loading packets database table into the Packets worksheet.')
+        wb.load_packets(Packet.query.all())
+        print('Saving workbook as \'{0}\'.'.format(save))
+        wb.save()
+        print('Worbook saved. Exiting.')
+        sys.exit(0)
+    print('Nothing to do here yet.')
 
 @manager.option(
     '-f',

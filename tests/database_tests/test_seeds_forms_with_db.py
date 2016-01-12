@@ -213,9 +213,6 @@ class TestAddBotanicalNameFormWithDB:
         form.name.data = 'Title Case is not a binomen'
         with pytest.raises(ValidationError):
             form.validate_name(form.name)
-        form.name.data = 'Asclepias incarnata'
-        with pytest.raises(ValidationError):
-            form.validate_name(form.name)
         form.name.data = 'Canis familiaris'
         with pytest.raises(ValidationError):
             form.validate_name(form.name)
@@ -380,8 +377,10 @@ class TestAddSeriesForm:
     """Test custom methods of AddSeriesForm."""
     def test_validate_name(self, db):
         series = Series()
+        cn = CommonName(name='Foxglove')
+        series.common_name = cn
         series.name = 'Polkadot'
-        db.session.add(series)
+        db.session.add(series, cn)
         db.session.commit()
         form = AddSeriesForm()
         form.name.data = 'Dalmatian'
@@ -393,8 +392,8 @@ class TestAddSeriesForm:
 
 class TestEditBotanicalNameFormWithDB:
     """Test custom methods of EditBotanicalNameForm."""
-    def test_set_common_name(self, db):
-        """Set common_name.choices with CommonNames from db."""
+    def test_set_common_names(self, db):
+        """Set common_names.choices with CommonNames from db."""
         cn1 = CommonName()
         cn2 = CommonName()
         cn3 = CommonName()
@@ -404,10 +403,10 @@ class TestEditBotanicalNameFormWithDB:
         cn3.name = 'Zinnia'
         db.session.commit()
         form = EditBotanicalNameForm()
-        form.set_common_name()
-        assert (cn1.id, cn1.name) in form.common_name.choices
-        assert (cn2.id, cn2.name) in form.common_name.choices
-        assert (cn3.id, cn3.name) in form.common_name.choices
+        form.set_common_names()
+        assert (cn1.id, cn1.name) in form.common_names.choices
+        assert (cn2.id, cn2.name) in form.common_names.choices
+        assert (cn3.id, cn3.name) in form.common_names.choices
 
 
 class TestEditCommonNameFormWithDB:

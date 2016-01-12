@@ -40,10 +40,10 @@
         {% endif %}
         {% if not idx_slug %}{% set idx_slug = cultivar.indexes[0].slug %}{% endif %}
         {% if not cn_slug %}{% set cn_slug = cultivar.common_name.slug %}{% endif %}
-        <h3><a href="{{ url_for('seeds.cultivar', idx_slug=idx_slug, cn_slug=cn_slug, cv_slug=cultivar.slug)}}">{{ cultivar.name }}</a></h3>
+        <h3><a href="{{ url_for('seeds.cultivar', idx_slug=idx_slug, cn_slug=cn_slug, cv_slug=cultivar.slug)}}">{{ cultivar.name_with_series }}</a></h3>
         <em>{{ cultivar.common_name.header }}</em>
         <i>{{ cultivar.botanical_name.name }}</i>
-        <p>{{ cultivar.description }}</p>
+        <p>{{ cultivar.description|safe }}</p>
         {% if cultivar.gw_common_names or cultivar.gw_cultivars %}<p class="grows_with">Grows nicely with: {{ grows_with(cultivar) }}.</p>{% endif %}
     </div>
     {% if current_user.can(Permission.MANAGE_SEEDS) %}

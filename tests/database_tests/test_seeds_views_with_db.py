@@ -33,32 +33,6 @@ def foxy_cultivar():
     return cultivar
 
 
-class TestAddBotanicalNameRouteWithDB:
-    """Test seeds.add_botanical_name."""
-    def test_add_botanical_name_adds_to_database(self, app, db):
-        """Add a botanical name to the db on successful form submission."""
-        cn = CommonName()
-        db.session.add(cn)
-        cn.name = 'Butterfly Weed'
-        db.session.commit()
-        with app.test_client() as tc:
-            rv = tc.post(url_for('seeds.add_botanical_name', cn_id=cn.id),
-                         data=dict(name='Asclepias incarnata',
-                                   synonyms='Innagada davida, Canis lupus'),
-                         follow_redirects=True)
-        bn = BotanicalName.query.filter_by(name='Asclepias incarnata').first()
-        assert bn is not None
-        syn1 = BotanicalName.query.filter_by(name='Innagada davida').first()
-        syn2 = BotanicalName.query.filter_by(name='Canis lupus').first()
-        assert syn1 in bn.synonyms
-        assert syn2 in bn.synonyms
-        assert bn in syn1.syn_parents
-        assert bn in syn2.syn_parents
-        assert syn1.invisible
-        assert syn2.invisible
-        assert 'Botanical name &#39;Asclepias incarnata&#39;' in str(rv.data)
-
-
 class TestAddIndexRouteWithDB:
     """Test seeds.add_index."""
     def test_add_index_adds_to_database(self, app, db):
@@ -140,8 +114,129 @@ class TestAddCommonNameRouteWithDB:
         assert 'Add Common Name' in str(rv.data)
 
 
+class TestAddBotanicalNameRouteWithDB:
+    """Test seeds.add_botanical_name."""
+    def test_add_botanical_name_renders_page(self, app, db):
+        """Load form page given a valid cn_id."""
+        cn = CommonName(name='Foxglove')
+        db.session.add(cn)
+        db.session.commit()
+        with app.test_client() as tc:
+            rv = tc.get(url_for('seeds.add_botanical_name', cn_id=cn.id),
+                        follow_redirects=True)
+        assert 'Add Botanical Name' in str(rv.data)
+
+    def test_add_botanical_name_bad_cn_id(self, app, db):
+        """Redirect to select common name if CommonName can't be loaded."""
+        with app.test_client() as tc:
+            rv = tc.get(url_for('seeds.add_botanical_name'))
+        assert rv.location == url_for('seeds.select_common_name',
+                                      dest='seeds.add_botanical_name',
+                                      _external=True)
+        cn = CommonName()
+        cn.id = 1
+        db.session.add(cn)
+        db.session.commit()
+        with app.test_client() as tc:
+            rv = tc.get(url_for('seeds.add_botanical_name', cn_id=42))
+        assert rv.location == url_for('seeds.select_common_name',
+                                      dest='seeds.add_botanical_name',
+                                      _external=True)
+
+    def test_add_botanical_name_adds_to_database(self, app, db):
+        """Add a botanical name to the db on successful form submission."""
+        cn = CommonName()
+        db.session.add(cn)
+        cn.name = 'Butterfly Weed'
+        db.session.commit()
+        with app.test_client() as tc:
+            rv = tc.post(url_for('seeds.add_botanical_name', cn_id=cn.id),
+                         data=dict(name='Asclepias incarnata',
+                                   synonyms='Innagada davida, Canis lupus'),
+                         follow_redirects=True)
+        bn = BotanicalName.query.filter_by(name='Asclepias incarnata').first()
+        assert bn is not None
+        syn1 = BotanicalName.query.filter_by(name='Innagada davida').first()
+        syn2 = BotanicalName.query.filter_by(name='Canis lupus').first()
+        assert syn1 in bn.synonyms
+        assert syn2 in bn.synonyms
+        assert bn in syn1.syn_parents
+        assert bn in syn2.syn_parents
+        assert syn1.invisible
+        assert syn2.invisible
+        assert 'Botanical name &#39;Asclepias incarnata&#39;' in str(rv.data)
+
+
+class TestAddSeriesRouteWithDB:
+    """Test add_series route."""
+    def test_add_series_renders_page(self, app, db):
+        """Load form page given a valid cn_id."""
+        cn = CommonName(name='Foxglove')
+        db.session.add(cn)
+        db.session.commit()
+        with app.test_client() as tc:
+            rv = tc.get(url_for('seeds.add_series', cn_id=cn.id))
+            assert 'Add Series' in str(rv.data)
+
+    def test_add_series_bad_cn_id(self, app, db):
+        """Redirect to select_common_name if cn_id is invalid."""
+        with app.test_client() as tc:
+            rv = tc.get(url_for('seeds.add_series'))
+        assert rv.location == url_for('seeds.select_common_name',
+                                      dest='seeds.add_series',
+                                      _external=True)
+        cn = CommonName(name='Foxglove')
+        cn.id = 1
+        db.session.add(cn)
+        db.session.commit()
+        with app.test_client() as tc:
+            rv = tc.get(url_for('seeds.add_series', cn_id=42))
+        assert rv.location == url_for('seeds.select_common_name',
+                                      dest='seeds.add_series',
+                                      _external=True)
+
+    def test_add_series_successful_submit(self, app, db):
+        """Flash message on successful form submission."""
+        cn = CommonName(name='Foxglove')
+        db.session.add(cn)
+        db.session.commit()
+        with app.test_client() as tc:
+            rv = tc.post(url_for('seeds.add_series', cn_id=cn.id),
+                         data=dict(common_name=cn.id,
+                                   name='Spotty',
+                                   position=0,
+                                   description='More dots!'),
+                         follow_redirects=True)
+        assert 'New series &#39;Spotty&#39; added to: Foxglove' in str(rv.data)
+
+
 class TestAddCultivarRouteWithDB:
     """Test seeds.add_cultivar."""
+    def test_add_cultivar_renders_page(self, app, db):
+        """Load form page given a valid cn_id."""
+        cn = CommonName(name='Foxglove')
+        db.session.add(cn)
+        db.session.commit()
+        with app.test_client() as tc:
+            rv = tc.get(url_for('seeds.add_cultivar', cn_id=cn.id))
+        assert 'Add Cultivar' in str(rv.data)
+
+    def test_add_cultivar_bad_cn_id(self, app, db):
+        """Redirect to select_common_name if cn_id is invalid."""
+        with app.test_client() as tc:
+            rv = tc.get(url_for('seeds.add_cultivar'))
+        assert rv.location == url_for('seeds.select_common_name',
+                                      dest='seeds.add_cultivar',
+                                      _external=True)
+        cn = CommonName(name='Foxglove')
+        db.session.add(cn)
+        db.session.commit()
+        with app.test_client() as tc:
+            rv = tc.get(url_for('seeds.add_cultivar', cn_id=42))
+        assert rv.location == url_for('seeds.select_common_name',
+                                      dest='seeds.add_cultivar',
+                                      _external=True)
+
     @mock.patch('werkzeug.FileStorage.save')
     def test_add_cultivar_successful_submit_in_stock_and_active(self,
                                                                 mock_save,
@@ -152,6 +247,7 @@ class TestAddCultivarRouteWithDB:
         cn = CommonName()
         idx = Index()
         series = Series(name='Spotty')
+        series.common_name = cn
         gwcn = CommonName(name='Fauxglove')
         gwcv = Cultivar(name='Fauxy')
         gwcv.common_name = gwcn
@@ -309,22 +405,6 @@ class TestAddPacketRouteWithDB:
         with app.test_client() as tc:
             rv = tc.get(url_for('seeds.add_packet', cv_id=cultivar.id))
         assert 'Add a Packet' in str(rv.data)
-
-
-class TestAddSeriesRouteWithDB:
-    """Test add_series route."""
-    def test_add_series_successful_submit(self, app, db):
-        """Flash message on successful form submission."""
-        cn = CommonName(name='Foxglove')
-        db.session.add(cn)
-        db.session.commit()
-        with app.test_client() as tc:
-            rv = tc.post(url_for('seeds.add_series', cn_id=cn.id),
-                         data=dict(common_name=cn.id,
-                                   name='Spotty',
-                                   description='More dots!'),
-                         follow_redirects=True)
-        assert 'New series &#39;Spotty&#39; added to: Foxglove' in str(rv.data)
 
 
 class TestIndexRouteWithDB:
@@ -555,20 +635,20 @@ class TestEditBotanicalNameRouteWithDB:
         bn.name = 'Asclepias incarnata'
         cn1.name = 'Butterfly Weed'
         cn2.name = 'Milkweed'
-        bn.common_name = cn1
+        bn.common_names = [cn1]
         db.session.commit()
         with app.test_client() as tc:
             rv = tc.post(url_for('seeds.edit_botanical_name', bn_id=bn.id),
                          data=dict(name='Asclepias tuberosa',
-                                   common_name=cn2.id),
+                                   common_names=[cn2.id]),
                          follow_redirects=True)
         assert bn.name == 'Asclepias tuberosa'
-        assert cn2 is bn.common_name
+        assert cn2 in bn.common_names
+        assert cn1 not in bn.common_names
         assert 'Botanical name &#39;Asclepias incarnata&#39; changed to '\
             '&#39;Asclepias tuberosa&#39;.' in str(rv.data)
-        assert 'Common name associated with botanical name &#39;Asclepias '\
-            'tuberosa&#39; changed from &#39;Butterfly Weed&#39; to: '\
-            '&#39;Milkweed&#39;.' in str(rv.data)
+        assert 'Removed common name &#39;Butterfly Weed' in str(rv.data)
+        assert 'Added common name &#39;Milkweed' in str(rv.data)
 
     def test_edit_botanical_name_other_with_name(self, app, db):
         """Flash an error and redirect if edited to name alread in use."""
@@ -1758,7 +1838,6 @@ class TestEditCultivarRouteWithDB:
                                    common_name=cn.id,
                                    series=sr1.id),
                          follow_redirects=True)
-        print(rv.data)
         assert 'Series for &#39;Polkadot Foxy Foxglove&#39; has been set to'\
             in str(rv.data)
         assert cv.series is sr1
@@ -1770,6 +1849,7 @@ class TestEditCultivarRouteWithDB:
                                    common_name=cn.id,
                                    series=sr2.id),
                          follow_redirects=True)
+        print(rv.data)
         assert cv.series is sr2
         assert 'Series for &#39;Spotty Foxy Foxglove&#39; has been set to'\
             in str(rv.data)

@@ -21,6 +21,8 @@
 {# block main: 3 indentations of 4 spaces each. (12 spaces total.) #}
 {% from 'includes/cultivar_box.html' import cultivar_box with context %}
 {% from 'includes/grows_with.html' import grows_with %}
+{% set subcategories = cn.children %}
+{% set series = cn.series %}
 {% block head %}
         <title>Swallowtail Garden Seeds - {{ cn.header }}</title>
         <link rel="canonical" href="{{ url_for('seeds.common_name', idx_slug=idx.slug, cn_slug=cn.slug, _external=True) }}">
@@ -28,13 +30,65 @@
 {% block main %}
             <div>
                 <h1>{{ cn.header }}</h1>
-                    <p class="description">{{ cn.description|safe }}</p>
-                    {% if cn.gw_common_names or cn.gw_cultivars %}<p class="grows_with">Grows nicely with: {{ grows_with(cn) }}.</p>{% endif %}
+                {% if cn.description %}
+                <p class="description">{{ cn.description|safe }}</p>
+                {% endif %}
+                {% if cn.gw_common_names or cn.gw_cultivars %}<p class="grows_with">Grows nicely with: {{ grows_with(cn) }}.</p>{% endif %}
             </div>
-            {% for cultivar in cn.cultivars %}
-            {% if not cultivar.invisible %}
-            {{ cultivar_box(cultivar)|indent(12)|safe }}
+            {% if cn.parent %}
+            <a href="{{ url_for('seeds.common_name', idx_slug=idx.slug, cn_slug=cn.parent.slug) }}">Back to {{ cn.parent.name }}</a>
             {% endif %}
+            {% if subcategories or series %}
+            <nav class='page_contents'>
+                {% if subcategories %}
+                <a href="#subcategories" class="nav_title">Types of {{ cn.name }}</a>
+                {% for sc in subcategories %}
+                <a href="#subcategory_{{ sc.name.replace(' ', '_') }}">{{ sc.name }}</a>
+                {% endfor %}
+                {% endif %}
+                {% if series %}
+                <a href="#series" class="nav_title">Series</a>
+                {% for sr in series %}
+                <a href="#series_{{ sr.name.replace(' ', '_') }}">{{ sr.name }}</a>
+                {% endfor %}
+                {% endif %}
+                {% if individuals %}
+                <h2><a href="#individual_varieties" class="nav_title">Individual Varieties</a></h2>
+                {% endif %}
+            </nav>
+            {% endif %}
+            {% if subcategories %}
+            <h2 id="subcategories">Types of {{ cn.name }}</h2>
+            {% for sc in subcategories %}
+            <h3 id="subcategory_{{ sc.name.replace(' ', '_') }}">{{ sc.name }}</h3>
+            {% if sc.description %}
+            <p class="description">{{ sc.description|safe }}</p>
+            {% endif %}
+            {% for cv in sc.cultivars if idx in cv.indexes and not cv.invisible %}
+            {{ cultivar_box(cv)|indent(12)|safe }}
             {% endfor %}
+            <hr>
+            {% endfor %}
+            {% endif %}
+            {% if series %}
+            <h2 id="series">Series</h2>
+            {% for sr in series %}
+            <h3 id="series_{{ sr.name.replace(' ', '_') }}">{{ sr.name }}</h3>
+            {% if sr.description %}
+            <p class="description">{{ sr.description|safe }}</p>
+            {% endif %}
+            {% for cv in sr.cultivars if idx in cv.indexes and not cv.invisible %}
+            {{ cultivar_box(cv)|indent(12)|safe }}
+            {% endfor %}
+            {% endfor %}
+            {% endif %}
+            {% if individuals %}
+            {% if subcategories or series %}
+            <h2 id="individual_varieties">Individual Varieties</h2>
+            {% endif %}
+            {% for cv in individuals if idx in cv.indexes and not cv.invisible %}
+            {{ cultivar_box(cv)|indent(12)|safe }}
+            {% endfor %}
+            {% endif %}
 {% endblock %}
 

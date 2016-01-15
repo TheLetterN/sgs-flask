@@ -25,10 +25,10 @@ def foxy_cultivar():
     cultivar.botanical_name = bn
     idx = Index()
     idx.name = 'Perennial Flower'
-    cultivar.indexes.append(idx)
+    cultivar.index = idx
     cn = CommonName()
     cn.name = 'Foxglove'
-    cn.indexes.append(idx)
+    cn.index = idx
     cultivar.common_name = cn
     return cultivar
 
@@ -57,14 +57,14 @@ class TestAddCommonNameRouteWithDB:
         gwcn = CommonName(name='Butterfly Weed')
         gwcv = Cultivar(name='Soulmate')
         gwcv.common_name = gwcn
+        gwcv.index = idx
         db.session.add_all([idx, gwcn, gwcv, pcn])
         idx.name = 'Perennial Flower'
         db.session.commit()
         with app.test_client() as tc:
-            rv = tc.post(url_for('seeds.add_common_name'),
+            rv = tc.post(url_for('seeds.add_common_name', idx_id=idx.id),
                          data=dict(name='Foxglove',
                                    parent_cn=pcn.id,
-                                   indexes=[idx.id],
                                    description='Foxy!',
                                    instructions='Put in ground.',
                                    synonyms='Digitalis',
@@ -73,8 +73,7 @@ class TestAddCommonNameRouteWithDB:
                          follow_redirects=True)
         cn = CommonName.query.filter_by(name='Foxglove').first()
         assert cn is not None
-        assert idx in cn.indexes
-        assert 'has been added to the index' in str(rv.data)
+        assert cn.index is idx
         assert cn.description == 'Foxy!'
         assert 'Description for &#39;Foxglove&#39; set to' in str(rv.data)
         assert cn.instructions == 'Put in ground.'
@@ -96,10 +95,9 @@ class TestAddCommonNameRouteWithDB:
         db.session.add(idx)
         db.session.commit()
         with app.test_client() as tc:
-            rv = tc.post(url_for('seeds.add_common_name'),
+            rv = tc.post(url_for('seeds.add_common_name', idx_id=idx.id),
                          data=dict(name='Foxglove',
                                    parent_cn=0,
-                                   indexes=[idx.id],
                                    description='',
                                    instructions=''),
                          follow_redirects=True)
@@ -109,8 +107,11 @@ class TestAddCommonNameRouteWithDB:
 
     def test_add_common_name_renders_page(self, app, db):
         """Render form page for add_common_name."""
+        idx = Index(name='Perennial')
+        db.session.add(idx)
+        db.session.commit()
         with app.test_client() as tc:
-            rv = tc.get(url_for('seeds.add_common_name'))
+            rv = tc.get(url_for('seeds.add_common_name', idx_id=idx.id))
         assert 'Add Common Name' in str(rv.data)
 
 
@@ -249,21 +250,23 @@ class TestAddCultivarRouteWithDB:
         series = Series(name='Spotty')
         series.common_name = cn
         gwcn = CommonName(name='Fauxglove')
+        gwcn.index = idx
         gwcv = Cultivar(name='Fauxy')
         gwcv.common_name = gwcn
+        gwcv.index = idx
         db.session.add_all([bn, cn, idx, gwcn, gwcv, series])
         bn.name = 'Digitalis purpurea'
         idx.name = 'Perennial Flower'
         cn.name = 'Foxglove'
-        cn.indexes.append(idx)
+        cn.index = idx
         db.session.commit()
         with app.test_client() as tc:
             rv = tc.post(url_for('seeds.add_cultivar', cn_id=cn.id),
                          data=dict(botanical_name=str(bn.id),
-                                   indexes=[str(idx.id)],
                                    description='Very foxy.',
-                                   dropped='',
+                                   active='y',
                                    in_stock='y',
+                                   visible='y',
                                    gw_common_names=[str(gwcn.id)],
                                    gw_cultivars=[str(gwcv.id)],
                                    series=str(series.id),
@@ -272,7 +275,7 @@ class TestAddCultivarRouteWithDB:
                                               'foxy.jpg'),
                                    name='Foxy'),
                          follow_redirects=True)
-        assert '&#39;Perennial Flower&#39; added' in str(rv.data)
+        print(rv.data)
         assert 'Foxy Foxglove&#39; is in stock' in str(rv.data)
         assert 'Foxy Foxglove&#39; is currently active' in str(rv.data)
         assert '&#39;Fauxglove&#39; added to Grows With for' in str(rv.data)
@@ -286,10 +289,10 @@ class TestAddCultivarRouteWithDB:
                                                   'foxy.jpg'))
 
     @mock.patch('werkzeug.FileStorage.save')
-    def test_add_cultivar_successful_submit_no_stock_and_dropped(self,
-                                                                 mock_save,
-                                                                 app,
-                                                                 db):
+    def test_add_cultivar_successful_submit_no_stock_and_inactive(self,
+                                                                  mock_save,
+                                                                  app,
+                                                                  db):
         """Flash messages if cultivar is not in stock and has been dropped."""
         bn = BotanicalName()
         cn = CommonName()
@@ -298,14 +301,14 @@ class TestAddCultivarRouteWithDB:
         bn.name = 'Digitalis purpurea'
         idx.name = 'Perennial Flower'
         cn.name = 'Foxglove'
-        cn.indexes.append(idx)
+        cn.index = idx
         db.session.commit()
         with app.test_client() as tc:
             rv = tc.post(url_for('seeds.add_cultivar', cn_id=cn.id),
                          data=dict(botanical_name=str(bn.id),
-                                   indexes=[str(idx.id)],
+                                   index=str(idx.id),
                                    description='Very foxy.',
-                                   dropped='y',
+                                   active='',
                                    in_stock='',
                                    name='Foxy',
                                    series='0',
@@ -313,29 +316,8 @@ class TestAddCultivarRouteWithDB:
                                               'foxy.jpg')),
                          follow_redirects=True)
         assert '&#39;Foxy Foxglove&#39; is not in stock' in str(rv.data)
-        assert '&#39;Foxy Foxglove&#39; is currently dropped/inactive' in\
+        assert '&#39;Foxy Foxglove&#39; is currently inactive' in\
             str(rv.data)
-
-    def test_add_cultivar_successful_submit_no_indexes(self, app, db):
-        """Set indexes from common name if none selected in form."""
-        bn = BotanicalName(name='Digitalis purpurea')
-        cn = CommonName(name='Foxglove')
-        idx = Index(name='Perennial Flower')
-        db.session.add_all([bn, cn, idx])
-        cn.indexes.append(idx)
-        db.session.commit()
-        with app.test_client() as tc:
-            rv = tc.post(url_for('seeds.add_cultivar', cn_id=cn.id),
-                         data=dict(botanical_name=str(bn.id),
-                                   description='Very foxy',
-                                   dropped='',
-                                   in_stock='',
-                                   name='Foxy',
-                                   series='0'),
-                         follow_redirects=True)
-        assert 'No indexes specified' in str(rv.data)
-        cv = Cultivar.query.filter_by(name='Foxy').first()
-        assert idx in cv.indexes
 
 
 class TestAddPacketRouteWithDB:
@@ -501,7 +483,7 @@ class TestCultivarRouteWithDB:
         idx.name = 'Perennial Flower'
         cn.name = 'Foxglove'
         cultivar.name = 'Foxy'
-        cultivar.indexes.append(idx)
+        cultivar.index = idx
         cultivar.common_name = cn
         cultivar.description = 'Like that Hendrix song.'
         db.session.commit()
@@ -543,7 +525,7 @@ class TestCultivarRouteWithDB:
         cn1.name = 'Foxglove'
         cn2.name = 'Persian'
         cultivar.name = 'Foxy'
-        cultivar.indexes.append(idx1)
+        cultivar.index = idx1
         cultivar.common_name = cn1
         db.session.commit()
         with app.test_client() as tc:
@@ -566,7 +548,7 @@ class TestCultivarRouteWithDB:
         db.session.commit()
         with app.test_client() as tc:
             rv = tc.get(url_for('seeds.cultivar',
-                                idx_slug=cultivar.indexes[0].slug,
+                                idx_slug=cultivar.index.slug,
                                 cn_slug=cultivar.common_name.slug,
                                 cv_slug=cultivar.slug))
         assert 'Foxy Foxglove' in str(rv.data)
@@ -863,14 +845,14 @@ class TestEditCommonNameRouteWithDB:
                         description='Foxy!',
                         instructions='Put in ground')
         idx = Index(name='Perennial Flower')
-        cn.indexes.append(idx)
+        cn.index = idx
         db.session.add_all([cn, idx])
         db.session.commit()
         assert cn.description is not None
         with app.test_client() as tc:
             rv = tc.post(url_for('seeds.edit_common_name', cn_id=cn.id),
                          data=dict(name='Foxglove',
-                                   indexes=[idx.id],
+                                   index=idx.id,
                                    description='',
                                    instructions='',
                                    parent_cn=0),
@@ -886,14 +868,14 @@ class TestEditCommonNameRouteWithDB:
         cn1 = CommonName(name='Fauxglove')
         cn2 = CommonName(name='Foxglove')
         idx = Index(name='Perennial Flower')
-        cn1.indexes.append(idx)
-        cn2.indexes.append(idx)
+        cn1.index = idx
+        cn2.index = idx
         db.session.add_all([cn1, cn2, idx])
         db.session.commit()
         with app.test_client() as tc:
             rv = tc.post(url_for('seeds.edit_common_name', cn_id=cn1.id),
                          data=dict(name='Foxglove',
-                                   indexes=[idx.id],
+                                   index=idx.id,
                                    parent_cn=0),
                          follow_redirects=True)
         assert 'is already in use' in str(rv.data)
@@ -905,14 +887,14 @@ class TestEditCommonNameRouteWithDB:
         cn2.invisible = True
         cn1.synonyms.append(cn2)
         idx = Index('Flower')
-        cn1.indexes.append(idx)
+        cn1.index = idx
         db.session.add_all([cn1, cn2, idx])
         db.session.commit()
         assert cn2 in cn1.synonyms
         with app.test_client() as tc:
             rv = tc.post(url_for('seeds.edit_common_name', cn_id=cn1.id),
                          data=dict(name='Foxglove',
-                                   indexes=[idx.id],
+                                   index=idx.id,
                                    parent_cn=0,
                                    synonyms=''),
                          follow_redirects=True)
@@ -927,14 +909,14 @@ class TestEditCommonNameRouteWithDB:
         cn3.invisible = True
         cn2.synonyms = [cn3]
         idx = Index(name='Perennial Flower')
-        cn1.indexes.append(idx)
-        cn2.indexes.append(idx)
+        cn1.index = idx
+        cn2.index = idx
         db.session.add_all([cn1, cn2, cn3, idx])
         db.session.commit()
         with app.test_client() as tc:
             rv = tc.post(url_for('seeds.edit_common_name', cn_id=cn1.id),
                          data=dict(name='Digitalis',
-                                   indexes=[idx.id],
+                                   index=idx.id,
                                    parent_cn=0),
                          follow_redirects=True)
         assert 'already exists as a synonym of' in str(rv.data)
@@ -953,13 +935,13 @@ class TestEditCommonNameRouteWithDB:
         cn3.invisible = True
         cn1.synonyms = [cn2, cn3]
         idx = Index(name='Perennial Flower')
-        cn1.indexes.append(idx)
+        cn1.index = idx
         db.session.add_all([cn1, cn2, cn3, idx])
         db.session.commit()
         with app.test_client() as tc:
             tc.post(url_for('seeds.edit_common_name', cn_id=cn1.id),
                     data=dict(name='Foxglove',
-                              indexes=[idx.id],
+                              index=idx.id,
                               parent_cn=0,
                               synonyms='Fauxglove, Digitalis'),
                     follow_redirects=True)
@@ -973,13 +955,13 @@ class TestEditCommonNameRouteWithDB:
         cn.name = 'Butterfly Weed'
         cn.description = 'Butterflies love this stuff.'
         idx.name = 'Perennial Flower'
-        cn.indexes.append(idx)
+        cn.index = idx
         db.session.commit()
         with app.test_client() as tc:
             rv = tc.post(url_for('seeds.edit_common_name', cn_id=cn.id),
                          data=dict(name='Butterfly Weed',
                                    description='Butterflies love this stuff.',
-                                   indexes=[idx.id],
+                                   index=idx.id,
                                    parent_cn=0),
                          follow_redirects=True)
         assert 'No changes made' in str(rv.data)
@@ -995,50 +977,50 @@ class TestEditCommonNameRouteWithDB:
 
     def test_edit_common_name_renders_page(self, app, db):
         """Render the page to edit common name given valid cn_id."""
-        cn = CommonName()
+        cn = CommonName(name='Foxglove')
+        cn.index = Index(name='Perennial')
         db.session.add(cn)
-        cn.name = 'Butterfly Weed'
         db.session.commit()
         with app.test_client() as tc:
             rv = tc.get(url_for('seeds.edit_common_name', cn_id=cn.id),
                         follow_redirects=True)
         assert 'Edit Common Name' in str(rv.data)
 
-    def test_edit_common_name_remove_index_removes_from_cv(self, app, db):
-        """Remove index from any cultivars w/ common name."""
+    def test_edit_common_name_changing_index_changes_cvs(self, app, db):
+        """Change index for cultivars belonging to CommonName."""
         cn = CommonName(name='Foxglove')
         idx1 = Index(name='Plant')
         idx2 = Index(name='Perennial Flower')
         cv = Cultivar(name='Foxy')
-        cn.indexes.append(idx1)
-        cv.indexes.append(idx1)
+        cn.index = idx1
+        cv.index = idx1
         cv.common_name = cn
         db.session.add_all([cn, idx1, idx2, cv])
         db.session.commit()
-        assert idx1 in cv.indexes
+        assert cv.index is idx1
         with app.test_client() as tc:
             rv = tc.post(url_for('seeds.edit_common_name', cn_id=cn.id),
                          data=dict(name='Foxglove',
-                                   indexes=[idx2.id],
+                                   index=idx2.id,
                                    parent_cn=0),
                          follow_redirects=True)
-        assert 'has also been removed from the cultivar' in str(rv.data)
-        assert idx1 not in cv.indexes
+        assert 'Index for &#39;Foxglove&#39; and all of its' in str(rv.data)
+        assert cv.index is idx2
 
     def test_edit_common_name_adds_parent(self, app, db):
         """Add parent if specified by form."""
         cn1 = CommonName(name='Dwarf Coleus')
         cn2 = CommonName(name='Coleus')
         idx = Index(name='Perennial Flower')
-        cn1.indexes.append(idx)
-        cn2.indexes.append(idx)
+        cn1.index = idx
+        cn2.index = idx
         db.session.add_all([cn1, cn2, idx])
         db.session.commit()
         assert not cn1.parent
         with app.test_client() as tc:
             rv = tc.post(url_for('seeds.edit_common_name', cn_id=cn1.id),
                          data=dict(name='Dwarf Coleus',
-                                   indexes=[idx.id],
+                                   index=idx.id,
                                    parent_cn=cn2.id),
                          follow_redirects=True)
         assert 'is now a subcategory of' in str(rv.data)
@@ -1050,9 +1032,9 @@ class TestEditCommonNameRouteWithDB:
         cn2 = CommonName(name='Plant')
         cn3 = CommonName(name='Coleus')
         idx = Index('Flower')
-        cn1.indexes.append(idx)
-        cn2.indexes.append(idx)
-        cn3.indexes.append(idx)
+        cn1.index = idx
+        cn2.index = idx
+        cn3.index = idx
         cn1.parent = cn2
         db.session.add_all([cn1, cn2, cn3, idx])
         db.session.commit()
@@ -1060,7 +1042,7 @@ class TestEditCommonNameRouteWithDB:
         with app.test_client() as tc:
             rv = tc.post(url_for('seeds.edit_common_name', cn_id=cn1.id),
                          data=dict(name='Dwarf Coleus',
-                                   indexes=[idx.id],
+                                   index=idx.id,
                                    parent_cn=cn3.id),
                          follow_redirects=True)
         assert 'is now a subcategory of' in str(rv.data)
@@ -1071,8 +1053,8 @@ class TestEditCommonNameRouteWithDB:
         cn1 = CommonName(name='Dwarf Coleus')
         cn2 = CommonName(name='Coleus')
         idx = Index('Flower')
-        cn1.indexes.append(idx)
-        cn2.indexes.append(idx)
+        cn1.index = idx
+        cn2.index = idx
         cn1.parent = cn2
         db.session.add_all([cn1, cn2, idx])
         db.session.commit()
@@ -1080,7 +1062,7 @@ class TestEditCommonNameRouteWithDB:
         with app.test_client() as tc:
             rv = tc.post(url_for('seeds.edit_common_name', cn_id=cn1.id),
                          data=dict(name='Dwarf Coleus',
-                                   indexes=[idx.id],
+                                   index=idx.id,
                                    parent_cn=0),
                          follow_redirects=True)
         assert 'is no longer a subcategory of any other' in str(rv.data)
@@ -1091,8 +1073,8 @@ class TestEditCommonNameRouteWithDB:
         cn = CommonName(name='Fauxglove')
         idx = Index(name='Perennial Flower')
         cv = Cultivar(name='Foxy')
-        cn.indexes.append(idx)
-        cv.indexes.append(idx)
+        cn.index = idx
+        cv.index = idx
         cv.common_name = cn
         db.session.add_all([cn, idx, cv])
         db.session.commit()
@@ -1100,7 +1082,7 @@ class TestEditCommonNameRouteWithDB:
         with app.test_client() as tc:
             rv = tc.post(url_for('seeds.edit_common_name', cn_id=cn.id),
                          data=dict(name='Foxglove',
-                                   indexes=[idx.id],
+                                   index=idx.id,
                                    parent_cn=0),
                          follow_redirects=True)
         assert cn_slug != cn.slug
@@ -1134,7 +1116,7 @@ class TestEditCommonNameRouteWithDB:
         with app.test_client() as tc:
             rv = tc.post(url_for('seeds.edit_common_name', cn_id=cn1.id),
                          data=dict(name='Foxglove',
-                                   indexes=[idx.id],
+                                   index=idx.id,
                                    parent_cn=0,
                                    gw_common_names=[cn2.id, cn3.id]),
                          follow_redirects=True)
@@ -1147,9 +1129,9 @@ class TestEditCommonNameRouteWithDB:
         cn2 = CommonName(name='Butterfly Weed')
         cn3 = CommonName(name='Tomato')
         idx = Index(name='Perennial Flower')
-        cn1.indexes.append(idx)
-        cn2.indexes.append(idx)
-        cn3.indexes.append(idx)
+        cn1.index = idx
+        cn2.index = idx
+        cn3.index = idx
         cn1.gw_common_names = [cn2, cn3]
         cn2.gw_common_names = [cn1, cn3]
         cn3.gw_common_names = [cn1, cn2]
@@ -1162,7 +1144,7 @@ class TestEditCommonNameRouteWithDB:
             rv = tc.post(url_for('seeds.edit_common_name', cn_id=cn1.id),
                          data=dict(name='Foxglove',
                                    parent_cn=0,
-                                   indexes=[idx.id],
+                                   index=idx.id,
                                    gw_common_names=[cn2.id]),
                          follow_redirects=True)
         assert 'removed from Grows With' in str(rv.data)
@@ -1178,7 +1160,9 @@ class TestEditCommonNameRouteWithDB:
         cv2 = Cultivar(name='Tumbling Tom')
         cv2.common_name = CommonName(name='Tomato')
         idx = Index(name='Perennial Flower')
-        cn.indexes.append(idx)
+        cv1.index = idx
+        cv2.index = idx
+        cn.index = idx
         cn.gw_cultivars.append(cv1)
         db.session.add_all([cn, cv1, cv2, idx])
         db.session.commit()
@@ -1188,7 +1172,7 @@ class TestEditCommonNameRouteWithDB:
             rv = tc.post(url_for('seeds.edit_common_name', cn_id=cn.id),
                          data=dict(name='Foxglove',
                                    parent_cn=0,
-                                   indexes=[idx.id],
+                                   index=idx.id,
                                    gw_cultivars=[cv1.id, cv2.id]),
                          follow_redirects=True)
         assert 'added to Grows With' in str(rv.data)
@@ -1203,7 +1187,9 @@ class TestEditCommonNameRouteWithDB:
         cv2 = Cultivar(name='Tumbling Tom')
         cv2.common_name = CommonName(name='Tomato')
         idx = Index(name='PerennialFlower')
-        cn.indexes.append(idx)
+        cv1.index = idx
+        cv2.index = idx
+        cn.index = idx
         cn.gw_cultivars = [cv1, cv2]
         db.session.add_all([cn, cv1, cv2, idx])
         db.session.commit()
@@ -1213,9 +1199,10 @@ class TestEditCommonNameRouteWithDB:
             rv = tc.post(url_for('seeds.edit_common_name', cn_id=cn.id),
                          data=dict(name='Foxglove',
                                    parent_cn=0,
-                                   indexes=[idx.id],
+                                   index=idx.id,
                                    gw_cultivars=[cv1.id]),
                          follow_redirects=True)
+        print(rv.data)
         assert 'removed from Grows With' in str(rv.data)
         assert cv1 in cn.gw_cultivars
         assert cv2 not in cn.gw_cultivars
@@ -1233,7 +1220,7 @@ class TestEditCommonNameRouteWithDB:
         idx1.name = 'Annual Flower'
         idx2.name = 'Vegetable'
         idx3.name = 'Herb'
-        cn.indexes.append(idx1)
+        cn.index = idx1
         db.session.commit()
         with app.test_client() as tc:
             rv = tc.post(url_for('seeds.edit_common_name', cn_id=cn.id),
@@ -1241,15 +1228,13 @@ class TestEditCommonNameRouteWithDB:
                                    description='Crunchy!',
                                    instructions='Do not eat.',
                                    parent_cn=0,
-                                   indexes=[idx2.id, idx3.id]),
+                                   index=idx2.id),
                          follow_redirects=True)
         assert cn.name == 'Celery'
-        assert idx1 not in cn.indexes
-        assert idx2 in cn.indexes
-        assert idx3 in cn.indexes
-        assert 'Common name &#39;Butterfly Weed&#39;' in str(rv.data)
-        assert 'added to indexes' in str(rv.data)
-        assert 'removed from indexes' in str(rv.data)
+        assert cn.index == idx2
+        assert 'Common name &#39;Butterfly Weed&#39; changed' in str(rv.data)
+        print(rv.data)
+        assert 'Index for &#39;Celery&#39; and all of' in str(rv.data)
         assert 'Planting instructions for &#39;Celery&#39; changed'\
             in str(rv.data)
         assert 'Description for &#39;Celery&#39; changed' in str(rv.data)
@@ -1388,9 +1373,10 @@ class TestEditCultivarRouteWithDB:
         cn.name = 'Foxglove'
         idx.name = 'Perennial Flower'
         thumb.filename = 'foxy.jpg'
-        cultivar.indexes.append(idx)
+        cultivar.index = idx
         cultivar.botanical_name = bn
-        cn.indexes.append(idx)
+        cn.index = idx
+        cn.botanical_names = [bn, bn2]
         cultivar.common_name = cn
         cultivar.name = 'Foxy'
         cultivar.description = 'Like that Hendrix song.'
@@ -1399,7 +1385,7 @@ class TestEditCultivarRouteWithDB:
         with app.test_client() as tc:
             rv = tc.post(url_for('seeds.edit_cultivar', cv_id=cultivar.id),
                          data=dict(botanical_name=str(bn2.id),
-                                   indexes=[str(idx.id)],
+                                   index=str(idx.id),
                                    common_name=str(cn.id),
                                    description=cultivar.description,
                                    name=cultivar.name,
@@ -1408,42 +1394,24 @@ class TestEditCultivarRouteWithDB:
         assert 'Changed botanical name' in str(rv.data)
         assert bn2 is cultivar.botanical_name
 
-    def test_edit_cultivar_change_indexes(self, app, db):
-        """Flash messages if indexes added or removed."""
-        cultivar = Cultivar()
-        bn = BotanicalName()
-        idx = Index()
-        idx2 = Index()
-        cn = CommonName()
-        thumb = Image()
-        db.session.add_all([bn, idx, idx2, cn])
-        bn.name = 'Digitalis purpurea'
-        cn.name = 'Foxglove'
-        idx.name = 'Perennial Flower'
-        idx2.name = 'Plant'
-        thumb.filename = 'foxy.jpg'
-        cultivar.indexes.append(idx)
-        cultivar.botanical_name = bn
-        cn.indexes.append(idx)
-        cn.indexes.append(idx2)
-        cultivar.common_name = cn
-        cultivar.name = 'Foxy'
-        cultivar.description = 'Like that Hendrix song.'
-        cultivar.thumbnail = thumb
-        db.session.commit()
+    def test_edit_cultivar_change_index(self, app, db):
+        """Flash messages if index is changed."""
+        idx1 = Index(name='Perennial')
+        idx2 = Index(name='Annual')
+        cv = Cultivar(name='Foxy')
+        cn = CommonName(name='Foxglove')
+        cv.index = idx1
+        cn.index = idx2  # Set to idx2 b/c cn needs same idx as cv on submit.
+        db.session.add_all([idx1, idx2, cv, cn])
         with app.test_client() as tc:
-            rv = tc.post(url_for('seeds.edit_cultivar', cv_id=cultivar.id),
-                         data=dict(botanical_name=str(bn.id),
-                                   indexes=[str(idx2.id)],
-                                   common_name=str(cn.id),
-                                   description=cultivar.description,
-                                   name=cultivar.name,
-                                   series='0'),
-                         follow_redirects=True)
-        assert 'Added index' in str(rv.data)
-        assert 'Removed index' in str(rv.data)
-        assert idx2 in cultivar.indexes
-        assert idx not in cultivar.indexes
+            tc.post(url_for('seeds.edit_cultivar', cv_id=cv.id),
+                    data=dict(botanical_name=0,
+                              index=str(idx2.id),
+                              common_name=str(cn.id),
+                              description=cv.description,
+                              name=cv.name,
+                              series='0'),
+                    follow_redirects=True)
 
     def test_edit_cultivar_change_common_name(self, app, db):
         """Flash message if common name changed."""
@@ -1459,10 +1427,12 @@ class TestEditCultivarRouteWithDB:
         cn2.name = 'Vulpinemitten'
         idx.name = 'Perennial Flower'
         thumb.filename = 'foxy.jpg'
-        cultivar.indexes.append(idx)
+        cultivar.index = idx
         cultivar.botanical_name = bn
-        cn.indexes.append(idx)
-        cn2.indexes.append(idx)
+        cn.index = idx
+        cn.botanical_names.append(bn)
+        cn2.index = idx
+        cn2.botanical_names.append(bn)
         cultivar.common_name = cn
         cultivar.name = 'Foxy'
         cultivar.description = 'Like that Hendrix song.'
@@ -1471,7 +1441,7 @@ class TestEditCultivarRouteWithDB:
         with app.test_client() as tc:
             rv = tc.post(url_for('seeds.edit_cultivar', cv_id=cultivar.id),
                          data=dict(botanical_name=str(bn.id),
-                                   indexes=[str(idx.id)],
+                                   index=str(idx.id),
                                    common_name=str(cn2.id),
                                    description=cultivar.description,
                                    name=cultivar.name,
@@ -1493,9 +1463,10 @@ class TestEditCultivarRouteWithDB:
         cn.name = 'Foxglove'
         idx.name = 'Perennial Flower'
         thumb.filename = 'foxy.jpg'
-        cultivar.indexes.append(idx)
+        cultivar.index = idx
         cultivar.botanical_name = bn
-        cn.indexes.append(idx)
+        cn.index = idx
+        cn.botanical_names.append(bn)
         cultivar.common_name = cn
         cultivar.name = 'Foxy'
         cultivar.description = 'Like that Hendrix song.'
@@ -1504,7 +1475,7 @@ class TestEditCultivarRouteWithDB:
         with app.test_client() as tc:
             rv = tc.post(url_for('seeds.edit_cultivar', cv_id=cultivar.id),
                          data=dict(botanical_name=str(bn.id),
-                                   indexes=[str(idx.id)],
+                                   index=str(idx.id),
                                    common_name=str(cn.id),
                                    description='Like a lady.',
                                    name=cultivar.name,
@@ -1513,8 +1484,8 @@ class TestEditCultivarRouteWithDB:
         assert 'Changed description' in str(rv.data)
         assert cultivar.description == 'Like a lady.'
 
-    def test_edit_cultivar_change_dropped(self, app, db):
-        """Flash message if dropped status changed."""
+    def test_edit_cultivar_change_active(self, app, db):
+        """Flash message if active status changed."""
         cultivar = Cultivar()
         bn = BotanicalName()
         idx = Index()
@@ -1525,42 +1496,43 @@ class TestEditCultivarRouteWithDB:
         cn.name = 'Foxglove'
         idx.name = 'Perennial Flower'
         thumb.filename = 'foxy.jpg'
-        cultivar.indexes.append(idx)
+        cultivar.index = idx
         cultivar.botanical_name = bn
-        cn.indexes.append(idx)
+        cn.index = idx
+        cn.botanical_names.append(bn)
         cultivar.common_name = cn
         cultivar.name = 'Foxy'
         cultivar.description = 'Like that Hendrix song.'
         cultivar.in_stock = True
-        cultivar.dropped = False
+        cultivar.active = True
         cultivar.thumbnail = thumb
         db.session.commit()
         with app.test_client() as tc:
             rv = tc.post(url_for('seeds.edit_cultivar', cv_id=cultivar.id),
                          data=dict(botanical_name=str(bn.id),
-                                   indexes=[str(idx.id)],
+                                   index=str(idx.id),
                                    common_name=str(cn.id),
                                    description=cultivar.description,
-                                   dropped='y',
+                                   active='',
                                    in_stock='y',
                                    name=cultivar.name,
                                    series='0'),
                          follow_redirects=True)
-        assert '&#39;Foxy Foxglove&#39; has been dropped.' in str(rv.data)
-        assert cultivar.dropped
+        assert '&#39;Foxy Foxglove&#39; is no longer active.' in str(rv.data)
+        assert not cultivar.active
         with app.test_client() as tc:
             rv = tc.post(url_for('seeds.edit_cultivar', cv_id=cultivar.id),
                          data=dict(botanical_name=str(bn.id),
-                                   indexes=[str(idx.id)],
+                                   index=str(idx.id),
                                    common_name=str(cn.id),
                                    description=cultivar.description,
-                                   dropped='',
+                                   active='y',
                                    in_stock='y',
                                    name=cultivar.name,
                                    series='0'),
                          follow_redirects=True)
         assert '&#39;Foxy Foxglove&#39; is now active' in str(rv.data)
-        assert not cultivar.dropped
+        assert cultivar.active
 
     def test_edit_cultivar_change_in_stock(self, app, db):
         """Flash message if in_stock status changed."""
@@ -1574,23 +1546,24 @@ class TestEditCultivarRouteWithDB:
         cn.name = 'Foxglove'
         idx.name = 'Perennial Flower'
         thumb.filename = 'foxy.jpg'
-        cultivar.indexes.append(idx)
+        cultivar.index = idx
         cultivar.botanical_name = bn
-        cn.indexes.append(idx)
+        cn.index = idx
+        cn.botanical_names.append(bn)
         cultivar.common_name = cn
         cultivar.name = 'Foxy'
         cultivar.description = 'Like that Hendrix song.'
         cultivar.in_stock = False
-        cultivar.dropped = False
+        cultivar.active = True
         cultivar.thumbnail = thumb
         db.session.commit()
         with app.test_client() as tc:
             rv = tc.post(url_for('seeds.edit_cultivar', cv_id=cultivar.id),
                          data=dict(botanical_name=str(bn.id),
-                                   indexes=[str(idx.id)],
+                                   index=str(idx.id),
                                    common_name=str(cn.id),
                                    description=cultivar.description,
-                                   dropped='',
+                                   active='y',
                                    in_stock='y',
                                    name=cultivar.name,
                                    series='0'),
@@ -1600,10 +1573,10 @@ class TestEditCultivarRouteWithDB:
         with app.test_client() as tc:
             rv = tc.post(url_for('seeds.edit_cultivar', cv_id=cultivar.id),
                          data=dict(botanical_name=str(bn.id),
-                                   indexes=[str(idx.id)],
+                                   index=str(idx.id),
                                    common_name=str(cn.id),
                                    description='Like that Hendrix song.',
-                                   dropped='',
+                                   Active='y',
                                    in_stock='',
                                    name=cultivar.name,
                                    series='0'),
@@ -1623,9 +1596,10 @@ class TestEditCultivarRouteWithDB:
         cn.name = 'Foxglove'
         idx.name = 'Perennial Flower'
         thumb.filename = 'foxy.jpg'
-        cultivar.indexes.append(idx)
+        cultivar.index = idx
         cultivar.botanical_name = bn
-        cn.indexes.append(idx)
+        cn.index = idx
+        cn.botanical_names.append(bn)
         cultivar.common_name = cn
         cultivar.name = 'Foxy'
         cultivar.description = 'Like that Hendrix song.'
@@ -1634,12 +1608,13 @@ class TestEditCultivarRouteWithDB:
         with app.test_client() as tc:
             rv = tc.post(url_for('seeds.edit_cultivar', cv_id=cultivar.id),
                          data=dict(botanical_name=str(bn.id),
-                                   indexes=[str(idx.id)],
+                                   index=str(idx.id),
                                    common_name=str(cn.id),
                                    description=cultivar.description,
                                    name='Fawksy',
                                    series='0'),
                          follow_redirects=True)
+        print(rv.data)
         assert 'Changed cultivar name' in str(rv.data)
         assert cultivar.name == 'Fawksy'
 
@@ -1659,9 +1634,10 @@ class TestEditCultivarRouteWithDB:
         cn.name = 'Foxglove'
         idx.name = 'Perennial Flower'
         thumb.filename = 'foxy.jpg'
-        cultivar.indexes.append(idx)
+        cultivar.index = idx
         cultivar.botanical_name = bn
-        cn.indexes.append(idx)
+        cn.index = idx
+        cn.botanical_names.append(bn)
         cultivar.common_name = cn
         cultivar.name = 'Foxy'
         cultivar.description = 'Like that Hendrix song.'
@@ -1670,7 +1646,7 @@ class TestEditCultivarRouteWithDB:
         with app.test_client() as tc:
             rv = tc.post(url_for('seeds.edit_cultivar', cv_id=cultivar.id),
                          data=dict(botanical_name=str(bn.id),
-                                   indexes=[str(idx.id)],
+                                   index=str(idx.id),
                                    common_name=str(cn.id),
                                    description=cultivar.description,
                                    name=cultivar.name,
@@ -1678,6 +1654,7 @@ class TestEditCultivarRouteWithDB:
                                    thumbnail=(io.BytesIO(b'fawks'),
                                               'fawksy.jpg')),
                          follow_redirects=True)
+        print(rv.data)
         assert 'New thumbnail' in str(rv.data)
         assert cultivar.thumbnail.filename == 'fawksy.jpg'
         assert thumb in cultivar.images
@@ -1692,9 +1669,9 @@ class TestEditCultivarRouteWithDB:
         cv2 = Cultivar(name='Fauxy')
         idx = Index(name='Perennial')
         cn = CommonName(name='Foxglove')
-        cv.indexes.append(idx)
-        cv2.indexes.append(idx)
-        cn.indexes.append(idx)
+        cv.index = idx
+        cv2.index = idx
+        cn.index = idx
         cv.common_name = cn
         cv2.common_name = cn
         thumb = Image()
@@ -1707,7 +1684,7 @@ class TestEditCultivarRouteWithDB:
                          data=dict(name='Foxy',
                                    botanical_name='0',
                                    common_name=str(cn.id),
-                                   indexes=[str(idx.id)],
+                                   index=str(idx.id),
                                    series='0',
                                    thumbnail=(io.BytesIO(b'fawks'),
                                               'foxy.jpg')),
@@ -1722,8 +1699,8 @@ class TestEditCultivarRouteWithDB:
         cv = Cultivar(name='Foxy')
         idx = Index(name='Perennial')
         cn = CommonName(name='Foxglove')
-        cv.indexes.append(idx)
-        cn.indexes.append(idx)
+        cv.index = idx
+        cn.index = idx
         cv.common_name = cn
         thumb = Image()
         thumb.filename = 'foxy.jpg'
@@ -1735,7 +1712,7 @@ class TestEditCultivarRouteWithDB:
                          data=dict(name='Foxy',
                                    botanical_name='0',
                                    common_name=str(cn.id),
-                                   indexes=[str(idx.id)],
+                                   index=str(idx.id),
                                    series='0',
                                    thumbnail=(io.BytesIO(b'fawks'),
                                               'foxy.jpg')),
@@ -1750,10 +1727,10 @@ class TestEditCultivarRouteWithDB:
         cn2 = CommonName(name='Plant')
         cn3 = CommonName(name='Butterfly Weed')
         idx = Index(name='Perennial')
-        cv.indexes.append(idx)
-        cn1.indexes.append(idx)
-        cn2.indexes.append(idx)
-        cn3.indexes.append(idx)
+        cv.index = idx
+        cn1.index = idx
+        cn2.index = idx
+        cn3.index = idx
         cv.common_name = cn1
         cv.gw_common_names.append(cn2)
         db.session.add_all([cv, cn2, cn3, idx])
@@ -1765,7 +1742,7 @@ class TestEditCultivarRouteWithDB:
                          data=dict(name='Foxy',
                                    botanical_name=0,
                                    common_name=cn1.id,
-                                   indexes=[idx.id],
+                                   index=idx.id,
                                    series='0',
                                    gw_common_names=[cn3.id]),
                          follow_redirects=True)
@@ -1789,11 +1766,11 @@ class TestEditCultivarRouteWithDB:
         cv2.common_name = cn2
         cv3.common_name = cn2
         idx = Index(name='Perennial')
-        cv1.indexes.append(idx)
-        cv2.indexes.append(idx)
-        cv3.indexes.append(idx)
-        cn1.indexes.append(idx)
-        cn2.indexes.append(idx)
+        cv1.index = idx
+        cv2.index = idx
+        cv3.index = idx
+        cn1.index = idx
+        cn2.index = idx
         cv2.gw_cultivars.append(cv1)
         cv1.gw_cultivars.append(cv2)
         db.session.add_all([cv1, cv2, cv3, cn1, cn2, idx])
@@ -1806,7 +1783,7 @@ class TestEditCultivarRouteWithDB:
                          data=dict(name='Foxy',
                                    botanical_name=0,
                                    common_name=cn1.id,
-                                   indexes=[idx.id],
+                                   index=idx.id,
                                    series=0,
                                    gw_cultivars=[cv3.id]),
                          follow_redirects=True)
@@ -1824,8 +1801,8 @@ class TestEditCultivarRouteWithDB:
         idx = Index(name='Perennial')
         sr1 = Series(name='Polkadot')
         sr2 = Series(name='Spotty')
-        cv.indexes.append(idx)
-        cn.indexes.append(idx)
+        cv.index = idx
+        cn.index = idx
         cv.common_name = cn
         db.session.add_all([cv, cn, idx, sr1, sr2])
         db.session.commit()
@@ -1834,7 +1811,7 @@ class TestEditCultivarRouteWithDB:
             rv = tc.post(url_for('seeds.edit_cultivar', cv_id=cv.id),
                          data=dict(name='Foxy',
                                    botanical_name=0,
-                                   indexes=[idx.id],
+                                   index=idx.id,
                                    common_name=cn.id,
                                    series=sr1.id),
                          follow_redirects=True)
@@ -1845,7 +1822,7 @@ class TestEditCultivarRouteWithDB:
             rv = tc.post(url_for('seeds.edit_cultivar', cv_id=cv.id),
                          data=dict(name='Foxy',
                                    botanical_name=0,
-                                   indexes=[idx.id],
+                                   index=idx.id,
                                    common_name=cn.id,
                                    series=sr2.id),
                          follow_redirects=True)
@@ -1857,7 +1834,7 @@ class TestEditCultivarRouteWithDB:
             rv = tc.post(url_for('seeds.edit_cultivar', cv_id=cv.id),
                          data=dict(name='Foxy',
                                    botanical_name=0,
-                                   indexes=[idx.id],
+                                   index=idx.id,
                                    common_name=cn.id,
                                    series=0),
                          follow_redirects=True)
@@ -1875,8 +1852,8 @@ class TestEditCultivarRouteWithDB:
         cv.synonyms.append(syn1)
         cn = CommonName(name='Foxglove')
         idx = Index(name='Perennial')
-        cv.indexes.append(idx)
-        cn.indexes.append(idx)
+        cv.index = idx
+        cn.index = idx
         cv.common_name = cn
         db.session.add_all([cv, syn1, syn2, cn, idx])
         db.session.commit()
@@ -1884,7 +1861,7 @@ class TestEditCultivarRouteWithDB:
             rv = tc.post(url_for('seeds.edit_cultivar', cv_id=cv.id),
                          data=dict(name='Foxy',
                                    botanical_name=0,
-                                   indexes=[idx.id],
+                                   index=idx.id,
                                    common_name=cn.id,
                                    synonyms='Fawksy',
                                    series=0),
@@ -1899,8 +1876,8 @@ class TestEditCultivarRouteWithDB:
         cv.description = 'Like Hendrix!'
         cn = CommonName(name='Foxglove')
         idx = Index(name='Perennial')
-        cv.indexes.append(idx)
-        cn.indexes.append(idx)
+        cv.index = idx
+        cn.index = idx
         cv.common_name = cn
         db.session.add_all([cv, cn, idx])
         db.session.commit()
@@ -1909,7 +1886,7 @@ class TestEditCultivarRouteWithDB:
                          data=dict(name='Foxy',
                                    botanical_name=0,
                                    common_name=cn.id,
-                                   indexes=[idx.id],
+                                   index=idx.id,
                                    description='',
                                    series=0),
                          follow_redirects=True)
@@ -1918,7 +1895,7 @@ class TestEditCultivarRouteWithDB:
         assert cv.description is None
 
     def test_edit_cultivar_exists(self, app, db):
-        """Flash an error if a cultivar with the same name/cn combo exists."""
+        """Flash an error if a cv with the same name-cn-series combo exists."""
         cv1 = Cultivar(name='Foxy')
         cv2 = Cultivar(name='Fauxy')
         cv3 = Cultivar(name='Fawksy')
@@ -1928,11 +1905,11 @@ class TestEditCultivarRouteWithDB:
         cv2.common_name = cn2
         cv3.common_name = cn1
         idx = Index('Perennial')
-        cv1.indexes.append(idx)
-        cv2.indexes.append(idx)
-        cv3.indexes.append(idx)
-        cn1.indexes.append(idx)
-        cn2.indexes.append(idx)
+        cv1.index = idx
+        cv2.index = idx
+        cv3.index = idx
+        cn1.index = idx
+        cn2.index = idx
         db.session.add_all([cv1, cv2, cv3, cn1, cn2, idx])
         db.session.commit()
         with app.test_client() as tc:
@@ -1940,7 +1917,7 @@ class TestEditCultivarRouteWithDB:
                          data=dict(name='Fauxy',
                                    botanical_name=0,
                                    common_name=cv1.common_name.id,
-                                   indexes=[idx.id],
+                                   index=idx.id,
                                    series=0))
         assert rv.location == url_for('seeds.manage', _external=True)
         assert cv1.name == 'Fauxy'
@@ -1953,64 +1930,43 @@ class TestEditCultivarRouteWithDB:
                                    indexes=[idx.id],
                                    series=0),
                          follow_redirects=True)
-        assert 'Error: There is already another' in str(rv.data)
+        print(rv.data)
+        assert 'The cultivar &#39;Fawksy Foxglove&#39; already exists'\
+            in str(rv.data)
         assert cv1.name != 'Fawksy'
-
-    def test_edit_cultivar_exists_as_synonym(self, app, db):
-        """Flash an error if trying to use a name of a synonym."""
-        cv1 = Cultivar(name='Foxy')
-        cv2 = Cultivar(name='Fauxy')
-        cv2.invisible = True
-        cn = CommonName(name='Foxglove')
-        idx = Index('Perennial')
-        cv1.indexes.append(idx)
-        cn.indexes.append(idx)
-        cv1.common_name = cn
-        db.session.add_all([cv1, cv2, cn, idx])
-        db.session.commit()
-        with app.test_client() as tc:
-            rv = tc.post(url_for('seeds.edit_cultivar', cv_id=cv1.id),
-                         data=dict(indexes=[idx.id],
-                                   common_name=cn.id,
-                                   name='Fauxy',
-                                   botanical_name=0,
-                                   series=0),
-                         follow_redirects=True)
-            assert 'is already being used as a synonym' in str(rv.data)
 
     def test_edit_cultivar_no_changes(self, app, db):
         """Submission with no changes flashes relevant message."""
-        cultivar = Cultivar()
-        bn = BotanicalName()
-        idx = Index()
-        cn = CommonName()
-        thumb = Image()
-        db.session.add_all([bn, idx, cn])
-        bn.name = 'Digitalis purpurea'
-        cn.name = 'Foxglove'
-        idx.name = 'Perennial Flower'
-        thumb.filename = 'foxy.jpg'
-        cultivar.indexes.append(idx)
+        cultivar = Cultivar(name='Foxy')
+        bn = BotanicalName(name='Digitalis purpurea')
+        idx = Index(name='Perennial Flower')
+        cn = CommonName(name='Foxglove')
+        thumb = Image(filename='foxy.jpg')
+        db.session.add_all([cultivar, bn, idx, cn, thumb])
+        cn.botanical_names.append(bn)
         cultivar.botanical_name = bn
-        cn.indexes.append(idx)
         cultivar.common_name = cn
-        cultivar.in_stock = True
-        cultivar.dropped = False
-        cultivar.name = 'Foxy'
+        cultivar.index = idx
+        cn.index = idx
         cultivar.description = 'Like that Hendrix song.'
+        cultivar.in_stock = True
+        cultivar.active = True
+        cultivar.invisible = False
         cultivar.thumbnail = thumb
         db.session.commit()
         with app.test_client() as tc:
             rv = tc.post(url_for('seeds.edit_cultivar', cv_id=cultivar.id),
                          data=dict(botanical_name=str(bn.id),
-                                   indexes=[str(idx.id)],
+                                   index=str(idx.id),
                                    common_name=str(cn.id),
                                    description=cultivar.description,
-                                   dropped='',
+                                   active='y',
                                    in_stock='y',
+                                   visible='y',
                                    name=cultivar.name,
                                    series='0'),
                          follow_redirects=True)
+        print(rv.data)
         assert 'No changes made' in str(rv.data)
 
     def test_edit_cultivar_no_cultivar(self, app, db):
@@ -2037,8 +1993,8 @@ class TestEditCultivarRouteWithDB:
         idx = Index(name='Perennial')
         cv.botanical_name = bn
         cv.common_name = cn
-        cv.indexes.append(idx)
-        cn.indexes.append(idx)
+        cv.index = idx
+        cn.index = idx
         db.session.add_all([cv, bn, cn, idx])
         db.session.commit()
         assert cv.botanical_name == bn
@@ -2047,7 +2003,7 @@ class TestEditCultivarRouteWithDB:
                          data=dict(name='Foxy',
                                    botanical_name=0,
                                    common_name=cn.id,
-                                   indexes=[idx.id],
+                                   index=idx.id,
                                    series=0),
                          follow_redirects=True)
         assert cv.botanical_name is None
@@ -2366,9 +2322,12 @@ class TestRemoveCommonNameRouteWithDB:
         """Delete CommonName from db on successful submit."""
         cn = CommonName()
         cn2 = CommonName()
-        db.session.add_all([cn, cn2])
+        idx = Index(name='Perennial')
+        db.session.add_all([idx, cn, cn2])
         cn.name = 'Coleus'
+        cn.index = idx
         cn2.name = 'Kingus'
+        cn2.index = idx
         db.session.commit()
         assert cn in CommonName.query.all()
         with app.test_client() as tc:
@@ -2655,16 +2614,18 @@ class TestSelectCultivarRouteWithDB:
                                 dest='seeds.add_packet'))
         assert 'Select Cultivar' in str(rv.data)
 
-    def test_select_seed_successful_submission(self, app, db):
+    def test_select_cultivar_successful_submission(self, app, db):
         """Redirect to dest on valid form submission."""
-        cultivar = Cultivar()
+        cultivar = Cultivar(name='Foxy')
+        cultivar.index = Index(name='Perennial')
+        cultivar.common_name = CommonName(name='Foxglove')
         db.session.add(cultivar)
-        cultivar.name = 'Foxy'
         db.session.commit()
         dest = 'seeds.add_packet'
         with app.test_client() as tc:
             rv = tc.post(url_for('seeds.select_cultivar', dest=dest),
                          data=dict(cultivar=cultivar.id))
+        print(rv.data)
         assert rv.location == url_for(dest, cv_id=str(cultivar.id),
                                       _external=True)
 

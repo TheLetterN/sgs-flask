@@ -46,24 +46,6 @@ botanical_names_to_common_names = db.Table(
 )
 
 
-indexes_to_cultivars = db.Table(
-    'indexes_to_cultivars',
-    db.Model.metadata,
-    db.Column('indexes_id', db.Integer, db.ForeignKey('indexes.id')),
-    db.Column('cultivars_id', db.Integer, db.ForeignKey('cultivars.id'))
-)
-
-
-common_names_to_indexes = db.Table(
-    'common_names_to_indexes',
-    db.Model.metadata,
-    db.Column('common_names_id',
-              db.Integer,
-              db.ForeignKey('common_names.id')),
-    db.Column('indexes_id', db.Integer, db.ForeignKey('indexes.id'))
-)
-
-
 common_name_synonyms = db.Table(
     'common_name_synonyms',
     db.Model.metadata,
@@ -257,6 +239,243 @@ class USDInt(db.TypeDecorator):
                              'number.')
 
 
+class Index(db.Model):
+    """Table for seed indexes.
+
+    Indexes are the first/broadest divisions we use to sort seeds. The
+    index a seed falls under is usually based on what type of plant it is
+    (herb, vegetable) or its life cycle. (perennial flower, annual flower)
+
+    Attributes:
+        __tablename__ (str): Name of the table: 'indexes'
+        id (int): Auto-incremented ID # for use as primary key.
+        description (str): HTML description information for the index.
+        _name (str): The name for the index itself, such as 'Herb'
+            or 'Perennial Flower'.
+        slug (str): URL-friendly version of the index name.
+    """
+    __tablename__ = 'indexes'
+    id = db.Column(db.Integer, primary_key=True)
+    description = db.Column(db.Text)
+    _name = db.Column(db.String(64), unique=True)
+    slug = db.Column(db.String(64), unique=True)
+
+    def __init__(self, name=None, description=None):
+        """Construct an instance of Index.
+
+        Args:
+            name (Optional[str]): A index name.
+            description (Optional[str]): A description for this index.
+                This should be in raw HTML to allow for special formatting.
+        """
+        self.name = name
+        self.description = description
+
+    def __repr__(self):
+        return '<{0} \'{1}\'>'.format(self.__class__.__name__,
+                                      self.name)
+
+    @hybrid_property
+    def name(self):
+        """str: contents of ._name.
+
+        Setter:
+            Sets ._name, and sets .slug to a pluralized, slugified version
+                of ._name.
+        """
+        return self._name
+
+    @name.expression
+    def name(cls):
+        return cls._name
+
+    @name.setter
+    def name(self, idx_name):
+        self._name = idx_name
+        if idx_name is not None:
+            self.slug = slugify(pluralize(idx_name))
+        else:
+            self.slug = None
+
+    @property
+    def header(self):
+        """str: contents of ._index in a str for headers, titles, etc."""
+        # TODO : Maybe make the string setable via config?
+        return '{0} Seeds'.format(self._name)
+
+    @property
+    def plural(self):
+        """str: plural form of ._index."""
+        return pluralize(self._name)
+
+
+class CommonName(db.Model):
+    """Table for common names.
+
+    A CommonName is the next subdivision below Index in how we sort seeds.
+    It is usually the common name for the species or group of species a seed
+    belongs to.
+
+    Attributes:
+        __tablename__ (str): Name of the table: 'common_names'
+        id (int): Auto-incremented ID # for use as primary_key.
+        index (relationship): The index this common name falls under.
+            common_names (backref): The common names associated with a
+                index.
+        description (str): An optional description for the species/group
+            of species with the given common name.
+        gw_common_names (relationship): Common names that grow well with this
+            common name.
+        instructions (str): Planting instructions for seeds with this common
+            name.
+        _name (str): The common name of a seed. Examples: Coleus, Tomato,
+            Lettuce, Zinnia.
+        parent_id (int): Foreign key for parent/children relationship.
+        parent (relationship): A common name this is a subcategory of. For
+            example, if this common name is 'Dwarf Coleus', it would have
+            'Coleus' as its parent.
+            children (backref): Common names that are subindexes of parent.
+        slug (str): The URL-friendly version of this common name.
+        invisible (bool): Whether or not to list this common name in
+            automatically generated pages.
+        syn_parents (relationship): Common names this is a synonym of.
+            synonyms (backref): Synonyms of this common name.
+    """
+    __tablename__ = 'common_names'
+    id = db.Column(db.Integer, primary_key=True)
+    index_id = db.Column(db.Integer, db.ForeignKey('indexes.id'))
+    index = db.relationship('Index', backref='common_names')
+    description = db.Column(db.Text)
+    gw_common_names = db.relationship(
+        'CommonName',
+        secondary=cns_to_gw_cns,
+        primaryjoin=id == cns_to_gw_cns.c.common_name_id,
+        secondaryjoin=id == cns_to_gw_cns.c.gw_common_name_id
+    )
+    instructions = db.Column(db.Text)
+    _name = db.Column(db.String(64))
+    parent_id = db.Column(db.Integer, db.ForeignKey('common_names.id'))
+    parent = db.relationship('CommonName',
+                             backref='children',
+                             foreign_keys=parent_id,
+                             remote_side=[id])
+    slug = db.Column(db.String(64))
+    invisible = db.Column(db.Boolean, default=False)
+    syn_parents = db.relationship(
+        'CommonName',
+        secondary=common_name_synonyms,
+        backref='synonyms',
+        primaryjoin=id == common_name_synonyms.c.syn_parents_id,
+        secondaryjoin=id == common_name_synonyms.c.synonyms_id
+    )
+    __table_args__ = (db.UniqueConstraint('_name',
+                                          'index_id',
+                                          name='cn_index_uc'),)
+
+    def __init__(self, name=None, description=None, instructions=None):
+        """Construct an instance of CommonName
+
+        Args:
+            name (Optional[str]): The common name for a seed or group of seeds.
+            description (Optional[str]): An optional description for use on
+                pages listing seeds of a given common name.
+            instructions(Optional[str]): Optional planting instructions.
+        """
+        self.name = name
+        self.description = description
+        self.instructions = instructions
+
+    def __repr__(self):
+        return '<{0} \'{1}\'>'.format(self.__class__.__name__, self.name)
+
+    @property
+    def header(self):
+        """str: ._name formatted for headers and titles."""
+        return '{0} Seeds'.format(self._name)
+
+    @hybrid_property
+    def name(self):
+        """str: Return ._name
+
+        Setter:
+            Set ._name, and set .slug to a slugified version of ._name.
+        """
+        return self._name
+
+    @name.expression
+    def name(cls):
+        return cls._name
+
+    @name.setter
+    def name(self, name):
+        self._name = name
+        if name is not None:
+            self.slug = slugify(name)
+        else:
+            self.slug = None
+
+    def clear_synonyms(self):
+        """Remove all synonyms, deleting any that end up with no parent."""
+        for synonym in list(self.synonyms):
+            self.synonyms.remove(synonym)
+            if not synonym.syn_parents and synonym.invisible:
+                db.session.delete(synonym)
+
+    def list_syn_parents_as_string(self):
+        """Return a string listing the parents of this if it is a synonym.
+
+        Returns:
+            str: A list of common names this is a synonym of delineated by
+                commas, or a blank string if it is not a synonym.
+        """
+        if self.syn_parents:
+            return ', '.join([sp.name for sp in self.syn_parents])
+        else:
+            return ''
+
+    def list_synonyms_as_string(self):
+        """Return a string listing of synonyms delineated by commas.
+
+        Returns:
+            str: A list of synonyms of this common name, or a blank string if
+                it has none.
+        """
+        if self.synonyms:
+            return ', '.join([syn.name for syn in self.synonyms])
+        else:
+            return ''
+
+    def set_synonyms_from_string_list(self, synlist):
+        """Set synonyms with data from a string list delineated by commas.
+
+        Args:
+            synlist (str): A string listing synonyms separated by commas.
+        """
+        if not synlist or synlist.isspace():
+            self.clear_synonyms()
+        else:
+            syns = synlist.split(', ')
+            syns = [dbify(syn) for syn in syns]
+            if self.synonyms:
+                for synonym in list(self.synonyms):
+                    if synonym.name not in syns:
+                        self.synonyms.remove(synonym)
+                        if not synonym.syn_parents and synonym.invisible:
+                            db.session.delete(synonym)
+                            db.session.commit()
+            for syn in syns:
+                synonym = CommonName.query.filter_by(_name=syn).first()
+                if synonym:
+                    if synonym not in self.synonyms:
+                        self.synonyms.append(synonym)
+                else:
+                    if syn and not syn.isspace():
+                        synonym = CommonName()
+                        synonym.name = syn
+                        synonym.invisible = True
+                        self.synonyms.append(synonym)
+
+
 class BotanicalName(db.Model):
     """Table for botanical (scientific) names of seeds.
 
@@ -441,246 +660,6 @@ class BotanicalName(db.Model):
                         self.synonyms.append(synonym)
 
 
-class Index(db.Model):
-    """Table for seed indexes.
-
-    Indexes are the first/broadest divisions we use to sort seeds. The
-    index a seed falls under is usually based on what type of plant it is
-    (herb, vegetable) or its life cycle. (perennial flower, annual flower)
-
-    Attributes:
-        __tablename__ (str): Name of the table: 'indexes'
-        id (int): Auto-incremented ID # for use as primary key.
-        description (str): HTML description information for the index.
-        _name (str): The name for the index itself, such as 'Herb'
-            or 'Perennial Flower'.
-        cultivars (relationship): Cultivars that fall under this index.
-            indexes (backref): Indexes belonging to a seed.
-        slug (str): URL-friendly version of the index name.
-    """
-    __tablename__ = 'indexes'
-    id = db.Column(db.Integer, primary_key=True)
-    description = db.Column(db.Text)
-    _name = db.Column(db.String(64), unique=True)
-    cultivars = db.relationship('Cultivar',
-                                secondary=indexes_to_cultivars,
-                                backref='indexes')
-    slug = db.Column(db.String(64), unique=True)
-
-    def __init__(self, name=None, description=None):
-        """Construct an instance of Index.
-
-        Args:
-            name (Optional[str]): A index name.
-            description (Optional[str]): A description for this index.
-                This should be in raw HTML to allow for special formatting.
-        """
-        self.name = name
-        self.description = description
-
-    def __repr__(self):
-        return '<{0} \'{1}\'>'.format(self.__class__.__name__,
-                                      self.name)
-
-    @hybrid_property
-    def name(self):
-        """str: contents of ._name.
-
-        Setter:
-            Sets ._name, and sets .slug to a pluralized, slugified version
-                of ._name.
-        """
-        return self._name
-
-    @name.expression
-    def name(cls):
-        return cls._name
-
-    @name.setter
-    def name(self, idx_name):
-        self._name = idx_name
-        if idx_name is not None:
-            self.slug = slugify(pluralize(idx_name))
-        else:
-            self.slug = None
-
-    @property
-    def header(self):
-        """str: contents of ._index in a str for headers, titles, etc."""
-        # TODO : Maybe make the string setable via config?
-        return '{0} Seeds'.format(self._name)
-
-    @property
-    def plural(self):
-        """str: plural form of ._index."""
-        return pluralize(self._name)
-
-
-class CommonName(db.Model):
-    """Table for common names.
-
-    A CommonName is the next subdivision below Index in how we sort seeds.
-    It is usually the common name for the species or group of species a seed
-    belongs to.
-
-    Attributes:
-        __tablename__ (str): Name of the table: 'common_names'
-        id (int): Auto-incremented ID # for use as primary_key.
-        indexes (relationship): The indexes this common name falls under.
-            common_names (backref): The common names associated with a
-                index.
-        description (str): An optional description for the species/group
-            of species with the given common name.
-        gw_common_names (relationship): Common names that grow well with this
-            common name.
-        instructions (str): Planting instructions for seeds with this common
-            name.
-        _name (str): The common name of a seed. Examples: Coleus, Tomato,
-            Lettuce, Zinnia.
-        parent_id (int): Foreign key for parent/children relationship.
-        parent (relationship): A common name this is a subcategory of. For
-            example, if this common name is 'Dwarf Coleus', it would have
-            'Coleus' as its parent.
-            children (backref): Common names that are subindexes of parent.
-        slug (str): The URL-friendly version of this common name.
-        invisible (bool): Whether or not to list this common name in
-            automatically generated pages.
-        syn_parents (relationship): Common names this is a synonym of.
-            synonyms (backref): Synonyms of this common name.
-    """
-    __tablename__ = 'common_names'
-    id = db.Column(db.Integer, primary_key=True)
-    indexes = db.relationship('Index',
-                              secondary=common_names_to_indexes,
-                              backref='common_names')
-    description = db.Column(db.Text)
-    gw_common_names = db.relationship(
-        'CommonName',
-        secondary=cns_to_gw_cns,
-        primaryjoin=id == cns_to_gw_cns.c.common_name_id,
-        secondaryjoin=id == cns_to_gw_cns.c.gw_common_name_id
-    )
-    instructions = db.Column(db.Text)
-    _name = db.Column(db.String(64), unique=True)
-    parent_id = db.Column(db.Integer, db.ForeignKey('common_names.id'))
-    parent = db.relationship('CommonName',
-                             backref='children',
-                             foreign_keys=parent_id,
-                             remote_side=[id])
-    slug = db.Column(db.String(64), unique=True)
-    invisible = db.Column(db.Boolean, default=False)
-    syn_parents = db.relationship(
-        'CommonName',
-        secondary=common_name_synonyms,
-        backref='synonyms',
-        primaryjoin=id == common_name_synonyms.c.syn_parents_id,
-        secondaryjoin=id == common_name_synonyms.c.synonyms_id
-    )
-
-    def __init__(self, name=None, description=None, instructions=None):
-        """Construct an instance of CommonName
-
-        Args:
-            name (Optional[str]): The common name for a seed or group of seeds.
-            description (Optional[str]): An optional description for use on
-                pages listing seeds of a given common name.
-            instructions(Optional[str]): Optional planting instructions.
-        """
-        self.name = name
-        self.description = description
-        self.instructions = instructions
-
-    def __repr__(self):
-        return '<{0} \'{1}\'>'.format(self.__class__.__name__, self.name)
-
-    @property
-    def header(self):
-        """str: ._name formatted for headers and titles."""
-        return '{0} Seeds'.format(self._name)
-
-    @hybrid_property
-    def name(self):
-        """str: Return ._name
-
-        Setter:
-            Set ._name, and set .slug to a slugified version of ._name.
-        """
-        return self._name
-
-    @name.expression
-    def name(cls):
-        return cls._name
-
-    @name.setter
-    def name(self, name):
-        self._name = name
-        if name is not None:
-            self.slug = slugify(name)
-        else:
-            self.slug = None
-
-    def clear_synonyms(self):
-        """Remove all synonyms, deleting any that end up with no parent."""
-        for synonym in list(self.synonyms):
-            self.synonyms.remove(synonym)
-            if not synonym.syn_parents and synonym.invisible:
-                db.session.delete(synonym)
-
-    def list_syn_parents_as_string(self):
-        """Return a string listing the parents of this if it is a synonym.
-
-        Returns:
-            str: A list of common names this is a synonym of delineated by
-                commas, or a blank string if it is not a synonym.
-        """
-        if self.syn_parents:
-            return ', '.join([sp.name for sp in self.syn_parents])
-        else:
-            return ''
-
-    def list_synonyms_as_string(self):
-        """Return a string listing of synonyms delineated by commas.
-
-        Returns:
-            str: A list of synonyms of this common name, or a blank string if
-                it has none.
-        """
-        if self.synonyms:
-            return ', '.join([syn.name for syn in self.synonyms])
-        else:
-            return ''
-
-    def set_synonyms_from_string_list(self, synlist):
-        """Set synonyms with data from a string list delineated by commas.
-
-        Args:
-            synlist (str): A string listing synonyms separated by commas.
-        """
-        if not synlist or synlist.isspace():
-            self.clear_synonyms()
-        else:
-            syns = synlist.split(', ')
-            syns = [dbify(syn) for syn in syns]
-            if self.synonyms:
-                for synonym in list(self.synonyms):
-                    if synonym.name not in syns:
-                        self.synonyms.remove(synonym)
-                        if not synonym.syn_parents and synonym.invisible:
-                            db.session.delete(synonym)
-                            db.session.commit()
-            for syn in syns:
-                synonym = CommonName.query.filter_by(_name=syn).first()
-                if synonym:
-                    if synonym not in self.synonyms:
-                        self.synonyms.append(synonym)
-                else:
-                    if syn and not syn.isspace():
-                        synonym = CommonName()
-                        synonym.name = syn
-                        synonym.invisible = True
-                        self.synonyms.append(synonym)
-
-
 class Image(db.Model):
     """Table for image information.
 
@@ -725,6 +704,56 @@ class Image(db.Model):
         return os.path.exists(self.full_path)
 
 
+class Series(db.Model):
+    """Table for seed series.
+
+    A series is an optional subclass of a given cultivar type, usually created
+    by the company that created the cultivars within the series. Examples
+    include Benary's Giant (zinnias), Superfine Rainbow (coleus), and Heat
+    Elite Mambo (petunias).
+
+    Attributes:
+        __tablename__ (str): Name of the table: 'series'
+        id (int): Auto-incremented ID # for use as primary key.
+        common_name_id (int): ForeignKey for common_name relationship.
+        common_name (relationship): The common name a series belongs to.
+        description (str): Column for description of a series.
+        name (str): The name of the series.
+        position (int): Int for a constant representing where to put series
+            name in relation to cultivar name.
+    """
+    __tablename__ = 'series'
+    id = db.Column(db.Integer, primary_key=True)
+    common_name_id = db.Column(db.Integer, db.ForeignKey('common_names.id'))
+    common_name = db.relationship('CommonName', backref='series')
+    description = db.Column(db.Text)
+    name = db.Column(db.String(64))
+    position = db.Column(db.Integer, default=0)
+    __table_args__ = (db.UniqueConstraint('name',
+                                          'common_name_id',
+                                          name='_series_name_cn_uc'),)
+
+    BEFORE_CULTIVAR = 0
+    AFTER_CULTIVAR = 1
+
+    def __repr__(self):
+        """Return a string representing a Series instance."""
+        return '<{0} \'{1}\'>'.format(self.__class__.__name__, self.name)
+
+    @property
+    def fullname(self):
+        """str: Series name + common name"""
+        fn = []
+        if self.name:
+            fn.append(self.name)
+        if self.common_name:
+            fn.append(self.common_name.name)
+        if fn:
+            return ' '.join(fn)
+        else:
+            return None
+
+
 class Cultivar(db.Model):
     """Table for cultivar data.
 
@@ -740,7 +769,7 @@ class Cultivar(db.Model):
         common_name_id (int): ForeignKey for common_name relationship.
         common_name (relationship): Common name this cultivar belongs to.
         description (str): Product description in HTML format.
-        dropped (bool): False if the cultivar will be re-stocked when low,
+        active (bool): True if the cultivar will be re-stocked when low,
             False if it will be discontinued when low.
         gw_common_names (relationship): Common names this cultivar grows well
             with. gw_cultivars (backref): Cultivars that grow well with a
@@ -766,6 +795,8 @@ class Cultivar(db.Model):
     """
     __tablename__ = 'cultivars'
     id = db.Column(db.Integer, primary_key=True)
+    index_id = db.Column(db.Integer, db.ForeignKey('indexes.id'))
+    index = db.relationship('Index', backref='cultivars')
     botanical_name_id = db.Column(db.Integer,
                                   db.ForeignKey('botanical_names.id'))
     botanical_name = db.relationship('BotanicalName',
@@ -773,7 +804,7 @@ class Cultivar(db.Model):
     common_name_id = db.Column(db.Integer, db.ForeignKey('common_names.id'))
     common_name = db.relationship('CommonName', backref='cultivars')
     description = db.Column(db.Text)
-    dropped = db.Column(db.Boolean)
+    active = db.Column(db.Boolean)
     gw_common_names = db.relationship(
         'CommonName',
         secondary=gw_common_names_to_gw_cultivars,
@@ -816,7 +847,7 @@ class Cultivar(db.Model):
     def __repr__(self):
         """Return representation of Cultivar in human-readable format."""
         return '<{0} \'{1}\'>'.format(self.__class__.__name__,
-                                      self.name)
+                                      self.fullname)
 
     @hybrid_property
     def fullname(self):
@@ -870,6 +901,65 @@ class Cultivar(db.Model):
                                 self.thumbnail.filename)
         else:
             return os.path.join('images', 'default_thumb.jpg')
+
+    def lookup_string(self):
+        """Generate a string that can easily be parsed to look up a Cultivar.
+
+        Since a Cultivar needs to be a unique combination of name, series, and
+        common_name, the only way to look it up is via some combination of
+        those three parts.
+        """
+        parts = []
+        parts.append('{CULTIVAR NAME: ' + self.name + '}')
+        if self.series:
+            parts.append('{SERIES: ' + self.series.name + '}')
+        if self.common_name:
+            parts.append('{COMMON NAME: ' + self.common_name.name + '}')
+        return ', '.join(parts)
+
+    @classmethod
+    def from_lookup_string(cls, lookup):
+        """Load a Cultivar from db based on lookup string."""
+        parts = lookup.split('}, ')
+        name = None
+        series = None
+        common_name = None
+        for part in parts:
+            if '{CULTIVAR NAME:' in part:
+                name = part.replace('{CULTIVAR NAME: ', '').replace('}', '')
+                if not name:
+                    name = None
+            if '{SERIES:' in part:
+                series = part.replace('{SERIES: ', '').replace('}', '')
+                if not series:
+                    series = None
+            if '{COMMON NAME:' in part:
+                common_name = part.replace('{COMMON NAME: ', '')\
+                    .replace('}', '')
+                if not common_name:
+                    common_name = None
+        if not name:
+            raise ValueError('Cannot look up cultivar without a name!')
+        if series and common_name:
+            obj = cls.query.join(CommonName,
+                                 CommonName.id == Cultivar.common_name_id)\
+                .join(Series, Series.id == Cultivar.series_id)\
+                .filter(Cultivar.name == name,
+                        CommonName.name == common_name,
+                        Series.name == series).one_or_none()
+        elif common_name and not series:
+            obj = cls.query.join(CommonName,
+                                 CommonName.id == Cultivar.common_name_id)\
+                .filter(Cultivar.series == None,  # noqa
+                        Cultivar.name == name,
+                        CommonName.name == common_name).one_or_none()
+        else:
+            obj = cls.query.filter(
+                Cultivar.name == name,
+                Cultivar.series == None,  # noqa
+                Cultivar.common_name == None  # noqa
+            ).one_or_none()
+        return obj
 
     def clear_synonyms(self):
         """Remove all synonyms, deleting any that end up with no parent."""
@@ -1275,56 +1365,6 @@ class Quantity(db.Model):
             return self.fraction_to_str(self.value)
         else:
             return str(self.value)
-
-
-class Series(db.Model):
-    """Table for seed series.
-
-    A series is an optional subclass of a given cultivar type, usually created
-    by the company that created the cultivars within the series. Examples
-    include Benary's Giant (zinnias), Superfine Rainbow (coleus), and Heat
-    Elite Mambo (petunias).
-
-    Attributes:
-        __tablename__ (str): Name of the table: 'series'
-        id (int): Auto-incremented ID # for use as primary key.
-        common_name_id (int): ForeignKey for common_name relationship.
-        common_name (relationship): The common name a series belongs to.
-        description (str): Column for description of a series.
-        name (str): The name of the series.
-        position (int): Int for a constant representing where to put series
-            name in relation to cultivar name.
-    """
-    __tablename__ = 'series'
-    id = db.Column(db.Integer, primary_key=True)
-    common_name_id = db.Column(db.Integer, db.ForeignKey('common_names.id'))
-    common_name = db.relationship('CommonName', backref='series')
-    description = db.Column(db.Text)
-    name = db.Column(db.String(64))
-    position = db.Column(db.Integer, default=0)
-    __table_args__ = (db.UniqueConstraint('name',
-                                          'common_name_id',
-                                          name='_series_name_cn_uc'),)
-
-    BEFORE_CULTIVAR = 0
-    AFTER_CULTIVAR = 1
-
-    def __repr__(self):
-        """Return a string representing a Series instance."""
-        return '<{0} \'{1}\'>'.format(self.__class__.__name__, self.name)
-
-    @property
-    def fullname(self):
-        """str: Series name + common name"""
-        fn = []
-        if self.name:
-            fn.append(self.name)
-        if self.common_name:
-            fn.append(self.common_name.name)
-        if fn:
-            return ' '.join(fn)
-        else:
-            return None
 
 
 class CustomPage(db.Model):

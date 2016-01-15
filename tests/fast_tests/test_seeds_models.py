@@ -321,6 +321,32 @@ class TestCultivar:
         assert cultivar._name is None
         assert cultivar.slug is None
 
+    def test_lookup_string(self):
+        """Generate a parseable string formatted for easy querying."""
+        cv1 = Cultivar(name='Name Only')
+        cv2 = Cultivar(name='Name & Common Name')
+        cv3 = Cultivar(name='Name, Series, and Common Name')
+        cn = CommonName(name='Common Name')
+        sr = Series(name='Series')
+        cv2.common_name = cn
+        cv3.common_name = cn
+        cv3.series = sr
+        assert cv1.lookup_string() == '{CULTIVAR NAME: Name Only}'
+        assert cv2.lookup_string() == '{CULTIVAR NAME: Name & Common Name}, '\
+            '{COMMON NAME: Common Name}'
+        assert cv3.lookup_string() == '{CULTIVAR NAME: Name, Series, and '\
+            'Common Name}, {SERIES: Series}, {COMMON NAME: Common Name}'
+
+    def test_from_lookup_string_no_name(self):
+        """Raise ValueError if no cultivar name is in lookup string."""
+        with pytest.raises(ValueError):
+            Cultivar.from_lookup_string('{COMMON NAME: Foxglove}, '
+                                        '{SERIES: Dalmatian}')
+        with pytest.raises(ValueError):
+            Cultivar.from_lookup_string('{COMMON NAME: Foxglove}')
+        with pytest.raises(ValueError):
+            Cultivar.from_lookup_string('{SERIES: Dalmatian}')
+
     def test_list_syn_parents_as_string(self):
         """List parents of a synonym as a string, blank string if none."""
         cv = Cultivar(name='Foxy')

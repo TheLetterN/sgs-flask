@@ -288,7 +288,7 @@ class TestEditCommonNameForm:
         idx = Index()
         idx.id = 1
         idx.name = 'Perennial Flower'
-        cn.indexes.append(idx)
+        cn.index = idx
         cnp = CommonName()
         cnp.id = 2
         cnp.name = 'Coleus'
@@ -310,7 +310,7 @@ class TestEditCommonNameForm:
         assert form.name.data == cn.name
         assert form.description.data == cn.description
         assert form.synonyms.data == cns.name
-        assert idx.id in form.indexes.data
+        assert form.index.data == idx.id
         assert gwcn.id in form.gw_common_names.data
         assert gwcv.id in form.gw_cultivars.data
 
@@ -350,12 +350,12 @@ class TestEditCultivarForm:
         cv.botanical_name = bn
         idx = Index(name='Perennial Flower')
         idx.id = 3
-        cv.indexes.append(idx)
+        cv.index = idx
         cn = CommonName(name='Foxglove')
         cn.id = 4
         cv.common_name = cn
         cv.in_stock = True
-        cv.dropped = True
+        cv.active = True
         gwcn = CommonName(name='Butterfly Weed')
         gwcn.id = 5
         cv.gw_common_names.append(gwcn)
@@ -372,10 +372,10 @@ class TestEditCultivarForm:
         form.populate(cv)
         assert form.name.data == 'Foxy'
         assert form.description.data == 'Like Hendrix!'
-        assert idx.id in form.indexes.data
+        assert form.index.data == idx.id
         assert form.common_name.data == cn.id
         assert form.in_stock.data
-        assert form.dropped.data
+        assert form.active.data
         assert gwcn.id in form.gw_common_names.data
         assert gwcv.id in form.gw_cultivars.data
         assert form.series.data == series.id

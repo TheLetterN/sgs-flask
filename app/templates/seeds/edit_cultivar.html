@@ -32,7 +32,7 @@
                     <fieldset>
                         <legend>Groups:</legend>
                         <li>
-                            {{ form_field(form.indexes)|indent(28)|safe }}
+                            {{ form_field(form.index)|indent(28)|safe }}
                         </li>
                         <li>
                             {{ form_field(form.common_name)|indent(28)|safe }}
@@ -75,7 +75,10 @@
                             {{ form_field(form.in_stock)|indent(28)|safe }}
                         </li>
                         <li>
-                            {{ form_field(form.dropped)|indent(28)|safe }}
+                            {{ form_field(form.active)|indent(28)|safe }}
+                        </li>
+                        <li>
+                            {{ form_field(form.visible)|indent(28)|safe }}
                         </li>
                     </fieldset>
                     <li>

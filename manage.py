@@ -82,10 +82,17 @@ def hello(goodbye=False):
     '-s',
     '--save',
     help='Save a database dump to an excel spreadsheet with given file name.')
-def excel(load=None, save=None):
+@manager.option(
+    '-t',
+    '--timestamp',
+    action='store_true',
+    help='Append timestamp to filename when saving.')
+def excel(load=None, save=None, timestamp=None):
     """Interact with the excel module to utilize spreadsheets."""
     if load and save:
         raise ValueError('Cannot load and save at the same time!')
+    if timestamp and not save:
+        raise ValueError('Cannot append timestamp with no file to save!')
     if load:
         if os.path.exists(load):
             wb = SeedsWorkbook(load)

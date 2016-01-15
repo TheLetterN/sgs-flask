@@ -214,7 +214,7 @@ def cultivar_select_list(obj=None):
     else:
         items = Cultivar.query.order_by('_name')
     for cultivar in items:
-        if not cultivar.invisible:
+        if cultivar.common_name and cultivar.index:
             cultivars.append((cultivar.id, cultivar.fullname))
     return cultivars
 
@@ -281,8 +281,7 @@ class AddCommonNameForm(Form):
     """Form for adding a new common name to the database.
 
     Attributes:
-        indexes (SelectMultipleField): Select field with indexes from
-            the database to associate with this CommonName.
+        idx_id (HiddenField): Field for Index id to use in validation.
         description (TextAreaField): Field for description of common name.
         gw_common_names (SelectMultipleField): Select field for common names
             that grow well with this common name.
@@ -296,9 +295,7 @@ class AddCommonNameForm(Form):
         submit (SubmitField): Submit button.
         synonyms (StringField): Field for synonyms of this common name.
     """
-    indexes = SelectMultipleField('Select Indexes',
-                                  coerce=int,
-                                  validators=[DataRequired()])
+    idx_id = HiddenField()
     description = TextAreaField('Description', validators=[NotSpace()])
     gw_common_names = SelectMultipleField('Common Names', coerce=int)
     gw_cultivars = SelectMultipleField('Cultivars', coerce=int)
@@ -318,37 +315,29 @@ class AddCommonNameForm(Form):
 
     def set_selects(self):
         """Populate indexes with Indexes from the database."""
-        self.indexes.choices = index_select_list()
         self.gw_common_names.choices = common_name_select_list()
         self.gw_cultivars.choices = cultivar_select_list()
         self.parent_cn.choices = common_name_select_list()
         self.parent_cn.choices.insert(0, (0, 'N/A'))
 
     def validate_name(self, field):
-        """Raise a ValidationError if submitted common name already exists.
+        """Raise ValidationError if Index + CommonName combo already exists.
 
         Args:
             field: The field to validate: .name.
 
         Raises:
-            ValidationError: If name already in use by another common name, if
-                name already in use by a synonym.
+            ValidationError: If a CommonName with the same name and Index
+                already exists.
         """
         cn = CommonName.query.filter_by(name=titlecase(field.data)).first()
-        if cn is not None:
-            if not cn.invisible:
+        if cn and cn.index:
+            if cn.index.id == self.idx_id.data:
                 cn_url = url_for('seeds.edit_common_name', cn_id=cn.id)
                 raise ValidationError(
-                    Markup('\'{0}\' already exists in the database. <a '
+                    Markup('\'{0} > {1}\' already exists in the database. <a '
                            'href="{1}">Click here</a> to edit it.'
-                           .format(cn.name, cn_url))
-                )
-            else:
-                raise ValidationError(
-                    Markup('The common name \'{0}\' already exists as a '
-                           'synonym of: \'{1}\'. You will need to remove it '
-                           'as a synonym if you wish to add it here.'
-                           .format(cn.name, syn_parents_links(cn)))
+                           .format(cn.index.plural, cn.name, cn_url))
                 )
 
     def validate_synonyms(self, field):
@@ -475,10 +464,8 @@ class AddCultivarForm(Form):
         cn_id (HiddenField): Store common name id used for this cultivar.
         botanical_name (SelectField): Select field for the botanical name
             associated with this cultivar.
-        indexes (SelectMultipleField): Select field for selecting
-            indexes associated with cultivar.
         description (TextAreaField): Field for cultivar product description.
-        dropped (BooleanField): Checkbox for whether or not a cultivar is
+        active (BooleanField): Checkbox for whether or not a cultivar is
             active.
         gw_common_names (SelectMultipleField): Select field for common names
             that grow well with this cultivar.
@@ -494,16 +481,17 @@ class AddCultivarForm(Form):
         thumbnail (FileField): Field for uploading thumbnail image.
     """
     cn_id = HiddenField()
-    botanical_name = SelectField('Select Botanical Name', coerce=int)
-    indexes = SelectMultipleField('Select Indexes', coerce=int)
+    botanical_name = SelectField('Botanical Name', coerce=int)
     description = TextAreaField('Description', validators=[NotSpace()])
-    dropped = BooleanField('Dropped/Inactive')
+    active = BooleanField('Actively replenished', default='checked')
+    visible = BooleanField('Visible in auto-generated pages',
+                           default='checked')
     gw_common_names = SelectMultipleField('Common Names', coerce=int)
     gw_cultivars = SelectMultipleField('Cultivars', coerce=int)
     in_stock = BooleanField('In Stock', default='checked')
     name = StringField('Cultivar Name',
                        validators=[Length(1, 64), NotSpace()])
-    series = SelectField('Select Series', coerce=int)
+    series = SelectField('Series', coerce=int)
     submit = SubmitField('Add Cultivar')
     synonyms = StringField('Synonyms', validators=[NotSpace()])
     thumbnail = FileField('Thumbnail Image',
@@ -518,29 +506,10 @@ class AddCultivarForm(Form):
         """
         self.botanical_name.choices = botanical_name_select_list(cn)
         self.botanical_name.choices.insert(0, (0, 'None'))
-        self.indexes.choices = index_select_list(cn)
         self.gw_common_names.choices = common_name_select_list()
         self.gw_cultivars.choices = cultivar_select_list()
         self.series.choices = series_select_list(cn)
         self.series.choices.insert(0, (0, 'None'))
-
-    def validate_indexes(self, field):
-        """Raise ValidationError if any indexes not in selected CommonName.
-
-        Raises:
-            ValidationError: If any selected indexes are not present within
-                the selected CommonName.
-        """
-        cn = CommonName.query.get(self.cn_id.data)
-        idx_ids = [idx.id for idx in cn.indexes]
-        for idx_id in field.data:
-            if idx_id not in idx_ids:
-                cn_url = url_for('seeds.edit_common_name', cn_id=cn.id)
-                raise ValidationError(
-                    Markup('One or more of selected indexes are not '
-                           'associated with selected common name \'{0}\'. <a '
-                           'href="{1}">Click here</a> if you would like to '
-                           'edit \'{0}\'.'.format(cn.name, cn_url)))
 
     def validate_name(self, field):
         """Raise ValidationError if cultivar already exists.
@@ -551,7 +520,7 @@ class AddCultivarForm(Form):
                 exists as a synonym."""
         cultivars = Cultivar.query.filter_by(_name=titlecase(field.data)).all()
         for cultivar in cultivars:
-            if not cultivar.invisible:
+            if cultivar.index and cultivar.common_name:
                 if (cultivar.common_name.id == self.cn_id.data) and\
                         (not cultivar.series and not self.series.data) or\
                         (cultivar.series.id == self.series.data):
@@ -806,7 +775,7 @@ class EditCommonNameForm(Form):
     """Form for editing an existing common name in the database.
 
     Attributes:
-        indexes (SelectMultipleField): Select for indexes.
+        index (SelectField): Select for indexes.
         description (TextAreaField): Field for description of common name.
         gw_common_names (SelectMultipleField): Field for common names that
             grow well with this one.
@@ -817,9 +786,9 @@ class EditCommonNameForm(Form):
         submit (SubmitField): Submit button.
         synonyms (StringField): Field for synonyms of this common name.
     """
-    indexes = SelectMultipleField('Select/Deselect Indexes',
-                                  coerce=int,
-                                  validators=[DataRequired()])
+    index = SelectField('Index',
+                        coerce=int,
+                        validators=[DataRequired()])
     description = TextAreaField('Description', validators=[NotSpace()])
     gw_common_names = SelectMultipleField('Common Names', coerce=int)
     gw_cultivars = SelectMultipleField('Cultivars', coerce=int)
@@ -843,7 +812,7 @@ class EditCommonNameForm(Form):
             self.parent_cn.data = cn.parent.id
         if cn.synonyms:
             self.synonyms.data = cn.list_synonyms_as_string()
-        self.indexes.data = [idx.id for idx in cn.indexes]
+        self.index.data = cn.index.id
         if cn.gw_common_names:
             self.gw_common_names.data = [gw_cn.id for gw_cn in
                                          cn.gw_common_names]
@@ -854,7 +823,7 @@ class EditCommonNameForm(Form):
 
     def set_selects(self):
         """Populate indexes with Indexes from the database."""
-        self.indexes.choices = index_select_list()
+        self.index.choices = index_select_list()
         self.gw_common_names.choices = common_name_select_list()
         self.gw_common_names.choices.insert(0, (0, 'None'))
         self.gw_cultivars.choices = cultivar_select_list()
@@ -884,15 +853,18 @@ class EditCultivarForm(Form):
     """Form for editing an existing cultivar in the database.
 
     Attributes:
+        cv_id (HiddenField): Hidden field containing id of cultivar.
         botanical_name (SelectField): Field for selecting botanical name for
             this cultivar.
-        indexes (SelectMultipleField): Field for selecting indexes
-            this cultivar belongs to.
+        index (SelectField): Field for selecting the index this cultivar
+            belongs to.
         common_name (SelectField): Field for selecting common name for this
             cultivar.
         description (TextAreaField): Field for description of cultivar.
-        dropped (BooleanField): Field for whether this cultivar is dropped or
+        active (BooleanField): Field for whether this cultivar is dropped or
             active.
+        visible (BooleanField): Field for whether or not this cultivar is
+            shown on auto-generated pages.
         gw_common_names (SelectMultipleField): Field for selecting common names
             that grow well with this cultivar.
         gw_cultivars (SelectMultipleField): Field for selecting cultivars that
@@ -906,15 +878,17 @@ class EditCultivarForm(Form):
         thumbnail (FileField): Field for uploading a thumbnail for this
             cultivar.
     """
+    cv_id = HiddenField()
     botanical_name = SelectField('Botanical Name', coerce=int)
-    indexes = SelectMultipleField('Select/Deselect Indexes',
-                                  coerce=int,
-                                  validators=[DataRequired()])
+    index = SelectField('Index',
+                        coerce=int,
+                        validators=[DataRequired()])
     common_name = SelectField('Common Name',
                               coerce=int,
                               validators=[DataRequired()])
     description = TextAreaField('Description', validators=[NotSpace()])
-    dropped = BooleanField('Dropped/Inactive')
+    active = BooleanField('Actively replenished')
+    visible = BooleanField('Visible on auto-generated pages')
     gw_common_names = SelectMultipleField('Common Names', coerce=int)
     gw_cultivars = SelectMultipleField('Cultivars', coerce=int)
     in_stock = BooleanField('In Stock')
@@ -930,7 +904,7 @@ class EditCultivarForm(Form):
         """Set choices for all select fields with values from database."""
         self.botanical_name.choices = botanical_name_select_list()
         self.botanical_name.choices.insert(0, (0, 'None'))
-        self.indexes.choices = index_select_list()
+        self.index.choices = index_select_list()
         self.common_name.choices = common_name_select_list()
         self.gw_common_names.choices = common_name_select_list()
         self.gw_common_names.choices.insert(0, (0, 'None'))
@@ -945,16 +919,16 @@ class EditCultivarForm(Form):
         Args:
             cultivar (Cultivar): The cultivar to populate this form with.
         """
+        self.index.data = cultivar.index.id
         if cultivar.botanical_name:
             self.botanical_name.data = cultivar.botanical_name.id
-        self.indexes.data = [idx.id for idx in cultivar.indexes]
         if cultivar.common_name:
             self.common_name.data = cultivar.common_name.id
         self.description.data = cultivar.description
         if cultivar.in_stock:
             self.in_stock.data = True
-        if cultivar.dropped:
-            self.dropped.data = True
+        if cultivar.active:
+            self.active.data = True
         if cultivar.gw_common_names:
             self.gw_common_names.data = [gw_cn.id for gw_cn in
                                          cultivar.gw_common_names]
@@ -968,23 +942,61 @@ class EditCultivarForm(Form):
         if cultivar.synonyms:
             self.synonyms.data = cultivar.list_synonyms_as_string()
 
-    def validate_indexes(self, field):
-        """Raise ValidationError if any indexes not in selected CommonName.
+    def validate_name(self, field):
+        """Raise ValidationError if changes would create duplicate cultivar."""
+        if self.series.data:
+            cvs = Cultivar.query\
+                .join(CommonName, CommonName.id == Cultivar.common_name_id)\
+                .join(Series, Series.id == Cultivar.series_id)\
+                .filter(CommonName.id == self.common_name.data,
+                        Series.id == self.series.data,
+                        Cultivar.name == dbify(self.name.data))\
+                .all()
+        else:
+            cvs = Cultivar.query\
+                .join(CommonName, CommonName.id == Cultivar.common_name_id)\
+                .filter(CommonName.id == self.common_name.data,
+                        Cultivar.name == dbify(self.name.data))\
+                .all()
+        for cv in cvs:
+            if cv.id != int(self.cv_id.data):
+                raise ValidationError('The cultivar \'{0}\' already exists!'
+                                      .format(cv.fullname))
+
+    def validate_index(self, field):
+        """Raise ValidationError if Index not associated with CommonName.
 
         Raises:
-            ValidationError: If any selected indexes are not present within
-                the selected CommonName.
+            ValidationError: If selected Index not associated with CommonName.
         """
         cn = CommonName.query.get(self.common_name.data)
-        idx_ids = [idx.id for idx in cn.indexes]
-        for idx_id in field.data:
-            if idx_id not in idx_ids:
+        if cn.index.id != field.data:
                 cn_url = url_for('seeds.edit_common_name', cn_id=cn.id)
                 raise ValidationError(
-                    Markup('One or more of selected indexes are not '
-                           'associated with selected common name \'{0}\'. <a '
-                           'href="{1}">Click here</a> if you would like to '
-                           'edit \'{0}\'.'.format(cn.name, cn_url)))
+                    Markup('The selected index is not associated with '
+                           ' the selected common name \'{0}\'. <a href="{1}">'
+                           'Click here</a> if you would like to edit \'{0}\'.'
+                           .format(cn.name, cn_url))
+                )
+
+    def validate_botanical_name(self, field):
+        """Raise ValidationError if bot. name not in selected CommonName.
+
+        Raises:
+            ValidationError: If selected botanical name does not belong to
+                selected common name.
+        """
+        if field.data:
+            bn = BotanicalName.query.get(field.data)
+            if int(self.common_name.data) not in\
+                    [cn.id for cn in bn.common_names]:
+                bn_url = url_for('seeds.edit_botanical_name', bn_id=bn.id)
+                raise ValidationError(
+                    Markup('The selected botanical name does not belong to '
+                           'the selected common name. <a href="{0}">Click '
+                           'here</a> if you would like to edit the botanical '
+                           'name \'{1}\''.format(bn_url, bn.name))
+                )
 
     def validate_synonyms(self, field):
         """Raise a ValidationError if any synonyms are too long.
@@ -1104,6 +1116,7 @@ class RemoveIndexForm(Form):
         """
         cats = Index.query.filter(Index.id != idx_id).all()
         self.move_to.choices = [(idx.id, idx.name) for idx in cats]
+        self.move_to.choices.insert(0, (0, 'Do not move'))
 
 
 class RemoveCommonNameForm(Form):

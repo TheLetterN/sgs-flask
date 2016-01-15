@@ -30,13 +30,10 @@
                 {{ form.hidden_tag() }}
                 <ol>
                     <fieldset>
-                        <legend>Add/Remove Indexes</legend>
-                        <li>
-                            {{ form_field(form.indexes)|indent(28)|safe }}
-                        </li>
-                    </fieldset>
-                    <fieldset>
                         <legend>Common Name Information</legend>
+                        <li>
+                            {{ form_field(form.index)|indent(28)|safe }}
+                        </li>
                         <li>
                             {{ form_field(form.name)|indent(28)|safe }}
                         </li>

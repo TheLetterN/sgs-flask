@@ -3,7 +3,8 @@ from app.seeds.models import (
     Index,
     CommonName,
     Image,
-    Cultivar
+    Cultivar,
+    Series
 )
 from tests.conftest import app, db  # noqa
 
@@ -150,6 +151,74 @@ class TestCommonNameWithDB:
 
 class TestCultivarWithDB:
     """Test Cultivar model methods that require database access."""
+    def test_from_lookup_string(self, db):
+        """Instantiate a Cultivar using a formatted string.
+
+        It should only load a Cultivar that exactly matches the data in the
+        string.
+        """
+        cv1 = Cultivar(name='Name')
+        cv2 = Cultivar(name='Name')
+        cv3 = Cultivar(name='Name')
+        cv4 = Cultivar(name='Name')
+        cv5 = Cultivar(name='Name')
+        cv6 = Cultivar(name='Name')
+        cv7 = Cultivar(name='Like, Other Name')
+        cn = CommonName(name='Common Name')
+        cn2 = CommonName(name='Other Common Name')
+        sr = Series(name='Series')
+        sr2 = Series(name='Other Series')
+        cv2.common_name = cn
+        cv3.common_name = cn
+        cv4.common_name = cn2
+        cv5.common_name = cn2
+        cv6.common_name = cn
+        cv7.common_name = cn
+        cv3.series = sr
+        cv5.series = sr
+        cv6.series = sr2
+        cv7.series = sr
+
+        db.session.add_all([cv1,
+                            cv2,
+                            cv3,
+                            cv4,
+                            cv5,
+                            cv6,
+                            cv7,
+                            cn,
+                            cn2,
+                            sr,
+                            sr2])
+        db.session.commit()
+        assert Cultivar.from_lookup_string('{CULTIVAR NAME: Name}') is cv1
+        assert Cultivar.from_lookup_string(
+            '{CULTIVAR NAME: Name}, {COMMON NAME: Common Name}'
+        ) is cv2
+        assert Cultivar.from_lookup_string(
+            '{CULTIVAR NAME: Name}, '
+            '{COMMON NAME: Common Name}, '
+            '{SERIES: Series}'
+        ) is cv3
+        assert Cultivar.from_lookup_string(
+            '{CULTIVAR NAME: Name}, {COMMON NAME: Other Common Name}'
+        ) is cv4
+        assert Cultivar.from_lookup_string(
+            '{CULTIVAR NAME: Name}, '
+            '{COMMON NAME: Other Common Name}, '
+            '{SERIES: Series}'
+        ) is cv5
+        assert Cultivar.from_lookup_string(
+            '{CULTIVAR NAME: Name}, '
+            '{COMMON NAME: Common Name}, '
+            '{SERIES: Other Series}'
+        ) is cv6
+        assert Cultivar.from_lookup_string(
+            '{CULTIVAR NAME: Like, Other Name}, '
+            '{COMMON NAME: Common Name}, '
+            '{SERIES: Series}'
+        ) is cv7
+
     def test_clear_synonyms(self, db):
         """Remove all synonyms and delete orphans."""
         cv1 = Cultivar(name='Foxy')

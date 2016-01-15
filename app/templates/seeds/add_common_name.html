@@ -26,16 +26,10 @@
         <link rel="canonical" href="{{ url_for('seeds.add_common_name', _external=True) }}">
 {% endblock %}
 {% block main %}
-            <h1>Add a Common Name:</h1>
+<h1>Add a Common Name to {{ idx_name }}:</h1>
             <form method="POST">
                 {{ form.hidden_tag() }}
                 <ol>
-                    <fieldset>
-                        <legend>Select/Add Indexes</legend>
-                        <li>
-                            {{ form_field(form.indexes)|indent(28)|safe }}
-                        </li>
-                    </fieldset>
                     <fieldset>
                         <legend>Add Common Name</legend>
                         <li>

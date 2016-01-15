@@ -26,26 +26,20 @@
         <link rel="canonical" href="{{ url_for('seeds.add_cultivar', _external=True) }}">
 {% endblock %}
 {% block main %}
-            <h1>Add a Cultivar to {{ cn.name }}:</h1>
+            <h1>Add a Cultivar to {{ cn.index.plural }} - {{ cn.name }}:</h1>
             <form method="POST" enctype="multipart/form-data">
                 {{ form.hidden_tag() }}
                 <ol>
                     <fieldset>
-                        <legend>Groups:</legend>
+                        <legend>Data:</legend>
                         <li>
-                            {{ form_field(form.indexes)|indent(28)|safe }}
+                            {{ form_field(form.name)|indent(28)|safe }}
                         </li>
                         <li>
                             {{ form_field(form.botanical_name)|indent(28)|safe }}
                         </li>
                         <li>
                             {{ form_field(form.series)|indent(28)|safe }}
-                        </li>
-                    </fieldset>
-                    <fieldset>
-                        <legend>Data:</legend>
-                        <li>
-                            {{ form_field(form.name)|indent(28)|safe }}
                         </li>
                         <li>
                             {{ form_field(form.thumbnail)|indent(28)|safe }}
@@ -72,7 +66,10 @@
                             {{ form_field(form.in_stock)|indent(28)|safe }}
                         </li>
                         <li>
-                            {{ form_field(form.dropped)|indent(28)|safe }}
+                            {{ form_field(form.active)|indent(28)|safe }}
+                        </li>
+                        <li>
+                            {{ form_field(form.visible)|indent(28)|safe }}
                         </li>
                     </fieldset>
                     <li>

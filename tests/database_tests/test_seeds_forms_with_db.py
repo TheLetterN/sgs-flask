@@ -131,18 +131,22 @@ class TestFunctionsWithDB:
 
     def test_cultivar_select_list(self, db):
         """Generate correct list of tuples from cultivars in db."""
-        cv1 = Cultivar()
-        cv2 = Cultivar()
-        cv3 = Cultivar()
-        db.session.add_all([cv1, cv2, cv3])
-        cv1.name = 'Soulmate'
-        cv2.name = 'Superfine Rainbow'
-        cv3.name = 'Tumbling Tom'
+        idx = Index(name='Perennial')
+        cv1 = Cultivar(name='Foxy')
+        cv1.index = idx
+        cv1.common_name = CommonName(name='Foxglove')
+        cv2 = Cultivar(name='Soulmate')
+        cv2.index = idx
+        cv2.common_name = CommonName(name='Butterfly Weed')
+        cv3 = Cultivar(name='New York')
+        cv3.index = idx
+        cv3.common_name = CommonName(name='Aster')
+        db.session.add_all([idx, cv1, cv2, cv3])
         db.session.commit()
         cultivarlist = cultivar_select_list()
-        assert (cv1.id, cv1.name) in cultivarlist
-        assert (cv2.id, cv2.name) in cultivarlist
-        assert (cv3.id, cv3.name) in cultivarlist
+        assert (cv1.id, cv1.fullname) in cultivarlist
+        assert (cv2.id, cv2.fullname) in cultivarlist
+        assert (cv3.id, cv3.fullname) in cultivarlist
 
     def test_syn_parents_links(self, db):
         """Generate list of links to parents of synonyms."""
@@ -238,48 +242,38 @@ class TestAddCommonNameFormWithDB:
     """Test custom methods of AddCommonNameForm."""
     def test_set_selects(self, db):
         """Set .indexes.choices with Categories from the db."""
-        idx1 = Index()
-        idx2 = Index()
+        idx = Index()
         cn1 = CommonName()
         cn2 = CommonName()
         cv1 = Cultivar()
         cv2 = Cultivar()
-        db.session.add_all([idx1, idx2, cn1, cn2, cv1, cv2])
-        idx1.name = 'Annual Flower'.title()
-        idx2.name = 'Perennial Flower'.title()
+        db.session.add_all([idx, cn1, cn2, cv1, cv2])
+        idx.name = 'Perennial Flower'.title()
         cn1.name = 'Foxglove'
         cn2.name = 'Butterfly Weed'
         cv1.name = 'Foxy'
+        cv1.index = idx
+        cv1.common_name = cn1
         cv2.name = 'Soulmate'
+        cv2.index = idx
+        cv2.common_name = cn2
         db.session.commit()
         form = AddCommonNameForm()
         form.set_selects()
-        assert (idx1.id, idx1.name) in form.indexes.choices
-        assert (idx2.id, idx2.name) in form.indexes.choices
         assert (cn1.id, cn1.name) in form.gw_common_names.choices
         assert (cn2.id, cn2.name) in form.gw_common_names.choices
-        assert (cv1.id, cv1.name) in form.gw_cultivars.choices
-        assert (cv2.id, cv2.name) in form.gw_cultivars.choices
+        assert (cv1.id, cv1.fullname) in form.gw_cultivars.choices
+        assert (cv2.id, cv2.fullname) in form.gw_cultivars.choices
 
     def test_validate_name(self, db):
-        """Raise a Validation error if common name already in db."""
-        cn = CommonName()
-        cn2 = CommonName()
-        cn3 = CommonName()
-        db.session.add_all([cn, cn2, cn3])
-        cn.name = 'Coleus'
-        cn2.name = 'Foxglove'
-        cn3.name = 'Digitalis'
-        cn3.invisible = True
-        cn2.synonyms.append(cn3)
+        """Raise a Validation error if CommonName & Index combo in db."""
+        cn = CommonName(name='Foxglove')
+        cn.index = Index(name='Perennial')
+        db.session.add(cn)
         db.session.commit()
         form = AddCommonNameForm()
-        form.name.data = 'Sunflower'
-        form.validate_name(form.name)
-        form.name.data = 'Coleus'
-        with pytest.raises(ValidationError):
-            form.validate_name(form.name)
-        form.name.data = 'Digitalis'
+        form.name.data = 'Foxglove'
+        form.idx_id.data = cn.index.id
         with pytest.raises(ValidationError):
             form.validate_name(form.name)
 
@@ -306,34 +300,12 @@ class TestAddCultivarFormWithDB:
     def test_set_selects(self, db):
         """Selects should be set from database."""
         bn = BotanicalName()
-        idx = Index()
-        db.session.add_all([bn, idx])
+        db.session.add(bn)
         bn.name = 'Asclepias incarnata'
-        idx.name = 'Perennial Flower'
         db.session.commit()
         form = AddCultivarForm()
         form.set_selects()
         assert (bn.id, bn.name) in form.botanical_name.choices
-        assert (idx.id, idx.name) in form.indexes.choices
-
-    def test_validate_indexes(self, db):
-        """Raise validation error if any indexes not in common name."""
-        cn = CommonName()
-        idx1 = Index()
-        idx2 = Index()
-        db.session.add_all([cn, idx1, idx2])
-        cn.name = 'Foxglove'
-        idx1.name = 'Perennial Flower'
-        idx2.name = 'Rock'
-        cn.indexes.append(idx1)
-        db.session.commit()
-        form = AddCultivarForm()
-        form.indexes.data = [idx1.id]
-        form.cn_id.data = cn.id
-        form.validate_indexes(form.indexes)
-        form.indexes.data = [idx1.id, idx2.id]
-        with pytest.raises(ValidationError):
-            form.validate_indexes(form.indexes)
 
     def test_validate_name(self, db):
         """Raise error if name is already in the database."""
@@ -425,16 +397,20 @@ class TestEditCommonNameFormWithDB:
         cn1.name = 'Foxglove'
         cn2.name = 'Butterfly Weed'
         cv1.name = 'Foxy'
+        cv1.common_name = cn1
+        cv1.index = idx2
         cv2.name = 'Soulmate'
+        cv2.common_name = cn2
+        cv2.index = idx1
         db.session.commit()
         form = EditCommonNameForm()
         form.set_selects()
-        assert (idx1.id, idx1.name) in form.indexes.choices
-        assert (idx2.id, idx2.name) in form.indexes.choices
+        assert (idx1.id, idx1.name) in form.index.choices
+        assert (idx2.id, idx2.name) in form.index.choices
         assert (cn1.id, cn1.name) in form.gw_common_names.choices
         assert (cn2.id, cn2.name) in form.gw_common_names.choices
-        assert (cv1.id, cv1.name) in form.gw_cultivars.choices
-        assert (cv2.id, cv2.name) in form.gw_cultivars.choices
+        assert (cv1.id, cv1.fullname) in form.gw_cultivars.choices
+        assert (cv2.id, cv2.fullname) in form.gw_cultivars.choices
         assert (cn1.id, cn1.name) in form.parent_cn.choices
         assert (cn2.id, cn2.name) in form.parent_cn.choices
 
@@ -470,23 +446,23 @@ class TestEditCultivarFormWithDB:
         form.set_selects()
         assert (bn.id, bn.name) in form.botanical_name.choices
         assert (cn.id, cn.name) in form.common_name.choices
-        assert (idx.id, idx.name) in form.indexes.choices
+        assert (idx.id, idx.name) in form.index.choices
 
-    def test_validate_indexes(self, db):
+    def test_validate_index(self, db):
         """Raise ValidationError if indexes not in selected CommonName."""
         idx1 = Index(name='Perennial Flower')
         idx2 = Index(name='Annual Flower')
         cn = CommonName(name='Foxglove')
         db.session.add_all([idx1, idx2, cn])
-        cn.indexes.append(idx1)
+        cn.index = idx1
         db.session.commit()
         form = EditCultivarForm()
         form.common_name.data = cn.id
-        form.indexes.data = [idx1.id]
-        form.validate_indexes(form.indexes)
-        form.indexes.data.append(idx2.id)
+        form.index.data = idx1.id
+        form.validate_index(form.index)
+        form.index.data = idx2.id
         with pytest.raises(ValidationError):
-            form.validate_indexes(form.indexes)
+            form.validate_index(form.index)
 
 
 class TestEditPacketFormWithDB:
@@ -590,20 +566,34 @@ class TestSelectCommonNameFormWithDB:
 class TestSelectCultivarFormWithDB:
     """Test custom methods of SelectCultivarForm."""
     def test_set_cultivar(self, db):
-        """Set select with cultivars loaded from database."""
+        """Set select with cultivars loaded from database.
+
+        Cultivars need an index and a common name to be loaded, otherwise they
+        are assumed to be synonyms.
+        """
+        idx1 = Index(name='Perennial')
+        idx2 = Index(name='Vegetable')
         cv1 = Cultivar()
         cv2 = Cultivar()
         cv3 = Cultivar()
-        db.session.add_all([cv1, cv2, cv3])
+        cv4 = Cultivar(name='Digitalis')
+        db.session.add_all([cv1, cv2, cv3, cv4])
         cv1.name = 'Soulmate'
+        cv1.index = idx1
+        cv1.common_name = CommonName(name='Butterfly Weed')
         cv2.name = 'Tumbling Tom'
-        cv2.name = 'Foxy'
+        cv2.index = idx2
+        cv2.common_name = CommonName(name='Tomato')
+        cv3.name = 'Foxy'
+        cv3.index = idx1
+        cv3.common_name = CommonName(name='Foxglove')
         db.session.commit()
         form = SelectCultivarForm()
         form.set_cultivar()
-        assert (cv1.id, cv1.name) in form.cultivar.choices
-        assert (cv2.id, cv2.name) in form.cultivar.choices
-        assert (cv3.id, cv3.name) in form.cultivar.choices
+        assert (cv1.id, cv1.fullname) in form.cultivar.choices
+        assert (cv2.id, cv2.fullname) in form.cultivar.choices
+        assert (cv3.id, cv3.fullname) in form.cultivar.choices
+        assert (cv4.id, cv4.fullname) not in form.cultivar.choices
 
 
 class TestSelectPacketFormWithDB:

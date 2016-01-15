@@ -64,7 +64,7 @@
             {% if sc.description %}
             <p class="description">{{ sc.description|safe }}</p>
             {% endif %}
-            {% for cv in sc.cultivars if idx in cv.indexes and not cv.invisible %}
+            {% for cv in sc.cultivars if cv.active and not cv.invisible %}
             {{ cultivar_box(cv)|indent(12)|safe }}
             {% endfor %}
             <hr>
@@ -77,7 +77,7 @@
             {% if sr.description %}
             <p class="description">{{ sr.description|safe }}</p>
             {% endif %}
-            {% for cv in sr.cultivars if idx in cv.indexes and not cv.invisible %}
+            {% for cv in sr.cultivars if cv.active and not cv.invisible %}
             {{ cultivar_box(cv)|indent(12)|safe }}
             {% endfor %}
             {% endfor %}
@@ -86,7 +86,7 @@
             {% if subcategories or series %}
             <h2 id="individual_varieties">Individual Varieties</h2>
             {% endif %}
-            {% for cv in individuals if idx in cv.indexes and not cv.invisible %}
+            {% for cv in individuals if cv.active and not cv.invisible %}
             {{ cultivar_box(cv)|indent(12)|safe }}
             {% endfor %}
             {% endif %}

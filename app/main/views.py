@@ -16,34 +16,8 @@
 # Copyright Swallowtail Garden Seeds, Inc
 
 
-from flask import current_app, render_template
+from flask import render_template
 from . import main
-from app.auth.models import Permission
-from app.seeds.models import Index
-
-
-@main.context_processor
-def make_permissions_available():
-    """Make the Permission object available to Jinja templates.
-
-    Returns:
-        dict: The Permission object to use in templates.
-    """
-    return dict(Permission=Permission)
-
-
-@main.context_processor
-def make_indexes_available():
-    """Make indexes available to Jinja templates.
-
-    Returns:
-        dict: A list of all Index objects loaded from the database.
-    """
-    if not current_app.config.get('TESTING'):  # pragma: no cover
-        indexes = Index.query.all()
-    else:
-        indexes = None
-    return dict(indexes=indexes)
 
 
 @main.route('/')

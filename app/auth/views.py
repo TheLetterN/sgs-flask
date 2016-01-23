@@ -30,9 +30,8 @@ from flask.ext.login import (
     login_user,
     logout_user
 )
-from app import db
+from app import db, Permission
 from app.decorators import permission_required
-from app.seeds.models import Index
 from . import auth
 from .forms import (
     DeleteUserForm,
@@ -45,31 +44,7 @@ from .forms import (
     ResetPasswordRequestForm,
     SelectUserForm
 )
-from .models import get_user_from_confirmation_token, Permission, User
-
-
-@auth.context_processor
-def make_permissions_available():
-    """Make the Permission object available to Jinja templates.
-
-    Returns:
-        dict: The Permission object to use in templates.
-    """
-    return dict(Permission=Permission)
-
-
-@auth.context_processor
-def make_indexes_available():
-    """Make indexes available to Jinja templates.
-
-    Returns:
-        dict: A list of all Index objects loaded from the database.
-    """
-    if not current_app.config.get('TESTING'):  # pragma: no cover
-        indexes = Index.query.all()
-    else:
-        indexes = None
-    return dict(indexes=indexes)
+from .models import get_user_from_confirmation_token, User
 
 
 @auth.route('/confirm_account/<token>')

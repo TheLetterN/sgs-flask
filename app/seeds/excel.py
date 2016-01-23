@@ -16,6 +16,7 @@
 # Copyright Swallowtail Garden Seeds, Inc
 
 
+import json
 from datetime import datetime
 from openpyxl import load_workbook, Workbook
 from openpyxl.styles import Alignment
@@ -100,8 +101,8 @@ class SeedsWorkbook(object):
                          'Description',
                          'Planting Instructions',
                          'Synonyms',
-                         'Grows With Common Names',
-                         'Grows With Cultivars',
+                         'Grows With Common Names (JSON)',
+                         'Grows With Cultivars (JSON)',
                          'Invisible'),
                         padding=4)
         else:
@@ -113,7 +114,7 @@ class SeedsWorkbook(object):
         if 'BotanicalNames' not in self.wb.sheetnames:
             self.botanical_names = self.wb.create_sheet(title='BotanicalNames')
             setup_sheet(self.botanical_names,
-                        ('Common Names',
+                        ('Common Names (JSON)',
                          'Botanical Name',
                          'Synonyms'),
                         padding=4)
@@ -126,7 +127,7 @@ class SeedsWorkbook(object):
         if 'Series' not in self.wb.sheetnames:
             self.series = self.wb.create_sheet(title='Series')
             setup_sheet(self.series,
-                        ('Common Name',
+                        ('Common Name (JSON)',
                          'Series',
                          'Position',
                          'Description'),
@@ -147,10 +148,10 @@ class SeedsWorkbook(object):
                          'Thumbnail Filename',
                          'Description',
                          'Synonyms',
-                         'Grows With Common Names',
-                         'Grows With Cultivars',
+                         'Grows With Common Names (JSON)',
+                         'Grows With Cultivars (JSON)',
                          'In Stock',
-                         'Inactive',
+                         'Active',
                          'Invisible'),
                         padding=4)
         else:
@@ -162,7 +163,7 @@ class SeedsWorkbook(object):
         if 'Packets' not in self.wb.sheetnames:
             self.packets = self.wb.create_sheet(title='Packets')
             setup_sheet(self.packets,
-                        ('Cultivar',
+                        ('Cultivar (JSON)',
                          'SKU',
                          'Price',
                          'Quantity',
@@ -294,15 +295,16 @@ class SeedsWorkbook(object):
             ws.cell(ws.col_map['Planting Instructions'] + row).value =\
                 cn.instructions
             ws.cell(ws.col_map['Synonyms'] + row).value =\
-                cn.list_synonyms_as_string()
+                cn.get_synonyms_string() if cn.synonyms else None
             if cn.gw_common_names:
-                gwcns = ', '.join([gwcn.name for gwcn in cn.gw_common_names])
-                ws.cell(ws.col_map['Grows With Common Names'] +
-                        row).value = gwcns
+                ws.cell(ws.col_map['Grows With Common Names (JSON)'] + row)\
+                    .value = json.dumps([gwcn.lookup_dict() for gwcn in
+                                         cn.gw_common_names])
             if cn.gw_cultivars:
-                gwcvs = ', '.join(['[' + gwcv.lookup_string() + ']' for gwcv in
-                                   cn.gw_cultivars])
-                ws.cell(ws.col_map['Grows With Cultivars'] + row).value = gwcvs
+                gwcvs = json.dumps([cv.lookup_dict() for cv in
+                                    cn.gw_cultivars])
+                ws.cell(ws.col_map['Grows With Cultivars (JSON)'] + row)\
+                    .value = gwcvs
             if cn.invisible:
                 ws.cell(ws.col_map['Invisible'] + row).value = 'True'
 
@@ -315,11 +317,11 @@ class SeedsWorkbook(object):
         ws = self.botanical_names
         for i, bn in enumerate(botanical_names):
             row = str(i + 2)
-            ws.cell(ws.col_map['Common Names'] + row).value =\
-                ', '.join([cn.name for cn in bn.common_names])
+            ws.cell(ws.col_map['Common Names (JSON)'] + row).value =\
+                json.dumps([cn.lookup_dict() for cn in bn.common_names])
             ws.cell(ws.col_map['Botanical Name'] + row).value = bn.name
             ws.cell(ws.col_map['Synonyms'] + row).value =\
-                bn.list_synonyms_as_string()
+                bn.get_synonyms_string() if bn.synonyms else None
 
     def load_series(self, series):
         """Populate the Series shet with Series objects from db.
@@ -330,8 +332,8 @@ class SeedsWorkbook(object):
         ws = self.series
         for i, sr in enumerate(series):
             row = str(i + 2)
-            ws.cell(ws.col_map['Common Name'] + row).value =\
-                sr.common_name.name
+            ws.cell(ws.col_map['Common Name (JSON)'] + row).value =\
+                json.dumps(sr.common_name.lookup_dict())
             ws.cell(ws.col_map['Series'] + row).value = sr.name
             ws.cell(ws.col_map['Position'] + row).value = 'after cultivar' if\
                 sr.position == Series.AFTER_CULTIVAR else 'before cultivar'
@@ -346,8 +348,9 @@ class SeedsWorkbook(object):
         ws = self.cultivars
         for i, cv in enumerate(cultivars):
             row = str(i + 2)
-            ws.cell(ws.col_map['Index'] + row).value = cv.index.name
             if cv.common_name:
+                ws.cell(ws.col_map['Index'] + row).value =\
+                    cv.common_name.index.name if cv.common_name.index else None
                 ws.cell(ws.col_map['Common Name'] + row).value =\
                     cv.common_name.name
             if cv.botanical_name:
@@ -363,17 +366,17 @@ class SeedsWorkbook(object):
                 cv.description
             if cv.synonyms:
                 ws.cell(ws.col_map['Synonyms'] + row).value =\
-                    cv.list_synonyms_as_string()
+                    cv.get_synonyms_string()
             if cv.gw_common_names:
-                ws.cell(ws.col_map['Grows With Common Names'] + row).value =\
-                    ', '.join([cn.name for cn in cv.gw_common_names])
+                ws.cell(ws.col_map['Grows With Common Names (JSON)'] + row).value =\
+                    json.dumps([cn.lookup_dict() for cn in cv.gw_common_names])
             if cv.gw_cultivars:
-                ws.cell(ws.col_map['Grows With Cultivars'] + row).value =\
-                    ', '.join([cult.name for cult in cv.gw_cultivars])
+                ws.cell(ws.col_map['Grows With Cultivars (JSON)'] + row).value =\
+                    json.dumps([cv.lookup_dict() for cv in cv.gw_cultivars])
             if cv.in_stock:
                 ws.cell(ws.col_map['In Stock'] + row).value = 'True'
-            if cv.dropped:
-                ws.cell(ws.col_map['Inactive'] + row).value = 'True'
+            if cv.active:
+                ws.cell(ws.col_map['Active'] + row).value = 'True'
             if cv.invisible:
                 ws.cell(ws.col_map['Invisible'] + row).value = 'True'
 
@@ -386,8 +389,8 @@ class SeedsWorkbook(object):
         ws = self.packets
         for i, pkt in enumerate(packets):
             row = str(i + 2)
-            ws.cell(ws.col_map['Cultivar'] + row).value =\
-                pkt.cultivar.lookup_string()
+            ws.cell(ws.col_map['Cultivar (JSON)'] + row).value =\
+                json.dumps(pkt.cultivar.lookup_dict())
             ws.cell(ws.col_map['SKU'] + row).value = pkt.sku
             ws.cell(ws.col_map['Price'] + row).value = pkt.price
             ws.cell(ws.col_map['Quantity'] + row).value =\

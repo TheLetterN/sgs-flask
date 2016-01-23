@@ -1,8 +1,19 @@
+import json
 import pytest
 from unittest import mock
 from openpyxl import Workbook
 from app.seeds.excel import SeedsWorkbook, set_sheet_col_map, setup_sheet
-from app.seeds.models import CommonName, Cultivar, Index, Series
+from app.seeds.models import (
+    BotanicalName,
+    CommonName,
+    Cultivar,
+    Image,
+    Index,
+    Packet,
+    Quantity,
+    Series,
+    Synonym
+)
 
 
 class TestHelperFunctions:
@@ -185,8 +196,8 @@ class TestSeedsWorkbook:
         assert ws['D1'].value == 'Description'
         assert ws['E1'].value == 'Planting Instructions'
         assert ws['F1'].value == 'Synonyms'
-        assert ws['G1'].value == 'Grows With Common Names'
-        assert ws['H1'].value == 'Grows With Cultivars'
+        assert ws['G1'].value == 'Grows With Common Names (JSON)'
+        assert ws['H1'].value == 'Grows With Cultivars (JSON)'
         assert ws['I1'].value == 'Invisible'
 
     def test_setup_common_names_already_exists(self):
@@ -205,7 +216,7 @@ class TestSeedsWorkbook:
         assert swb.botanical_names
         assert swb.botanical_names.title == 'BotanicalNames'
         ws = swb.botanical_names
-        assert ws['A1'].value == 'Common Names'
+        assert ws['A1'].value == 'Common Names (JSON)'
         assert ws['B1'].value == 'Botanical Name'
         assert ws['C1'].value == 'Synonyms'
 
@@ -225,7 +236,7 @@ class TestSeedsWorkbook:
         assert swb.series
         assert swb.series.title == 'Series'
         ws = swb.series
-        assert ws['A1'].value == 'Common Name'
+        assert ws['A1'].value == 'Common Name (JSON)'
         assert ws['B1'].value == 'Series'
         assert ws['C1'].value == 'Position'
         assert ws['D1'].value == 'Description'
@@ -254,10 +265,10 @@ class TestSeedsWorkbook:
         assert ws['F1'].value == 'Thumbnail Filename'
         assert ws['G1'].value == 'Description'
         assert ws['H1'].value == 'Synonyms'
-        assert ws['I1'].value == 'Grows With Common Names'
-        assert ws['J1'].value == 'Grows With Cultivars'
+        assert ws['I1'].value == 'Grows With Common Names (JSON)'
+        assert ws['J1'].value == 'Grows With Cultivars (JSON)'
         assert ws['K1'].value == 'In Stock'
-        assert ws['L1'].value == 'Inactive'
+        assert ws['L1'].value == 'Active'
         assert ws['M1'].value == 'Invisible'
 
     def test_setup_cultivars_already_exists(self):
@@ -276,7 +287,7 @@ class TestSeedsWorkbook:
         assert swb.packets
         assert swb.packets.title == 'Packets'
         ws = swb.packets
-        assert ws['A1'].value == 'Cultivar'
+        assert ws['A1'].value == 'Cultivar (JSON)'
         assert ws['B1'].value == 'SKU'
         assert ws['C1'].value == 'Price'
         assert ws['D1'].value == 'Quantity'
@@ -452,12 +463,17 @@ class TestSeedsWorkbook:
                          description='Spotty.',
                          instructions='Just add water.')
         cn1.index = idx1
-        cn1.synonyms.append(CommonName(name='Digitalis'))
+        cn1.synonyms.append(Synonym(name='Digitalis'))
         cn2 = CommonName(name='Lupine',
                          description='Pretty.',
                          instructions='Do stuff.')
         cn2.index = idx2
-        cn2.synonyms.append(CommonName(name='Lupin'))
+        cn3 = CommonName(name='Dwarf Lupine',
+                         description='Lupine, but smaller!',
+                         instructions='Do more stuff.')
+        cn3.index = idx2
+        cn3.parent = cn2
+        cn2.synonyms.append(Synonym(name='Lupin'))
         cn2.gw_common_names.append(cn1)
         cn1.gw_common_names.append(cn2)
         cn2.invisible = True
@@ -468,7 +484,7 @@ class TestSeedsWorkbook:
         swb = SeedsWorkbook()
         swb.wb = None
         swb.setup_workbook()
-        swb.load_common_names([cn1, cn2])
+        swb.load_common_names([cn1, cn2, cn3])
         ws = swb.common_names
         cols = ws.col_map
         assert ws[cols['Index'] + '2'].value == 'Perennial'
@@ -478,8 +494,9 @@ class TestSeedsWorkbook:
         assert ws[cols['Planting Instructions'] + '2'].value ==\
             'Just add water.'
         assert ws[cols['Synonyms'] + '2'].value == 'Digitalis'
-        assert ws[cols['Grows With Common Names'] + '2'].value == 'Lupine'
-        assert ws[cols['Grows With Cultivars'] + '2'].value is None
+        assert ws[cols['Grows With Common Names (JSON)'] + '2'].value ==\
+            json.dumps([cn.lookup_dict() for cn in cn1.gw_common_names])
+        assert ws[cols['Grows With Cultivars (JSON)'] + '2'].value is None
         assert ws[cols['Invisible'] + '2'].value is None
         assert ws[cols['Index'] + '3'].value == 'Annual'
         assert ws[cols['Common Name'] + '3'].value == 'Lupine'
@@ -487,6 +504,181 @@ class TestSeedsWorkbook:
         assert ws[cols['Description'] + '3'].value == 'Pretty.'
         assert ws[cols['Planting Instructions'] + '3'].value == 'Do stuff.'
         assert ws[cols['Synonyms'] + '3'].value == 'Lupin'
-        assert ws[cols['Grows With Common Names'] + '3'].value == 'Foxglove'
-        assert ws[cols['Grows With Cultivars'] + '3'].value ==\
-            '[' + cn2.gw_cultivars[0].lookup_string() + ']'
+        assert ws[cols['Grows With Common Names (JSON)'] + '3'].value ==\
+            json.dumps([cn.lookup_dict() for cn in cn2.gw_common_names])
+        assert ws[cols['Grows With Cultivars (JSON)'] + '3'].value ==\
+            json.dumps([cn2.gw_cultivars[0].lookup_dict()])
+        assert ws[cols['Index'] + '4'].value == 'Annual'
+        assert ws[cols['Common Name'] + '4'].value == 'Dwarf Lupine'
+        assert ws[cols['Subcategory of'] + '4'].value == 'Lupine'
+        assert ws[cols['Description'] + '4'].value == 'Lupine, but smaller!'
+        assert ws[cols['Planting Instructions'] + '4'].value ==\
+            'Do more stuff.'
+        assert ws[cols['Synonyms'] + '4'].value is None
+        assert ws[cols['Grows With Common Names (JSON)'] + '4'].value is None
+        assert ws[cols['Grows With Cultivars (JSON)'] + '4'].value is None
+        assert ws[cols['Invisible'] + '4'].value is None
+
+    def test_load_botanical_names(self):
+        """Load a list of BotanicalName objects into BotanicalNames sheet."""
+        bn1 = BotanicalName(name='Digitalis über alles')
+        bn2 = BotanicalName(name='Innagada davida')
+        bn1.common_names = [CommonName(name='Fauxglove'),
+                            CommonName(name='Focksglove')]
+        bn2.common_names = [CommonName(name='Iron Butterfly Weed')]
+        bn1.synonyms = [Synonym(name='Digitalis watchus'),
+                        Synonym(name='Digitalis scalus')]
+        swb = SeedsWorkbook()
+        swb.wb = None
+        swb.setup_workbook()
+        swb.load_botanical_names([bn1, bn2])
+        ws = swb.botanical_names
+        cols = ws.col_map
+        assert ws[cols['Common Names (JSON)'] + '2'].value ==\
+            json.dumps([cn.lookup_dict() for cn in bn1.common_names])
+        assert ws[cols['Botanical Name'] + '2'].value ==\
+            'Digitalis über alles'
+        assert ws[cols['Synonyms'] + '2'].value ==\
+            'Digitalis watchus, Digitalis scalus'
+        assert ws[cols['Common Names (JSON)'] + '3'].value ==\
+            json.dumps([cn.lookup_dict() for cn in bn2.common_names])
+        assert ws[cols['Botanical Name'] + '3'].value == 'Innagada davida'
+        assert ws[cols['Synonyms'] + '3'].value is None
+
+    def test_load_series(self):
+        """Load a list of Series objects into Series sheet."""
+        sr1 = Series(name='Polkadot', description='Spotty.')
+        sr2 = Series(name='Queen', description='Regal.')
+        sr1.common_name = CommonName(name='Foxglove')
+        sr2.common_name = CommonName(name='Cleome')
+        sr1.position = Series.BEFORE_CULTIVAR
+        sr2.position = Series.AFTER_CULTIVAR
+        swb = SeedsWorkbook()
+        swb.wb = None
+        swb.load_series([sr1, sr2])
+        ws = swb.series
+        cols = ws.col_map
+        assert ws[cols['Common Name (JSON)'] + '2'].value ==\
+            json.dumps(sr1.common_name.lookup_dict())
+        assert ws[cols['Series'] + '2'].value == 'Polkadot'
+        assert ws[cols['Position'] + '2'].value == 'before cultivar'
+        assert ws[cols['Description'] + '2'].value == 'Spotty.'
+        assert ws[cols['Common Name (JSON)'] + '3'].value ==\
+            json.dumps(sr2.common_name.lookup_dict())
+        assert ws[cols['Series'] + '3'].value == 'Queen'
+        assert ws[cols['Position'] + '3'].value == 'after cultivar'
+        assert ws[cols['Description'] + '3'].value == 'Regal.'
+
+    def test_load_cultivars(self):
+        """Load a list of cultivars into Cultivars sheet."""
+        idx = Index(name='Perennial')
+        cv1 = Cultivar(name='Petra', description='Quite spotty.')
+        cv2 = Cultivar(name='Soulmate', description='Find it.')
+        cv3 = Cultivar(name='Blacknight', description='Dark.')
+        cv1.series = Series(name='Polkadot')
+        cv1.common_name = CommonName(name='Foxglove')
+        cv2.common_name = CommonName(name='Butterfly Weed')
+        cv3.common_name = CommonName(name='Hollyhock')
+        cv1.common_name.index = idx
+        cv2.common_name.index = idx
+        cv3.common_name.index = idx
+        cv1.botanical_name = BotanicalName(name='Digitalis purpurea')
+        cv2.botanical_name = BotanicalName(name='Asclepias incarnata')
+        cv3.botanical_name = BotanicalName(name='Alcea rosea hybrids')
+        cv1.gw_common_names = [CommonName(name='Fauxglove')]
+        cv1.gw_cultivars = [cv2]
+        cv2.gw_cultivars = [cv1, cv3]
+        cv3.gw_cultivars = [cv2]
+        cv3.synonyms = [Synonym(name='Batman'), Synonym(name='Bruce Wayne')]
+        cv1.in_stock = True
+        cv2.in_stock = False
+        cv3.in_stock = True
+        cv1.active = True
+        cv2.active = True
+        cv3.active = False
+        cv1.invisible = True
+        cv2.invisible = False
+        cv3.invisible = False
+        cv1.thumbnail = Image(filename='petra.jpg')
+        cv2.thumbnail = Image(filename='soulmate.jpg')
+        swb = SeedsWorkbook()
+        swb.wb = None
+        swb.setup_workbook()
+        swb.load_cultivars([cv1, cv2, cv3])
+        ws = swb.cultivars
+        cols = ws.col_map
+        assert ws[cols['Index'] + '2'].value == 'Perennial'
+        assert ws[cols['Common Name'] + '2'].value == 'Foxglove'
+        assert ws[cols['Botanical Name'] + '2'].value == 'Digitalis purpurea'
+        assert ws[cols['Series'] + '2'].value == 'Polkadot'
+        assert ws[cols['Cultivar Name'] + '2'].value == 'Petra'
+        assert ws[cols['Thumbnail Filename'] + '2'].value == 'petra.jpg'
+        assert ws[cols['Description'] + '2'].value == 'Quite spotty.'
+        assert ws[cols['Synonyms'] + '2'].value is None
+        assert ws[cols['Grows With Common Names (JSON)'] + '2'].value ==\
+            json.dumps([cn.lookup_dict() for cn in cv1.gw_common_names])
+        assert ws[cols['Grows With Cultivars (JSON)'] + '2'].value ==\
+            json.dumps([cv2.lookup_dict()])
+        assert ws[cols['In Stock'] + '2'].value == 'True'
+        assert ws[cols['Active'] + '2'].value == 'True'
+        assert ws[cols['Invisible'] + '2'].value == 'True'
+        assert ws[cols['Index'] + '3'].value == 'Perennial'
+        assert ws[cols['Common Name'] + '3'].value == 'Butterfly Weed'
+        assert ws[cols['Botanical Name'] + '3'].value == 'Asclepias incarnata'
+        assert ws[cols['Series'] + '3'].value is None
+        assert ws[cols['Cultivar Name'] + '3'].value == 'Soulmate'
+        assert ws[cols['Thumbnail Filename'] + '3'].value == 'soulmate.jpg'
+        assert ws[cols['Description'] + '3'].value == 'Find it.'
+        assert ws[cols['Synonyms'] + '3'].value is None
+        assert ws[cols['Grows With Common Names (JSON)'] + '3'].value is None
+        assert ws[cols['Grows With Cultivars (JSON)'] + '3'].value ==\
+            json.dumps([cv1.lookup_dict(), cv3.lookup_dict()])
+        assert ws[cols['In Stock'] + '3'].value is None
+        assert ws[cols['Active'] + '3'].value == 'True'
+        assert ws[cols['Invisible'] + '3'].value is None
+        assert ws[cols['Index'] + '4'].value == 'Perennial'
+        assert ws[cols['Common Name'] + '4'].value == 'Hollyhock'
+        assert ws[cols['Botanical Name'] + '4'].value == 'Alcea rosea hybrids'
+        assert ws[cols['Series'] + '4'].value is None
+        assert ws[cols['Cultivar Name'] + '4'].value == 'Blacknight'
+        assert ws[cols['Thumbnail Filename'] + '4'].value is None
+        assert ws[cols['Description'] + '4'].value == 'Dark.'
+        assert ws[cols['Synonyms'] + '4'].value == 'Batman, Bruce Wayne'
+        assert ws[cols['Grows With Common Names (JSON)'] + '4'].value is None
+        assert ws[cols['Grows With Cultivars (JSON)'] + '4'].value ==\
+            json.dumps([cv2.lookup_dict()])
+        assert ws[cols['In Stock'] + '4'].value == 'True'
+        assert ws[cols['Active'] + '4'].value is None
+        assert ws[cols['Invisible'] + '4'].value is None
+
+    def test_load_packets(self):
+        """Populate Packets sheet with Packets from the database."""
+        cv1 = Cultivar(name='Dotty')
+        cv1.series = Series(name='Spotty')
+        cv1.common_name = CommonName(name='Foxglove')
+        cv2 = Cultivar(name='Just Friends')
+        cv2.common_name = CommonName(name='Butterfly Weed')
+        pkt1 = Packet(sku='8675309', price='3.50')
+        pkt1.quantity = Quantity(value='100', units='seeds')
+        pkt1.cultivar = cv1
+        pkt2 = Packet(sku='156', price='1.99')
+        pkt2.quantity = Quantity(value='50', units='seeds')
+        pkt2.cultivar = cv2
+        swb = SeedsWorkbook()
+        swb.wb = None
+        swb.setup_workbook()
+        swb.load_packets([pkt1, pkt2])
+        ws = swb.packets
+        cols = swb.packets.col_map
+        assert ws[cols['Cultivar (JSON)'] + '2'].value ==\
+            json.dumps(cv1.lookup_dict())
+        assert ws[cols['SKU'] + '2'].value == '8675309'
+        assert ws[cols['Price'] + '2'].value == '3.50'
+        assert ws[cols['Quantity'] + '2'].value == '100'
+        assert ws[cols['Units'] + '2'].value == 'seeds'
+        assert ws[cols['Cultivar (JSON)'] + '3'].value ==\
+            json.dumps(cv2.lookup_dict())
+        assert ws[cols['SKU'] + '3'].value == '156'
+        assert ws[cols['Price'] + '3'].value == '1.99'
+        assert ws[cols['Quantity'] + '3'].value == '50'
+        assert ws[cols['Units'] + '3'].value == 'seeds'

@@ -25,7 +25,9 @@ This is the main application module for SGS Flask, a Flask implementation
 of the website for Swallowtail Garden Seeds.
 """
 
-
+import json
+import os
+from collections import OrderedDict
 from titlecase import titlecase
 from flask import Flask
 from flask.ext.login import AnonymousUserMixin, LoginManager
@@ -34,6 +36,38 @@ from flask.ext.sqlalchemy import SQLAlchemy
 from config import CONFIG
 from .pending import Pending
 from .redirects import RedirectsFile
+
+
+def get_index_map():
+    """Return a map used for showing links to Indexes in the nav."""
+    if os.path.exists('indexes.json'):
+        with open('indexes.json', 'r', encoding='utf-8') as ifile:
+            return json.loads(ifile.read(), object_pairs_hook=OrderedDict)
+    else:
+        return {}
+
+
+class Permission(object):
+    """Permission defines permissions to be used by the User class.
+
+    A permission represents a task the user requires permission to perform,
+    and each permission's value corresponds to a bit in the integer stored in
+    User.permissions.
+
+    Note:
+        Attribute names should be in the form of an action the user can or
+        cannot do, as their primary use will be via User.can(), so it makes
+        the most sense semantically to have attribute names like "HERD_CATS"
+        or "DANCE_THE_POLKA".
+
+    Attributes:
+        MANAGE_USERS (int): This bit is set if the user is allowed to edit the
+                            data/permissions of other users.
+        MANAGE_SEEDS (int): This bit is set if the user is allowed to manage
+                            the seeds database.
+    """
+    MANAGE_USERS = 0b1
+    MANAGE_SEEDS = 0b10
 
 
 class Anonymous(AnonymousUserMixin):
@@ -125,5 +159,9 @@ def create_app(config_name):
     pending = Pending(app.config.get('PENDING_FILE'))
     pending.clear()
     pending.save()
+
+    # Make things available to Jinja
+    app.add_template_global(Permission, 'Permission')
+    app.add_template_global(get_index_map, 'get_index_map')
 
     return app

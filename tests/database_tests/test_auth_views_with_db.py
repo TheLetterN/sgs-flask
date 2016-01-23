@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 from datetime import datetime, timedelta
 from flask import url_for
-from app.auth.models import Permission, User
+from app import Permission
+from app.auth.models import User
 from tests.conftest import app, db  # noqa
 
 

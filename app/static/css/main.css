@@ -395,13 +395,14 @@ input[type=checkbox] + label {
     display: inline;
 }
 
-input[type=text], input[type=password], textarea {
-    min-width: 200px;
-    width: 20%;
+
+input[type=text], input[type=password], textarea, select[multiple] {
+    width: 240px;
     font-family: monospace;
     color: black;
     background-color: white;
     border: 1px solid #888;
+    box-sizing: border-box;
 }
 
 input[type=text]:focus, input[type=password]:focus, textarea:focus {
@@ -427,8 +428,11 @@ input[type=radio] + label:after {
     padding-right: 0.4em;
     padding-top: 0.3em;
     padding-bottom: 0.3em;
-    margin: 0.2em;
+    margin-top: 0.2em;
+    margin-bottom: 0.2em;
+    max-width: 240px;
     display: inline-block;
+    box-sizing: border-box;
 }
 /* END forms */
 

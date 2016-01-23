@@ -132,39 +132,6 @@ class TestBotanicalName:
         bn = BotanicalName(name='Asclepias incarnata')
         assert bn.__repr__() == '<BotanicalName \'Asclepias incarnata\'>'
 
-    def test_list_syn_parents_as_string(self):
-        """Return a string list of BotanicalNames that have bn as synonym."""
-        bn = BotanicalName(name='Digitalis purpurea')
-        sp1 = BotanicalName(name='Digitalis watchus')
-        sp2 = BotanicalName(name='Digitalis scalus')
-        sp3 = BotanicalName(name='Digitalis über alles')
-        assert bn.list_syn_parents_as_string() == ''
-        bn.syn_parents = [sp1, sp2, sp3]
-        assert bn.list_syn_parents_as_string() == 'Digitalis watchus, '\
-                                                  'Digitalis scalus, '\
-                                                  'Digitalis über alles'
-
-    def test_list_synonyms_as_string(self):
-        """Return a string list of synonyms of BotanicalName."""
-        bn = BotanicalName(name='Digitalis purpurea')
-        s1 = BotanicalName(name='Digitalis watchus')
-        s2 = BotanicalName(name='Digitalis scalus')
-        s3 = BotanicalName(name='Digitalis über alles')
-        assert bn.list_synonyms_as_string() == ''
-        bn.synonyms = [s1, s2, s3]
-        assert bn.list_synonyms_as_string() == 'Digitalis watchus, '\
-                                               'Digitalis scalus, '\
-                                               'Digitalis über alles'
-
-    def test_set_synonyms_from_string_list_empty_string(self):
-        """Call self.clear_synonyms() if given a blank stringi or space."""
-        with mock.patch('app.seeds.models.BotanicalName.clear_synonyms') as m:
-            bn = BotanicalName(name='Digitalis purpurea')
-            bn.set_synonyms_from_string_list('')
-            assert m.called
-            bn.set_synonyms_from_string_list(' ')
-            assert m.call_count == 2
-
     def test_validate_more_than_two_words(self, app):
         """A botanical name is still valid with more than 2 words."""
         assert BotanicalName.validate('Brassica oleracea Var.')
@@ -251,37 +218,6 @@ class TestCommonName:
         assert cn._name == 'Butterfly Weed'
         assert cn.slug == slugify('Butterfly Weed')
 
-    def test_list_syn_parents_as_string(self):
-        """Return string list of syn_parents, or empty string if none."""
-        cn = CommonName(name='Foxglove')
-        s1 = CommonName(name='Digitalis')
-        s2 = CommonName(name='Fauxglove')
-        s3 = CommonName(name='Fawksglove')
-        assert cn.list_syn_parents_as_string() == ''
-        cn.syn_parents = [s1, s2, s3]
-        assert cn.list_syn_parents_as_string() == 'Digitalis, Fauxglove, '\
-                                                  'Fawksglove'
-
-    def test_list_synonyms_as_string(self):
-        """Return string list of synonyms, or empty string if none."""
-        cn = CommonName(name='Foxglove')
-        s1 = CommonName(name='Digitalis')
-        s2 = CommonName(name='Fauxglove')
-        s3 = CommonName(name='Fawksglove')
-        assert cn.list_synonyms_as_string() == ''
-        cn.synonyms = [s1, s2, s3]
-        assert cn.list_synonyms_as_string() == 'Digitalis, Fauxglove, '\
-                                               'Fawksglove'
-
-    def test_set_synonyms_from_string_list_empty_string(self):
-        """Call self.clear_synonyms if given an empty string or space."""
-        cn = CommonName(name='Foxglove')
-        with mock.patch('app.seeds.models.CommonName.clear_synonyms') as m:
-            cn.set_synonyms_from_string_list('')
-            assert m.called
-            cn.set_synonyms_from_string_list(' ')
-            assert m.call_count == 2
-
 
 class TestCultivar:
     """Test methods of Cultivar in the seeds model."""
@@ -321,8 +257,8 @@ class TestCultivar:
         assert cultivar._name is None
         assert cultivar.slug is None
 
-    def test_lookup_string(self):
-        """Generate a parseable string formatted for easy querying."""
+    def test_lookup_dict(self):
+        """Generate a dict containing information used to look up."""
         cv1 = Cultivar(name='Name Only')
         cv2 = Cultivar(name='Name & Common Name')
         cv3 = Cultivar(name='Name, Series, and Common Name')
@@ -331,50 +267,32 @@ class TestCultivar:
         cv2.common_name = cn
         cv3.common_name = cn
         cv3.series = sr
-        assert cv1.lookup_string() == '{CULTIVAR NAME: Name Only}'
-        assert cv2.lookup_string() == '{CULTIVAR NAME: Name & Common Name}, '\
-            '{COMMON NAME: Common Name}'
-        assert cv3.lookup_string() == '{CULTIVAR NAME: Name, Series, and '\
-            'Common Name}, {SERIES: Series}, {COMMON NAME: Common Name}'
+        assert cv1.lookup_dict() == {'Cultivar Name': 'Name Only',
+                                     'Common Name': None,
+                                     'Series': None}
+        assert cv2.lookup_dict() == {'Cultivar Name': 'Name & Common Name',
+                                     'Common Name': 'Common Name',
+                                     'Series': None}
+        assert cv3.lookup_dict() == {
+            'Cultivar Name': 'Name, Series, and Common Name',
+            'Common Name': 'Common Name',
+            'Series': 'Series'
+        }
 
-    def test_from_lookup_string_no_name(self):
-        """Raise ValueError if no cultivar name is in lookup string."""
+    def test_from_lookup_dict_no_name(self):
+        """Raise ValueError if no cultivar name is in lookup dict."""
         with pytest.raises(ValueError):
-            Cultivar.from_lookup_string('{COMMON NAME: Foxglove}, '
-                                        '{SERIES: Dalmatian}')
+            Cultivar.from_lookup_dict({'Cultivar Name': None,
+                                       'Common Name': 'Foxglove',
+                                       'Series': 'Dalmatian'})
         with pytest.raises(ValueError):
-            Cultivar.from_lookup_string('{COMMON NAME: Foxglove}')
+            Cultivar.from_lookup_dict({'Cultivar Name': None,
+                                       'Common Name': 'Foxglove',
+                                       'Series': None})
         with pytest.raises(ValueError):
-            Cultivar.from_lookup_string('{SERIES: Dalmatian}')
-
-    def test_list_syn_parents_as_string(self):
-        """List parents of a synonym as a string, blank string if none."""
-        cv = Cultivar(name='Foxy')
-        s1 = Cultivar(name='Fauxy')
-        s2 = Cultivar(name='Fawksy')
-        s3 = Cultivar(name='Focksy')
-        assert cv.list_syn_parents_as_string() == ''
-        cv.syn_parents = [s1, s2, s3]
-        assert cv.list_syn_parents_as_string() == 'Fauxy, Fawksy, Focksy'
-
-    def test_list_synonyms_as_string(self):
-        """List synonyms as a string, blank string if none."""
-        cv = Cultivar(name='Foxy')
-        s1 = Cultivar(name='Fauxy')
-        s2 = Cultivar(name='Fawksy')
-        s3 = Cultivar(name='Focksy')
-        assert cv.list_synonyms_as_string() == ''
-        cv.synonyms = [s1, s2, s3]
-        assert cv.list_synonyms_as_string() == 'Fauxy, Fawksy, Focksy'
-
-    def test_set_synonyms_from_string_list_empty_string(self):
-        """Call self.clear_synonyms() given an empty string or space."""
-        cultivar = Cultivar(name='Foxy')
-        with mock.patch('app.seeds.models.Cultivar.clear_synonyms') as m:
-            cultivar.set_synonyms_from_string_list('')
-            assert m.called
-            cultivar.set_synonyms_from_string_list(' ')
-            assert m.call_count == 2
+            Cultivar.from_lookup_dict({'Cultivar Name': None,
+                                       'Common Name': None,
+                                       'Series': 'Dalmatian'})
 
 
 class TestImage:
@@ -426,6 +344,27 @@ class TestPacket:
         assert pk.info == 'SKU #8675309: $3.50 for None None'
         pk.quantity = Quantity(100, 'seeds')
         assert pk.info == 'SKU #8675309: $3.50 for 100 seeds'
+
+    def test_init_with_no_args(self):
+        """Create a Packet object with no data given  no args."""
+        pkt = Packet()
+        assert not pkt.sku
+        assert not pkt.price
+        assert not pkt.quantity
+
+    def test_init_with_no_quantity(self):
+        """Create a Packet with no quantity set given only sku and price."""
+        pkt = Packet(sku='8675309', price=Decimal('3.50'))
+        assert pkt.sku == '8675309'
+        assert pkt.price == Decimal('3.50')
+        assert not pkt.quantity
+
+    def test_init_quantity_or_units(self):
+        """Raise a ValueError if only one of quantity or units passed."""
+        with pytest.raises(ValueError):
+            Packet(sku='8675309', price=Decimal('3.50'), quantity=100)
+        with pytest.raises(ValueError):
+            Packet(sku='8675309', price=Decimal('3.50'), units='seeds')
 
 
 class TestQuantity:

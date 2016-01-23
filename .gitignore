@@ -17,6 +17,9 @@ venv2/
 # Thanks, Apple!
 .DS_Store
 
+# Thanks, KDE!
+.directory
+
 # Ignore SQLite databases.
 *.db
 

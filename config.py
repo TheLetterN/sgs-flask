@@ -48,6 +48,8 @@ class Config(object):
                                               changes to database on
                                               teardown.
         SUPPORT_EMAIL (str): Email address for users to contact support.
+        SHOW_CULTIVAR_PAGES (bool): Whether or not to show pages for individual
+            cultivars.
     """
     try:
         ADMINISTRATORS = os.environ.get('SGS_ADMINISTRATORS').split(', ')
@@ -79,6 +81,10 @@ class Config(object):
         SQLALCHEMY_ECHO = True
     else:
         SQLALCHEMY_ECHO = False
+    if os.environ.get('SGS_SHOW_CULTIVAR_PAGES'):
+        SHOW_CULTIVAR_PAGES = True
+    else:
+        SHOW_CULTIVAR_PAGES = False
 
     @staticmethod
     def init_app(app):

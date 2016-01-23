@@ -103,9 +103,6 @@ class TestAddBotanicalNameForm:
         form.name.data = 'Digitalis purpurea'
         form.synonyms.data = 'Digitalis watchus, Digitalis thermometer'
         form.validate_synonyms(form.synonyms)
-        form.synonyms.data = 'Digitalis watchus, Digitalis purpurea'
-        with pytest.raises(ValidationError):
-            form.validate_synonyms(form.synonyms)
         form.synonyms.data = 'Digitalis watchus, He just kept talking in one '\
                              'long incredibly unbroken sentence moving from '\
                              'topic to topic so that no one had a chance to '\
@@ -126,9 +123,6 @@ class TestAddCommonNameForm:
         form.synonyms.data = 'Sixty-four characters is actually quite a lot '\
                              'of characters to fit in one name, the limit is '\
                              'perfectly reasonable'
-        with pytest.raises(ValidationError):
-            form.validate_synonyms(form.synonyms)
-        form.synonyms.data = 'Foxglove, Digitalis'
         with pytest.raises(ValidationError):
             form.validate_synonyms(form.synonyms)
 
@@ -198,9 +192,6 @@ class TestAddCultivarForm:
         form.name.data = 'Foxy'
         form.synonyms.data = 'Digitalis'
         form.validate_synonyms(form.synonyms)
-        form.synonyms.data = 'Digitalis, Foxy'
-        with pytest.raises(ValidationError):
-            form.validate_synonyms(form.synonyms)
         form.synonyms.data = 'Digitalis, He just spoke in one long incredibly'\
                              ' unbroken sentence moving from topic to topic'\
                              ' it was quite hypnotic'
@@ -214,32 +205,11 @@ class TestEditBotanicalNameForm:
         """Populate form from a BotanicalName object."""
         bn = BotanicalName()
         bn.name = 'Asclepias incarnata'
-        bns = BotanicalName()
-        bns.name = 'Innagada davida'
-        bn.synonyms.append(bns)
+        bn.set_synonyms_string('Innagada davida')
         form = EditBotanicalNameForm()
         form.populate(bn)
         assert form.name.data == bn.name
         assert form.synonyms.data == 'Innagada davida'
-
-    def test_validate_name(self):
-        """Raise ValidationError if name doesn't appear to be a binomen."""
-        form = EditBotanicalNameForm()
-        form.name.data = 'Digitalis purpurea'
-        form.validate_name(form.name)
-        form.name.data = 'digitalis watchus'
-        with pytest.raises(ValidationError):
-            form.validate_name(form.name)
-
-    def test_validate_synonyms_same_as_name(self):
-        """Raise ValidationError if any synonyms same as name."""
-        form = EditBotanicalNameForm()
-        form.name.data = 'Digitalis purpurea'
-        form.synonyms.data = 'Digitalis watchus, Innagada davida'
-        form.validate_synonyms(form.synonyms)
-        form.synonyms.data = 'Digitalis purpurea, Digitalis watchus'
-        with pytest.raises(ValidationError):
-            form.validate_synonyms(form.synonyms)
 
     def test_validate_synonyms_too_long(self):
         """Raise ValidationError if any synonyms are too long."""
@@ -274,7 +244,7 @@ class TestEditIndexForm:
         index.description = 'Not really built to last.'
         form = EditIndexForm()
         form.populate(index)
-        assert form.index.data == index.name
+        assert form.name.data == index.name
         assert form.description.data == index.description
 
 
@@ -293,9 +263,7 @@ class TestEditCommonNameForm:
         cnp.id = 2
         cnp.name = 'Coleus'
         cn.parent = cnp
-        cns = CommonName()
-        cns.name = 'Vertically Challenged Coleus'
-        cn.synonyms.append(cns)
+        cn.set_synonyms_string('Vertically Challenged Coleus')
         gwcn = CommonName()
         gwcn.id = 3
         gwcn.name = 'Foxglove'
@@ -309,20 +277,10 @@ class TestEditCommonNameForm:
         form.populate(cn)
         assert form.name.data == cn.name
         assert form.description.data == cn.description
-        assert form.synonyms.data == cns.name
+        assert form.synonyms.data == 'Vertically Challenged Coleus'
         assert form.index.data == idx.id
         assert gwcn.id in form.gw_common_names.data
         assert gwcv.id in form.gw_cultivars.data
-
-    def test_validate_synonyms_same_as_name(self):
-        """Raise ValidationError if a synonym is the same as name."""
-        form = EditCommonNameForm()
-        form.name.data = 'Foxglove'
-        form.synonyms.data = 'Digitalis'
-        form.validate_synonyms(form.synonyms)
-        form.synonyms.data = 'Digitalis, Foxglove'
-        with pytest.raises(ValidationError):
-            form.validate_synonyms(form.synonyms)
 
     def test_validate_synonyms_too_long(self):
         """Raise ValidationError if any synonyms are too long."""
@@ -350,9 +308,9 @@ class TestEditCultivarForm:
         cv.botanical_name = bn
         idx = Index(name='Perennial Flower')
         idx.id = 3
-        cv.index = idx
         cn = CommonName(name='Foxglove')
         cn.id = 4
+        cn.index = idx
         cv.common_name = cn
         cv.in_stock = True
         cv.active = True
@@ -366,13 +324,10 @@ class TestEditCultivarForm:
         series = Series(name='Spotty')
         series.id = 7
         cv.series = series
-        cvsyn = Cultivar(name='Fauxy')
-        cvsyn.id = 8
-        cv.synonyms.append(cvsyn)
+        cv.set_synonyms_string('Fauxy')
         form.populate(cv)
         assert form.name.data == 'Foxy'
         assert form.description.data == 'Like Hendrix!'
-        assert form.index.data == idx.id
         assert form.common_name.data == cn.id
         assert form.in_stock.data
         assert form.active.data

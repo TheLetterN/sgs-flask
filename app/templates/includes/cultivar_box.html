@@ -40,7 +40,7 @@
         {% endif %}
         {% if not idx_slug %}{% set idx_slug = cultivar.index.slug %}{% endif %}
         {% if not cn_slug %}{% set cn_slug = cultivar.common_name.slug %}{% endif %}
-        <h3><a href="{{ url_for('seeds.cultivar', idx_slug=idx_slug, cn_slug=cn_slug, cv_slug=cultivar.slug)}}">{{ cultivar.name_with_series }}</a></h3>
+        <h3 id="{{ cultivar.slug }}">{% if config.SHOW_CULTIVAR_PAGES %}<a href="{{ url_for('seeds.cultivar', idx_slug=idx_slug, cn_slug=cn_slug, cv_slug=cultivar.slug)}}">{{ cultivar.fullname }}</a>{% else %}{{ cultivar.fullname }}{% endif %}</h3>
         <em>{{ cultivar.common_name.header }}</em>
         <i>{{ cultivar.botanical_name.name }}</i>
         <p>{{ cultivar.description|safe }}</p>

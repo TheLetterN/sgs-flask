@@ -63,29 +63,6 @@ class EmailRequest(db.Model):
                                       self.sender)
 
 
-class Permission(object):
-    """Permission defines permissions to be used by the User class.
-
-    A permission represents a task the user requires permission to perform,
-    and each permission's value corresponds to a bit in the integer stored in
-    User.permissions.
-
-    Note:
-        Attribute names should be in the form of an action the user can or
-        cannot do, as their primary use will be via User.can(), so it makes
-        the most sense semantically to have attribute names like "HERD_CATS"
-        or "DANCE_THE_POLKA".
-
-    Attributes:
-        MANAGE_USERS (int): This bit is set if the user is allowed to edit the
-                            data/permissions of other users.
-        MANAGE_SEEDS (int): This bit is set if the user is allowed to manage
-                            the seeds database.
-    """
-    MANAGE_USERS = 0b1
-    MANAGE_SEEDS = 0b10
-
-
 class User(UserMixin, db.Model):
     """Table representing registered users.
 

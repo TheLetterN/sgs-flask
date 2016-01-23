@@ -16,24 +16,16 @@
 # Copyright Swallowtail Garden Seeds, Inc
 
 
+import json
 import os
 from decimal import Decimal, ROUND_DOWN
 from flask import current_app
 from fractions import Fraction
 from inflection import pluralize
 from slugify import slugify
+from sqlalchemy import inspect
 from sqlalchemy.ext.hybrid import hybrid_property
 from app import db, dbify
-
-
-botanical_name_synonyms = db.Table(
-    'botanical_name_synonyms',
-    db.Model.metadata,
-    db.Column('syn_parents_id',
-              db.Integer,
-              db.ForeignKey('botanical_names.id')),
-    db.Column('synonyms_id', db.Integer, db.ForeignKey('botanical_names.id'))
-)
 
 
 botanical_names_to_common_names = db.Table(
@@ -43,14 +35,6 @@ botanical_names_to_common_names = db.Table(
               db.Integer,
               db.ForeignKey('botanical_names.id')),
     db.Column('common_names_id', db.Integer, db.ForeignKey('common_names.id'))
-)
-
-
-common_name_synonyms = db.Table(
-    'common_name_synonyms',
-    db.Model.metadata,
-    db.Column('syn_parents_id', db.Integer, db.ForeignKey('common_names.id')),
-    db.Column('synonyms_id', db.Integer, db.ForeignKey('common_names.id'))
 )
 
 
@@ -80,19 +64,60 @@ cultivars_to_gw_cultivars = db.Table(
 )
 
 
-cultivar_synonyms = db.Table(
-    'cultivar_synonyms',
-    db.Model.metadata,
-    db.Column('syn_parents_id', db.Integer, db.ForeignKey('cultivars.id')),
-    db.Column('synonyms_id', db.Integer, db.ForeignKey('cultivars.id'))
-)
-
 cultivars_to_custom_pages = db.Table(
     'cultivars_to_custom_pages',
     db.Model.metadata,
     db.Column('cultivar_id', db.Integer, db.ForeignKey('cultivars.id')),
     db.Column('custom_pages_id', db.Integer, db.ForeignKey('custom_pages.id'))
 )
+
+
+def indexes_to_json(indexes):
+    """Return a list of tuples containing index headers and slugs.
+
+    This way we can dump needed index information into a JSON file so we don't
+    have to query the database every time we load a page with the nav bar on
+    it.
+    """
+    return json.dumps({idx.id: (idx.header, idx.slug) for idx in indexes})
+
+
+class SynonymsMixin(object):
+    """A mixin class containing methods that operate on synonyms."""
+    def get_synonyms_string(self):
+        """Return a comma separated list """
+        if self.synonyms:
+            return ', '.join([syn.name for syn in self.synonyms])
+        else:
+            return ''
+
+    def set_synonyms_string(self, synonyms, dbify_syns=True):
+        db_changed = False
+        if not synonyms:
+            for syn in list(self.synonyms):
+                if inspect(syn).persistent:
+                    db_changed = True
+                    db.session.delete(syn)
+                else:
+                    self.synonyms.remove(syn)
+        else:
+            syns = [dbify(syn) if dbify_syns else syn
+                    for syn in synonyms.split(', ')]
+            for syn in list(self.synonyms):
+                if syn.name not in syns:
+                    if inspect(syn).persistent:
+                        db_changed = True
+                        db.session.delete(syn)
+                    else:
+                        self.synonyms.remove(syn)
+            for syn in syns:
+                if syn.isspace():
+                    syn = None
+                if syn and syn not in [syno.name for syno in self.synonyms]:
+                    db_changed = True
+                    self.synonyms.append(Synonym(name=syn))
+            if db_changed:
+                db.session.commit()
 
 
 class USDInt(db.TypeDecorator):
@@ -309,7 +334,7 @@ class Index(db.Model):
         return pluralize(self._name)
 
 
-class CommonName(db.Model):
+class CommonName(SynonymsMixin, db.Model):
     """Table for common names.
 
     A CommonName is the next subdivision below Index in how we sort seeds.
@@ -338,8 +363,6 @@ class CommonName(db.Model):
         slug (str): The URL-friendly version of this common name.
         invisible (bool): Whether or not to list this common name in
             automatically generated pages.
-        syn_parents (relationship): Common names this is a synonym of.
-            synonyms (backref): Synonyms of this common name.
     """
     __tablename__ = 'common_names'
     id = db.Column(db.Integer, primary_key=True)
@@ -361,13 +384,6 @@ class CommonName(db.Model):
                              remote_side=[id])
     slug = db.Column(db.String(64))
     invisible = db.Column(db.Boolean, default=False)
-    syn_parents = db.relationship(
-        'CommonName',
-        secondary=common_name_synonyms,
-        backref='synonyms',
-        primaryjoin=id == common_name_synonyms.c.syn_parents_id,
-        secondaryjoin=id == common_name_synonyms.c.synonyms_id
-    )
     __table_args__ = (db.UniqueConstraint('_name',
                                           'index_id',
                                           name='cn_index_uc'),)
@@ -414,69 +430,30 @@ class CommonName(db.Model):
         else:
             self.slug = None
 
-    def clear_synonyms(self):
-        """Remove all synonyms, deleting any that end up with no parent."""
-        for synonym in list(self.synonyms):
-            self.synonyms.remove(synonym)
-            if not synonym.syn_parents and synonym.invisible:
-                db.session.delete(synonym)
+    def lookup_dict(self):
+        """Return a dictionary with name and index for easy DB lookup."""
+        return {
+            'Name': self._name if self._name else None,
+            'Index': self.index.name if self.index else None}
 
-    def list_syn_parents_as_string(self):
-        """Return a string listing the parents of this if it is a synonym.
-
-        Returns:
-            str: A list of common names this is a synonym of delineated by
-                commas, or a blank string if it is not a synonym.
-        """
-        if self.syn_parents:
-            return ', '.join([sp.name for sp in self.syn_parents])
+    @classmethod
+    def from_lookup_dict(cls, lookup):
+        name = lookup['Name']
+        index = lookup['Index']
+        if not name:
+            raise ValueError('Cannot look up CommonName without a name!')
+        if index:
+            return cls.query\
+                .join(Index, Index.id == CommonName.index_id)\
+                .filter(CommonName._name == name,
+                        Index.name == index).one_or_none()
         else:
-            return ''
-
-    def list_synonyms_as_string(self):
-        """Return a string listing of synonyms delineated by commas.
-
-        Returns:
-            str: A list of synonyms of this common name, or a blank string if
-                it has none.
-        """
-        if self.synonyms:
-            return ', '.join([syn.name for syn in self.synonyms])
-        else:
-            return ''
-
-    def set_synonyms_from_string_list(self, synlist):
-        """Set synonyms with data from a string list delineated by commas.
-
-        Args:
-            synlist (str): A string listing synonyms separated by commas.
-        """
-        if not synlist or synlist.isspace():
-            self.clear_synonyms()
-        else:
-            syns = synlist.split(', ')
-            syns = [dbify(syn) for syn in syns]
-            if self.synonyms:
-                for synonym in list(self.synonyms):
-                    if synonym.name not in syns:
-                        self.synonyms.remove(synonym)
-                        if not synonym.syn_parents and synonym.invisible:
-                            db.session.delete(synonym)
-                            db.session.commit()
-            for syn in syns:
-                synonym = CommonName.query.filter_by(_name=syn).first()
-                if synonym:
-                    if synonym not in self.synonyms:
-                        self.synonyms.append(synonym)
-                else:
-                    if syn and not syn.isspace():
-                        synonym = CommonName()
-                        synonym.name = syn
-                        synonym.invisible = True
-                        self.synonyms.append(synonym)
+            return cls.query\
+                .filter(CommonName._name == name,
+                        CommonName.index == None).one_or_none()  # noqa
 
 
-class BotanicalName(db.Model):
+class BotanicalName(SynonymsMixin, db.Model):
     """Table for botanical (scientific) names of seeds.
 
     The botanical name is the scientific name of the species a seed belongs
@@ -495,9 +472,6 @@ class BotanicalName(db.Model):
             and set via the name property.
         invisible (bool): Whether or not the botanical name exists only as a
             synonym.
-        syn_parents (relationship): The botanical names that this botanical
-            name is considered a synonym of.
-            synonyms (backref): Synonyms of this botanical name.
     """
     __tablename__ = 'botanical_names'
     id = db.Column(db.Integer, primary_key=True)
@@ -508,13 +482,6 @@ class BotanicalName(db.Model):
     )
     _name = db.Column(db.String(64), unique=True)
     invisible = db.Column(db.Boolean, default=False)
-    syn_parents = db.relationship(
-        'BotanicalName',
-        secondary=botanical_name_synonyms,
-        backref='synonyms',
-        primaryjoin=id == botanical_name_synonyms.c.syn_parents_id,
-        secondaryjoin=id == botanical_name_synonyms.c.synonyms_id
-    )
 
     def __init__(self, name=None):
         """Construct an instance of BotanicalName.
@@ -599,65 +566,22 @@ class BotanicalName(db.Model):
         except:
             return False
 
-    def clear_synonyms(self):
-        """Remove all synonyms, deleting any that end up with no parent."""
-        for synonym in list(self.synonyms):
-            self.synonyms.remove(synonym)
-            if not synonym.syn_parents and synonym.invisible:
-                db.session.delete(synonym)
+    def set_synonyms_string(self, synonyms, dbify_syns=False):
+        """Validate synonyms as botanical names before adding them.
 
-    def list_syn_parents_as_string(self):
-        """Return a string listing the parents of this if it is a synonym.
-
-        Returns:
-            str: A list of botanical names this botanical name is a synonym of
-                delineated by commas, or a blank string if it is not a synonym.
+        Note that dbify_syns is set to False by default here, as we don't
+        want to titlecase botanical names.
         """
-        if self.syn_parents:
-            return ', '.join([sp.name for sp in self.syn_parents])
-        else:
-            return ''
-
-    def list_synonyms_as_string(self):
-        """Return a string listing of synonyms delineated by commas.
-
-        Returns:
-            str: A list of synonyms of this botanical name, or a blank string
-                if it has none.
-        """
-        if self.synonyms:
-            return ', '.join([syn.name for syn in self.synonyms])
-        else:
-            return ''
-
-    def set_synonyms_from_string_list(self, synlist):
-        """Set synonyms with data from a string list delineated by commas.
-
-        Args:
-            synlist (str): A string containing a list of synonyms separated by
-                commas.
-        """
-        if not synlist or synlist.isspace():
-            self.clear_synonyms()
-        else:
-            syns = synlist.split(', ')
-            if self.synonyms:
-                for synonym in list(self.synonyms):
-                    if synonym.name not in syns:
-                        self.synonyms.remove(synonym)
-                        if not synonym.syn_parents and synonym.invisible:
-                            db.session.delete(synonym)
-            for syn in syns:
-                synonym = BotanicalName.query.filter_by(_name=syn).first()
-                if synonym:
-                    if synonym not in self.synonyms:
-                        self.synonyms.append(synonym)
-                else:
-                    if syn and not syn.isspace():
-                        synonym = BotanicalName()
-                        synonym.name = syn
-                        synonym.invisible = True
-                        self.synonyms.append(synonym)
+        if synonyms:
+            bad_syns = []
+            for syn in synonyms.split(', '):
+                if not BotanicalName.validate(syn.strip()):
+                    bad_syns.append(syn)
+            if bad_syns:
+                raise ValueError('One or more synonyms do not appear to be '
+                                 'valid botanical names: {0}'
+                                 .format(', '.join(bad_syns)))
+        super().set_synonyms_string(synonyms, dbify_syns)
 
 
 class Image(db.Model):
@@ -754,7 +678,7 @@ class Series(db.Model):
             return None
 
 
-class Cultivar(db.Model):
+class Cultivar(SynonymsMixin, db.Model):
     """Table for cultivar data.
 
     This table contains the primary identifying information for a cultivar of
@@ -786,8 +710,6 @@ class Cultivar(db.Model):
         invisible (bool): Whether or not this cultivar should be listed in
             automatically generated pages. Cultivars set to invisible can still
             be listed on custom pages.
-        syn_parents (relationship): Cultivars that have this one as a synonym.
-            synonyms (backref): Synonyms of this cultivar.
         thumbnail_id (int): ForeignKey of Image, used with thumbnail.
         thumbnail (relationship): MtO relationship with Image for specifying
             a thumbnail for cultivar.
@@ -795,8 +717,6 @@ class Cultivar(db.Model):
     """
     __tablename__ = 'cultivars'
     id = db.Column(db.Integer, primary_key=True)
-    index_id = db.Column(db.Integer, db.ForeignKey('indexes.id'))
-    index = db.relationship('Index', backref='cultivars')
     botanical_name_id = db.Column(db.Integer,
                                   db.ForeignKey('botanical_names.id'))
     botanical_name = db.relationship('BotanicalName',
@@ -826,13 +746,6 @@ class Cultivar(db.Model):
     series = db.relationship('Series', backref='cultivars')
     slug = db.Column(db.String(64))
     invisible = db.Column(db.Boolean, default=False)
-    syn_parents = db.relationship(
-        'Cultivar',
-        secondary=cultivar_synonyms,
-        backref='synonyms',
-        primaryjoin=id == cultivar_synonyms.c.syn_parents_id,
-        secondaryjoin=id == cultivar_synonyms.c.synonyms_id
-    )
     thumbnail_id = db.Column(db.Integer, db.ForeignKey('images.id'))
     thumbnail = db.relationship('Image', foreign_keys=thumbnail_id)
     __table_args__ = (db.UniqueConstraint('_name',
@@ -848,6 +761,11 @@ class Cultivar(db.Model):
         """Return representation of Cultivar in human-readable format."""
         return '<{0} \'{1}\'>'.format(self.__class__.__name__,
                                       self.fullname)
+
+    @hybrid_property
+    def index(self):
+        """Index belonging to this cultivar's common name."""
+        return self.common_name.index
 
     @hybrid_property
     def fullname(self):
@@ -902,42 +820,30 @@ class Cultivar(db.Model):
         else:
             return os.path.join('images', 'default_thumb.jpg')
 
-    def lookup_string(self):
-        """Generate a string that can easily be parsed to look up a Cultivar.
+    def lookup_dict(self):
+        """Return a dict of name, series, and common_name for use in lookups.
 
         Since a Cultivar needs to be a unique combination of name, series, and
         common_name, the only way to look it up is via some combination of
         those three parts.
+
+        Returns:
+            dict: A dict containing Cultivar.name, Cultivar.series.name, and
+            Cultivar.common_name.name, substituting None where not present.
         """
-        parts = []
-        parts.append('{CULTIVAR NAME: ' + self.name + '}')
-        if self.series:
-            parts.append('{SERIES: ' + self.series.name + '}')
-        if self.common_name:
-            parts.append('{COMMON NAME: ' + self.common_name.name + '}')
-        return ', '.join(parts)
+        return {
+            'Cultivar Name': None if not self.name else self.name,
+            'Series': None if not self.series else self.series.name,
+            'Common Name': None if not self.common_name else
+            self.common_name.name
+        }
 
     @classmethod
-    def from_lookup_string(cls, lookup):
+    def from_lookup_dict(cls, lookup):
         """Load a Cultivar from db based on lookup string."""
-        parts = lookup.split('}, ')
-        name = None
-        series = None
-        common_name = None
-        for part in parts:
-            if '{CULTIVAR NAME:' in part:
-                name = part.replace('{CULTIVAR NAME: ', '').replace('}', '')
-                if not name:
-                    name = None
-            if '{SERIES:' in part:
-                series = part.replace('{SERIES: ', '').replace('}', '')
-                if not series:
-                    series = None
-            if '{COMMON NAME:' in part:
-                common_name = part.replace('{COMMON NAME: ', '')\
-                    .replace('}', '')
-                if not common_name:
-                    common_name = None
+        name = lookup['Cultivar Name']
+        series = lookup['Series']
+        common_name = lookup['Common Name']
         if not name:
             raise ValueError('Cannot look up cultivar without a name!')
         if series and common_name:
@@ -961,73 +867,12 @@ class Cultivar(db.Model):
             ).one_or_none()
         return obj
 
-    def clear_synonyms(self):
-        """Remove all synonyms, deleting any that end up with no parent."""
-        for synonym in list(self.synonyms):
-            self.synonyms.remove(synonym)
-            if not synonym.syn_parents and synonym.invisible:
-                db.session.delete(synonym)
-
-    def list_syn_parents_as_string(self):
-        """Return a string listing the parents of this if it is a synonym.
-
-        Returns:
-            str: A list of cultivars this is a synonym of delineated by commas,
-                or a blank string if it is not a synonym.
-        """
-        if self.syn_parents:
-            return ', '.join([sp.name for sp in self.syn_parents])
-        else:
-            return ''
-
-    def list_synonyms_as_string(self):
-        """Return a string listing of synonyms delineated by commas.
-
-        Returns:
-            str: A list of synonyms of this cultivar separated by commas, or a
-            blank string if it has none.
-        """
-        if self.synonyms:
-            return ', '.join([syn.name for syn in self.synonyms])
-        else:
-            return ''
-
     def set_slug(self):
         """Sets self.slug to a slug made from name and series."""
         if self._name:
             self.slug = slugify(self.name_with_series)
         else:
             self.slug = None
-
-    def set_synonyms_from_string_list(self, synlist):
-        """Set synonyms with data from a string list delineated by commas.
-
-        Args:
-            synlist (str): A string listing synonyms separated by commas.
-        """
-        if not synlist or synlist.isspace():
-            self.clear_synonyms()
-        else:
-            syns = synlist.split(', ')
-            syns = [dbify(syn) for syn in syns]
-            if self.synonyms:
-                for synonym in list(self.synonyms):
-                    if synonym.name not in syns:
-                        self.synonyms.remove(synonym)
-                        if not synonym.syn_parents and synonym.invisible:
-                            db.session.delete(synonym)
-                            db.session.commit()
-            for syn in syns:
-                synonym = Cultivar.query.filter_by(_name=syn).first()
-                if synonym:
-                    if synonym not in self.synonyms:
-                        self.synonyms.append(synonym)
-                else:
-                    if syn and not syn.isspace():
-                        synonym = Cultivar()
-                        synonym.name = syn
-                        synonym.invisible = True
-                        self.synonyms.append(synonym)
 
 
 class Packet(db.Model):
@@ -1051,13 +896,27 @@ class Packet(db.Model):
     __tablename__ = 'packets'
     id = db.Column(db.Integer, primary_key=True)
     price = db.Column(USDInt)
-    quantity_id = db.Column(db.ForeignKey('quantities.id'))
+    quantity_id = db.Column(db.Integer, db.ForeignKey('quantities.id'))
     quantity = db.relationship('Quantity', backref='packets')
     cultivar_id = db.Column(db.Integer, db.ForeignKey('cultivars.id'))
     sku = db.Column(db.String(32), unique=True)
 
     def __repr__(self):
         return '<{0} SKU #{1}>'.format(self.__class__.__name__, self.sku)
+
+    def __init__(self, sku=None, price=None, quantity=None, units=None):
+        self.sku = sku
+        self.price = price
+        if quantity and units:
+            self.quantity = Quantity.query.filter(
+                Quantity.value == quantity,
+                Quantity.units == units
+            ).one_or_none()
+            if not self.quantity:
+                self.quantity = Quantity(value=quantity, units=units)
+        elif quantity or units:
+            raise ValueError('Cannot set quantity without both quantity and '
+                             'units.')
 
     @property
     def info(self):
@@ -1365,6 +1224,56 @@ class Quantity(db.Model):
             return self.fraction_to_str(self.value)
         else:
             return str(self.value)
+
+
+class Synonym(db.Model):
+    """Table for synonyms of other objects."""
+    __tablename__ = 'synonyms'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(64))
+    common_name_id = db.Column(db.Integer, db.ForeignKey('common_names.id'))
+    common_name = db.relationship('CommonName', backref='synonyms')
+    botanical_name_id = db.Column(db.Integer,
+                                  db.ForeignKey('botanical_names.id'))
+    botanical_name = db.relationship('BotanicalName', backref='synonyms')
+    cultivar_id = db.Column(db.Integer, db.ForeignKey('cultivars.id'))
+    cultivar = db.relationship('Cultivar', backref='synonyms')
+
+    def __init__(self, name=None):
+        self.name = name
+
+    def __repr__(self):
+        """Return string representing a synonym."""
+        if self.parent:
+            return('<{0} \'{1}\' of {2}: \'{3}\'>'
+                   .format(self.__class__.__name__,
+                           self.name,
+                           None if not self.parent else
+                           self.parent.__class__.__name__,
+                           None if not self.parent else self.parent.name))
+        else:
+            return('<{0} \'{1}\'>'.format(self.__class__.__name__, self.name))
+
+    @property
+    def parent(self):
+        """Returns whatever foreign row this synonym belongs to."""
+        parents = []
+        if self.common_name:
+            parents.append(self.common_name)
+        if self.botanical_name:
+            parents.append(self.botanical_name)
+        if self.cultivar:
+            parents.append(self.cultivar)
+        if len(parents) == 0:
+            return None
+        if len(parents) == 1:
+            return parents.pop()
+        else:
+            raise ValueError(
+                'Each synonym should only be linked to one other table, but '
+                'this one is linked to: {0}'
+                .format(', '.join([obj.__repr__() for obj in parents]))
+            )
 
 
 class CustomPage(db.Model):

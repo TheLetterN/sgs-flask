@@ -3,6 +3,7 @@ from app.seeds.models import (
     BotanicalName,
     CommonName,
     Image,
+    Index,
     Cultivar,
     Packet,
     Quantity,
@@ -38,7 +39,9 @@ class TestCultivarWithDB:
         cv6 = Cultivar(name='Name')
         cv7 = Cultivar(name='Like, Other Name')
         cn = CommonName(name='Common Name')
+        cn.index = Index(name='Index')
         cn2 = CommonName(name='Other Common Name')
+        cn2.index = Index(name='Other Index')
         sr = Series(name='Series')
         sr2 = Series(name='Other Series')
         cv2.common_name = cn
@@ -67,36 +70,43 @@ class TestCultivarWithDB:
         assert Cultivar.from_lookup_dict(
             {'Cultivar Name': 'Name',
              'Common Name': None,
+             'Index': None,
              'Series': None}
         ) is cv1
         assert Cultivar.from_lookup_dict(
             {'Cultivar Name': 'Name',
              'Common Name': 'Common Name',
+             'Index': 'Index',
              'Series': None}
         ) is cv2
         assert Cultivar.from_lookup_dict(
             {'Cultivar Name': 'Name',
              'Common Name': 'Common Name',
+             'Index': 'Index',
              'Series': 'Series'}
         ) is cv3
         assert Cultivar.from_lookup_dict(
             {'Cultivar Name': 'Name',
              'Common Name': 'Other Common Name',
+             'Index': 'Other Index',
              'Series': None}
         ) is cv4
         assert Cultivar.from_lookup_dict(
             {'Cultivar Name': 'Name',
              'Common Name': 'Other Common Name',
+             'Index': 'Other Index',
              'Series': 'Series'}
         ) is cv5
         assert Cultivar.from_lookup_dict(
             {'Cultivar Name': 'Name',
              'Common Name': 'Common Name',
+             'Index': 'Index',
              'Series': 'Other Series'}
         ) is cv6
         assert Cultivar.from_lookup_dict(
             {'Cultivar Name': 'Like, Other Name',
              'Common Name': 'Common Name',
+             'Index': 'Index',
              'Series': 'Series'}
         ) is cv7
 

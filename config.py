@@ -40,6 +40,7 @@ class Config(object):
         ERFP_MINUTES_BETWEEN_REQUESTS (int): Number of minutes to prevent
                                              additional requests after one has
                                              already been made.
+        INDEXES_JSON_FILE (str): Name of file to save/load indexes to.
         INFO_EMAIL (str): Email address to send information with.
         PENDING_FILE (str): Location of file listing changes pending restart.
         REDIRECTS_FILE (str): Location of JSON file containing redirects.
@@ -64,18 +65,20 @@ class Config(object):
     ERFP_MINUTES_BETWEEN_REQUESTS = int(ERFP_MINUTES_BETWEEN_REQUESTS)
     EMAIL_SUBJECT_PREFIX = os.environ.get('SGS_EMAIL_SUBJECT_PREFIX') or \
         'Swallowtail Garden Seeds - '
+    INDEXES_JSON_FILE = os.environ.get('SGS_INDEXES_JSON_FILE') or \
+        'indexes.json'
     IMAGES_FOLDER = os.path.join(BASEDIR, 'app', 'static', 'images')
     INFO_EMAIL = os.environ.get('SGS_INFO_EMAIL') or \
         'info@swallowtailgardenseeds.com'
     PENDING_FILE = os.environ.get('SGS_PENDING_FILE') or \
         os.path.join(BASEDIR, 'pending.txt')
     REDIRECTS_FILE = os.environ.get('SGS_REDIRECTS_FILE') or \
-         os.path.join(BASEDIR, 'redirects.json')
+        os.path.join(BASEDIR, 'redirects.json')
     SECRET_KEY = os.environ.get('SGS_SECRET_KEY') or \
         '\xbdc@:b\xac\xfa\xfa\xd1z[\xa3=\xd1\x9a\x0b&\xe3\x1d5\xe9\x84(\xda'
     SUPPORT_EMAIL = os.environ.get('SGS_SUPPORT_EMAIL') or \
         'support@swallowtailgardenseeds.com'
-    #Set to suppress Flask-SQLAlchemy warning. May need to change later.
+    # Set to suppress Flask-SQLAlchemy warning. May need to change later.
     SQLALCHEMY_TRACK_MODIFICATIONS = True
     if os.environ.get('SGS_SQLALCHEMY_ECHO'):
         SQLALCHEMY_ECHO = True
@@ -112,6 +115,7 @@ class TestingConfig(Config):
     LOGIN_DISABLED = True
     TESTING = True
     WTF_CSRF_ENABLED = False
+    INDEXES_JSON_FILE = os.path.join(TEMPDIR, 'indexes.json')
     PENDING_FILE = os.path.join(TEMPDIR, 'pending.txt')
     REDIRECTS_FILE = os.path.join(TEMPDIR, 'redirects.json')
     SQLALCHEMY_DATABASE_URI = os.environ.get('SGS_TEST_DATABASE_URI') or \

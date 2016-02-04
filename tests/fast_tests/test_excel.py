@@ -267,9 +267,10 @@ class TestSeedsWorkbook:
         assert ws['H1'].value == 'Synonyms'
         assert ws['I1'].value == 'Grows With Common Names (JSON)'
         assert ws['J1'].value == 'Grows With Cultivars (JSON)'
-        assert ws['K1'].value == 'In Stock'
-        assert ws['L1'].value == 'Active'
-        assert ws['M1'].value == 'Invisible'
+        assert ws['K1'].value == 'New For'
+        assert ws['L1'].value == 'In Stock'
+        assert ws['M1'].value == 'Active'
+        assert ws['N1'].value == 'Invisible'
 
     def test_setup_cultivars_already_exists(self):
         """Raise RuntimeError if Cultivars sheet exists."""
@@ -423,7 +424,7 @@ class TestSeedsWorkbook:
         swb.save('bar.xlsx', append_timestamp=True)
         m_save.assert_called_with('bar_timestamp.xlsx')
 
-    @mock.patch('app.seeds.excel.SeedsWorkbook.beautify')
+    @mock.patch('app.seeds.excel.beautify')
     @mock.patch('app.seeds.excel.Workbook.save')
     def test_save_calls_beautify(self, m_save, m_b):
         """Call beautify on spreadsheet when saving.

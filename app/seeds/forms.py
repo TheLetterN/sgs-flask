@@ -159,7 +159,8 @@ def common_name_select_list():
     cn_list = []
     for cn in CommonName.query.order_by('_name'):
         if not cn.invisible:
-            cn_list.append((cn.id, cn.name))
+            val = cn.name + ' (' + cn.index.name + ')' if cn.index else cn.name
+            cn_list.append((cn.id, val))
     return cn_list
 
 
@@ -189,11 +190,11 @@ def series_select_list(obj=None):
         list: A list of tuples with id and name of each series.
     """
     if obj:
-        items = obj.series if obj.series else []
+        sl = [(series.id, series.name) for series in obj.series]\
+            if obj.series else []
     else:
-        items = Series.query.all()
-    sl = [(series.id,
-           series.common_name.name + ', ' + series.name) for series in items]
+        sl = [(series.id,  series.common_name.name + ', ' + series.name) for
+              series in Series.query.all()]
     return sl
 
 

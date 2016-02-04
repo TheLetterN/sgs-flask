@@ -82,6 +82,14 @@ def indexes_to_json(indexes):
     return json.dumps({idx.id: (idx.header, idx.slug) for idx in indexes})
 
 
+def save_indexes_to_json():
+    """Save all indexes to indexes.json"""
+    with open(current_app.config.get('INDEXES_JSON_FILE'),
+              'w',
+              encoding='utf-8') as ofile:
+        ofile.write(indexes_to_json(Index.query.all()))
+
+
 class SynonymsMixin(object):
     """A mixin class containing methods that operate on synonyms."""
     def get_synonyms_string(self):
@@ -433,12 +441,12 @@ class CommonName(SynonymsMixin, db.Model):
     def lookup_dict(self):
         """Return a dictionary with name and index for easy DB lookup."""
         return {
-            'Name': self._name if self._name else None,
+            'Common Name': self._name if self._name else None,
             'Index': self.index.name if self.index else None}
 
     @classmethod
     def from_lookup_dict(cls, lookup):
-        name = lookup['Name']
+        name = lookup['Common Name']
         index = lookup['Index']
         if not name:
             raise ValueError('Cannot look up CommonName without a name!')
@@ -713,6 +721,7 @@ class Cultivar(SynonymsMixin, db.Model):
         thumbnail_id (int): ForeignKey of Image, used with thumbnail.
         thumbnail (relationship): MtO relationship with Image for specifying
             a thumbnail for cultivar.
+        new_for (int): Year a cultivar is new for.
         __table_args__: Table-wide arguments, such as constraints.
     """
     __tablename__ = 'cultivars'
@@ -748,6 +757,7 @@ class Cultivar(SynonymsMixin, db.Model):
     invisible = db.Column(db.Boolean, default=False)
     thumbnail_id = db.Column(db.Integer, db.ForeignKey('images.id'))
     thumbnail = db.relationship('Image', foreign_keys=thumbnail_id)
+    new_for = db.Column(db.Integer)
     __table_args__ = (db.UniqueConstraint('_name',
                                           'common_name_id',
                                           'series_id',
@@ -773,7 +783,7 @@ class Cultivar(SynonymsMixin, db.Model):
         fn = []
         if self.name_with_series:
             fn.append(self.name_with_series)
-        if self.common_name:
+        if self.common_name and self.common_name.name != self.name:
             fn.append(self.common_name.name)
         if fn:
             return ' '.join(fn)
@@ -835,7 +845,9 @@ class Cultivar(SynonymsMixin, db.Model):
             'Cultivar Name': None if not self.name else self.name,
             'Series': None if not self.series else self.series.name,
             'Common Name': None if not self.common_name else
-            self.common_name.name
+            self.common_name.name,
+            'Index': None if not self.common_name or not self.common_name.index
+            else self.common_name.index.name
         }
 
     @classmethod
@@ -844,21 +856,27 @@ class Cultivar(SynonymsMixin, db.Model):
         name = lookup['Cultivar Name']
         series = lookup['Series']
         common_name = lookup['Common Name']
+        index = lookup['Index']
         if not name:
             raise ValueError('Cannot look up cultivar without a name!')
+        if common_name and not index:
+            raise ValueError('Common name cannot be used without an index!')
         if series and common_name:
             obj = cls.query.join(CommonName,
                                  CommonName.id == Cultivar.common_name_id)\
                 .join(Series, Series.id == Cultivar.series_id)\
+                .join(Index, Index.id == CommonName.index_id)\
                 .filter(Cultivar.name == name,
                         CommonName.name == common_name,
                         Series.name == series).one_or_none()
         elif common_name and not series:
             obj = cls.query.join(CommonName,
                                  CommonName.id == Cultivar.common_name_id)\
+                .join(Index, Index.id == CommonName.index_id)\
                 .filter(Cultivar.series == None,  # noqa
                         Cultivar.name == name,
-                        CommonName.name == common_name).one_or_none()
+                        CommonName.name == common_name,
+                        Index.name == index).one_or_none()
         else:
             obj = cls.query.filter(
                 Cultivar.name == name,

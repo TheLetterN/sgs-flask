@@ -241,8 +241,10 @@ class TestAddCommonNameFormWithDB:
         db.session.commit()
         form = AddCommonNameForm()
         form.set_selects()
-        assert (cn1.id, cn1.name) in form.gw_common_names.choices
-        assert (cn2.id, cn2.name) in form.gw_common_names.choices
+        assert (cn1.id, 'Foxglove (Perennial Flower)') in\
+            form.gw_common_names.choices
+        assert (cn2.id, 'Butterfly Weed (Perennial Flower)') in\
+            form.gw_common_names.choices
         assert (cv1.id, cv1.fullname) in form.gw_cultivars.choices
         assert (cv2.id, cv2.fullname) in form.gw_cultivars.choices
 
@@ -395,12 +397,16 @@ class TestEditCommonNameFormWithDB:
         db.session.commit()
         form = EditCommonNameForm()
         form.set_selects()
-        assert (cn1.id, cn1.name) in form.gw_common_names.choices
-        assert (cn2.id, cn2.name) in form.gw_common_names.choices
+        assert (cn1.id, 'Foxglove (Perennial Flower)') in\
+            form.gw_common_names.choices
+        assert (cn2.id, 'Butterfly Weed (Annual Flower)') in\
+            form.gw_common_names.choices
         assert (cv1.id, cv1.fullname) in form.gw_cultivars.choices
         assert (cv2.id, cv2.fullname) in form.gw_cultivars.choices
-        assert (cn1.id, cn1.name) in form.parent_cn.choices
-        assert (cn2.id, cn2.name) in form.parent_cn.choices
+        assert (cn1.id, 'Foxglove (Perennial Flower)') in\
+            form.parent_cn.choices
+        assert (cn2.id, 'Butterfly Weed (Annual Flower)') in\
+            form.parent_cn.choices
 
 
 class TestEditIndexFormWithDB:

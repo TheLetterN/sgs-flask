@@ -38,12 +38,12 @@ from ..lastcommit import LastCommit
 from .models import (
     BotanicalName,
     Index,
-    indexes_to_json,
     CommonName,
+    Cultivar,
     Image,
     Packet,
     Quantity,
-    Cultivar,
+    save_indexes_to_json,
     Series,
     USDInt
 )
@@ -115,12 +115,6 @@ def redirect_warning(old_path, links):
     """
     return Markup('Warning: the path \'{0}\' is no longer valid. You may wish '
                   'to redirect it to {1}.'.format(old_path, links))
-
-
-def save_indexes_to_json():
-    """Save all indexes to indexes.json"""
-    with open('indexes.json', 'w', encoding='utf-8') as ofile:
-        ofile.write(indexes_to_json(Index.query.all()))
 
 
 @seeds.route('/add_index', methods=['GET', 'POST'])

@@ -263,19 +263,23 @@ class TestCultivar:
         cv2 = Cultivar(name='Name & Common Name')
         cv3 = Cultivar(name='Name, Series, and Common Name')
         cn = CommonName(name='Common Name')
+        cn.index = Index(name='Index')
         sr = Series(name='Series')
         cv2.common_name = cn
         cv3.common_name = cn
         cv3.series = sr
         assert cv1.lookup_dict() == {'Cultivar Name': 'Name Only',
                                      'Common Name': None,
+                                     'Index': None,
                                      'Series': None}
         assert cv2.lookup_dict() == {'Cultivar Name': 'Name & Common Name',
                                      'Common Name': 'Common Name',
+                                     'Index': 'Index',
                                      'Series': None}
         assert cv3.lookup_dict() == {
             'Cultivar Name': 'Name, Series, and Common Name',
             'Common Name': 'Common Name',
+            'Index': 'Index',
             'Series': 'Series'
         }
 
@@ -284,14 +288,17 @@ class TestCultivar:
         with pytest.raises(ValueError):
             Cultivar.from_lookup_dict({'Cultivar Name': None,
                                        'Common Name': 'Foxglove',
+                                       'Index': 'Perennial',
                                        'Series': 'Dalmatian'})
         with pytest.raises(ValueError):
             Cultivar.from_lookup_dict({'Cultivar Name': None,
                                        'Common Name': 'Foxglove',
+                                       'Index': 'Perennial',
                                        'Series': None})
         with pytest.raises(ValueError):
             Cultivar.from_lookup_dict({'Cultivar Name': None,
                                        'Common Name': None,
+                                       'Index': None,
                                        'Series': 'Dalmatian'})
 
 

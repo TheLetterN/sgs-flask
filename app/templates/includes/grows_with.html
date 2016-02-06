@@ -19,5 +19,5 @@
 contain the members gw_common_names and gw_cultivars
 #}
 {% macro grows_with(obj) %}
-{% if obj.gw_common_names %}{% for gw_cn in obj.gw_common_names %}<a href="{{ url_for('seeds.common_name', idx_slug=gw_cn.index.slug, cn_slug=gw_cn.slug) }}">{{ gw_cn.name }}</a>{% if not loop.last or obj.gw_cultivars %}, {% endif %}{% endfor %}{% endif %}{% if obj.gw_cultivars %}{% for gw_cv in obj.gw_cultivars %}<a href="{{ url_for('seeds.cultivar', idx_slug=gw_cv.common_name.index.slug, cn_slug=gw_cv.common_name.slug, cv_slug=gw_cv.slug) }}">{{ gw_cv.fullname }}</a>{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}
+{% if obj.gw_common_names %}{% for gw_cn in obj.gw_common_names %}<a href="{{ url_for('seeds.common_name', idx_slug=gw_cn.index.slug, cn_slug=gw_cn.slug) }}">{{ gw_cn.name }}</a>{% if not loop.last or obj.gw_cultivars %}, {% endif %}{% endfor %}{% endif %}{% if obj.gw_cultivars %}{% for gw_cv in obj.gw_cultivars %}{% if config.SHOW_CULTIVAR_PAGES %}<a href="{{ url_for('seeds.cultivar', idx_slug=gw_cv.common_name.index.slug, cn_slug=gw_cv.common_name.slug, cv_slug=gw_cv.slug) }}">{{ gw_cv.fullname }}</a>{% else %}<a href="{{ url_for('seeds.common_name', idx_slug=gw_cv.common_name.index.slug, cn_slug=gw_cv.common_name.slug) }}#{{ gw_cv.slug }}">{{ gw_cv.fullname }}</a>{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}
 {% endmacro %}

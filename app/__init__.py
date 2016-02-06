@@ -118,8 +118,12 @@ def dbify(string):
 
     Returns:
         str: A string formatted for database usage.
+        None: If string is None or empty.
     """
-    return titlecase(string.lower().strip())
+    if string:
+        return titlecase(string.lower().strip())
+    else:
+        return None
 
 
 def create_app(config_name):

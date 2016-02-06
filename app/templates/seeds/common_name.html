@@ -25,7 +25,7 @@
 {% set series = cn.series %}
 {% block head %}
         <title>Swallowtail Garden Seeds - {{ cn.header }}</title>
-        <link rel="canonical" href="{{ url_for('seeds.common_name', idx_slug=idx.slug, cn_slug=cn.slug, _external=True) }}">
+        <link rel="canonical" href="{{ url_for('seeds.common_name', idx_slug=cn.index.slug, cn_slug=cn.slug, _external=True) }}">
 {% endblock %}
 {% block main %}
             <div>

@@ -1828,19 +1828,21 @@ def index_page(idx_slug=None):
 @seeds.route('/<idx_slug>/<cn_slug>')
 def common_name(idx_slug=None, cn_slug=None):
     """Display page for a common name."""
-    idx = Index.query.filter_by(slug=idx_slug).first()
-    cn = CommonName.query.filter_by(slug=cn_slug).first()
-    if cn is not None and idx is not None:
+    cn = CommonName.query\
+        .join(Index, Index.id == CommonName.index_id)\
+        .filter(CommonName.slug == cn_slug, Index.slug == idx_slug)\
+        .one_or_none()
+    if cn is not None:
         individuals = [cv for cv in cn.cultivars if not cv.series and
                        not cv.common_name.parent]
         crumbs = make_breadcrumbs(
             (url_for('seeds.index'), 'All Seeds'),
-            (url_for('seeds.index_page', idx_slug=idx_slug), idx.header),
+            (url_for('seeds.index_page', idx_slug=idx_slug),
+             cn.index.header),
             (url_for('seeds.common_name', idx_slug=idx_slug, cn_slug=cn_slug),
              cn.name)
         )
         return render_template('seeds/common_name.html',
-                               idx=idx,
                                individuals=individuals,
                                cn=cn,
                                crumbs=crumbs)

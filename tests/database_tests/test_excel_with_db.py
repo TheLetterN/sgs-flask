@@ -259,29 +259,21 @@ class TestSeedsWorkbookWithDB:
         assert gwcv2 not in cnq.gw_cultivars
 
     def test_dump_botanical_names_adds_to_database(self, db):
-        """Add new botanical names to database."""
-        cn1 = CommonName(name='Foxglove')
-        cn2 = CommonName(name='Butterfly Weed')
-        idx = Index(name='Perennial')
-        cn1.index = idx
-        cn2.index = idx
-        db.session.add_all([cn1, cn2])
-        db.session.commit()
-        bn1 = BotanicalName(name='Digitalis purpurea')
-        bn1.common_names = [CommonName(name='Foxglove')]
-        bn1.common_names[0].index = Index(name='Perennial')
-        bn2 = BotanicalName(name='Asclepias incarnata')
-        bn2.common_names = [CommonName(name='Butterfly Weed')]
-        bn2.common_names[0].index = Index(name='Perennial')
+        """Add new botanical name to database if not already there."""
+        bn = BotanicalName(name='Digitalis purpurea')
+        bn.common_names = [CommonName(name='Foxglove')]
+        bn.common_names[0].index = Index(name='Perennial')
         swb = SeedsWorkbook()
-        swb.load_botanical_names([bn1, bn2])
+        swb.load_botanical_names([bn])
         swb.dump_botanical_names()
-        assert BotanicalName.query\
+        bnq = BotanicalName.query\
             .filter(BotanicalName.name == 'Digitalis purpurea')\
             .one_or_none()
-        assert BotanicalName.query\
-            .filter(BotanicalName.name == 'Asclepias incarnata')\
-            .one_or_none()
+        assert bnq
+        assert bnq.name == 'Digitalis purpurea'
+        cn = bnq.common_names[0]
+        assert cn.name == 'Foxglove'
+        assert cn.index.name == 'Perennial'
 
     def test_dump_botanical_names_existing(self, db):
         """Use existing botanical name if present."""
@@ -319,3 +311,206 @@ class TestSeedsWorkbookWithDB:
             out.seek(0)
         m_commit.assert_not_called()
         assert 'No changes were made' in out.read()
+
+    def test_dump_series_adds_to_db(self, db):
+        """Add new series to database if not already there."""
+        sr = Series(name='Polkadot')
+        sr.position = Series.BEFORE_CULTIVAR
+        sr.description = 'Spotty.'
+        sr.common_name = CommonName(name='Foxglove')
+        sr.common_name.index = Index(name='Perennial')
+        swb = SeedsWorkbook()
+        swb.load_series([sr])
+        swb.dump_series()
+        srq = Series.query\
+            .join(CommonName, CommonName.id == Series.common_name_id)\
+            .join(Index, Index.id == CommonName.index_id)\
+            .filter(Series.name == 'Polkadot',
+                    CommonName._name == 'Foxglove',
+                    Index._name == 'Perennial')\
+            .one_or_none()
+        assert srq
+        assert srq.position == Series.BEFORE_CULTIVAR
+        assert srq.description == 'Spotty.'
+
+    def test_dump_series_existing(self, db):
+        """Load and edit existing series if present in db."""
+        sr = Series(name='Polkadot')
+        sr.position = Series.BEFORE_CULTIVAR
+        sr.description = 'Spotty.'
+        sr.common_name = CommonName(name='Foxglove')
+        sr.common_name.index = Index(name='Perennial')
+        db.session.add(sr)
+        db.session.commit()
+        sr2 = Series(name='Polkadot')
+        sr2.position = Series.AFTER_CULTIVAR
+        sr2.description = 'Like my shorts!'
+        sr2.common_name = CommonName(name='Foxglove')
+        sr2.common_name.index = Index(name='Perennial')
+        swb = SeedsWorkbook()
+        swb.load_series([sr2])
+        swb.dump_series()
+        srq = Series.query\
+            .join(CommonName, CommonName.id == Series.common_name_id)\
+            .join(Index, Index.id == CommonName.index_id)\
+            .one_or_none()
+        assert srq is sr
+        assert sr.position == Series.AFTER_CULTIVAR
+        assert sr.description == 'Like my shorts!'
+
+    @mock.patch('app.seeds.excel.db.session.commit')
+    def test_dump_series_no_changes(self, m_commit, db):
+        """Don't commit anything if no changes are made."""
+        sr = Series(name='Polkadot')
+        sr.position = Series.BEFORE_CULTIVAR
+        sr.description = 'Spotty.'
+        sr.common_name = CommonName(name='Foxglove')
+        sr.common_name.index = Index(name='Perennial')
+        db.session.add(sr)
+        db.session.commit()
+        swb = SeedsWorkbook()
+        swb.load_series([sr])
+        out = StringIO()
+        with redirect_stdout(out):
+            swb.dump_series()
+        out.seek(0)
+        m_commit.assert_not_called()
+        assert 'No changes have been made' in out.read()
+
+    def test_dump_cultivars_adds_to_database(self, db):
+        """Add new cultivars to the database."""
+        cv = Cultivar(name='Foxy')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        cv.botanical_name = BotanicalName(name='Digitalis purpurea')
+        cv.botanical_name.common_names.append(cv.common_name)
+        swb = SeedsWorkbook()
+        swb.load_cultivars([cv])
+        swb.dump_cultivars()
+        cvq = Cultivar.query\
+            .join(CommonName, CommonName.id == Cultivar.common_name_id)\
+            .join(Index, Index.id == CommonName.index_id)\
+            .filter(Cultivar._name == 'Foxy',
+                    CommonName._name == 'Foxglove',
+                    Index._name == 'Perennial')\
+            .one_or_none()
+        assert cvq
+        assert cvq is not cv
+
+    def test_dump_cultivars_uses_existing_no_series(self, db):
+        """Load cultivar if exists, even if no series specified."""
+        cv = Cultivar(name='Foxy')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        cv.botanical_name = BotanicalName(name='Digitalis purpurea')
+        cv.botanical_name.common_names.append(cv.common_name)
+        cv.description = 'Like Hendrix!'
+        cv.in_stock = True
+        cv.active = True
+        cv.invisible = False
+        db.session.add(cv)
+        db.session.commit()
+        cv2 = Cultivar(name='Foxy')
+        cv2.common_name = CommonName(name='Foxglove')
+        cv2.common_name.index = Index(name='Perennial')
+        cv2.botanical_name = BotanicalName(name='Digitalis purpurea')
+        cv2.botanical_name.common_names.append(cv2.common_name)
+        cv2.description = 'Like a lady.'
+        cv2.in_stock = False
+        cv2.active = False
+        cv2.invisible = True
+        swb = SeedsWorkbook()
+        swb.load_cultivars([cv2])
+        swb.dump_cultivars()
+        cvq = Cultivar.query\
+            .join(CommonName, CommonName.id == Cultivar.common_name_id)\
+            .join(Index, Index.id == CommonName.index_id)\
+            .filter(Cultivar._name == 'Foxy',
+                    CommonName._name == 'Foxglove',
+                    Index._name == 'Perennial')\
+            .one_or_none()
+        assert cvq is cv
+        assert cvq.description == 'Like a lady.'
+        assert not cvq.in_stock
+        assert not cvq.active
+        assert cvq.invisible
+
+    def test_dump_cultivars_uses_existing_with_series(self, db):
+        """Load cultivar if it exists with given series."""
+        cv = Cultivar(name='Petra')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        cv.botanical_name = BotanicalName(name='Digitalis purpurea')
+        cv.botanical_name.common_names.append(cv.common_name)
+        cv.series = Series(name='Polkadot')
+        cv.series.common_name = cv.common_name
+        cv.description = 'Got nothin\'.'
+        cv.in_stock = True
+        cv.active = True
+        cv.invisible = False
+        db.session.add(cv)
+        db.session.commit()
+        cv2 = Cultivar(name='Petra')
+        cv2.common_name = CommonName(name='Foxglove')
+        cv2.common_name.index = Index(name='Perennial')
+        cv2.botanical_name = BotanicalName(name='Digitalis purpurea')
+        cv2.botanical_name.common_names.append(cv2.common_name)
+        cv2.series = Series(name='Polkadot')
+        cv2.series.common_name = cv2.common_name
+        cv2.description = 'Still got nothin\'.'
+        cv2.in_stock = False
+        cv2.active = False
+        cv2.invisible = True
+        swb = SeedsWorkbook()
+        swb.load_cultivars([cv2])
+        swb.dump_cultivars()
+        cvq = Cultivar.query\
+            .join(CommonName, CommonName.id == Cultivar.common_name_id)\
+            .join(Index, Index.id == CommonName.index_id)\
+            .join(Series, Series.id == Cultivar.series_id)\
+            .filter(Cultivar._name == 'Petra',
+                    CommonName._name == 'Foxglove',
+                    Index._name == 'Perennial',
+                    Series.name == 'Polkadot')\
+            .one_or_none()
+        assert cvq is cv
+        assert cv.description == 'Still got nothin\'.'
+        assert not cv.in_stock
+        assert not cv.active
+        assert cv.invisible
+
+    @mock.patch('app.seeds.excel.db.session.commit')
+    def test_dump_cultivars_no_changes(self, m_commit, db):
+        """Do not add anything to the database given identical data."""
+        cv = Cultivar(name='Petra')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        cv.botanical_name = BotanicalName(name='Digitalis purpurea')
+        cv.botanical_name.common_names.append(cv.common_name)
+        cv.series = Series(name='Polkadot')
+        cv.series.common_name = cv.common_name
+        cv.description = 'Got nothin\'.'
+        cv.in_stock = True
+        cv.active = True
+        cv.invisible = False
+        db.session.add(cv)
+        db.session.commit()
+        cv2 = Cultivar(name='Petra')
+        cv2.common_name = CommonName(name='Foxglove')
+        cv2.common_name.index = Index(name='Perennial')
+        cv2.botanical_name = BotanicalName(name='Digitalis purpurea')
+        cv2.botanical_name.common_names.append(cv2.common_name)
+        cv2.series = Series(name='Polkadot')
+        cv2.series.common_name = cv2.common_name
+        cv2.description = 'Got nothin\'.'
+        cv2.in_stock = True
+        cv2.active = True
+        cv2.invisible = False
+        swb = SeedsWorkbook()
+        swb.load_cultivars([cv2])
+        out = StringIO()
+        with redirect_stdout(out):
+            swb.dump_cultivars()
+        out.seek(0)
+        m_commit.assert_not_called()
+        assert 'No changes have been made' in out.read()

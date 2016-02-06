@@ -831,11 +831,12 @@ class Cultivar(SynonymsMixin, db.Model):
             return os.path.join('images', 'default_thumb.jpg')
 
     def lookup_dict(self):
-        """Return a dict of name, series, and common_name for use in lookups.
+        """Return a dict of name, series, common_name, and index.
 
         Since a Cultivar needs to be a unique combination of name, series, and
-        common_name, the only way to look it up is via some combination of
-        those three parts.
+        common_name (which requires an Index) the only way to look it up is via
+        some combination of cultivar name, series name, commo nname, and index
+        name.
 
         Returns:
             dict: A dict containing Cultivar.name, Cultivar.series.name, and
@@ -852,13 +853,36 @@ class Cultivar(SynonymsMixin, db.Model):
 
     @classmethod
     def from_lookup_dict(cls, lookup):
-        """Load a Cultivar from db based on lookup string."""
+        """Load a Cultivar from db based on lookup dict.
+
+        Args:
+            lookup (dict): A dictionary with values to use in querying for
+                a cultivar.
+        """
         name = lookup['Cultivar Name']
         series = lookup['Series']
         common_name = lookup['Common Name']
         index = lookup['Index']
-        if not name:
-            raise ValueError('Cannot look up cultivar without a name!')
+        return Cultivar.lookup(name, series, common_name, index)
+
+    @classmethod
+    def lookup(cls, name, series=None, common_name=None, index=None):
+        """Query a Cultivar based on its name, series, and common name.
+
+        Since cultivars don't necessarily need a series or common name (though
+        they should in theory always have a common name) we need to be able to
+        query for cultivars that may not have a series or common name. This
+        method allows querying based on any combination of the necessary
+        parameters.
+
+        Args:
+            name (str): Name of the cultivar to query.
+            series (optional[str]): Name of the series, if applicable, that
+                the cultivar belongs to.
+            common_name (str): The common name the cultivar belongs to.
+            index (str): The index the common name (and thusly cultivar)
+                belongs to.
+        """
         if common_name and not index:
             raise ValueError('Common name cannot be used without an index!')
         if series and common_name:

@@ -454,6 +454,7 @@ class TestCommonNameRouteWithDB:
         cn.name = 'Foxglove'
         cn.description = 'Do foxes really wear these?'
         idx.name = 'Perennial Flower'
+        cn.index = idx
         db.session.commit()
         with app.test_client() as tc:
             rv = tc.get(url_for('seeds.common_name',

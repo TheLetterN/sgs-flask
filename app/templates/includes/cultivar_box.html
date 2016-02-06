@@ -17,7 +17,7 @@
 #}
 {% macro cultivar_box(cultivar) %}
 {% from 'includes/grows_with.html' import grows_with %}
-{% if not cultivar.dropped or current_user.can(Permission.MANAGE_SEEDS) %}
+{% if cultivar.active or current_user.can(Permission.MANAGE_SEEDS) %}
 <div class="cultivar_box">
     <img src="{{ url_for('static', filename=cultivar.thumbnail_path) }}">
     <div class="cultivar_info">
@@ -44,7 +44,9 @@
         <em>{{ cultivar.common_name.header }}</em>
         <i>{{ cultivar.botanical_name.name }}</i>
         <p>{{ cultivar.description|safe }}</p>
-        {% if cultivar.gw_common_names or cultivar.gw_cultivars %}<p class="grows_with">Grows nicely with: {{ grows_with(cultivar) }}.</p>{% endif %}
+        {% if cultivar.gw_common_names or cultivar.gw_cultivars %}
+        <p class="grows_with">Grows nicely with: {{ grows_with(cultivar) }}.</p>
+        {% endif %}
     </div>
     {% if current_user.can(Permission.MANAGE_SEEDS) %}
     <a href="{{ url_for('seeds.add_packet', cv_id=cultivar.id) }}">Add Packet</a>

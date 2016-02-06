@@ -283,24 +283,6 @@ class TestCultivar:
             'Series': 'Series'
         }
 
-    def test_from_lookup_dict_no_name(self):
-        """Raise ValueError if no cultivar name is in lookup dict."""
-        with pytest.raises(ValueError):
-            Cultivar.from_lookup_dict({'Cultivar Name': None,
-                                       'Common Name': 'Foxglove',
-                                       'Index': 'Perennial',
-                                       'Series': 'Dalmatian'})
-        with pytest.raises(ValueError):
-            Cultivar.from_lookup_dict({'Cultivar Name': None,
-                                       'Common Name': 'Foxglove',
-                                       'Index': 'Perennial',
-                                       'Series': None})
-        with pytest.raises(ValueError):
-            Cultivar.from_lookup_dict({'Cultivar Name': None,
-                                       'Common Name': None,
-                                       'Index': None,
-                                       'Series': 'Dalmatian'})
-
 
 class TestImage:
     """Test methods of Image in the seeds model."""

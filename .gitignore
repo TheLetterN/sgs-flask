@@ -23,6 +23,9 @@ venv2/
 # Ignore SQLite databases.
 *.db
 
+# Ignore backup files.
+*.bak
+
 # Ignore JSON files.
 *.json
 

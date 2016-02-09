@@ -810,9 +810,9 @@ class Cultivar(SynonymsMixin, db.Model):
         if self.series:
             if self.series.position != Series.AFTER_CULTIVAR or\
                     'Mix' in self.name:
-                return self.series.name + ' ' + self._name
+                return '{0} {1}'.format(self.series.name, self._name)
             else:
-                return self._name + ' ' + self.series.name
+                return '{0} {1}'.format(self._name, self.series.name)
         else:
             return self._name
 
@@ -1103,16 +1103,13 @@ class Quantity(db.Model):
 
     @staticmethod
     def for_cmp(val):
-        """Convert a value into appropriate type for use in comparisons.
+        """Convert a value into appropriate float for querying.
 
         Args:
-            val: Value to convert to a similar format to how they're stored to
-                make querying more reliable.
+            val: Value to convert to a float.
 
         Returns:
             float: If value is a decimal number.
-            int: If value is an integer.
-            Fraction: If value is a fraction.
         """
         if Quantity.dec_check(val):
             return float(val)
@@ -1120,10 +1117,7 @@ class Quantity(db.Model):
             frac = Quantity.str_to_fraction(val)
         else:
             frac = Fraction(val)
-        if frac.denominator == 1:
-            return int(frac)
-        else:
-            return frac
+        return float(frac)
 
     @staticmethod
     def str_to_fraction(val):

@@ -27,8 +27,11 @@ from app.seeds.models import (
     Cultivar,
     Image,
     Index,
+    Packet,
+    Quantity,
     save_indexes_to_json,
-    Series
+    Series,
+    USDInt
 )
 
 
@@ -328,8 +331,9 @@ class SeedsWorkbook(object):
     def dump_indexes(self):
         """Dump Indexes from the Indexes sheet to the database."""
         ws = self.indexes
-        edited = False
+        commit_to_db = False
         for i in range(2, len(ws.rows) + 1):
+            edited = False
             row = str(i)
             name = dbify(ws.cell(ws.col_map['Index'] + row).value)
             desc = ws.cell(ws.col_map['Description'] + row).value
@@ -350,13 +354,17 @@ class SeedsWorkbook(object):
                 print('New index \'{0}\' has been added with the description: '
                       '{1}'.format(idx.name, idx.description))
                 db.session.add(idx)
-        if edited:
-            save_indexes_to_json()
+            if edited:
+                commit_to_db = True
+                print('The index \'{0}\' has been edited/added.'
+                      .format(idx.name))
+                save_indexes_to_json()
+                db.session.flush()
+            else:
+                print('No changes were made to the index \'{0}\'.'
+                      .format(idx.name))
+        if commit_to_db:
             db.session.commit()
-        else:
-            print('The spreadsheet values for the index \'{0}\' do not differ '
-                  'from the version in the database, so no changes to it were '
-                  'made'.format(idx.name))
 
     def load_common_names(self, common_names):
         """Populate the CommonNames sheet with CommonName object data.
@@ -402,9 +410,10 @@ class SeedsWorkbook(object):
     def dump_common_names(self):
         """Dump contents of CommonNames sheet into database."""
         ws = self.common_names
-        edited = False
+        commit_to_db = False
         for i in range(2, len(ws.rows) + 1):
             row = str(i)
+            edited = False
             index = dbify(ws.cell(ws.col_map['Index'] + row).value)
             name = dbify(ws.cell(ws.col_map['Common Name'] + row).value)
             parent = dbify(ws.cell(ws.col_map['Subcategory of'] + row).value)
@@ -611,12 +620,15 @@ class SeedsWorkbook(object):
                 print('The common name \'{0}\' will now be visible on '
                       'auto-generated pages.'.format(cn.name))
             if edited:
-                db.session.commit()
+                db.session.flush()
+                commit_to_db = True
                 print('The common name \'{0}\' has been edited/added.'
                       .format(cn.name))
             else:
                 print('No changes were made to the common name \'{0}\'.'
                       .format(cn.name))
+        if commit_to_db:
+            db.session.commit()
 
     def load_botanical_names(self, botanical_names):
         """Populate the BotanicalNames sheet with BotanicalName objects.
@@ -638,9 +650,10 @@ class SeedsWorkbook(object):
     def dump_botanical_names(self):
         """Dump botanical name data from spreadsheet to the database."""
         ws = self.botanical_names
-        edited = False
+        commit_to_db = False
         for i in range(2, len(ws.rows) + 1):
             row = str(i)
+            edited = False
             cn_json = ws.cell(
                 ws.col_map['Common Names (JSON)'] + row
             ).value
@@ -708,10 +721,13 @@ class SeedsWorkbook(object):
             if edited:
                 print('The botanical name \'{0}\' has been edited/added.'
                       .format(bn.name))
-                db.session.commit()
+                db.session.flush()
+                commit_to_db = True
             else:
                 print('No changes were made to the botanical name \'{0}\'.'
                       .format(bn.name))
+        if commit_to_db:
+            db.session.commit()
 
     def load_series(self, series):
         """Populate the Series shet with Series objects from db.
@@ -735,9 +751,10 @@ class SeedsWorkbook(object):
     def dump_series(self):
         """Dump data from the Series sheet into the database."""
         ws = self.series
-        edited = False
+        commit_to_db = False
         for i in range(2, len(ws.rows) + 1):
             row = str(i)
+            edited = False
             cn_json = ws.cell(ws.col_map['Common Name (JSON)'] + row).value
             cn_dict = clean_dict(json.loads(cn_json))
             series = dbify(ws.cell(ws.col_map['Series'] + row).value)
@@ -795,12 +812,15 @@ class SeedsWorkbook(object):
                 print('Description for \'{0}\' has been set to: {1}'
                       .format(sr.name, sr.description))
             if edited:
-                db.session.commit()
+                db.session.flush()
+                commit_to_db = True
                 print('The series \'{0}\' has been edited/added.'
                       .format(sr.name))
             else:
                 print('No changes have been made to the series \'{0}\'.'
                       .format(sr.name))
+        if commit_to_db:
+            db.session.commit()
 
     def load_cultivars(self, cultivars):
         """Populate the Cultivars sheet with Cultivar object data.
@@ -861,9 +881,10 @@ class SeedsWorkbook(object):
     def dump_cultivars(self):
         """Dump cultivar sheet data to database."""
         ws = self.cultivars
-        edited = False
+        commit_to_db = False
         for i in range(2, len(ws.rows) + 1):
             row = str(i)
+            edited = False
             index = dbify(ws.cell(ws.col_map['Index'] + row).value)
             common_name = dbify(ws.cell(ws.col_map['Common Name'] + row).value)
             botanical_name = ws.cell(ws.col_map['Botanical Name'] + row).value
@@ -1152,12 +1173,15 @@ class SeedsWorkbook(object):
                       'generated pages.'.format(cv.fullname))
             if edited:
                 cv.set_slug()
-                db.session.commit()
-                print('The cultivar \'{0}\' has been added to the database.'
+                db.session.flush()
+                commit_to_db = True
+                print('The cultivar \'{0}\' has been edited/added.'
                       .format(cv.fullname))
             else:
                 print('No changes have been made to the cultivar \'{0}\'.'
                       .format(cv.fullname))
+        if commit_to_db:
+            db.session.commit()
 
     def load_packets(self, packets):
         """Populate the Packets sheet with Packet object data.
@@ -1177,3 +1201,131 @@ class SeedsWorkbook(object):
                 ws.col_map['Quantity'] + row
             ).value = pkt.quantity.str_value
             ws.cell(ws.col_map['Units'] + row).value = pkt.quantity.units
+
+    def dump_packets(self):
+        """Dump Packets sheet to database."""
+        ws = self.packets
+        commit_to_db = False
+        for i in range(2, len(ws.rows) + 1):
+            row = str(i)
+            edited = False
+            cv_json = ws.cell(ws.col_map['Cultivar (JSON)'] + row).value
+            cv_dict = clean_dict(json.loads(cv_json))
+            sku = ws.cell(ws.col_map['SKU'] + row).value
+            price_str = ws.cell(ws.col_map['Price'] + row).value
+            price = USDInt.usd_to_decimal(price_str)
+            quantity = ws.cell(ws.col_map['Quantity'] + row).value
+            units = ws.cell(ws.col_map['Units'] + row).value
+
+            pkt = Packet.query.filter(Packet.sku == sku).one_or_none()
+            if pkt:
+                print('The packet \'{0}\' already exists in the database.'
+                      .format(pkt.info))
+            else:
+                edited = True
+                pkt = Packet(sku=sku)
+                db.session.add(pkt)
+                print('New packet created with the sku \'{0}\'.'
+                      .format(pkt.sku))
+            cv = Cultivar.from_lookup_dict(cv_dict)
+            if not cv:
+                edited = True
+                cv = Cultivar(name=cv_dict['Cultivar Name'])
+                print('The cultivar with the name \'{0}\' needed for the '
+                      'packet with the sku \'{1}\' does not yet exist, so it '
+                      'has been created.'.format(cv.name, pkt.sku))
+                cn_name = cv_dict['Common Name']
+                idx_name = cv_dict['Index']
+                cn = CommonName.query\
+                    .join(Index, Index.id == CommonName.index_id)\
+                    .filter(CommonName._name == cn_name,
+                            Index._name == idx_name)\
+                    .one_or_none()
+                if not cn:
+                    cn = CommonName(name=cn_name)
+                    print('The common name \'{0}\' needed for the cultivar '
+                          '\'{1}\' does not exist, so it has been created.'
+                          .format(cn.name, cv.fullname))
+                    idx = Index.query\
+                        .filter(Index._name == idx_name)\
+                        .one_or_none()
+                    if not idx:
+                        idx = Index(name=idx_name)
+                        print('The index \'{0}\' needed for the common name '
+                              '\'{1}\' does not yet exist, so it has been '
+                              'created.'.format(idx.name, cn.name))
+                    if cn.index is not idx:
+                        cn.index = idx
+                        print('Setting the index for the common name \'{0}\' '
+                              'to: \'{1}\'.'.format(cn.name, idx.name))
+                if cv.common_name is not cn:
+                    cv.common_name = cn
+                    print('Setting the common name for the cultivar \'{0}\' '
+                          'to \'{1}\'.'.format(cv.fullname, cn.name))
+                if cv_dict['Series']:
+                    sr = Series.query\
+                        .filter(Series.name == cv_dict['Series'],
+                                Series.common_name_id == cn.id)\
+                        .one_or_none()
+                    if not sr:
+                        sr = Series(name=cv_dict['Series'])
+                        print('The series \'{0}\' needed for the cultivar '
+                              '\'{1}\' does not yet exist, so it has been '
+                              'created.'.format(sr.name, cv.name))
+                        sr.common_name = cn
+                    if cv.series is not sr:
+                        cv.series = sr
+                        print('The series for the cultivar \'{0}\' has been '
+                              'set to: \'{1}\'.'.format(cv.fullname, sr.name))
+            if pkt.cultivar is not cv:
+                edited = True
+                pkt.cultivar = cv
+                print('Setting the cultivar for the packet with sku '
+                      '\'{0}\' to \'{1}\'.'.format(pkt.sku, cv.fullname))
+            qty = Quantity.query\
+                .filter(Quantity.value == Quantity.for_cmp(quantity),
+                        Quantity.units == units)\
+                .one_or_none()
+            if not qty:
+                edited = True
+                qty = Quantity(value=quantity, units=units)
+                print('The quantity \'{0} {1}\' needed for the packet with '
+                      'sku \'{2}\' does not yet exist, so it has been '
+                      'created.'.format(qty.str_value, qty.units, pkt.sku))
+            if pkt.quantity is not qty:
+                edited = True
+                oldqty = pkt.quantity
+                pkt.quantity = qty
+                if oldqty and not oldqty.packets:
+                    print('The quantity \'{0} {1}\' no longer has any packets '
+                          'associated with it, so it has been deleted from '
+                          'the database.'
+                          .format(oldqty.str_value, oldqty.units))
+                    db.session.delete(oldqty)
+                print('The quantity for the packet with sku \'{0}\' has been '
+                      'set to \'{1} {2}\'.'
+                      .format(pkt.sku, qty.str_value, qty.units))
+            if pkt.price != price:
+                edited = True
+                pkt.price = price
+                print('The price for the packet with sku \'{0}\' has been set '
+                      'to: \'${1}\'.'.format(pkt.sku, pkt.price))
+            if edited:
+                db.session.flush()
+                commit_to_db = True
+                print('The packet \'{0}\' has been edited/added.'
+                      .format(pkt.info))
+            else:
+                print('No changes were made to the packet \'{0}\'.'
+                      .format(pkt.info))
+        if commit_to_db:
+            db.session.commit()
+
+    def dump_all(self):
+        """Dump all worksheets into the database."""
+        self.dump_indexes()
+        self.dump_common_names()
+        self.dump_botanical_names()
+        self.dump_series()
+        self.dump_cultivars()
+        self.dump_packets()

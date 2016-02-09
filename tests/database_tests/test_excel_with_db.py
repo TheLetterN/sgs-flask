@@ -1,4 +1,5 @@
 from contextlib import redirect_stdout
+from decimal import Decimal
 from io import StringIO
 from unittest import mock
 from app.seeds.excel import SeedsWorkbook
@@ -7,6 +8,8 @@ from app.seeds.models import (
     CommonName,
     Cultivar,
     Index,
+    Packet,
+    Quantity,
     Series
 )
 
@@ -57,7 +60,7 @@ class TestSeedsWorkbookWithDB:
             swb.dump_indexes()
         out.seek(0)
         m_commit.assert_not_called()
-        assert 'no changes to it were made' in out.read()
+        assert 'No changes were made' in out.read()
 
     def test_dump_common_names_adds_to_database(self, db):
         """Add new common names to the database."""
@@ -514,3 +517,90 @@ class TestSeedsWorkbookWithDB:
         out.seek(0)
         m_commit.assert_not_called()
         assert 'No changes have been made' in out.read()
+
+    def test_dump_packets_adds_to_database(self, db):
+        """Add new packets to the database."""
+        pkt = Packet(sku='8675309')
+        pkt.price = Decimal('3.50')
+        pkt.quantity = Quantity(value=100, units='seeds')
+        pkt.cultivar = Cultivar(name='Foxy')
+        pkt.cultivar.common_name = CommonName(name='Foxglove')
+        pkt.cultivar.common_name.index = Index(name='Perennial')
+        swb = SeedsWorkbook()
+        swb.load_packets([pkt])
+        swb.dump_packets()
+        pktq = Packet.query.filter(Packet.sku == '8675309').one_or_none()
+        assert pktq
+        assert pktq.price == Decimal('3.50')
+        assert pktq.cultivar.name == 'Foxy'
+        assert pktq.cultivar.common_name.name == 'Foxglove'
+        assert pktq.cultivar.common_name.index.name == 'Perennial'
+
+    def test_dump_packets_adds_to_database_with_series(self, db):
+        """Add all data, including series, if a series is in the sheet."""
+        pkt = Packet(sku='8675309')
+        pkt.price = Decimal('3.50')
+        pkt.quantity = Quantity(value=100, units='seeds')
+        pkt.cultivar = Cultivar(name='Petra')
+        pkt.cultivar.common_name = CommonName(name='Foxglove')
+        pkt.cultivar.common_name.index = Index(name='Perennial')
+        pkt.cultivar.series = Series(name='Polkadot')
+        pkt.cultivar.series.common_name = pkt.cultivar.common_name
+        swb = SeedsWorkbook()
+        swb.load_packets([pkt])
+        swb.dump_packets()
+        pktq = Packet.query.filter(Packet.sku == '8675309').one_or_none()
+        assert pktq
+        assert pktq.cultivar.series.name == 'Polkadot'
+
+    def test_dump_packets_uses_existing(self, db):
+        """Use existing packet from db if present."""
+        pkt = Packet(sku='8675309')
+        pkt.price = Decimal('3.50')
+        pkt.quantity = Quantity(value=100, units='seeds')
+        pkt.cultivar = Cultivar(name='Foxy')
+        pkt.cultivar.common_name = CommonName(name='Foxglove')
+        pkt.cultivar.common_name.index = Index(name='Perennial')
+        db.session.add(pkt)
+        db.session.commit()
+        pkt2 = Packet(sku='8675309')
+        pkt2.price = Decimal('1.99')
+        pkt2.quantity = Quantity(value=100, units='seeds')
+        pkt2.cultivar = Cultivar(name='Foxy')
+        pkt2.cultivar.common_name = CommonName(name='Foxglove')
+        pkt2.cultivar.common_name.index = Index(name='Perennial')
+        swb = SeedsWorkbook()
+        swb.load_packets([pkt2])
+        swb.dump_packets()
+        pktq = Packet.query.filter(Packet.sku == '8675309').one_or_none()
+        assert pktq is pkt
+        assert pkt.price == Decimal('1.99')
+
+    def test_dump_packets_deletes_orphaned_quantity(self, db):
+        """Delete quantity row if it has no packets associated with it."""
+        pkt = Packet(sku='8675309')
+        pkt.price = Decimal('3.50')
+        pkt.quantity = Quantity(value=100, units='seeds')
+        pkt.cultivar = Cultivar(name='Foxy')
+        pkt.cultivar.common_name = CommonName(name='Foxglove')
+        pkt.cultivar.common_name.index = Index(name='Perennial')
+        db.session.add(pkt)
+        db.session.commit()
+        pkt2 = Packet(sku='8675309')
+        pkt2.price = Decimal('3.50')
+        pkt2.quantity = Quantity(value='1/2', units='gram')
+        pkt2.cultivar = Cultivar(name='Foxy')
+        pkt2.cultivar.common_name = CommonName(name='Foxglove')
+        pkt2.cultivar.common_name.index = Index(name='Perennial')
+        swb = SeedsWorkbook()
+        swb.load_packets([pkt2])
+        swb.dump_packets()
+        assert not Quantity.query\
+            .filter(Quantity.value == Quantity.for_cmp(100),
+                    Quantity.units == 'seeds')\
+            .one_or_none()
+        qtyq = Quantity.query\
+            .filter(Quantity.value == Quantity.for_cmp('1/2'),
+                    Quantity.units == 'gram')\
+            .one_or_none()
+        assert pkt.quantity is qtyq

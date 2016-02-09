@@ -391,12 +391,12 @@ class TestQuantity:
             Quantity.fraction_to_str('4/3')
 
     def test_for_cmp(self):
-        """Return appropriate type for comparing quantities."""
+        """Return floats for any given integer, decimal, or fraction."""
         assert isinstance(Quantity.for_cmp(3.145), float)
         assert isinstance(Quantity.for_cmp(Decimal('2.544')), float)
         assert isinstance(Quantity.for_cmp('5.456'), float)
-        assert isinstance(Quantity.for_cmp(132), int)
-        assert isinstance(Quantity.for_cmp(Fraction(3, 4)), Fraction)
+        assert isinstance(Quantity.for_cmp(132), float)
+        assert isinstance(Quantity.for_cmp(Fraction(3, 4)), float)
 
     def test_str_to_fraction(self):
         """Return a Fraction given a valid string containing a fraction.

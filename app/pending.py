@@ -50,3 +50,11 @@ class Pending(object):
 
     def exists(self):
         return os.path.exists(self.file_name)
+
+    def has_content(self):
+        """Return True if the pending file has any content in it."""
+        if self.exists():
+            with open(self.file_name, 'r', encoding='utf-8') as infile:
+                if infile.read():
+                    return True
+        return False

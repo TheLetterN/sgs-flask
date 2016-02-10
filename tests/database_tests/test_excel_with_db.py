@@ -170,6 +170,25 @@ class TestSeedsWorkbookWithDB:
         assert cnq2.parent is not cnp2
         assert cnq2.parent.name == 'Cosmos'
 
+    def test_dump_common_names_with_existing_parent(self, db):
+        """Load existing parent if present in db."""
+        cnp = CommonName(name='Tomato')
+        cnp.index = Index(name='Vegetable')
+        db.session.add(cnp)
+        db.session.commit()
+        cn = CommonName(name='Paste Tomato')
+        cn.index = Index(name='Vegetable')
+        cn.parent = CommonName(name='Tomato')
+        cn.parent.index = cn.index
+        swb = SeedsWorkbook()
+        swb.load_common_names([cn])
+        swb.dump_common_names()
+        cnq = CommonName.query\
+            .join(Index, Index.id == CommonName.index_id)\
+            .filter(CommonName.name == 'Paste Tomato')\
+            .one_or_none()
+        assert cnq.parent is cnp
+
     def test_dump_common_names_changes_values(self, db):
         """Change description, instructions, and invisible if different."""
         cn = CommonName(name='Foxglove',
@@ -193,6 +212,23 @@ class TestSeedsWorkbookWithDB:
         assert cn.instructions == 'Hope for the best.'
         assert cn.get_synonyms_string() == 'Analogus'
         assert not cn.invisible
+
+    def test_dump_common_names_clears_synonyms(self, db):
+        """Clear synonyms if they need to be emptied."""
+        cn = CommonName(name='Foxglove')
+        cn.index = Index(name='Perennial')
+        cn.set_synonyms_string('Digitalis')
+        db.session.add(cn)
+        db.session.commit()
+        cn2 = CommonName(name='Foxglove')
+        cn2.index = Index(name='Perennial')
+        swb = SeedsWorkbook()
+        swb.load_common_names([cn2])
+        out = StringIO()
+        with redirect_stdout(out):
+            swb.dump_common_names()
+        out.seek(0)
+        assert 'The synonyms for \'Foxglove\' have been cleared.' in out.read()
 
     def test_dump_common_names_with_gwcns(self, db):
         """Use existing cns if present, else create for gwcns.
@@ -225,6 +261,23 @@ class TestSeedsWorkbookWithDB:
             if gwcn.name == 'Butterfly Weed':
                 assert gwcn.invisible
 
+    def test_dump_common_names_removes_old_gwcns(self, db):
+        """Remove gwcns that are in loaded common name but not in sheet."""
+        cn = CommonName(name='Foxglove')
+        cn.index = Index(name='Perennial')
+        gwcn = CommonName(name='Butterfly Weed')
+        gwcn.index = cn.index
+        cn.gw_common_names = [gwcn]
+        db.session.add(cn)
+        db.session.commit()
+        assert gwcn in cn.gw_common_names
+        cn2 = CommonName(name='Foxglove')
+        cn2.index = Index(name='Perennial')
+        swb = SeedsWorkbook()
+        swb.load_common_names([cn2])
+        swb.dump_common_names()
+        assert gwcn not in cn.gw_common_names
+
     def test_dump_common_names_with_gwcvs(self, db):
         """Use existing cvs if present, else create for gwcvs.
 
@@ -247,9 +300,11 @@ class TestSeedsWorkbookWithDB:
         gwcv2.series = Series(name='Norwegian')
         gwcv2.series.common_name = gwcv2.common_name
         gwcv3 = Cultivar(name='Crunchy')
-        gwcv3.common_name = CommonName(name='Chick')
-        gwcv3.common_name.index = Index(name='Bird')
-        cn.gw_cultivars = [gwcv2]
+        gwcv3.common_name = CommonName(name='Frog')
+        gwcv3.common_name.index = Index(name='Amphibian')
+        gwcv3.series = Series(name='Chocolate-covered')
+        gwcv3.series.common_name = gwcv3.common_name
+        cn.gw_cultivars = [gwcv2, gwcv3]
         swb = SeedsWorkbook()
         swb.load_common_names([cn])
         swb.dump_common_names()
@@ -260,6 +315,49 @@ class TestSeedsWorkbookWithDB:
             .one_or_none()
         assert gwcv1 in cnq.gw_cultivars
         assert gwcv2 not in cnq.gw_cultivars
+        gwcvq = Cultivar.from_lookup_dict(gwcv3.lookup_dict())
+        print(gwcv3.lookup_dict())
+        assert gwcvq in cnq.gw_cultivars
+        assert gwcv3 not in cnq.gw_cultivars
+
+    def test_dump_common_names_removes_old_gwcvs(self, db):
+        """Remove gwcvs present in loaded cn but not in sheet."""
+        cn = CommonName(name='Foxglove')
+        cn.index = Index(name='Perennial')
+        gwcv = Cultivar(name='Soulmate')
+        gwcv.common_name = CommonName(name='Butterfly Weed')
+        gwcv.common_name.index = cn.index
+        cn.gw_cultivars = [gwcv]
+        db.session.add(cn)
+        db.session.commit()
+        assert gwcv in cn.gw_cultivars
+        cn2 = CommonName(name='Foxglove')
+        cn2.index = Index(name='Perennial')
+        swb = SeedsWorkbook()
+        swb.load_common_names([cn2])
+        swb.dump_common_names()
+        assert gwcv not in cn.gw_cultivars
+
+    def test_dump_common_names_sets_invisible(self, db):
+        """Set cn to invisible if invisible set in sheet, and vice-versa."""
+        cn = CommonName(name='Foxglove')
+        cn.index = Index(name='Perennial')
+        cn.invisible = False
+        db.session.add(cn)
+        db.session.commit()
+        cn2 = CommonName(name='Foxglove')
+        cn2.index = Index(name='Perennial')
+        cn2.invisible = True
+        assert not cn.invisible
+        swb = SeedsWorkbook()
+        swb.load_common_names([cn2])
+        swb.dump_common_names()
+        assert cn.invisible
+        swb = SeedsWorkbook()
+        cn2.invisible = False
+        swb.load_common_names([cn2])
+        swb.dump_common_names()
+        assert not cn.invisible
 
     def test_dump_botanical_names_adds_to_database(self, db):
         """Add new botanical name to database if not already there."""

@@ -29,7 +29,7 @@ import json
 import os
 from collections import OrderedDict
 from titlecase import titlecase
-from flask import Flask
+from flask import Flask, current_app
 from flask.ext.login import AnonymousUserMixin, LoginManager
 from flask.ext.mail import Mail
 from flask.ext.sqlalchemy import SQLAlchemy
@@ -38,10 +38,12 @@ from .pending import Pending
 from .redirects import RedirectsFile
 
 
-def get_index_map():
+def get_index_map(filename=None):
     """Return a map used for showing links to Indexes in the nav."""
-    if os.path.exists('indexes.json'):
-        with open('indexes.json', 'r', encoding='utf-8') as ifile:
+    if not filename:
+        filename = current_app.config.get('INDEXES_JSON_FILE')
+    if os.path.exists(filename):
+        with open(filename, 'r', encoding='utf-8') as ifile:
             return json.loads(ifile.read(), object_pairs_hook=OrderedDict)
     else:
         return {}
@@ -78,7 +80,6 @@ class Anonymous(AnonymousUserMixin):
     def can(self, permission=None):
         """Anonymous users can't do squat, always return False!"""
         return False
-
 
 db = SQLAlchemy()
 mail = Mail()
@@ -120,8 +121,22 @@ def dbify(string):
         str: A string formatted for database usage.
         None: If string is None or empty.
     """
+    def cb(word, **kwargs):
+        """Override default behaviors in titlecase that give incorrect results.
+
+        Hyphenated phrases should only capitalize the first letter. The default
+        behavior of titlecase is to capitalize the first letter in each part.
+        e.g forget-me-not > Forget-Me-Not, while we want forget-me-not >
+        Forget-me-not.
+
+        Returns:
+            str: Corrected hyphenated word.
+        """
+        if '-' in word:
+            return word[0].upper() + word[1:].lower()
+
     if string:
-        return titlecase(string.lower().strip())
+        return titlecase(string.lower().strip(), callback=cb)
     else:
         return None
 
@@ -161,8 +176,9 @@ def create_app(config_name):
 
     # Clear pending changes messages
     pending = Pending(app.config.get('PENDING_FILE'))
-    pending.clear()
-    pending.save()
+    if pending.has_content():  # pragma: no cover
+        pending.clear()
+        pending.save()
 
     # Make things available to Jinja
     app.add_template_global(Permission, 'Permission')

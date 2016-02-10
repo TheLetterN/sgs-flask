@@ -852,17 +852,17 @@ class Cultivar(SynonymsMixin, db.Model):
         }
 
     @classmethod
-    def from_lookup_dict(cls, lookup):
+    def from_lookup_dict(cls, lud):
         """Load a Cultivar from db based on lookup dict.
 
         Args:
-            lookup (dict): A dictionary with values to use in querying for
+            lud (dict): A dictionary with values to use in querying for
                 a cultivar.
         """
-        name = lookup['Cultivar Name']
-        series = lookup['Series']
-        common_name = lookup['Common Name']
-        index = lookup['Index']
+        name = lud['Cultivar Name']
+        series = lud['Series']
+        common_name = lud['Common Name']
+        index = lud['Index']
         return Cultivar.lookup(name, series, common_name, index)
 
     @classmethod

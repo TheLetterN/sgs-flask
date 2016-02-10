@@ -1,3 +1,4 @@
+from io import StringIO
 from unittest import mock
 from app.pending import Pending
 
@@ -70,3 +71,19 @@ class TestPending:
         mock_exists.return_value = False
         assert not pd.exists()
         mock_exists.assert_called_with('/tmp/foo.txt')
+
+    @mock.patch('os.path.exists')
+    def test_has_content(self, m_exists):
+        """Return True if file has contents, False if not."""
+        content = StringIO('')
+        m = mock.mock_open()
+        pd = Pending('/tmp/foo.txt')
+        m_exists.return_value = True
+        with mock.patch('builtins.open', m, create=True) as m_open:
+            m_open.return_value = content
+            assert not pd.has_content()
+        content = StringIO('Stuff is pending.')
+        m = mock.mock_open()
+        with mock.patch('builtins.open', m, create=True) as m_open:
+            m_open.return_value = content
+            assert pd.has_content()

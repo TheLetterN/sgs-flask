@@ -417,17 +417,11 @@ class SeedsWorkbook(object):
             index = dbify(ws.cell(ws.col_map['Index'] + row).value)
             name = dbify(ws.cell(ws.col_map['Common Name'] + row).value)
             parent = dbify(ws.cell(ws.col_map['Subcategory of'] + row).value)
-            desc = ws.cell(ws.col_map['Description'] + row).value
-            if not desc:
-                desc = None
+            desc = ws.cell(ws.col_map['Description'] + row).value or None
             instructions = ws.cell(
                 ws.col_map['Planting Instructions'] + row
-            ).value
-            if not instructions:
-                instructions = None
-            synonyms = ws.cell(ws.col_map['Synonyms'] + row).value
-            if not synonyms:
-                synonyms = None
+            ).value or None
+            synonyms = ws.cell(ws.col_map['Synonyms'] + row).value or None
             gwcn_json = ws.cell(
                 ws.col_map['Grows With Common Names (JSON)'] + row
             ).value
@@ -469,7 +463,7 @@ class SeedsWorkbook(object):
                         .one_or_none()
                     if pcn:
                         print('Parent for \'{0}\' set to: {1}'
-                              .filter(cn.name, pcn.name))
+                              .format(cn.name, pcn.name))
                         cn.parent = pcn
                     else:
                         cn.parent = CommonName(name=parent)

@@ -1,3 +1,4 @@
+import pytest
 from contextlib import redirect_stdout
 from decimal import Decimal
 from io import StringIO
@@ -413,6 +414,55 @@ class TestSeedsWorkbookWithDB:
         m_commit.assert_not_called()
         assert 'No changes were made' in out.read()
 
+    def test_dump_botanical_names_removes_common_names(self, db):
+        """Remove common names in bn if not present in sheet."""
+        bn = BotanicalName(name='Digitalis über alles')
+        cn1 = CommonName(name='Foxglove')
+        cn1.index = Index(name='Perennial')
+        cn2 = CommonName(name='Digitalis')
+        cn2.index = cn1.index
+        bn.common_names = [cn1, cn2]
+        db.session.add(bn)
+        db.session.commit()
+        assert len(bn.common_names) == 2
+        assert 'Digitalis' in [cn.name for cn in bn.common_names]
+        bn2 = BotanicalName(name='Digitalis über alles')
+        bn2.common_names = [CommonName(name='Foxglove')]
+        bn2.common_names[0].index = Index(name='Perennial')
+        swb = SeedsWorkbook()
+        swb.load_botanical_names([bn2])
+        swb.dump_botanical_names()
+        assert len(bn.common_names) == 1
+        assert 'Digitalis' not in [cn.name for cn in bn.common_names]
+
+    def test_dump_botanical_names_clears_synonyms(self, db):
+        """Clear synonyms if none in sheet."""
+        bn = BotanicalName(name='Digitalis purpurea')
+        bn.common_names = [CommonName(name='Foxglove')]
+        bn.common_names[0].index = Index(name='Perennial')
+        bn.set_synonyms_string('Digitalis über alles, Digitalis pururin')
+        db.session.add(bn)
+        db.session.commit()
+        assert bn.get_synonyms_string()
+        bn2 = BotanicalName(name='Digitalis purpurea')
+        bn2.common_names = [CommonName(name='Foxglove')]
+        bn2.common_names[0].index = Index(name='Perennial')
+        swb = SeedsWorkbook()
+        swb.load_botanical_names([bn2])
+        swb.dump_botanical_names()
+        assert not bn.get_synonyms_string()
+
+    def test_dump_botanical_names_bad_botanical_name(self, db):
+        """Raise a ValueError given a bad botanical name."""
+        bn = BotanicalName()
+        bn._name = 'Digitalis Invalidus'
+        bn.common_name = CommonName(name='Fauxglove')
+        bn.common_name.index = Index(name='Spurious')
+        swb = SeedsWorkbook()
+        swb.load_botanical_names([bn])
+        with pytest.raises(ValueError):
+            swb.dump_botanical_names()
+
     def test_dump_series_adds_to_db(self, db):
         """Add new series to database if not already there."""
         sr = Series(name='Polkadot')
@@ -477,6 +527,33 @@ class TestSeedsWorkbookWithDB:
         out.seek(0)
         m_commit.assert_not_called()
         assert 'No changes have been made' in out.read()
+
+    def test_dump_series_flips_position(self, db):
+        """If sheet position differs from series position in db, change it."""
+        sr = Series(name='Polkadot')
+        sr.common_name = CommonName(name='Foxglove')
+        sr.common_name.index = Index(name='Perennial')
+        sr.position = Series.BEFORE_CULTIVAR
+        db.session.add(sr)
+        db.session.commit()
+        assert sr.position == Series.BEFORE_CULTIVAR
+        sr2 = Series(name='Polkadot')
+        sr2.common_name = CommonName(name='Foxglove')
+        sr2.common_name.index = Index(name='Perennial')
+        sr2.position = Series.AFTER_CULTIVAR
+        swb = SeedsWorkbook()
+        swb.load_series([sr2])
+        swb.dump_series()
+        assert sr.position == Series.AFTER_CULTIVAR
+        sr3 = Series(name='Polkadot')
+        sr3.common_name = CommonName(name='Foxglove')
+        sr3.common_name.index = Index(name='Perennial')
+        sr3.position = Series.BEFORE_CULTIVAR
+        swb = SeedsWorkbook()
+        swb.load_series([sr3])
+        swb.dump_series()
+        assert sr.position == Series.BEFORE_CULTIVAR
+        
 
     def test_dump_cultivars_adds_to_database(self, db):
         """Add new cultivars to the database."""

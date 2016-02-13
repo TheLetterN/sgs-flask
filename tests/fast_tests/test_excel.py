@@ -2,7 +2,12 @@ import json
 import pytest
 from unittest import mock
 from openpyxl import Workbook
-from app.seeds.excel import SeedsWorkbook, set_sheet_col_map, setup_sheet
+from app.seeds.excel import (
+    beautify,
+    SeedsWorkbook,
+    set_sheet_col_map,
+    setup_sheet
+)
 from app.seeds.models import (
     BotanicalName,
     CommonName,
@@ -18,6 +23,19 @@ from app.seeds.models import (
 
 class TestHelperFunctions:
     """Test module-level functions in the Excel module."""
+
+    def test_beautify(self):
+        """Turn on text wrap, set row heights, and freeze header row."""
+        swb = SeedsWorkbook()  # Use this because we need the header row.
+        ws = swb.indexes
+        ws.append(['Perennial', 'Built to last.'])
+        assert ws['A2'].value == 'Perennial'
+        beautify(ws, height=42)
+        assert ws.freeze_panes == 'A2'
+        assert ws['A2'].alignment.wrap_text
+        assert ws['A2'].alignment.vertical == 'top'
+        assert ws.row_dimensions[2].height == 42
+
     def test_setup_sheet_column_headers(self):
         """Set up worksheet with a header row containing column titles."""
         wb = Workbook()
@@ -28,14 +46,6 @@ class TestHelperFunctions:
         assert ws['B1'].value == 'Two'
         assert ws['C1'].value == 'Three'
         assert ws['D1'].value == 'Four'
-
-    def test_setup_sheet_freezes_panes(self):
-        """Freeze panes from 'A2' up to create header row."""
-        wb = Workbook()
-        ws = wb.active
-        values = ['One', 'Two', 'Three', 'Four']
-        setup_sheet(ws, values)
-        assert ws.freeze_panes == 'A2'
 
     def test_setup_sheet_sets_column_widths(self):
         """Column widths should be set based on title length and padding."""
@@ -602,6 +612,7 @@ class TestSeedsWorkbook:
         cv3.invisible = False
         cv1.thumbnail = Image(filename='petra.jpg')
         cv2.thumbnail = Image(filename='soulmate.jpg')
+        cv1.new_for = 2525
         swb = SeedsWorkbook()
         swb.wb = None
         swb.setup_workbook()
@@ -623,6 +634,7 @@ class TestSeedsWorkbook:
         assert ws[cols['In Stock'] + '2'].value == 'True'
         assert ws[cols['Active'] + '2'].value == 'True'
         assert ws[cols['Invisible'] + '2'].value == 'True'
+        assert ws[cols['New For'] + '2'].value == 2525
         assert ws[cols['Index'] + '3'].value == 'Perennial'
         assert ws[cols['Common Name'] + '3'].value == 'Butterfly Weed'
         assert ws[cols['Botanical Name'] + '3'].value == 'Asclepias incarnata'

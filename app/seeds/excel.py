@@ -36,13 +36,14 @@ from app.seeds.models import (
 
 
 def beautify(sheet, height=42):
-    """Turn on text wrap in cells and set row heights in all sheets."""
+    """Wrap text in cells, set row heights, and freeze header row."""
     a = Alignment(wrap_text=True, vertical='top')
     for row in sheet.rows[1:]:
         for cell in row:
             cell.alignment = a
         for i in range(2, len(sheet.rows[1:]) + 2):
             sheet.row_dimensions[i].height = height
+    sheet.freeze_panes = sheet['A2']
 
 
 def cell_to_bool(value):
@@ -76,6 +77,11 @@ def clean_dict(d):
             v for (k, v) in d.items()}
 
 
+def get_cell(sheet, column_header, row):
+    """Get a cell given its column header name and row #."""
+    return sheet.cell(sheet.col_map[column_header] + str(row))
+
+    
 def setup_sheet(sheet,
                 values,
                 padding=0,
@@ -99,7 +105,6 @@ def setup_sheet(sheet,
             sheet.column_dimensions[cell.column].width = textwidth
         else:
             sheet.column_dimensions[cell.column].width = len(val) + padding
-    sheet.freeze_panes = sheet['A2']
 
 
 def set_sheet_col_map(sheet):
@@ -655,6 +660,12 @@ class SeedsWorkbook(object):
             botanical_name = ws.cell(
                 ws.col_map['Botanical Name'] + row
             ).value
+            if not BotanicalName.validate(botanical_name):
+                raise ValueError('The botanical name \'{0}\' in cell \'{1}\' '
+                                 'of the BotanicalNames spreadsheet does not '
+                                 'appear to be valid. Please fix it and try '
+                                 'again.'.format(botanical_name,
+                                                 ws.cell(ws.col_map['Botanical Name'] + row).coordinate))
             synonyms = ws.cell(
                 ws.col_map['Synonyms'] + row
             ).value
@@ -700,6 +711,7 @@ class SeedsWorkbook(object):
             for cn in list(bn.common_names):
                 if cn not in current_cns:
                     edited = True
+                    bn.common_names.remove(cn)
                     print('The common name \'{0}\' has been removed from the '
                           'botanical name \'{1}\'.'.format(cn.name, bn.name))
             bn_syns = bn.get_synonyms_string()
@@ -881,16 +893,14 @@ class SeedsWorkbook(object):
             edited = False
             index = dbify(ws.cell(ws.col_map['Index'] + row).value)
             common_name = dbify(ws.cell(ws.col_map['Common Name'] + row).value)
-            botanical_name = ws.cell(ws.col_map['Botanical Name'] + row).value
-            if not botanical_name:
-                botanical_name = None
+            botanical_name = ws.cell(
+                ws.col_map['Botanical Name'] + row
+            ).value or None
             series = dbify(ws.cell(ws.col_map['Series'] + row).value)
             cultivar = dbify(ws.cell(ws.col_map['Cultivar Name'] + row).value)
             thumbnail = ws.cell(ws.col_map['Thumbnail Filename'] + row).value
             description = ws.cell(ws.col_map['Description'] + row).value
-            synonyms = ws.cell(ws.col_map['Synonyms'] + row).value
-            if not synonyms:
-                synonyms = None
+            synonyms = ws.cell(ws.col_map['Synonyms'] + row).value or None
             gwcn_json = ws.cell(
                 ws.col_map['Grows With Common Names (JSON)'] + row
             ).value

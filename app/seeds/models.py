@@ -103,11 +103,10 @@ class SynonymsMixin(object):
         db_changed = False
         if not synonyms:
             for syn in list(self.synonyms):
+                self.synonyms.remove(syn)
                 if inspect(syn).persistent:
                     db_changed = True
                     db.session.delete(syn)
-                else:
-                    self.synonyms.remove(syn)
         else:
             syns = [dbify(syn) if dbify_syns else syn
                     for syn in synonyms.split(', ')]

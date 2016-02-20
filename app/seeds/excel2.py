@@ -1,25 +1,155 @@
 import json
+import sys
+import warnings
 import openpyxl
+from app import db, dbify
 from app.seeds.models import (
     BotanicalName,
     CommonName,
-    Index
+    Cultivar,
+    Index,
+    Packet,
+    Series
 )
 
 
 def lookup_dicts_to_json(items):
     """Return a JSON string of lookup_dicts from a list of objects.
-    
+
     Obviously, the objects need the lookup_dict() method, so this function
     is only used for groups of CommonName or Cultivar objects.
     """
     return json.dumps(tuple(it.lookup_dict() for it in items))
 
 
+def get_or_create_index(name, file=sys.stdout):
+    """Load an index if it exists, create it if not.
+
+    Note:
+        The boolean attribute 'created' is attached to the Index instance so
+        we know whether the returned Index was created or loaded.
+
+    Args:
+        name (str): The name of the Index to query or create.
+        file (io): IO object to write messages to. Defaults to sys.stdout.
+
+    Returns:
+        Index: The Index loaded/created.
+    """
+    idx = Index.query.filter(Index._name == name).one_or_none()
+    if idx:
+        print('The Index \'{0}\' has been loaded from the database.'
+              .format(idx.name), file=file)
+        idx.created = False
+    else:
+        idx = Index(name=name)
+        print('The Index \'{0}\' does not yet exist in the database, so it '
+              'has been created.'.format(idx.name), file=file)
+        idx.created = True
+    return idx
+
+
+def get_or_create_common_name(name, index, file=sys.stdout):
+    """Load a CommonName if it exists, create it if not.
+
+    Note:
+        The boolean attribute 'created' is attached to the CommonName
+        instance so we know whether the returned CommonName was created or
+        loaded.
+
+    Args:
+    name (str): Name of the CommonName
+    index (str): Name of the Index the CommonName belongs to.
+    file (io): IO object to write messages to. Defaults to sys.stdout.
+
+    Returns:
+        CommonName: The CommonName loaded or created.
+    """
+    cn = CommonName.query\
+        .join(Index, Index.id == CommonName.index_id)\
+        .filter(CommonName._name == name, Index._name == index)\
+        .one_or_none()
+    if cn:
+        print('The CommonName \'{0}\' has been loaded from the database.'
+              .format(cn.name), file=file)
+        cn.created = False
+    else:
+        cn = CommonName(name=name)
+        print('The CommonName \'{0}\' does not yet exist in the database, so '
+              'it has been created.'.format(cn.name), file=file)
+        cn.index = get_or_create_index(name=index, file=file)
+        cn.created = True
+    return cn
+
+
+def get_or_create_cultivar(name,
+                           common_name,
+                           index,
+                           series=None,
+                           file=sys.stdout):
+    """Load a cultivar if it iexists, create it if not.
+
+    Note:
+        The boolean attribute 'created' is attached to the CommonName
+        instance so we know whether the returned CommonName was created or
+        loaded.
+
+    Args:
+        name (str): Name of the Cultivar.
+        common_name (str): Name of the CommonName this Cultivar belongs to.
+        index (str): Index the CommonName belongs to.
+        series (optional[str]): The Series this Cultivar is in, if applicable.
+        file (io): IO object to write messages to. Defaults to sys.stdout.
+    """
+    if series:
+        cv = Cultivar.query\
+            .join(CommonName, CommonName.id == Cultivar.common_name_id)\
+            .join(Index, Index.id == CommonName.index_id)\
+            .join(Series, Series.id == Cultivar.series_id)\
+            .filter(Cultivar._name == name,
+                    CommonName._name == common_name,
+                    Index._name == index,
+                    Series.name == series)\
+            .one_or_none()
+    else:
+        cv = Cultivar.query\
+            .join(CommonName, CommonName.id == Cultivar.common_name_id)\
+            .join(Index, Index.id == CommonName.index_id)\
+            .filter(Cultivar._name == name,
+                    CommonName._name == common_name,
+                    Cultivar.series_id == None,  # noqa
+                    Index._name == index)\
+            .one_or_none()
+    if cv:
+        cv.created = False
+        print('The Cultivar \'{0}\' has been loaded from the database.'
+              .format(cv.fullname), file=file)
+    else:
+        cv = Cultivar(name=name)
+        cv.created = True
+        cv.common_name = get_or_create_common_name(name=common_name,
+                                                   index=index,
+                                                   file=file)
+        if series:
+            sr = Series.query.filter(Series.name == series).one_or_none()
+            if sr:
+                print('The Series \'{0}\' has been loaded from the database.'
+                      .format(sr.name), file=file)
+            else:
+                sr = Series(name=series)
+                sr.common_name = cv.common_name
+                print('The Series \'{0}\' does not yet exist, so it has been '
+                      'created.'.format(sr.name), file=file)
+            cv.series = sr
+        print('The Cultivar \'{0}\' does not yet exist in the database, so it '
+              'has been created.'.format(cv.fullname), file=file)
+    return cv
+
+
 class SeedsWorksheet(object):
     """A container for an openpyxl worksheet.
-    
-    Since extending openpyxl's classes seems to be an exercise in futility, it 
+
+    Since extending openpyxl's classes seems to be an exercise in futility, it
     is easier to just encapsulate them and create an interface that's specific
     to how we want our worksheet data formatted.
     """
@@ -41,7 +171,7 @@ class SeedsWorksheet(object):
     @property
     def rows(self):
         """tuple: A tuple listing each row as a tuple of cells.
-        
+
         I'm fiendishly using the protected _cells variable here because as of
         writing this the rows property in Worksheet returns ((),) even if there
         is data in cell A1, while Worksheet._cells is empty until at least one
@@ -66,11 +196,20 @@ class SeedsWorksheet(object):
         """tuple: All used rows except the titles (first) row."""
         return self.rows[1:]
 
+    def has_data(self):
+        """Return True if there is already data in the worksheet.
+
+        This can safely be done by checking to see if any data is in cell A1,
+        because there should always be data in cell A1 in sheet that has been
+        set up.
+        """
+        return True if self._ws['A1'].value is not None else False
+
     def cell(self, row, column):
         """cell: The cell of the worksheet represented by (row, column).
 
         Since Worksheet.cell doesn't use integer coordinates by default, this
-        method is here to save time and space when accessing cells, as 
+        method is here to save time and space when accessing cells, as
         we only use integer values for rows and columns within SeedsWorksheet.
 
         Args:
@@ -81,8 +220,9 @@ class SeedsWorksheet(object):
 
     def set_column_titles(self, titles):
         """Populate the first row of a worksheet with column titles."""
-        if not self._ws.rows[0]:
-            self._ws.append(titles)
+        if not self.has_data():
+            for c, title in enumerate(titles, start=1):
+                self.cell(1, c).value = title
         else:
             raise ValueError('The worksheet \'{0}\' already has data in its '
                              'top row!'.format(self._ws.title))
@@ -107,6 +247,659 @@ class SeedsWorksheet(object):
         """Freeze the top row of the worksheet to act as column titles."""
         self._ws.freeze_panes = self._ws['A2']
 
+    def _setup(self, titles=None):
+        """Set up a worksheet appropriate for its contents.
+
+        If worksheet is blank, this should set up the title row and instance
+            attributes.
+        If worksheet contains data, it should just set up the instance
+            attributes, as the title rows are already present.
+        """
+        if not self.has_data():
+            if titles:
+                self.set_column_titles(titles)
+            else:
+                raise ValueError('Cannot set up worksheet with no titles!')
+        elif titles:
+            warnings.warn(
+                'Column titles for this worksheet have already been set, so '
+                'new titles will not be used. If you would like to set new '
+                'titles, please replace this worksheet with a blank one.',
+                UserWarning
+            )
+        self.populate_cols_dict()
+
+    def add_one(self, obj):
+        """Add one object to the first empty row in the worksheet.
+
+        What type of object is valid should be defined in the implementation
+        of this method in the child class, and it should raise a TypeError if
+        given invalid data.
+        """
+        raise NotImplementedError('This method needs to be implemented by a '
+                                  'class derived from SeedsWorksheet.')
+
+    def add(self, objects):
+        """Add database model objects from an iterable.
+
+        We want to add any valid data, and warn if any invalid data is present
+        rather than raise an exception, that way all valid data is added.
+
+        Note:
+            This method requires use of the abstract class add_one; as such,
+            it should only be called from child classes of SeedsWorksheet.
+        """
+        for obj in objects:
+            try:
+                self.add_one(obj)
+            except TypeError as e:
+                warnings.warn(e.args[0], UserWarning)
+
+    def save_row_to_db(self, row, file=sys.stdout):
+        """Save a row from a worksheet to the database.
+
+        It should take the row number, and optionally an IO object to write to.
+
+        It should return False if no changes are made, otherwise return True.
+        """
+        raise NotImplementedError('This method needs to be implemented by a '
+                                  'class derived from SeedsWorksheet.')
+
+    def save_to_db(self, file=sys.stdout):
+        """Save all rows of worksheet to the database.
+
+        Notes:
+            Since range(start, n) goes from start to n-1, we can use active_row
+            as n because it won't be included in the row numbers generated.
+        """
+        edited = False
+        print('-- BEGIN saving all rows from {0} to database. --'
+              .format(self.__class__.__name__), file=file)
+        for r in range(2, self.active_row):
+            try:
+                if self.save_row_to_db(row=r, file=file):
+                    edited = True
+            except Exception as e:
+                db.session.rollback()
+                raise RuntimeError('An exception occurred while saving row '
+                                   '#{0} to the database, so the database '
+                                   'has been rolled back. The exception that '
+                                   'was raised: {1}: {2}'
+                                   .format(r, e.__class__.__name__, e))
+        if edited:
+            db.session.commit()
+            print('All changes have been committed to the database.',
+                  file=file)
+        print('-- END saving all rows from {0} to database. --'
+              .format(self.__class__.__name__), file=file)
+
+
+class IndexesWorksheet(SeedsWorksheet):
+    """Class extending SeedsWorksheet to have Indexes-specific methods."""
+    def setup(self):
+        """Set up the Indexes worksheet."""
+        if self.has_data():
+            self._setup()
+        else:
+            titles = ('Index', 'Description')
+            self._setup(titles)
+
+    def add_one(self, idx):
+        """Add a singe Index object to the Indexes worksheet."""
+        if isinstance(idx, Index):
+            r = self.active_row
+            self.cell(r, self.cols['Index']).value = idx.name
+            self.cell(r, self.cols['Description']).value = idx.description
+        else:
+            raise TypeError('The object \'{0}\' could not be added because '
+                            'it is not of type \'Index\'!'.format(idx))
+
+    def save_row_to_db(self, row, file=sys.stdout):
+        """Save a row representing in Index to the database.
+
+        Args:
+            row (int): The number of the row to save.
+            file (io): Object to write messages to. Default to stdout.
+
+        Returns:
+            bool: True if changes have been made, False if not.
+        """
+        name = dbify(self.cell(row, self.cols['Index']).value)
+        description = self.cell(row, self.cols['Description']).value
+
+        print('-- BEGIN editing/creating Index \'{0}\' from row #{1}. --'
+              .format(name, row), file=file)
+        edited = False
+        idx = get_or_create_index(name=name, file=file)
+        if idx.created:
+            edited = True
+            db.session.add(idx)
+        if description != idx.description:
+            edited = True
+            if description:
+                idx.description = description
+                print('Description for the Index \'{0}\' set to: {1}'
+                      .format(idx.name, idx.description), file=file)
+            elif idx.description:
+                idx.description = None
+                print('Description for the Index \'{0}\' has been cleared.'
+                      .format(idx.name), file=file)
+        if edited:
+            db.session.commit()
+            print('Changes to Index \'{0}\' have been flushed to the database.'
+                  .format(idx.name), file=file)
+        else:
+            print('No changes were made to the Index \'{0}\'.'
+                  .format(idx.name), file=file)
+        print('-- END editing/creating Index \'{0}\' from row #{1}. --'
+              .format(idx.name, row), file=file)
+        return edited
+
+
+class CommonNamesWorksheet(SeedsWorksheet):
+    """Class extending SeedsWorksheet to have Common Names-specific methods."""
+    def setup(self):
+        """Set up the Common Names worksheet."""
+        if self.has_data():
+            self._setup()
+        else:
+            titles = ('Index',
+                      'Common Name',
+                      'Subcategory of',
+                      'Description',
+                      'Planting Instructions',
+                      'Synonyms',
+                      'Invisible',
+                      'Grows With Common Names (JSON)',
+                      'Grows With Cultivars (JSON)')
+            self._setup(titles)
+
+    def add_one(self, cn):
+        """Add a single CommonName to a CommonNames worksheet."""
+        if isinstance(cn, CommonName):
+            r = self.active_row
+            self.cell(r, self.cols['Index']).value = cn.index.name
+            self.cell(r, self.cols['Common Name']).value = cn.name
+            if cn.parent:
+                self.cell(
+                    r, self.cols['Subcategory of']
+                ).value = cn.parent.name
+            if cn.description:
+                self.cell(
+                    r, self.cols['Description']
+                ).value = cn.description
+            if cn.instructions:
+                self.cell(
+                    r, self.cols['Planting Instructions']
+                ).value = cn.instructions
+            syns = cn.get_synonyms_string()
+            if syns:
+                self.cell(r, self.cols['Synonyms']).value = syns
+            inv_cell = self.cell(r, self.cols['Invisible'])
+            inv_cell.value = 'True' if cn.invisible else 'False'
+            if cn.gw_common_names:
+                self.cell(
+                    r, self.cols['Grows With Common Names (JSON)']
+                ).value = lookup_dicts_to_json(cn.gw_common_names)
+            if cn.gw_cultivars:
+                self.cell(
+                    r, self.cols['Grows With Cultivars (JSON)']
+                ).value = lookup_dicts_to_json(cn.gw_cultivars)
+        else:
+            raise TypeError('The object \'{0}\' could not be added because '
+                            'it is not of type \'CommonName\'!'.format(cn))
+
+    def save_row_to_db(self, row, file=sys.stdout):
+        """Save a row from the Common Names sheet to the database.
+
+        Args:
+            row (int): The number of the row to save.
+            file (io): Object to write messages to. Default to stdout.
+
+        Returns:
+            bool: True if changes have been made, False if not.
+        """
+        index = dbify(self.cell(row, self.cols['Index']).value)
+        name = dbify(self.cell(row, self.cols['Common Name']).value)
+        parent = dbify(self.cell(row, self.cols['Subcategory of']).value)
+        description = self.cell(row, self.cols['Description']).value
+        instructions = self.cell(row, self.cols['Planting Instructions']).value
+        synonyms = self.cell(row, self.cols['Synonyms']).value
+        if not synonyms:
+            synonyms = ''  # Match result of CommonName.get_synonyms_string()
+        if 'true' in self.cell(row, self.cols['Invisible']).value.lower():
+            invisible = True
+        else:
+            invisible = False
+        gwcn_json = self.cell(
+            row, self.cols['Grows With Common Names (JSON)']
+        ).value
+        gwcn_dicts = json.loads(gwcn_json) if gwcn_json else None
+        gwcv_json = self.cell(
+            row, self.cols['Grows With Cultivars (JSON)']
+        ).value
+        gwcv_dicts = json.loads(gwcv_json) if gwcv_json else None
+
+        print('-- BEGIN editing/creating CommonName \'{0}\' from row #{1}. --'
+              .format(name, row), file=file)
+        edited = False
+        cn = get_or_create_common_name(name=name, index=index, file=file)
+        if cn.created:
+            edited = True
+            db.session.add(cn)
+        if parent:
+            pcn = get_or_create_common_name(name=parent,
+                                            index=index,
+                                            file=file)
+            if cn.parent != pcn:
+                edited = True
+                cn.parent = pcn
+                print('The CommonName \'{0}\' has been set as a subcategory '
+                      'of \'{1}\'.'.format(cn.name, pcn.name), file=file)
+        if description != cn.description:
+            edited = True
+            if description:
+                cn.description = description
+                print('Description for the CommonName \'{0}\' set to: {1}'
+                      .format(cn.name, cn.description), file=file)
+            elif cn.description:
+                cn.description = None
+                print('Description for the CommonName \'{0}\' has been '
+                      'cleared.'.format(cn.name), file=file)
+        if instructions != cn.instructions:
+            edited = True
+            if instructions:
+                cn.instructions = instructions
+                print('Planting instructions for the CommonName \'{0}\' set '
+                      'to: {1}'.format(cn.name, cn.instructions), file=file)
+            elif cn.instructions:
+                cn.instructions = None
+                print('Planting instructions for the CommonName \'{0}\' have '
+                      'been cleared.'.format(cn.name), file=file)
+        if synonyms != cn.get_synonyms_string():
+            edited = True
+            cn.set_synonyms_string(synonyms)
+            if synonyms:
+                print('Synonyms for the CommonName \'{0}\' set to: {1}'
+                      .format(cn.name, cn.get_synonyms_string()), file=file)
+            else:
+                print('Synonyms for the CommonName \'{0}\' have been cleared.'
+                      .format(cn.name), file=file)
+        if invisible != cn.invisible:
+            edited = True
+            cn.invisible = invisible
+            if cn.invisible:
+                print('The CommonName \'{0}\' is not visible on generated '
+                      'pages.'.format(cn.name), file=file)
+            else:
+                print('The CommonName \'{0}\' is visible on generated pages.'
+                      .format(cn.name), file=file)
+        if gwcn_dicts:
+            gwcns = tuple(get_or_create_common_name(
+                name=dbify(d['Common Name']),
+                index=dbify(d['Index']),
+                file=file
+            ) for d in gwcn_dicts)
+            for gwcn in gwcns:
+                if gwcn not in cn.gw_common_names:
+                    edited = True
+                    cn.gw_common_names.append(gwcn)
+                    print('The CommonName \'{0}\' has been added to Grows '
+                          'With Common Names for the CommonName \'{1}\'.'
+                          .format(gwcn.name, cn.name), file=file)
+        else:
+            gwcns = tuple()
+        for gwcn in list(cn.gw_common_names):
+            if gwcn not in gwcns:
+                edited = True
+                cn.gw_common_names.remove(gwcn)
+                print('The CommonName \'{0}\' has been removed from Grows '
+                      'With Common Names for the CommonName \'{1}\'.'
+                      .format(gwcn.name, cn.name), file=file)
+        if gwcv_dicts:
+            gwcvs = tuple(get_or_create_cultivar(
+                name=dbify(d['Cultivar Name']),
+                common_name=dbify(d['Common Name']),
+                index=dbify(d['Index']),
+                series=dbify(d['Series']),
+                file=file
+            ) for d in gwcv_dicts)
+            for gwcv in gwcvs:
+                if gwcv not in cn.gw_cultivars:
+                    edited = True
+                    cn.gw_cultivars.append(gwcv)
+                    print('The Cultivar \'{0}\' has been added to Grows With '
+                          'Cultivars for the CommonName \'{1}\'.'
+                          .format(gwcv.fullname, cn.name), file=file)
+        else:
+            gwcvs = tuple()
+        for gwcv in list(cn.gw_cultivars):
+            if gwcv not in gwcvs:
+                edited = True
+                cn.gw_cultivars.remove(gwcv)
+                print('The Cultivar \'{0}\' has been removed from Grows With '
+                      'Cultivars for the CommonName \'{1}\'.'
+                      .format(gwcv.fullname, cn.name), file=file)
+        if edited:
+            db.session.flush()
+            print('Changes to the CommonName \'{0}\' have been flushed to the '
+                  'database.'.format(cn.name), file=file)
+        else:
+            print('No changes were made to the CommonName \'{0}\'.'
+                  .format(cn.name), file=file)
+        print('-- END editing/creating CommonName \'{0}\' from row #{1}. --'
+              .format(cn.name, row), file=file)
+        return edited
+
+
+class BotanicalNamesWorksheet(SeedsWorksheet):
+    """Class extending SeedsWorksheet with Botanical Names-specific methods."""
+    def setup(self):
+        """Set up the Botanical Names worksheet."""
+        if self.has_data():
+            self._setup()
+        else:
+            titles = ('Common Names (JSON)',
+                      'Botanical Name',
+                      'Synonyms')
+            self._setup(titles)
+
+    def add_one(self, bn):
+        """Add a single BotanicalName to the Botanical Names worksheet."""
+        if isinstance(bn, BotanicalName):
+            r = self.active_row
+            self.cell(
+                r, self.cols['Common Names (JSON)']
+            ).value = lookup_dicts_to_json(bn.common_names)
+            self.cell(r, self.cols['Botanical Name']).value = bn.name
+            syns = bn.get_synonyms_string()
+            if syns:
+                self.cell(r, self.cols['Synonyms']).value = syns
+        else:
+            raise TypeError('The object \'{0}\' could not be added because '
+                            'it is not of type \'BotanicalName\'!'.format(bn))
+
+    def save_row_to_db(self, row, file=sys.stdout):
+        """Save a row from the Botanical Names sheet to the database.
+
+        Args:
+            row (int): The number of the row to save.
+            file (io): Object to write messages to. Default to stdout.
+
+        Returns:
+            bool: True if changes have been made, False if not.
+        """
+        botanical_name = self.cell(row, self.cols['Botanical Name']).value
+        cn_json = self.cell(row, self.cols['Common Names (JSON)']).value
+        cn_dicts = json.loads(cn_json)
+        synonyms = self.cell(row, self.cols['Synonyms']).value
+        if not synonyms:
+            synonyms = ''
+
+        if not BotanicalName.validate(botanical_name):
+            print('Could not add the BotanicalName \'{0}\' because it does '
+                  'not appear to be a validly formatted botanical name.'
+                  .format(botanical_name), file=file)
+            return False
+
+        print('-- BEGIN editing/creating BotanicalName \'{0}\' from row #{1}. '
+              '--'.format(botanical_name, row), file=file)
+        edited = False
+        bn = BotanicalName.query\
+            .filter(BotanicalName._name == botanical_name)\
+            .one_or_none()
+        if bn:
+            print('The BotanicalName \'{0}\' has been loaded from the '
+                  'database.'.format(bn.name), file=file)
+        else:
+            edited = True
+            bn = BotanicalName(name=botanical_name)
+            db.session.add(bn)
+            print('The BotanicalName \'{0}\' does not yet exist in the '
+                  'database, so it has been created.'.format(bn.name),
+                  file=file)
+        cns = tuple(get_or_create_common_name(
+            name=dbify(d['Common Name']),
+            index=dbify(d['Index']),
+            file=file
+        ) for d in cn_dicts)
+        for cn in cns:
+            if cn not in bn.common_names:
+                edited = True
+                bn.common_names.append(cn)
+                print('The CommonName \'{0}\' has been added to CommonNames '
+                      'for the BotanicalName \'{1}\'.'
+                      .format(cn.name, bn.name), file=file)
+        for cn in list(bn.common_names):
+            if cn not in cns:
+                edited = True
+                bn.common_names.remove(cn)
+                print('The CommonName \'{0}\' has been removed from '
+                      'CommonNames for the BotanicalName \'{1}\'.'
+                      .format(cn.name, bn.name), file=file)
+        if synonyms != bn.get_synonyms_string():
+            edited = True
+            bn.set_synonyms_string(synonyms)
+            if synonyms:
+                print('Synonyms for the BotanicalName \'{0}\' set to: {1}'
+                      .format(bn.name, bn.get_synonyms_string()), file=file)
+            else:
+                print('Synonyms for the BotanicalName \'{0}\' have been '
+                      'cleared.'.format(bn.name), file=file)
+        if edited:
+            db.session.flush()
+            print('Changes to the BotanicalName \'{0}\' have been flushed to '
+                  'the database.'.format(bn.name), file=file)
+        else:
+            print('No changes were made to the BotanicalName \'{0}\'.'
+                  .format(bn.name), file=file)
+        print('-- END editing/creating BotanicalName \'{0}\' from row #{1}. '
+              '--'.format(bn.name, row), file=file)
+        return edited
+
+
+class SeriesWorksheet(SeedsWorksheet):
+    """Class extending SeedsWorksheet with Series-specific methods."""
+    def setup(self):
+        """Set up the Series worksheet."""
+        if self.has_data():
+            self._setup()
+        else:
+            titles = ('Common Name (JSON)',
+                      'Series',
+                      'Position',
+                      'Description')
+            self._setup(titles)
+
+    def add_one(self, sr):
+        """Add a single Series to the Series worksheet."""
+        if isinstance(sr, Series):
+            r = self.active_row
+            self.cell(
+                r, self.cols['Common Name (JSON)']
+            ).value = json.dumps(sr.common_name.lookup_dict())
+            self.cell(r, self.cols['Series']).value = sr.name
+            pos_cell = self.cell(r, self.cols['Position'])
+            if sr.position == Series.AFTER_CULTIVAR:
+                pos_cell.value = 'after cultivar'
+            else:
+                pos_cell.value = 'before cultivar'
+            if sr.description:
+                self.cell(r, self.cols['Description']).value = sr.description
+        else:
+            raise TypeError('The object \'{0}\' could not be added because '
+                            'it is not of type \'Series\'!'.format(sr))
+
+    def save_row_to_db(self, row, file=sys.stdout):
+        """Save a row from the Common Names sheet to the database.
+
+        Args:
+            row (int): The number of the row to save.
+            file (io): Object to write messages to. Default to stdout.
+
+        Returns:
+            bool: True if changes have been made, False if not.
+        """
+        cn_json = self.cell(row, self.cols['Common Name (JSON)']).value
+        cn_dict = json.loads(cn_json)
+        series = dbify(self.cell(row, self.cols['Series']).value)
+        position_text = self.cell(row, self.cols['Position']).value
+        if 'after' in position_text.lower():
+            position = Series.AFTER_CULTIVAR
+        else:
+            position = Series.BEFORE_CULTIVAR
+        description = self.cell(row, self.cols['Description']).value
+
+        print('-- BEGIN editing/creating Series \'{0}\' from row #{1}. '
+              '--'.format(series, row), file=file)
+        edited = False
+        cn = get_or_create_common_name(name=dbify(cn_dict['Common Name']),
+                                       index=dbify(cn_dict['Index']),
+                                       file=file)
+        sr = None
+        if not cn.created:
+            sr = Series.query\
+                .filter(Series.name == series, Series.common_name_id == cn.id)\
+                .one_or_none()
+        if sr:
+            print('The Series \'{0}\' has been loaded from the database.'
+                  .format(sr.name), file=file)
+        else:
+            edited = True
+            sr = Series(name=series)
+            sr.common_name = cn
+            print('CommonName for the Series \'{0}\' set to: {1}'
+                  .format(sr.name, cn.name), file=file)
+            db.session.add(sr)
+            print('The Series \'{0}\' does not yet exist in the database, so '
+                  'it has been created.'.format(sr.name), file=file)
+        if position != sr.position:
+            edited = True
+            sr.position = position
+            if sr.position == Series.AFTER_CULTIVAR:
+                print('The Series name \'{0}\' will be placed after the '
+                      'Cultivar name for each Cultivar in the Series.'
+                      .format(sr.name), file=file)
+            else:
+                print('The Series name \'{0}\' will be placed before the '
+                      'Cultivar name for each Cultivar in the Series.'
+                      .format(sr.name), file=file)
+        if description != sr.description:
+            edited = True
+            if description:
+                sr.description = description
+                print('Description for the Series \'{0}\' set to: {1}'
+                      .format(sr.name, sr.description), file=file)
+            else:
+                sr.description = None
+                print('Description for the Series \'{0}\' has been cleared.'
+                      .format(sr.name), file=file)
+        if edited:
+            db.session.flush()
+            print('Changes to the Series \'{0}\' have been flushed to '
+                  'the database.'.format(sr.name), file=file)
+        else:
+            print('No changes were made to the Series \'{0}\'.'
+                  .format(sr.name), file=file)
+        print('-- END editing/creating Series \'{0}\' from row #{1}. '
+              '--'.format(sr.name, row), file=file)
+        return edited
+
+
+class CultivarsWorksheet(SeedsWorksheet):
+    """Class extending SeedsWorksheet with Cultivars-specific methods."""
+    def setup(self):
+        """Set up the Cultivars worksheet."""
+        if self.has_data():
+            self._setup()
+        else:
+            titles = ('Index',
+                      'Common Name',
+                      'Cultivar Name',
+                      'Series',
+                      'Botanical Name',
+                      'Thumbnail Filename',
+                      'Description',
+                      'Synonyms',
+                      'New For',
+                      'In Stock',
+                      'Active',
+                      'Invisible',
+                      'Grows With Common Names (JSON)',
+                      'Grows With Cultivars (JSON)')
+            self._setup(titles)
+
+    def add_one(self, cv):
+        """Add a single Cultivar to the Cultivars worksheet."""
+        if isinstance(cv, Cultivar):
+            r = self.active_row
+            self.cell(r, self.cols['Index']).value = cv.common_name.index.name
+            self.cell(r, self.cols['Common Name']).value = cv.common_name.name
+            self.cell(r, self.cols['Cultivar Name']).value = cv.name
+            if cv.series:
+                self.cell(r, self.cols['Series']).value = cv.series.name
+            if cv.botanical_name:
+                self.cell(
+                    r, self.cols['Botanical Name']
+                ).value = cv.botanical_name.name
+            if cv.thumbnail:
+                self.cell(
+                    r, self.cols['Thumbnail Filename']
+                ).value = cv.thumbnail.filename
+            if cv.description:
+                self.cell(r, self.cols['Description']).value = cv.description
+            syns = cv.get_synonyms_string()
+            if syns:
+                self.cell(r, self.cols['Synonyms']).value = syns
+            if cv.new_for:
+                self.cell(r, self.cols['New For']).value = cv.new_for
+            is_cell = self.cell(r, self.cols['In Stock'])
+            is_cell.value = 'True' if cv.in_stock else 'False'
+            act_cell = self.cell(r, self.cols['Active'])
+            act_cell.value = 'True' if cv.active else 'False'
+            inv_cell = self.cell(r, self.cols['Invisible'])
+            inv_cell.value = 'True' if cv.invisible else 'False'
+            if cv.gw_common_names:
+                self.cell(
+                    r, self.cols['Grows With Common Names (JSON)']
+                ).value = lookup_dicts_to_json(cv.gw_common_names)
+            if cv.gw_cultivars:
+                self.cell(
+                    r, self.cols['Grows With Cultivars (JSON)']
+                ).value = lookup_dicts_to_json(cv.gw_cultivars)
+        else:
+            raise TypeError('The object \'{0}\' could not be added because '
+                            'it is not of type \'Cultivar\'!'.format(cv))
+
+
+class PacketsWorksheet(SeedsWorksheet):
+    """Class extending SeedsWorksheet with Packets-specific methods."""
+    def setup(self):
+        """Set up the packets worksheet."""
+        if self.has_data():
+            self._setup()
+        else:
+            titles = ('Cultivar (JSON)',
+                      'SKU',
+                      'Price',
+                      'Quantity',
+                      'Units')
+            self._setup(titles)
+
+    def add_one(self, pkt):
+        """Add a single Packet to the Packets worksheet."""
+        if isinstance(pkt, Packet):
+            r = self.active_row
+            self.cell(
+                r, self.cols['Cultivar (JSON)']
+            ).value = json.dumps(pkt.cultivar.lookup_dict())
+            self.cell(r, self.cols['SKU']).value = pkt.sku
+            self.cell(r, self.cols['Price']).value = pkt.price
+            self.cell(r, self.cols['Quantity']).value = pkt.quantity.str_value
+            self.cell(r, self.cols['Units']).value = pkt.quantity.units
+        else:
+            raise TypeError('The object \'{0}\' could not be added because '
+                            'it is not of type \'Packet\'!'.format(pkt))
 
 
 class SeedsWorkbook(object):
@@ -118,200 +911,6 @@ class SeedsWorkbook(object):
     def __getitem__(self, x):
         return self._wb[x]
 
-    # Indexes sheet methods
-    def create_indexes_sheet(self):
-        """Set up the Indexes worksheet."""
-        self.indexes = SeedsWorksheet(self._wb.create_sheet('Indexes'))
-        self.indexes.set_column_titles(('Index', 'Description'))
-        self.indexes.populate_cols_dict()
-
-    def load_indexes_from_workbook(self):
-        """Set up self.indexes with sheet from loaded workbook."""
-        self.indexes = SeedsWorksheet(self._wb['Indexes'])
-        self.indexes.populate_cols_dict()
-
-    def add_index(self, idx):
-        """Add an Index object to the Indexes worksheet."""
-        if isinstance(idx, Index):
-            sws = self.indexes
-            r = sws.active_row
-            sws.cell(r, sws.cols['Index']).value = idx.name
-            sws.cell(r, sws.cols['Description']).value = idx.description
-        else:
-            raise TypeError('add_index can only take an object of type Index!')
-
-    def add_indexes(self, indexes):
-        """Add a set of indexes to the Indexes worksheet."""
-        for idx in indexes:
-            self.add_index(self, idx)
-
-    # Common Names sheet methods
-    def create_common_names_sheet(self):
-        """Set up the Common Names worksheet."""
-        self.common_names = SeedsWorksheet(
-            self._wb.create_sheet(title='Common Names')
-        )
-        self.common_names.set_column_titles(
-            ('Index',
-             'Common Name',
-             'Subcategory of',
-             'Description',
-             'Planting Instructions',
-             'Synonyms',
-             'Invisible',
-             'Grows With Common Names (JSON)',
-             'Grows With Cultivars (JSON)')
-        )
-        self.common_names.populate_cols_dict()
-
-    def load_common_names_from_workbook(self):
-        """Set up self.common_names with sheet from loaded workbook."""
-        self.common_names = SeedsWorksheet(self._wb['Common Names'])
-        self.common_names.populate_cols_dict()
-
-    def add_common_name(self, cn):
-        """Add a CommonName object to the Common Names worksheet."""
-        if isinstance(cn, CommonName):
-            sws = self.common_names
-            r = sws.active_row
-            sws.cell(r, sws.cols['Index']).value = cn.index.name
-            sws.cell(r, sws.cols['Common Name']).value = cn.name
-            if cn.parent:
-                sws.cell(r, sws.cols['Subcategory of']).value = cn.parent.name
-            if cn.description:
-                sws.cell(r, sws.cols['Description']).value = cn.description
-            if cn.instructions:
-                sws.cell(
-                    r, sws.cols['Planting Instructions']
-                ).value = cn.instructions
-            syns = cn.get_synonyms_string()
-            if syns:
-                sws.cell(r, sws.cols['Synonyms']).value = syns
-            if cn.invisible:
-                sws.cell(r, sws.cols['Invisible']).value = 'True'
-            if cn.gw_common_names:
-                sws.cell(
-                    r, sws.cols['Grows With Common Names (JSON)']
-                ).value = lookup_dicts_to_json(cn.gw_common_names) 
-            if cn.gw_cultivars:
-                sws.cell(
-                    r, sws.cols['Grows With Cultivars (JSON)']
-                ).value = lookup_dicts_to_json(cn.gw_cultivars)
-        else:
-            raise TypeError('add_common_name can only take an object of type '
-                            'CommonName!')
-
-    def add_common_names(self, cns):
-        """Add multiple CommonName objects to the Common Names worksheet."""
-        for cn in cns:
-            self.add_common_name(cn)
-
-    # Botanical Names sheet methods
-    def create_botanical_names_sheet(self):
-        """Set up the Botanical Names worksheet."""
-        self.botanical_names = SeedsWorksheet(
-            self._wb.create_sheet(title='Botanical Names')
-        )
-        self.botanical_names.set_column_titles(
-            ('Common Names (JSON)',
-             'Botanical Name',
-             'Synonyms')
-        )
-        self.botanical_names.populate_cols_dict()
-
-    def load_botanical_names_from_workbook(self):
-        """Set up self.botanical_names with sheet from loaded workbook."""
-        self.botanical_names = SeedsWorksheet(self._wb['Botanical Names'])
-        self.botanical_names.populate_cols_dict()
-
-    def add_botanical_name(self, bn):
-        """Add a BotanicalName object to the Botanical Names sheet."""
-        if isinstance(bn, BotanicalName):
-            sws = self.botanical_names
-            r = sws.active_row
-            sws.cell(
-                r, sws.cols['Common Names (JSON)']
-            ).value = lookup_dicts_to_json(bn.common_names)
-            sws.cell(r, sws.cols['Botanical Name']).value = bn.name
-            syns = bn.get_synonyms_string()
-            if syns:
-                sws.cell(r, sws.cols['Synonyms']).value = syns
-        else:
-            raise TypeError('add_botanical_name can only take an object of '
-                            'type BotanicalName!')
-
-    def add_botanical_names(self, bns):
-        """Add multiple BotanicalName objects to the Botanical Names sheet."""
-        for bn in bns:
-            self.add_botanical_name(bn)
-
-    # Series sheet methods
-    def create_series_sheet(self):
-        """Set up the Series worksheet."""
-        self.series = SeedsWorksheet(self._wb.create_sheet(title='Series'))
-        self.series.set_column_titles(
-            ('Common Name (JSON)',
-             'Series',
-             'Position',
-             'Description')
-        )
-        self.series.populate_cols_dict()
-
-    def load_series_from_workbook(self):
-        """Set up self.series with sheet from loaded workbook."""
-        self.series = SeedsWorksheet(self._wb['Series'])
-        self.series.populate_cols_dict()
-
-    # Cultivar sheet methods
-    def create_cultivars_sheet(self):
-        """Set up the Cultivars worksheet."""
-        self.cultivars = SeedsWorksheet(
-            self._wb.create_sheet(title='Cultivars')
-        )
-        self.cultivars.set_column_titles(
-            ('Index',
-             'Common Name',
-             'Botanical Name',
-             'Series',
-             'Cultivar Name',
-             'Thumbnail Filename',
-             'Description',
-             'Synonyms',
-             'New For',
-             'In Stock',
-             'Active',
-             'Invisible',
-             'Grows With Common Names (JSON)',
-             'Grows With Cultivars (JSON)')
-        )
-        self.cultivars.populate_cols_dict()
-
-    def load_cultivars_from_workbook(self):
-        """Set up self.cultivars with sheet from loaded workbook."""
-        self.cultivars = SeedsWorksheet(self._wb['Cultivars'])
-        self.series.populate_cols_dict()
-
-    # Packets sheet methods
-    def create_packets_sheet(self):
-        """Set up the Packets worksheet."""
-        self.packets = SeedsWorksheet(
-            self._wb.create_sheet(title='Packets')
-        )
-        self.packets.set_column_titles(
-            ('Cultivar (JSON)',
-             'SKU',
-             'Price',
-             'Quantity',
-             'Units')
-        )
-        self.packets.populate_cols_dict()
-
-    def load_packets_from_workbook(self):
-        """Set up self.packets with sheet from loaded workbook."""
-        self.packets = SeedsWorksheet(self._wb['Packets'])
-        self.packets.populate_cols_dict()
-
-    # All sheets methods
     def remove_all_sheets(self):
         """Remove all worksheets from the workbook.
 
@@ -324,27 +923,46 @@ class SeedsWorkbook(object):
     def create_all_sheets(self):
         """Create all of the worksheets in the SeedsWorkbook."""
         self.remove_all_sheets()
-        self.create_indexes_sheet()
-        self.create_common_names_sheet()
-        self.create_botanical_names_sheet()
-        self.create_series_sheet()
-        self.create_cultivars_sheet()
-        self.create_packets_sheet()
+        self.indexes = IndexesWorksheet(self._wb.create_sheet(title='Indexes'))
+        self.indexes.setup()
+        self.common_names = CommonNamesWorksheet(
+            self._wb.create_sheet(title='Common Names')
+        )
+        self.common_names.setup()
+        self.botanical_names = BotanicalNamesWorksheet(
+            self._wb.create_sheet(title='Botanical Names')
+        )
+        self.botanical_names.setup()
+        self.series = SeriesWorksheet(self._wb.create_sheet(title='Series'))
+        self.series.setup()
+        self.cultivars = CultivarsWorksheet(
+            self._wb.create_sheet(title='Cultivars')
+        )
+        self.cultivars.setup()
+        self.packets = PacketsWorksheet(self._wb.create_sheet(title='Packets'))
+        self.packets.setup()
 
     def load_all_sheets_from_workbook(self):
         """Set up all SeedsWorksheets with sheets from loaded workbook."""
-        self.load_indexes_from_workbook()
-        self.load_common_names_from_workbook()
-        self.load_botanical_names_from_workbook()
-        self.load_series_from_workbook()
-        self.load_cultivars_from_workbook()
-        self.load_packets_from_workbook()
+        self.indexes = IndexesWorksheet(self._wb['Indexes'])
+        self.indexes.setup()
+        self.common_names = CommonNamesWorksheet(self._wb['Common Names'])
+        self.common_names.setup()
+        self.botanical_names = BotanicalNamesWorksheet(
+            self._wb['Botanical Names']
+        )
+        self.botanical_names.setup()
+        self.series = SeriesWorksheet(self._wb['Series'])
+        self.series.setup()
+        self.cultivars = CultivarsWorksheet(self._wb['Cultivars'])
+        self.cultivars.setup()
+        self.packets = PacketsWorksheet(self._wb['Packets'])
+        self.packets.setup()
 
-    # Workbook methods
     @classmethod
     def load(cls, filename):
-        self._wb = openpyxl.load_workbook(filename)
-        self.load_all_sheets_from_workbook()
+        cls._wb = openpyxl.load_workbook(filename)
+        cls.load_all_sheets_from_workbook()
 
     def save(self, filename):
         self._wb.save(filename)

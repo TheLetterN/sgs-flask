@@ -2,12 +2,24 @@ import json
 import pytest
 from unittest import mock
 from openpyxl import Workbook
-from app.seeds.excel2 import lookup_dicts_to_json, SeedsWorkbook, SeedsWorksheet
+from app.seeds.excel2 import (
+    BotanicalNamesWorksheet,
+    CommonNamesWorksheet,
+    CultivarsWorksheet,
+    IndexesWorksheet,
+    lookup_dicts_to_json,
+    PacketsWorksheet,
+    SeedsWorkbook,
+    SeedsWorksheet,
+    SeriesWorksheet
+)
 from app.seeds.models import (
     BotanicalName,
     CommonName,
     Cultivar,
+    Image,
     Index,
+    Packet,
     Series
 )
 
@@ -21,26 +33,28 @@ class TestExcel2Functions:
         """
         gwcn1 = CommonName(name='Foxglove')
         gwcn1.index = Index(name='Perennial')
-        assert lookup_dicts_to_json([gwcn1]) == json.dumps((gwcn1.lookup_dict(),))
+        assert lookup_dicts_to_json([gwcn1]) == \
+            json.dumps((gwcn1.lookup_dict(),))
         gwcn2 = CommonName(name='Butterfly Weed')
         gwcn2.index = Index(name='Perennial')
-        assert lookup_dicts_to_json([gwcn1, gwcn2]) == json.dumps((gwcn1.lookup_dict(),
-                                                      gwcn2.lookup_dict()))
+        assert lookup_dicts_to_json([gwcn1, gwcn2]) == \
+            json.dumps((gwcn1.lookup_dict(), gwcn2.lookup_dict()))
         gwcv1 = Cultivar(name='Soulmate')
         gwcv1.common_name = CommonName(name='Butterfly Weed')
         gwcv1.common_name.index = Index(name='Perennial')
-        assert lookup_dicts_to_json([gwcv1]) == json.dumps((gwcv1.lookup_dict(),))
+        assert lookup_dicts_to_json([gwcv1]) == \
+            json.dumps((gwcv1.lookup_dict(),))
         gwcv2 = Cultivar(name='Petra')
         gwcv2.common_name = CommonName(name='Foxglove')
         gwcv2.common_name.index = Index(name='Perennial')
         gwcv2.series = Series(name='Polkadot')
-        assert lookup_dicts_to_json([gwcv1, gwcv2]) == json.dumps((gwcv1.lookup_dict(),
-                                                      gwcv2.lookup_dict()))
+        assert lookup_dicts_to_json([gwcv1, gwcv2]) == \
+            json.dumps((gwcv1.lookup_dict(), gwcv2.lookup_dict()))
 
 
 class TestSeedsWorksheet:
     """Test methods of the SeedsWorksheet container class.
-    
+
     We use Workbook to create sheets instead of Worksheet because it ensures
     the worksheet is created as it would be when used in a workbook.
     """
@@ -62,7 +76,7 @@ class TestSeedsWorksheet:
         assert sws.rows == ((a1, b1),)
         a2 = sws._ws['A2']
         a2.value = 'Three'
-        # B2 is created with a null value to fill the grid. 
+        # B2 is created with a null value to fill the grid.
         b2 = sws._ws['B2']
         assert sws.rows == ((a1, b1), (a2, b2))
 
@@ -91,6 +105,17 @@ class TestSeedsWorksheet:
         assert sws.data_rows == ((ws['A2'],),)
         ws['A3'] = 'Three'
         assert sws.data_rows == ((ws['A2'],), (ws['A3'],))
+
+    def test_has_data(self):
+        """Return True if there is data in cell A1, else False."""
+        wb = Workbook()
+        ws = wb.active
+        sws = SeedsWorksheet(ws)
+        assert not sws.has_data()
+        sws._ws['A2'].value = 'Stuff'
+        assert not sws.has_data()  # Okay; should never happen in usage.
+        sws._ws['A1'].value = 'More stuff'
+        assert sws.has_data()
 
     def test_cell(self):
         """Return a cell given integer coordinates."""
@@ -155,117 +180,200 @@ class TestSeedsWorksheet:
         sws.freeze_title_row()
         assert sws._ws.freeze_panes == 'A2'
 
-
-class TestSeedsWorkbook:
-    """Test methods of the SeedsWorkbook container class."""
-    @mock.patch('app.seeds.excel2.SeedsWorkbook.create_all_sheets')
-    def test_create_indexes_sheet(self, m):
-        """Create a sheet titled 'Indexes' and prepare it for use."""
-        swb = SeedsWorkbook()
-        swb.create_indexes_sheet()
-        ws = swb.indexes._ws
-        assert ws.title == 'Indexes'
-        assert ws['A1'].value == 'Index'
-        assert ws['B1'].value == 'Description'
-        assert swb.indexes.cols['Index'] == 1
-        assert swb.indexes.cols['Description'] == 2
-    
+    @mock.patch('app.seeds.excel2.SeedsWorksheet.set_column_titles')
     @mock.patch('app.seeds.excel2.SeedsWorksheet.populate_cols_dict')
-    def test_load_indexes_from_workbook(self, m):
-        """Setup self.indexes and with data from Indexes sheet."""
-        swb = SeedsWorkbook()
+    def test_setup_new(self, m_pcd, m_sct):
+        """Call set_column_titles and populate_cols_dict when sheet blank."""
         wb = Workbook()
-        wb.create_sheet(title='Indexes')
-        wb['Indexes'].append(['One', 'Two', 'Three'])
-        swb._wb = wb
-        swb.load_indexes_from_workbook()
-        assert swb.indexes._ws is swb._wb['Indexes']
-        assert m.called
+        ws = wb.active
+        sws = SeedsWorksheet(ws)
+        titles = ('One', 'Two', 'Three')
+        sws._setup(titles)
+        assert m_pcd.called
+        assert m_sct.called_with(titles)
 
-    def test_add_index(self):
-        """Add data from an Index to active row of the Indexes sheet."""
-        swb = SeedsWorkbook()
-        sws = swb.indexes
-        idx1 = Index(name='Perennial', description='Built to last.')
-        swb.add_index(idx1)
-        idx_col = sws.cols['Index']
-        desc_col = sws.cols['Description']
-        assert sws.cell(2, idx_col).value == 'Perennial'
-        assert sws.cell(2, desc_col).value == 'Built to last.'
-        idx2 = Index(name='Annual', description='Not built to last.')
-        swb.add_index(idx2)
-        assert sws.cell(3, idx_col).value == 'Annual'
-        assert sws.cell(3, desc_col).value == 'Not built to last.'
+    def test_setup_new_no_titles(self):
+        """Raise a value error if _setup is run without titles on new sheet."""
+        wb = Workbook()
+        ws = wb.active
+        sws = SeedsWorksheet(ws)
+        with pytest.raises(ValueError):
+            sws._setup()
 
-    def test_add_index_not_index(self):
-        """Raise a TypeError given non Index data."""
-        swb = SeedsWorkbook()
-        with pytest.raises(TypeError):
-            swb.add_index(42)
-        with pytest.raises(TypeError):
-            swb.add_index(CommonName(name='Not an index'))
-
-    @mock.patch('app.seeds.excel2.SeedsWorkbook.add_index')
-    def test_add_indexes(self, m):
-        """Run add_index for each Index in passed iterable."""
-        swb = SeedsWorkbook()
-        indexes = (Index(name='Perennial'),
-                   Index(name='Annual'),
-                   Index(name='Herb'))
-        swb.add_indexes(indexes)
-        assert m.call_count == 3
-
-    @mock.patch('app.seeds.excel2.SeedsWorkbook.create_all_sheets')
-    def test_create_common_names_sheet(self, m):
-        """Create a sheet titled 'Common Names' and prepare for use."""
-        swb = SeedsWorkbook()
-        swb.create_common_names_sheet()
-        ws = swb.common_names._ws
-        assert ws.title == 'Common Names'
-        assert ws['A1'].value == 'Index'
-        assert ws['B1'].value == 'Common Name'
-        assert ws['C1'].value == 'Subcategory of'
-        assert ws['D1'].value == 'Description'
-        assert ws['E1'].value == 'Planting Instructions'
-        assert ws['F1'].value == 'Synonyms'
-        assert ws['G1'].value == 'Invisible'
-        assert ws['H1'].value == 'Grows With Common Names (JSON)'
-        assert ws['I1'].value == 'Grows With Cultivars (JSON)'
-        sws = swb.common_names
-        assert sws.cols['Index'] == 1
-        assert sws.cols['Common Name'] == 2
-        assert sws.cols['Subcategory of'] == 3
-        assert sws.cols['Description'] == 4
-        assert sws.cols['Planting Instructions'] == 5
-        assert sws.cols['Synonyms'] == 6
-        assert sws.cols['Invisible'] == 7
-        assert sws.cols['Grows With Common Names (JSON)'] == 8
-        assert sws.cols['Grows With Cultivars (JSON)'] == 9
-
+    @mock.patch('app.seeds.excel2.SeedsWorksheet.set_column_titles')
     @mock.patch('app.seeds.excel2.SeedsWorksheet.populate_cols_dict')
-    def test_load_common_names_from_workbook(self, m):
-        """Setup self.common_names with data from Common Names sheet."""
-        swb = SeedsWorkbook()
+    def test_setup_existing(self, m_pcd, m_sct):
+        """Do not call set_column_titles if data in first row already."""
         wb = Workbook()
-        wb.create_sheet(title='Common Names')
-        swb._wb = wb
-        swb.load_common_names_from_workbook()
-        assert swb.common_names._ws is swb._wb['Common Names']
-        assert m.called
+        ws = wb.active
+        sws = SeedsWorksheet(ws)
+        sws._ws['A1'].value = 'One'
+        sws._setup()
+        assert m_pcd.called
+        assert not m_sct.called
 
-    def test_add_common_name_no_optionals(self):
+    @mock.patch('app.seeds.excel2.SeedsWorksheet.set_column_titles')
+    @mock.patch('app.seeds.excel2.SeedsWorksheet.populate_cols_dict')
+    def test_setup_existing_with_titles(self, m_pcd, m_sct):
+        """Set up as normal but discard new titles."""
+        wb = Workbook()
+        ws = wb.active
+        sws = SeedsWorksheet(ws)
+        sws._ws['A1'].value = 'One'
+        titles = ('One', 'Two', 'Three')
+        with pytest.warns(UserWarning):
+            sws._setup(titles)
+        assert m_pcd.called
+        assert not m_sct.called
+
+    def testadd_one(self):
+        """add_one should be an abstract method in this class."""
+        wb = Workbook()
+        ws = wb.active
+        sws = SeedsWorksheet(ws)
+        with pytest.raises(NotImplementedError):
+            sws.add_one(None)
+
+    @mock.patch('app.seeds.excel2.SeedsWorksheet.add_one')
+    def test_add(self, m_ao):
+        """add should call add_one for each item in iterable."""
+        wb = Workbook()
+        ws = wb.active
+        sws = SeedsWorksheet(ws)
+        sws.add(('Test',))
+        assert m_ao.called
+
+    @mock.patch('app.seeds.excel2.SeedsWorksheet.add_one')
+    def test_add_bad_data(self, m_ao):
+        """Warn user when iterable contains bad types instead of halting."""
+        m_ao.side_effect = TypeError('Bad data, yo!')
+        wb = Workbook()
+        ws = wb.active
+        sws = SeedsWorksheet(ws)
+        with pytest.warns(UserWarning):
+            sws.add((1, 2, 3, 4))
+        assert m_ao.call_count == 4
+
+    def test_add_not_iterable(self):
+        """Do not suppress TypeError if given non-iterable."""
+        wb = Workbook()
+        ws = wb.active
+        sws = SeedsWorksheet(ws)
+        with pytest.raises(TypeError):
+            sws.add(42)
+
+    def test_save_row_to_db(self):
+        """save_row_to_db should be an abstract method in this class."""
+        wb = Workbook()
+        ws = wb.active
+        sws = SeedsWorksheet(ws)
+        with pytest.raises(NotImplementedError):
+            sws.save_row_to_db(None)
+
+
+class TestIndexesWorksheet:
+    """Test methods of the IndexesWorksheet container class."""
+    @mock.patch('app.seeds.excel2.IndexesWorksheet._setup')
+    def test_setup_new(self, m_s):
+        """Call _setup with titles for Indexes sheet."""
+        wb = Workbook()
+        ws = wb.active
+        iws = IndexesWorksheet(ws)
+        iws.setup()
+        m_s.assert_called_with(('Index', 'Description'))
+
+    @mock.patch('app.seeds.excel2.IndexesWorksheet._setup')
+    def test_setup_existing(self, m_s):
+        """Call _setup with no data if sheet titles already populated."""
+        wb = Workbook()
+        ws = wb.active
+        sws = SeedsWorksheet(ws)
+        sws.set_column_titles(('Index', 'Description'))
+        iws = IndexesWorksheet(sws._ws)
+        iws.setup()
+        assert m_s.call_args_list == [mock.call()]
+
+    def testadd_one(self):
+        """Add a single Index to worksheet."""
+        wb = Workbook()
+        ws = wb.active
+        iws = IndexesWorksheet(ws)
+        iws.setup()
+        idx = Index(name='Perennial', description='Built to last.')
+        iws.add_one(idx)
+        assert iws.cell(2, iws.cols['Index']).value == 'Perennial'
+        assert iws.cell(2, iws.cols['Description']).value == 'Built to last.'
+
+    def testadd_one_bad_type(self):
+        """Raise a TypeError given non-Index data."""
+        wb = Workbook()
+        ws = wb.active
+        iws = IndexesWorksheet(ws)
+        iws.setup()
+        with pytest.raises(TypeError):
+            iws.add_one('Frogs!')
+
+
+class TestCommonNamesWorksheet:
+    """Test methods of the CommonNamesWorksheet container class."""
+    @mock.patch('app.seeds.excel2.CommonNamesWorksheet._setup')
+    def test_setup_new(self, m_s):
+        """Call _setup with titles for Common Names worksheet."""
+        wb = Workbook()
+        ws = wb.active
+        cnws = CommonNamesWorksheet(ws)
+        cnws.setup()
+        titles = ('Index',
+                  'Common Name',
+                  'Subcategory of',
+                  'Description',
+                  'Planting Instructions',
+                  'Synonyms',
+                  'Invisible',
+                  'Grows With Common Names (JSON)',
+                  'Grows With Cultivars (JSON)')
+        m_s.assert_called_with(titles)
+
+    @mock.patch('app.seeds.excel2.CommonNamesWorksheet._setup')
+    def test_setup_existing(self, m_s):
+        """Call _setup with no data if titles row already populated."""
+        wb = Workbook()
+        ws = wb.active
+        sws = SeedsWorksheet(ws)
+        sws.set_column_titles(('One', 'Two', 'Three'))
+        cnws = CommonNamesWorksheet(sws._ws)
+        cnws.setup()
+        assert m_s.call_args_list == [mock.call()]
+
+    def testadd_one_no_optionals(self):
         """Add a common name (with no optional data) to Common Names sheet."""
-        swb = SeedsWorkbook()
+        wb = Workbook()
+        ws = wb.active
+        cnws = CommonNamesWorksheet(ws)
+        cnws.setup()
         cn = CommonName(name='Foxglove')
         cn.index = Index(name='Perennial')
-        swb.add_common_name(cn)
-        sws = swb.common_names
-        assert sws.cell(2, sws.cols['Index']).value == 'Perennial'
-        assert sws.cell(2, sws.cols['Common Name']).value == 'Foxglove'
+        cnws.add_one(cn)
+        assert cnws.cell(2, cnws.cols['Index']).value == 'Perennial'
+        assert cnws.cell(2, cnws.cols['Common Name']).value == 'Foxglove'
+        assert cnws.cell(2, cnws.cols['Subcategory of']).value is None
+        assert cnws.cell(2, cnws.cols['Description']).value is None
+        assert cnws.cell(2, cnws.cols['Planting Instructions']).value is None
+        assert cnws.cell(2, cnws.cols['Synonyms']).value is None
+        assert cnws.cell(2, cnws.cols['Invisible']).value == 'False'
+        assert cnws.cell(
+            2, cnws.cols['Grows With Common Names (JSON)']
+        ).value is None
+        assert cnws.cell(
+            2, cnws.cols['Grows With Cultivars (JSON)']
+        ).value is None
 
-    def test_add_common_name_no_gw(self):
+    def testadd_one_no_gw(self):
         """Add a common name (with no Grows With) to Common Names sheet."""
-        swb = SeedsWorkbook()
+        wb = Workbook()
+        ws = wb.active
+        cnws = CommonNamesWorksheet(ws)
+        cnws.setup()
         cn = CommonName(name='Foxglove',
                         description='Spotty.',
                         instructions='Just add water!')
@@ -273,19 +381,21 @@ class TestSeedsWorkbook:
         cn.parent = CommonName(name='Fauxglove')
         cn.invisible = True
         cn.set_synonyms_string('Digitalis')
-        swb.add_common_name(cn)
-        sws = swb.common_names
-        assert sws.cell(2, sws.cols['Subcategory of']).value == 'Fauxglove'
-        assert sws.cell(2, sws.cols['Description']).value == 'Spotty.'
-        assert sws.cell(
-            2, sws.cols['Planting Instructions']
+        cnws.add_one(cn)
+        assert cnws.cell(2, cnws.cols['Subcategory of']).value == 'Fauxglove'
+        assert cnws.cell(2, cnws.cols['Description']).value == 'Spotty.'
+        assert cnws.cell(
+            2, cnws.cols['Planting Instructions']
         ).value == 'Just add water!'
-        assert sws.cell(2, sws.cols['Synonyms']).value == 'Digitalis'
-        assert sws.cell(2, sws.cols['Invisible']).value == 'True'
+        assert cnws.cell(2, cnws.cols['Synonyms']).value == 'Digitalis'
+        assert cnws.cell(2, cnws.cols['Invisible']).value == 'True'
 
-    def test_add_common_name_with_gw_cn(self):
+    def testadd_one_with_gw_cn(self):
         """Add a common name with some Grows With Common Names."""
-        swb = SeedsWorkbook()
+        wb = Workbook()
+        ws = wb.active
+        cnws = CommonNamesWorksheet(ws)
+        cnws.setup()
         cn = CommonName(name='Foxglove')
         cn.index = Index(name='Perennial')
         gwcn1 = CommonName(name='Tomato')
@@ -293,15 +403,17 @@ class TestSeedsWorkbook:
         gwcn2 = CommonName(name='Basil')
         gwcn2.index = Index(name='Herb')
         cn.gw_common_names = [gwcn1, gwcn2]
-        swb.add_common_name(cn)
-        sws = swb.common_names
-        assert sws.cell(
-            2, sws.cols['Grows With Common Names (JSON)']
-        ).value == lookup_dicts_to_json([gwcn1, gwcn2]) 
+        cnws.add_one(cn)
+        assert cnws.cell(
+            2, cnws.cols['Grows With Common Names (JSON)']
+        ).value == lookup_dicts_to_json([gwcn1, gwcn2])
 
-    def test_add_common_name_with_gw_cv(self):
+    def testadd_one_with_gw_cv(self):
         """Add a common name with some Grows With Cultivars."""
-        swb = SeedsWorkbook()
+        wb = Workbook()
+        ws = wb.active
+        cnws = CommonNamesWorksheet(ws)
+        cnws.setup()
         cn = CommonName(name='Foxglove')
         cn.index = Index(name='Perennial')
         gwcv1 = Cultivar(name='Soulmate')
@@ -312,207 +424,482 @@ class TestSeedsWorkbook:
         gwcv2.common_name.index = Index(name='Perennial')
         gwcv2.series = Series(name='Polkadot')
         cn.gw_cultivars = [gwcv1, gwcv2]
-        swb.add_common_name(cn)
-        sws = swb.common_names
-        assert sws.cell(
-            2, sws.cols['Grows With Cultivars (JSON)']
+        cnws.add_one(cn)
+        assert cnws.cell(
+            2, cnws.cols['Grows With Cultivars (JSON)']
         ).value == lookup_dicts_to_json([gwcv1, gwcv2])
 
-    def test_add_common_name_not_common_name(self):
+    def testadd_one_not_common_name(self):
         """Raise a TypeError given data that isn't a CommonName."""
-        swb = SeedsWorkbook()
-        with pytest.raises(TypeError):
-            swb.add_common_name(42)
-        with pytest.raises(TypeError):
-            swb.add_common_name(Index(name='Perennial'))
-
-    @mock.patch('app.seeds.excel2.SeedsWorkbook.add_common_name')
-    def test_add_common_names(self, m):
-        """Run add_common_name on each CommonName in passed iterable."""
-        swb = SeedsWorkbook()
-        cn1 = CommonName(name='Foxglove')
-        cn1.index = Index(name='Perennial')
-        cn2 = CommonName(name='Butterfly Weed')
-        cn2.index = Index(name='Perennial')
-        cn3 = CommonName(name='Basil')
-        cn3.index = Index(name='Herb')
-        swb.add_common_names((cn1, cn2, cn3))
-        assert m.call_count == 3
-
-    @mock.patch('app.seeds.excel2.SeedsWorkbook.create_all_sheets')
-    def test_create_botanical_names_sheet(self, m):
-        """Create a sheet titled 'Botanical Names' and prepare for use."""
-        swb = SeedsWorkbook()
-        swb.create_botanical_names_sheet()
-        ws = swb.botanical_names._ws
-        assert ws.title == 'Botanical Names'
-        assert ws['A1'].value == 'Common Names (JSON)'
-        assert ws['B1'].value == 'Botanical Name'
-        assert ws['C1'].value == 'Synonyms'
-        sws = swb.botanical_names
-        assert sws.cols['Common Names (JSON)'] == 1
-        assert sws.cols['Botanical Name'] == 2
-        assert sws.cols['Synonyms'] == 3
-
-    @mock.patch('app.seeds.excel2.SeedsWorksheet.populate_cols_dict')
-    def test_load_botanical_names_from_workbook(self, m):
-        """Setup self.botanical_names with data from Botanical Names sheet."""
-        swb = SeedsWorkbook()
         wb = Workbook()
-        wb.create_sheet(title='Botanical Names')
-        swb._wb = wb
-        swb.load_botanical_names_from_workbook()
-        assert swb.botanical_names._ws is swb._wb['Botanical Names']
-        assert m.called
+        ws = wb.active
+        cnws = CommonNamesWorksheet(ws)
+        cnws.setup()
+        with pytest.raises(TypeError):
+            cnws.add_one(42)
+        with pytest.raises(TypeError):
+            cnws.add_one(Index(name='Perennial'))
 
-    def test_add_botanical_name_no_optionals(self):
+
+class TestBotanicalNamesWorksheet:
+    """Test methods of the BotanicalNamesWorksheet container class."""
+    @mock.patch('app.seeds.excel2.BotanicalNamesWorksheet._setup')
+    def test_setup_new(self, m_s):
+        """Call _setup with titles for Botanical Names worksheet."""
+        wb = Workbook()
+        ws = wb.active
+        bnws = BotanicalNamesWorksheet(ws)
+        bnws.setup()
+        titles = ('Common Names (JSON)',
+                  'Botanical Name',
+                  'Synonyms')
+        m_s.assert_called_with(titles)
+
+    @mock.patch('app.seeds.excel2.BotanicalNamesWorksheet._setup')
+    def test_setup_existing(self, m_s):
+        """Call _setup with no data if titles already present."""
+        wb = Workbook()
+        ws = wb.active
+        sws = SeedsWorksheet(ws)
+        sws.set_column_titles(('One', 'Two', 'Three'))
+        bnws = BotanicalNamesWorksheet(sws._ws)
+        bnws.setup()
+        assert m_s.call_args_list == [mock.call()]
+
+    def testadd_one_no_optionals(self):
         """Add a BotanicalName object to Botanical Names sheet."""
-        swb = SeedsWorkbook()
+        wb = Workbook()
+        ws = wb.active
+        bnws = BotanicalNamesWorksheet(ws)
+        bnws.setup()
         bn = BotanicalName(name='Innagada davida')
         cn = CommonName(name='Rock')
         cn.index = Index(name='Music')
         bn.common_names = [cn]
-        swb.add_botanical_name(bn)
-        sws = swb.botanical_names
-        assert sws.cell(
-            2, sws.cols['Common Names (JSON)']
+        bnws.add_one(bn)
+        assert bnws.cell(
+            2, bnws.cols['Common Names (JSON)']
         ).value == lookup_dicts_to_json([cn])
-        assert sws.cell(
-            2, sws.cols['Botanical Name']
+        assert bnws.cell(
+            2, bnws.cols['Botanical Name']
         ).value == 'Innagada davida'
+        assert bnws.cell(2, bnws.cols['Synonyms']).value is None
 
-    def test_add_botanical_name_with_synonyms(self):
+    def testadd_one_with_synonyms(self):
         """Add a BotanicalName with synonyms to Botanical Names sheet."""
-        swb = SeedsWorkbook()
+        wb = Workbook()
+        ws = wb.active
+        bnws = BotanicalNamesWorksheet(ws)
+        bnws.setup()
         bn = BotanicalName(name='Innagada davida')
         cn = CommonName(name='Rock')
         cn.index = Index(name='Music')
         bn.common_names = [cn]
         bn.set_synonyms_string('Iron butterfly')
-        swb.add_botanical_name(bn)
-        sws = swb.botanical_names
-        assert sws.cell(2, sws.cols['Synonyms']).value == 'Iron butterfly'
+        bnws.add_one(bn)
+        assert bnws.cell(2, bnws.cols['Synonyms']).value == 'Iron butterfly'
 
-    def test_add_botanical_name_not_botanical_name(self):
+    def testadd_one_not_botanical_name(self):
         """Raise a TypeError given non-BotanicalName data."""
-        swb = SeedsWorkbook()
+        wb = Workbook()
+        ws = wb.active
+        bnws = BotanicalNamesWorksheet(ws)
+        bnws.setup()
         with pytest.raises(TypeError):
-            swb.add_botanical_name(42)
+            bnws.add_one(42)
         with pytest.raises(TypeError):
-            swb.add_botanical_name(CommonName(name='Spurious'))
+            bnws.add_one(CommonName(name='Spurious'))
 
-    @mock.patch('app.seeds.excel2.SeedsWorkbook.add_botanical_name')
-    def test_add_botanical_names(self, m):
-        """Run add_botanical_name on each BotanicalName in passed iterable."""
-        swb = SeedsWorkbook()
-        bns = (BotanicalName(name='Innagada davida'),
-               BotanicalName(name='Digitalis über alles'),
-               BotanicalName(name='Canis lupus'))
-        swb.add_botanical_names(bns)
-        assert m.call_count == 3
 
-    @mock.patch('app.seeds.excel2.SeedsWorkbook.create_all_sheets')
-    def test_create_series_sheet(self, m):
-        """Create a sheet titled 'Series' and prepare for use."""
-        swb = SeedsWorkbook()
-        swb.create_series_sheet()
-        ws = swb.series._ws
-        assert ws.title == 'Series'
-        assert ws['A1'].value == 'Common Name (JSON)'
-        assert ws['B1'].value == 'Series'
-        assert ws['C1'].value == 'Position'
-        assert ws['D1'].value == 'Description'
-        sws = swb.series
-        assert sws.cols['Common Name (JSON)'] == 1
-        assert sws.cols['Series'] == 2
-        assert sws.cols['Position'] == 3
-        assert sws.cols['Description'] == 4
-
-    @mock.patch('app.seeds.excel2.SeedsWorksheet.populate_cols_dict')
-    def test_load_series_from_workbook(self, m):
-        swb = SeedsWorkbook()
+class TestSeriesWorksheet:
+    """Test methods of the SeriesWorksheet container class."""
+    @mock.patch('app.seeds.excel2.SeriesWorksheet._setup')
+    def test_setup_new(self, m_s):
+        """Run _setup with the titles for the Series worksheet."""
         wb = Workbook()
-        wb.create_sheet(title='Series')
-        swb._wb = wb
-        swb.load_series_from_workbook()
-        assert swb.series._ws is swb._wb['Series']
-        assert m.called
+        ws = wb.active
+        srws = SeriesWorksheet(ws)
+        srws.setup()
+        titles = ('Common Name (JSON)', 'Series', 'Position', 'Description')
+        m_s.assert_called_with(titles)
 
-    @mock.patch('app.seeds.excel2.SeedsWorkbook.create_all_sheets')
-    def test_create_cultivars_sheet(self, m):
-        """Create a sheet titled 'Cultivars' and prepare for use."""
-        swb = SeedsWorkbook()
-        swb.create_cultivars_sheet()
-        ws = swb.cultivars._ws
-        assert ws.title == 'Cultivars'
-        assert ws['A1'].value == 'Index'
-        assert ws['B1'].value == 'Common Name'
-        assert ws['C1'].value == 'Botanical Name'
-        assert ws['D1'].value == 'Series'
-        assert ws['E1'].value == 'Cultivar Name'
-        assert ws['F1'].value == 'Thumbnail Filename'
-        assert ws['G1'].value == 'Description'
-        assert ws['H1'].value == 'Synonyms'
-        assert ws['I1'].value == 'New For'
-        assert ws['J1'].value == 'In Stock'
-        assert ws['K1'].value == 'Active'
-        assert ws['L1'].value == 'Invisible'
-        assert ws['M1'].value == 'Grows With Common Names (JSON)'
-        assert ws['N1'].value == 'Grows With Cultivars (JSON)'
-        sws = swb.cultivars
-        assert sws.cols['Index'] == 1
-        assert sws.cols['Common Name'] == 2
-        assert sws.cols['Botanical Name'] == 3
-        assert sws.cols['Series'] == 4
-        assert sws.cols['Cultivar Name'] == 5
-        assert sws.cols['Thumbnail Filename'] == 6
-        assert sws.cols['Description'] == 7
-        assert sws.cols['Synonyms'] == 8
-        assert sws.cols['New For'] == 9
-        assert sws.cols['In Stock'] == 10
-        assert sws.cols['Active'] == 11
-        assert sws.cols['Invisible'] == 12
-        assert sws.cols['Grows With Common Names (JSON)'] == 13
-        assert sws.cols['Grows With Cultivars (JSON)'] == 14
-
-    @mock.patch('app.seeds.excel2.SeedsWorksheet.populate_cols_dict')
-    def test_load_cultivars_from_workbook(self, m):
-        swb = SeedsWorkbook()
+    @mock.patch('app.seeds.excel2.SeriesWorksheet._setup')
+    def test_setup_existing(self, m_s):
+        """Run _setup with no arguments if titles apready present."""
         wb = Workbook()
-        wb.create_sheet('Cultivars')
-        swb._wb = wb
-        swb.load_cultivars_from_workbook()
-        assert swb.cultivars._ws is swb._wb['Cultivars']
-        assert m.called
+        ws = wb.active
+        sws = SeedsWorksheet(ws)
+        sws.set_column_titles(('One', 'Two', 'Three'))
+        srws = SeriesWorksheet(sws._ws)
+        srws.setup()
+        assert m_s.call_args_list == [mock.call()]
 
-    @mock.patch('app.seeds.excel2.SeedsWorkbook.create_all_sheets')
-    def test_create_packets_sheet(self, m):
-        swb = SeedsWorkbook()
-        swb.create_packets_sheet()
-        ws = swb.packets._ws
-        assert ws.title == 'Packets'
-        assert ws['A1'].value == 'Cultivar (JSON)'
-        assert ws['B1'].value == 'SKU'
-        assert ws['C1'].value == 'Price'
-        assert ws['D1'].value == 'Quantity'
-        assert ws['E1'].value == 'Units'
-        sws = swb.packets
-        assert sws.cols['Cultivar (JSON)'] == 1
-        assert sws.cols['SKU'] == 2
-        assert sws.cols['Price'] == 3
-        assert sws.cols['Quantity'] == 4
-        assert sws.cols['Units'] == 5
-
-    @mock.patch('app.seeds.excel2.SeedsWorksheet.populate_cols_dict')
-    def test_load_packets_from_workbook(self, m):
-        swb = SeedsWorkbook()
+    def testadd_one_no_optionals(self):
+        """Add a Series object to the Series worksheet."""
         wb = Workbook()
-        wb.create_sheet('Packets')
-        swb._wb = wb
-        swb.load_packets_from_workbook()
-        assert swb.packets._ws is swb._wb['Packets']
-        assert m.called
+        ws = wb.active
+        srws = SeriesWorksheet(ws)
+        srws.setup()
+        sr = Series(name='Polkadot')
+        sr.common_name = CommonName(name='Foxglove')
+        sr.common_name.index = Index(name='Perennial')
+        srws.add_one(sr)
+        assert srws.cell(
+            2, srws.cols['Common Name (JSON)']
+        ).value == json.dumps(sr.common_name.lookup_dict())
+        assert srws.cell(2, srws.cols['Series']).value == 'Polkadot'
+        assert srws.cell(2, srws.cols['Position']).value == 'before cultivar'
+        assert srws.cell(2, srws.cols['Description']).value is None
 
+    def testadd_one_with_position(self):
+        """Set Position column's cell with relevant position description."""
+        wb = Workbook()
+        ws = wb.active
+        srws = SeriesWorksheet(ws)
+        srws.setup()
+        sr = Series(name='Polkadot')
+        sr.common_name = CommonName(name='Foxglove')
+        sr.common_name.index = Index(name='Perennial')
+        sr.position = Series.BEFORE_CULTIVAR
+        srws.add_one(sr)
+        assert srws.cell(2, srws.cols['Position']).value == 'before cultivar'
+        sr2 = Series(name='Queen')
+        sr2.common_name = CommonName(name='Cleome')
+        sr2.common_name.index = Index(name='Annual')
+        sr2.position = Series.AFTER_CULTIVAR
+        srws.add_one(sr2)
+        assert srws.cell(3, srws.cols['Position']).value == 'after cultivar'
+
+    def testadd_one_with_description(self):
+        """Set Description column's cell with Series desc."""
+        wb = Workbook()
+        ws = wb.active
+        srws = SeriesWorksheet(ws)
+        srws.setup()
+        sr = Series(name='Polkadot', description='A bit spotty.')
+        sr.common_name = CommonName(name='Foxglove')
+        sr.common_name.index = Index(name='Perennial')
+        srws.add_one(sr)
+        assert srws.cell(2, srws.cols['Description']).value == 'A bit spotty.'
+
+    def testadd_one_not_series(self):
+        """Raise a TypeError if passed argument is not a Series object."""
+        wb = Workbook()
+        ws = wb.active
+        srws = SeriesWorksheet(ws)
+        srws.setup()
+        with pytest.raises(TypeError):
+            srws.add_one(42)
+        with pytest.raises(TypeError):
+            srws.add_one(Index(name='Perennial'))
+
+
+class TestCultivarsWorksheet:
+    """Test methods of the CultivarsWorksheet container class."""
+    @mock.patch('app.seeds.excel2.CultivarsWorksheet._setup')
+    def test_setup_new(self, m_s):
+        """Run _setup with the titles for the Cultivars worksheet."""
+        wb = Workbook()
+        ws = wb.active
+        cvws = CultivarsWorksheet(ws)
+        cvws.setup()
+        titles = ('Index',
+                  'Common Name',
+                  'Cultivar Name',
+                  'Series',
+                  'Botanical Name',
+                  'Thumbnail Filename',
+                  'Description',
+                  'Synonyms',
+                  'New For',
+                  'In Stock',
+                  'Active',
+                  'Invisible',
+                  'Grows With Common Names (JSON)',
+                  'Grows With Cultivars (JSON)')
+        m_s.assert_called_with(titles)
+
+    @mock.patch('app.seeds.excel2.CultivarsWorksheet._setup')
+    def test_setup_existing(self, m_s):
+        """Run _setup with no arguments if titles already exist."""
+        wb = Workbook()
+        ws = wb.active
+        sws = SeedsWorksheet(ws)
+        sws.set_column_titles(('One', 'Two', 'Three'))
+        cvws = CultivarsWorksheet(sws._ws)
+        cvws.setup()
+        assert m_s.call_args_list == [mock.call()]
+
+    def testadd_one_no_optionals(self):
+        """Add a Cultivar to the Cultivars worksheet."""
+        wb = Workbook()
+        ws = wb.active
+        cvws = CultivarsWorksheet(ws)
+        cvws.setup()
+        cv = Cultivar(name='Foxy')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        cvws.add_one(cv)
+        assert cvws.cell(2, cvws.cols['Index']).value == 'Perennial'
+        assert cvws.cell(2, cvws.cols['Common Name']).value == 'Foxglove'
+        assert cvws.cell(2, cvws.cols['Cultivar Name']).value == 'Foxy'
+        assert cvws.cell(2, cvws.cols['Series']).value is None
+        assert cvws.cell(2, cvws.cols['Botanical Name']).value is None
+        assert cvws.cell(2, cvws.cols['Thumbnail Filename']).value is None
+        assert cvws.cell(2, cvws.cols['Description']).value is None
+        assert cvws.cell(2, cvws.cols['Synonyms']).value is None
+        assert cvws.cell(2, cvws.cols['New For']).value is None
+        assert cvws.cell(2, cvws.cols['In Stock']).value == 'False'
+        assert cvws.cell(2, cvws.cols['Active']).value == 'False'
+        assert cvws.cell(2, cvws.cols['Invisible']).value == 'False'
+        assert cvws.cell(
+            2, cvws.cols['Grows With Common Names (JSON)']
+        ).value is None
+        assert cvws.cell(
+            2, cvws.cols['Grows With Cultivars (JSON)']
+        ).value is None
+
+    def testadd_one_with_series(self):
+        """Add a Cultivar with Series to worksheet."""
+        wb = Workbook()
+        ws = wb.active
+        cvws = CultivarsWorksheet(ws)
+        cvws.setup()
+        cv = Cultivar(name='Petra')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        cv.series = Series(name='Polkadot')
+        cvws.add_one(cv)
+        assert cvws.cell(2, cvws.cols['Series']).value == 'Polkadot'
+
+    def testadd_one_with_botanical_name(self):
+        """Add a Cultivar with a Botanical Name to worksheet."""
+        wb = Workbook()
+        ws = wb.active
+        cvws = CultivarsWorksheet(ws)
+        cvws.setup()
+        cv = Cultivar(name='Foxy')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        cv.botanical_name = BotanicalName(name='Digitalis purpurea')
+        cvws.add_one(cv)
+        assert cvws.cell(
+            2, cvws.cols['Botanical Name']
+        ).value == 'Digitalis purpurea'
+
+    def testadd_one_with_thumbnail_filename(self):
+        """Add a Cultivar with a Thumbnail Filename to worksheet."""
+        wb = Workbook()
+        ws = wb.active
+        cvws = CultivarsWorksheet(ws)
+        cvws.setup()
+        cv = Cultivar(name='Foxy')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        cv.thumbnail = Image(filename='foo.jpg')
+        cvws.add_one(cv)
+        assert cvws.cell(2, cvws.cols['Thumbnail Filename']).value == 'foo.jpg'
+
+    def testadd_one_with_description(self):
+        """Add a Cultivar with a description to worksheet."""
+        wb = Workbook()
+        ws = wb.active
+        cvws = CultivarsWorksheet(ws)
+        cvws.setup()
+        cv = Cultivar(name='Foxy')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        cv.description = 'Like a lady!'
+        cvws.add_one(cv)
+        assert cvws.cell(2, cvws.cols['Description']).value == 'Like a lady!'
+
+    def testadd_one_with_synonyms(self):
+        """Add a Cultivar with synonyms to worksheet."""
+        wb = Workbook()
+        ws = wb.active
+        cvws = CultivarsWorksheet(ws)
+        cvws.setup()
+        cv = Cultivar(name='Foxy')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        cv.set_synonyms_string('Vulpine')
+        cvws.add_one(cv)
+        assert cvws.cell(2, cvws.cols['Synonyms']).value == 'Vulpine'
+
+    def testadd_one_with_new_for(self):
+        """Add a Cultivar with New For to worksheet."""
+        wb = Workbook()
+        ws = wb.active
+        cvws = CultivarsWorksheet(ws)
+        cvws.setup()
+        cv = Cultivar(name='Foxy')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        cv.new_for = 1984
+        cvws.add_one(cv)
+        assert cvws.cell(2, cvws.cols['New For']).value == 1984
+
+    def testadd_one_in_stock(self):
+        """Add an in-stock Cultivar to worksheet."""
+        wb = Workbook()
+        ws = wb.active
+        cvws = CultivarsWorksheet(ws)
+        cvws.setup()
+        cv = Cultivar(name='Foxy')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        cv.in_stock = True
+        cvws.add_one(cv)
+        assert cvws.cell(2, cvws.cols['In Stock']).value == 'True'
+        cv2 = Cultivar(name='Soulmate')
+        cv2.common_name = CommonName(name='Butterfly Weed')
+        cv2.common_name.index = Index(name='Perennial')
+        cv2.in_stock = False
+        cvws.add_one(cv2)
+        assert cvws.cell(3, cvws.cols['In Stock']).value == 'False'
+
+    def testadd_one_active(self):
+        """Add an active Cultivar to worksheet."""
+        wb = Workbook()
+        ws = wb.active
+        cvws = CultivarsWorksheet(ws)
+        cvws.setup()
+        cv = Cultivar(name='Foxy')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        cv.active = True
+        cvws.add_one(cv)
+        assert cvws.cell(2, cvws.cols['Active']).value == 'True'
+        cv2 = Cultivar(name='Soulmate')
+        cv2.common_name = CommonName(name='Butterfly Weed')
+        cv2.common_name.index = Index(name='Perennial')
+        cv2.active = False
+        cvws.add_one(cv2)
+        assert cvws.cell(3, cvws.cols['Active']).value == 'False'
+
+    def testadd_one_invisible(self):
+        """Add an invisible Cultivar to worksheet."""
+        wb = Workbook()
+        ws = wb.active
+        cvws = CultivarsWorksheet(ws)
+        cvws.setup()
+        cv = Cultivar(name='Foxy')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        cv.invisible = True
+        cvws.add_one(cv)
+        assert cvws.cell(2, cvws.cols['Invisible']).value == 'True'
+        cv2 = Cultivar(name='Soulmate')
+        cv2.common_name = CommonName(name='Butterfly Weed')
+        cv2.common_name.index = Index(name='Perennial')
+        cv2.invisible = False
+        cvws.add_one(cv2)
+        assert cvws.cell(3, cvws.cols['Invisible']).value == 'False'
+
+    def testadd_one_with_gw_common_names(self):
+        """Add a Cultivar with Grows With Common Names to worksheet."""
+        wb = Workbook()
+        ws = wb.active
+        cvws = CultivarsWorksheet(ws)
+        cvws.setup()
+        cv = Cultivar(name='Foxy')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        gwcn = CommonName(name='Butterfly Weed')
+        gwcn.index = Index(name='Perennial')
+        cv.gw_common_names = [gwcn]
+        cvws.add_one(cv)
+        assert cvws.cell(
+            2, cvws.cols['Grows With Common Names (JSON)']
+        ).value == lookup_dicts_to_json((gwcn,))
+
+    def testadd_one_with_gw_cultivars(self):
+        """Add a Cultivar with Grows With Cultivars to worksheet."""
+        wb = Workbook()
+        ws = wb.active
+        cvws = CultivarsWorksheet(ws)
+        cvws.setup()
+        cv = Cultivar(name='Foxy')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        gwcv = Cultivar(name='Soulmate')
+        gwcv.common_name = CommonName(name='Butterfly Weed')
+        gwcv.common_name.index = Index(name='Perennial')
+        cv.gw_cultivars = [gwcv]
+        cvws.add_one(cv)
+        assert cvws.cell(
+            2, cvws.cols['Grows With Cultivars (JSON)']
+        ).value == lookup_dicts_to_json((gwcv,))
+
+    def testadd_one_not_cultivar(self):
+        """Raise a TypeError given non-Cultivar data."""
+        wb = Workbook()
+        ws = wb.active
+        cvws = CultivarsWorksheet(ws)
+        cvws.setup()
+        with pytest.raises(TypeError):
+            cvws.add_one(42)
+        with pytest.raises(TypeError):
+            cvws.add_one(Series(name='Spurious'))
+
+
+class TestPacketsWorksheet:
+    """Test methods of the PacketsWorksheet container class."""
+    @mock.patch('app.seeds.excel2.PacketsWorksheet._setup')
+    def test_setup_new(self, m_s):
+        """Run _setup with titles on setup of new worksheet."""
+        wb = Workbook()
+        ws = wb.active
+        pws = PacketsWorksheet(ws)
+        pws.setup()
+        titles = ('Cultivar (JSON)', 'SKU', 'Price', 'Quantity', 'Units')
+        m_s.assert_called_with(titles)
+
+    @mock.patch('app.seeds.excel2.PacketsWorksheet._setup')
+    def test_setup_existing(self, m_s):
+        """Run _setup with no args on setup of sheet with titles."""
+        wb = Workbook()
+        ws = wb.active
+        sws = SeedsWorksheet(ws)
+        sws.set_column_titles(('One', 'Two', 'Three'))
+        pws = PacketsWorksheet(sws._ws)
+        pws.setup()
+        assert m_s.call_args_list == [mock.call()]
+
+    def testadd_one(self):
+        """Add a Packet to the Packets worksheet."""
+        wb = Workbook()
+        ws = wb.active
+        pws = PacketsWorksheet(ws)
+        pws.setup()
+        pkt = Packet(sku='8675309', price='3.50', quantity=100, units='seeds')
+        cv = Cultivar(name='Foxy')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        pkt.cultivar = cv
+        pws.add_one(pkt)
+        assert pws.cell(
+            2, pws.cols['Cultivar (JSON)']
+        ).value == json.dumps(cv.lookup_dict())
+        assert pws.cell(2, pws.cols['SKU']).value == '8675309'
+        assert pws.cell(2, pws.cols['Price']).value == '3.50'
+        assert pws.cell(2, pws.cols['Quantity']).value == '100'
+        assert pws.cell(2, pws.cols['Units']).value == 'seeds'
+
+    def testadd_one_not_packet(self):
+        """Raise TypeError given non-Packet data."""
+        wb = Workbook()
+        ws = wb.active
+        pws = PacketsWorksheet(ws)
+        pws.setup()
+        with pytest.raises(TypeError):
+            pws.add_one(42)
+        with pytest.raises(TypeError):
+            pws.add_one(Cultivar(name='Foxy'))
+
+
+class TestSeedsWorkbook:
+    """Test methods of the SeedsWorkbook container class."""
     @mock.patch('app.seeds.excel2.SeedsWorkbook.create_all_sheets')
     def test_remove_all_sheets(self, m):
         """Remove all worksheets from the workbook."""
@@ -525,12 +912,12 @@ class TestSeedsWorkbook:
         assert sorted(titles) == sorted(swb._wb.sheetnames)
 
     @mock.patch('app.seeds.excel2.SeedsWorkbook.remove_all_sheets')
-    @mock.patch('app.seeds.excel2.SeedsWorkbook.create_indexes_sheet')
-    @mock.patch('app.seeds.excel2.SeedsWorkbook.create_common_names_sheet')
-    @mock.patch('app.seeds.excel2.SeedsWorkbook.create_botanical_names_sheet')
-    @mock.patch('app.seeds.excel2.SeedsWorkbook.create_series_sheet')
-    @mock.patch('app.seeds.excel2.SeedsWorkbook.create_cultivars_sheet')
-    @mock.patch('app.seeds.excel2.SeedsWorkbook.create_packets_sheet')
+    @mock.patch('app.seeds.excel2.IndexesWorksheet.setup')
+    @mock.patch('app.seeds.excel2.CommonNamesWorksheet.setup')
+    @mock.patch('app.seeds.excel2.BotanicalNamesWorksheet.setup')
+    @mock.patch('app.seeds.excel2.SeriesWorksheet.setup')
+    @mock.patch('app.seeds.excel2.CultivarsWorksheet.setup')
+    @mock.patch('app.seeds.excel2.PacketsWorksheet.setup')
     def test_create_all_sheets(self,
                                m_pkt,
                                m_cv,
@@ -544,21 +931,25 @@ class TestSeedsWorkbook:
             swb = SeedsWorkbook()
         swb.create_all_sheets()
         assert m_remove.called
+        assert swb.indexes._ws is swb._wb['Indexes']
         assert m_idx.called
+        assert swb.common_names._ws is swb._wb['Common Names']
         assert m_cn.called
+        assert swb.botanical_names._ws is swb._wb['Botanical Names']
         assert m_bn.called
+        assert swb.series._ws is swb._wb['Series']
         assert m_sr.called
+        assert swb.cultivars._ws is swb._wb['Cultivars']
         assert m_cv.called
+        assert swb.packets._ws is swb._wb['Packets']
         assert m_pkt.called
 
-    @mock.patch('app.seeds.excel2.SeedsWorkbook.load_indexes_from_workbook')
-    @mock.patch('app.seeds.excel2.SeedsWorkbook'
-                '.load_common_names_from_workbook')
-    @mock.patch('app.seeds.excel2.SeedsWorkbook'
-                '.load_botanical_names_from_workbook')
-    @mock.patch('app.seeds.excel2.SeedsWorkbook.load_series_from_workbook')
-    @mock.patch('app.seeds.excel2.SeedsWorkbook.load_cultivars_from_workbook')
-    @mock.patch('app.seeds.excel2.SeedsWorkbook.load_packets_from_workbook')
+    @mock.patch('app.seeds.excel2.IndexesWorksheet.setup')
+    @mock.patch('app.seeds.excel2.CommonNamesWorksheet.setup')
+    @mock.patch('app.seeds.excel2.BotanicalNamesWorksheet.setup')
+    @mock.patch('app.seeds.excel2.SeriesWorksheet.setup')
+    @mock.patch('app.seeds.excel2.CultivarsWorksheet.setup')
+    @mock.patch('app.seeds.excel2.PacketsWorksheet.setup')
     def test_load_all_sheets_from_workbook(self,
                                            m_pkt,
                                            m_cv,
@@ -569,9 +960,15 @@ class TestSeedsWorkbook:
         """Load all sheets from self._wb into appropriate attributes."""
         swb = SeedsWorkbook()
         swb.load_all_sheets_from_workbook()
+        assert swb.indexes._ws is swb._wb['Indexes']
         assert m_idx.called
+        assert swb.common_names._ws is swb._wb['Common Names']
         assert m_cn.called
+        assert swb.botanical_names._ws is swb._wb['Botanical Names']
         assert m_bn.called
+        assert swb.series._ws is swb._wb['Series']
         assert m_sr.called
+        assert swb.cultivars._ws is swb._wb['Cultivars']
         assert m_cv.called
+        assert swb.packets._ws is swb._wb['Packets']
         assert m_pkt.called

@@ -5,10 +5,12 @@ from openpyxl import Workbook
 from app.seeds.excel2 import (
     BotanicalNamesWorksheet,
     CommonNamesWorksheet,
+    CultivarsWorksheet,
     get_or_create_common_name,
     get_or_create_cultivar,
     get_or_create_index,
     IndexesWorksheet,
+    PacketsWorksheet,
     SeedsWorksheet,
     SeriesWorksheet
 )
@@ -16,7 +18,10 @@ from app.seeds.models import (
     BotanicalName,
     CommonName,
     Cultivar,
+    Image,
     Index,
+    Packet,
+    Quantity,
     Series
 )
 
@@ -632,7 +637,7 @@ class TestCommonNamesWorksheet:
         msgs = messages.read()
         assert ('The CommonName \'Foxglove\' is visible on generated '
                 'pages.') in msgs
-        
+
     def test_save_row_to_db_new_invisible(self, db):
         """Set invisible to True if true in row."""
         messages = StringIO()
@@ -652,6 +657,27 @@ class TestCommonNamesWorksheet:
         messages.seek(0)
         msgs = messages.read()
         assert ('The CommonName \'Foxglove\' is not visible on generated '
+                'pages.') in msgs
+
+    def test_save_row_to_db_new_null_invisible(self, db):
+        """Treat null value for invisible as False."""
+        messages = StringIO()
+        wb = Workbook()
+        ws = wb.active
+        cnws = CommonNamesWorksheet(ws)
+        cnws.setup()
+        cn = CommonName(name='Foxglove')
+        cn.index = Index(name='Perennial')
+        cn.invisible = None
+        cnws.add_one(cn)
+        assert cnws.save_row_to_db(row=2, file=messages)
+        cnq = CommonName.query\
+            .filter(CommonName._name == 'Foxglove')\
+            .one_or_none()
+        assert not cnq.invisible
+        messages.seek(0)
+        msgs = messages.read()
+        assert ('The CommonName \'Foxglove\' is visible on generated '
                 'pages.') in msgs
 
     def test_save_row_to_db_new_with_new_gwcn(self, db):
@@ -677,6 +703,25 @@ class TestCommonNamesWorksheet:
         msgs = messages.read()
         assert ('The CommonName \'Butterfly Weed\' has been added to Grows '
                 'With Common Names for the CommonName \'Foxglove\'.') in msgs
+
+    def test_save_row_to_db_new_with_same_new_gwcn(self, db):
+        """Don't cause an IntegrityError if GWCN is same as CN."""
+        messages = StringIO()
+        wb = Workbook()
+        ws = wb.active
+        cnws = CommonNamesWorksheet(ws)
+        cnws.setup()
+        cn = CommonName(name='Foxglove')
+        cn.index = Index(name='Perennial')
+        gwcn = CommonName(name='Foxglove')
+        gwcn.index = Index(name='Perennial')
+        cn.gw_common_names.append(gwcn)
+        cnws.add_one(cn)
+        assert cnws.save_row_to_db(row=2, file=messages)
+        cnq = CommonName.query\
+            .filter(CommonName._name == 'Foxglove')\
+            .one_or_none()
+        assert cnq.gw_common_names[0] is cnq
 
     def test_save_row_to_db_new_with_existing_gwcn(self, db):
         """Load GWCN from db if it exists."""
@@ -1318,3 +1363,1274 @@ class TestSeriesWorksheetWithDB:
         msgs = messages.read()
         assert ('The Series name \'Polkadot\' will be placed after the '
                 'Cultivar name for each Cultivar in the Series.') in msgs
+
+
+class TestCultivarsWorksheetWithDB:
+    """Test methods of CultivarsWorksheet which utilize the database."""
+    @mock.patch('app.seeds.excel2.db.session.flush')
+    def test_save_row_to_db_no_changes(self, m_f, db):
+        """Do not change that which does not need to be changed."""
+        messages = StringIO()
+        wb = Workbook()
+        ws = wb.active
+        cvws = CultivarsWorksheet(ws)
+        cvws.setup()
+        cv = Cultivar(name='Foxy')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        cv.in_stock = True
+        cv.active = True
+        cv.invisible = False
+        db.session.add(cv)
+        db.session.commit()
+        cv2 = Cultivar(name='Foxy')
+        cv2.common_name = CommonName(name='Foxglove')
+        cv2.common_name.index = Index(name='Perennial')
+        cv2.in_stock = True
+        cv2.active = True
+        cv2.invisible = False
+        cvws.add_one(cv2)
+        assert not cvws.save_row_to_db(2, file=messages)
+        messages.seek(0)
+        msgs = messages.read()
+        assert not m_f.called
+        assert 'No changes were made' in msgs
+
+    @mock.patch('app.seeds.excel2.db.session.flush')
+    def test_save_row_to_db_no_changes_with_series(self, m_f, db):
+        """Being in a Series shouldn't break the no changes scenario."""
+        messages = StringIO()
+        wb = Workbook()
+        ws = wb.active
+        cvws = CultivarsWorksheet(ws)
+        cvws.setup()
+        cv = Cultivar(name='Petra')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        cv.series = Series(name='Polkadot')
+        cv.series.common_name = cv.common_name
+        cv.in_stock = True
+        cv.active = True
+        cv.invisible = False
+        db.session.add(cv)
+        db.session.commit()
+        cv2 = Cultivar(name='Petra')
+        cv2.common_name = CommonName(name='Foxglove')
+        cv2.common_name.index = Index(name='Perennial')
+        cv2.series = Series(name='Polkadot')
+        cv2.series.common_name = cv2.common_name
+        cv2.in_stock = True
+        cv2.active = True
+        cv2.invisible = False
+        cvws.add_one(cv2)
+        assert not cvws.save_row_to_db(2, file=messages)
+        messages.seek(0)
+        msgs = messages.read()
+        assert not m_f.called
+        assert 'No changes were made' in msgs
+
+    def test_save_row_to_db_new_no_opts(self, db):
+        """Save a new Cultivar to the database using data from row."""
+        messages = StringIO()
+        wb = Workbook()
+        ws = wb.active
+        cvws = CultivarsWorksheet(ws)
+        cvws.setup()
+        cv = Cultivar(name='Foxy')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        cv.in_stock = True
+        cv.active = True
+        cv.invisible = False
+        cvws.add_one(cv)
+        assert cvws.save_row_to_db(row=2, file=messages)
+        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        assert cvq.name == 'Foxy'
+        assert cvq.common_name.name == 'Foxglove'
+        assert cvq.common_name.index.name == 'Perennial'
+        assert cvq.in_stock
+        assert cvq.active
+        assert not cvq.invisible
+        messages.seek(0)
+        msgs = messages.read()
+        assert ('Changes to the Cultivar \'Foxy Foxglove\' have been flushed '
+                'to the database.') in msgs
+
+    def test_save_row_to_db_new_with_series(self, db):
+        """Save a new Cultivar with a Series."""
+        messages = StringIO()
+        wb = Workbook()
+        ws = wb.active
+        cvws = CultivarsWorksheet(ws)
+        cvws.setup()
+        cv = Cultivar(name='Petra')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        cv.series = Series(name='Polkadot')
+        cv.series.common_name = cv.common_name
+        cv.in_stock = True
+        cv.active = True
+        cv.invisible = False
+        cvws.add_one(cv)
+        assert cvws.save_row_to_db(row=2, file=messages)
+        cv = Cultivar.query.filter(Cultivar._name == 'Petra').one_or_none()
+        messages.seek(0)
+        msgs = messages.read()
+        assert cv.series.name == 'Polkadot'
+        assert 'The Series \'Polkadot\' does not yet exist' in msgs
+        assert ('Series for the Cultivar \'Polkadot Petra Foxglove\' set to: '
+                'Polkadot') in msgs
+
+    def test_save_row_to_db_new_with_existing_series(self, db):
+        """Use Series from the database if it already exists."""
+        messages = StringIO()
+        wb = Workbook()
+        ws = wb.active
+        cvws = CultivarsWorksheet(ws)
+        cvws.setup()
+        sr = Series(name='Polkadot')
+        sr.common_name = CommonName(name='Foxglove')
+        sr.common_name.index = Index(name='Perennial')
+        db.session.add(sr)
+        db.session.commit()
+        cv = Cultivar(name='Petra')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        cv.series = Series(name='Polkadot')
+        cv.series.common_name = cv.common_name
+        cv.in_stock = True
+        cv.active = True
+        cv.invisible = False
+        cvws.add_one(cv)
+        assert cvws.save_row_to_db(row=2, file=messages)
+        cv = Cultivar.query.filter(Cultivar._name == 'Petra').one_or_none()
+        messages.seek(0)
+        msgs = messages.read()
+        assert cv.series is sr
+        assert 'The Series \'Polkadot\' has been loaded from' in msgs
+
+    def test_save_row_to_db_new_with_new_botanical_name(self, db):
+        """Create a BotanicalName when creating Cultivar."""
+        messages = StringIO()
+        wb = Workbook()
+        ws = wb.active
+        cvws = CultivarsWorksheet(ws)
+        cvws.setup()
+        cv = Cultivar(name='Foxy')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        cv.botanical_name = BotanicalName(name='Digitalis purpurea')
+        cv.botanical_name.common_names.append(cv.common_name)
+        cv.in_stock = True
+        cv.active = True
+        cv.invisible = False
+        cvws.add_one(cv)
+        assert cvws.save_row_to_db(row=2, file=messages)
+        cv = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        messages.seek(0)
+        msgs = messages.read()
+        assert cv.botanical_name.name == 'Digitalis purpurea'
+        assert 'The BotanicalName \'Digitalis purpurea\' does not yet' in msgs
+        assert ('BotanicalName for the Cultivar \'Foxy Foxglove\' set to: '
+                'Digitalis purpurea') in msgs
+
+    def test_save_row_to_db_new_with_new_bad_botanical_name(self, db):
+        """Fix bad BotanicalName and use fixed version."""
+        messages = StringIO()
+        wb = Workbook()
+        ws = wb.active
+        cvws = CultivarsWorksheet(ws)
+        cvws.setup()
+        cv = Cultivar(name='Foxy')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        cv.botanical_name = BotanicalName()
+        cv.botanical_name._name = 'Digitalis Purpurea'
+        cv.botanical_name.common_names.append(cv.common_name)
+        cv.in_stock = True
+        cv.active = True
+        cv.invisible = False
+        cvws.add_one(cv)
+        assert cvws.save_row_to_db(row=2, file=messages)
+        cv = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        messages.seek(0)
+        msgs = messages.read()
+        assert cv.botanical_name.name == 'Digitalis purpurea'
+        assert ('The BotanicalName \'Digitalis Purpurea\' does not appear to '
+                'be a validly formatted botanical name') in msgs
+
+    def test_save_row_to_db_new_with_existing_botanical_name(self, db):
+        """Use existing BotanicalName instead of new one."""
+        messages = StringIO()
+        wb = Workbook()
+        ws = wb.active
+        cvws = CultivarsWorksheet(ws)
+        cvws.setup()
+        bn = BotanicalName(name='Digitalis purpurea')
+        bn.common_name = CommonName(name='Foxglove')
+        bn.common_name.index = Index(name='Perennial')
+        db.session.add(bn)
+        db.session.commit()
+        cv = Cultivar(name='Foxy')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        cv.botanical_name = BotanicalName(name='Digitalis purpurea')
+        cv.botanical_name.common_names.append(cv.common_name)
+        cv.in_stock = True
+        cv.active = True
+        cv.invisible = False
+        cvws.add_one(cv)
+        assert cvws.save_row_to_db(row=2, file=messages)
+        cv = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        messages.seek(0)
+        msgs = messages.read()
+        assert cv.botanical_name is bn
+        assert 'The BotanicalName \'Digitalis purpurea\' has been load' in msgs
+
+    def test_save_row_to_db_existing_with_new_botanical_name(self, db):
+        """Add a new BotanicalName to an existing Cultivar."""
+        messages = StringIO()
+        wb = Workbook()
+        ws = wb.active
+        cvws = CultivarsWorksheet(ws)
+        cvws.setup()
+        cv = Cultivar(name='Foxy')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        cv.in_stock = True
+        cv.active = True
+        cv.invisible = False
+        db.session.add(cv)
+        db.session.commit()
+        cv2 = Cultivar(name='Foxy')
+        cv2.common_name = CommonName(name='Foxglove')
+        cv2.common_name.index = Index(name='Perennial')
+        cv2.botanical_name = BotanicalName(name='Digitalis purpurea')
+        cv2.botanical_name.common_names.append(cv2.common_name)
+        cv2.in_stock = True
+        cv2.active = True
+        cv2.invisible = False
+        cvws.add_one(cv2)
+        assert cvws.save_row_to_db(row=2, file=messages)
+        messages.seek(0)
+        msgs = messages.read()
+        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        assert cvq is cv
+        assert cv.botanical_name.name == 'Digitalis purpurea'
+        assert ('BotanicalName for the Cultivar \'Foxy Foxglove\' set to: '
+                'Digitalis purpurea') in msgs
+
+    @mock.patch('app.seeds.excel2.Image.exists')
+    def test_save_row_to_db_new_with_new_thumbnail_file_exists(self, m_i, db):
+        """Add a Cultivar with a thumbnail filename."""
+        m_i.return_value = True
+        messages = StringIO()
+        wb = Workbook()
+        ws = wb.active
+        cvws = CultivarsWorksheet(ws)
+        cvws.setup()
+        cv = Cultivar(name='Foxy')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        cv.thumbnail = Image(filename='foxy.jpg')
+        cv.in_stock = True
+        cv.active = True
+        cv.invisible = False
+        cvws.add_one(cv)
+        assert cvws.save_row_to_db(row=2, file=messages)
+        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        messages.seek(0)
+        msgs = messages.read()
+        assert cvq.thumbnail.filename == 'foxy.jpg'
+        assert 'The Image with the filename \'foxy.jpg\' does not yet' in msgs
+
+    @mock.patch('app.seeds.excel2.Image.exists')
+    def test_save_row_to_db_new_with_new_thumbnail_no_file(self, m_i, db):
+        """Notify the user that the file doesn't exist."""
+        m_i.return_value = False
+        messages = StringIO()
+        wb = Workbook()
+        ws = wb.active
+        cvws = CultivarsWorksheet(ws)
+        cvws.setup()
+        cv = Cultivar(name='Foxy')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        cv.thumbnail = Image(filename='foxy.jpg')
+        cv.in_stock = True
+        cv.active = True
+        cv.invisible = False
+        cvws.add_one(cv)
+        assert cvws.save_row_to_db(row=2, file=messages)
+        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        messages.seek(0)
+        msgs = messages.read()
+        assert cvq.thumbnail.filename == 'foxy.jpg'
+        assert ('WARNING: The image file \'foxy.jpg\' set as the thumbnail '
+                'for the Cultivar \'Foxy Foxglove\' does not exist!') in msgs
+
+    def test_save_row_to_db_new_with_existing_thumbnail(self, db):
+        """Load an existing Image from the database instead of creating it."""
+        messages = StringIO()
+        wb = Workbook()
+        ws = wb.active
+        cvws = CultivarsWorksheet(ws)
+        cvws.setup()
+        tn = Image(filename='foxy.jpg')
+        db.session.add(tn)
+        db.session.commit()
+        cv = Cultivar(name='Foxy')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        cv.thumbnail = Image(filename='foxy.jpg')
+        cv.in_stock = True
+        cv.active = True
+        cv.invisible = False
+        cvws.add_one(cv)
+        assert cvws.save_row_to_db(row=2, file=messages)
+        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        messages.seek(0)
+        msgs = messages.read()
+        assert cvq.thumbnail is tn
+        assert 'The Image with the filename \'foxy.jpg\' has been load' in msgs
+
+    def test_save_row_to_db_existing_with_new_thumbnail(self, db):
+        """Set a new thumbnail for an existing Cultivar."""
+        messages = StringIO()
+        wb = Workbook()
+        ws = wb.active
+        cvws = CultivarsWorksheet(ws)
+        cvws.setup()
+        cv = Cultivar(name='Foxy')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        cv.in_stock = True
+        cv.active = True
+        cv.invisible = False
+        db.session.add(cv)
+        db.session.commit()
+        cv2 = Cultivar(name='Foxy')
+        cv2.common_name = CommonName(name='Foxglove')
+        cv2.common_name.index = Index(name='Perennial')
+        cv2.thumbnail = Image(filename='foxy.jpg')
+        cv2.in_stock = True
+        cv2.active = True
+        cv2.invisible = False
+        cvws.add_one(cv2)
+        assert cvws.save_row_to_db(row=2, file=messages)
+        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        messages.seek(0)
+        msgs = messages.read()
+        assert cvq is cv
+        assert cv.thumbnail.filename == 'foxy.jpg'
+        assert ('The Image with the filename \'foxy.jpg\' has been set as the '
+                'thumbnail for the Cultivar \'Foxy Foxglove\'.') in msgs
+
+    def test_save_row_to_db_new_with_description(self, db):
+        """Save a Cultivar with a description to db."""
+        messages = StringIO()
+        wb = Workbook()
+        ws = wb.active
+        cvws = CultivarsWorksheet(ws)
+        cvws.setup()
+        cv = Cultivar(name='Foxy', description='Like a lady.')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        cv.in_stock = True
+        cv.active = True
+        cv.invisible = False
+        cvws.add_one(cv)
+        assert cvws.save_row_to_db(row=2, file=messages)
+        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        messages.seek(0)
+        msgs = messages.read()
+        assert cvq.description == 'Like a lady.'
+        assert ('Description for the Cultivar \'Foxy Foxglove\' set to: Like '
+                'a lady.') in msgs
+
+    def test_save_row_to_db_existing_changes_description(self, db):
+        """Set a new description for an existing Cultivar."""
+        messages = StringIO()
+        wb = Workbook()
+        ws = wb.active
+        cvws = CultivarsWorksheet(ws)
+        cvws.setup()
+        cv = Cultivar(name='Foxy', description='Like a lady.')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        cv.in_stock = True
+        cv.active = True
+        cv.invisible = False
+        db.session.add(cv)
+        db.session.commit()
+        cv2 = Cultivar(name='Foxy', description='Like a Hendrix song.')
+        cv2.common_name = CommonName(name='Foxglove')
+        cv2.common_name.index = Index(name='Perennial')
+        cv2.in_stock = True
+        cv2.active = True
+        cv2.invisible = False
+        cvws.add_one(cv2)
+        assert cvws.save_row_to_db(row=2, file=messages)
+        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        messages.seek(0)
+        msgs = messages.read()
+        assert cvq is cv
+        assert cv.description == 'Like a Hendrix song.'
+        assert ('Description for the Cultivar \'Foxy Foxglove\' set to: Like '
+                'a Hendrix song.') in msgs
+
+    def test_save_row_to_db_existing_clears_description(self, db):
+        """Clear the description for an existing Cultivar."""
+        messages = StringIO()
+        wb = Workbook()
+        ws = wb.active
+        cvws = CultivarsWorksheet(ws)
+        cvws.setup()
+        cv = Cultivar(name='Foxy', description='Like a lady.')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        cv.in_stock = True
+        cv.active = True
+        cv.invisible = False
+        db.session.add(cv)
+        db.session.commit()
+        cv2 = Cultivar(name='Foxy')
+        cv2.common_name = CommonName(name='Foxglove')
+        cv2.common_name.index = Index(name='Perennial')
+        cv2.in_stock = True
+        cv2.active = True
+        cv2.invisible = False
+        cvws.add_one(cv2)
+        assert cvws.save_row_to_db(row=2, file=messages)
+        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        messages.seek(0)
+        msgs = messages.read()
+        assert cvq is cv
+        assert cv.description is None
+        assert ('Description for the Cultivar \'Foxy Foxglove\' has been '
+                'cleared.') in msgs
+
+    def test_save_row_to_db_new_with_synonyms(self, db):
+        """Save a Cultivar with synonyms."""
+        messages = StringIO()
+        wb = Workbook()
+        ws = wb.active
+        cvws = CultivarsWorksheet(ws)
+        cvws.setup()
+        cv = Cultivar(name='Foxy')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        cv.set_synonyms_string('Vulpine')
+        cv.in_stock = True
+        cv.active = True
+        cv.invisible = False
+        cvws.add_one(cv)
+        assert cvws.save_row_to_db(row=2, file=messages)
+        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        messages.seek(0)
+        msgs = messages.read()
+        assert cvq.get_synonyms_string() == 'Vulpine'
+        assert ('Synonyms for the Cultivar \'Foxy Foxglove\' set to: '
+                'Vulpine') in msgs
+
+    def test_save_row_to_db_existing_changes_synonyms(self, db):
+        """Change old synonyms to new ones."""
+        messages = StringIO()
+        wb = Workbook()
+        ws = wb.active
+        cvws = CultivarsWorksheet(ws)
+        cvws.setup()
+        cv = Cultivar(name='Foxy')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        cv.set_synonyms_string('Vulpine')
+        cv.in_stock = True
+        cv.active = True
+        cv.invisible = False
+        db.session.add(cv)
+        db.session.commit()
+        cv2 = Cultivar(name='Foxy')
+        cv2.common_name = CommonName(name='Foxglove')
+        cv2.common_name.index = Index(name='Perennial')
+        cv2.set_synonyms_string('Fauxy')
+        cv2.in_stock = True
+        cv2.active = True
+        cv2.invisible = False
+        cvws.add_one(cv2)
+        assert cvws.save_row_to_db(row=2, file=messages)
+        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        messages.seek(0)
+        msgs = messages.read()
+        assert cvq is cv
+        assert cv.get_synonyms_string() == 'Fauxy'
+        assert ('Synonyms for the Cultivar \'Foxy Foxglove\' set to: '
+                'Fauxy') in msgs
+
+    def test_save_row_to_db_existing_clears_synonyms(self, db):
+        """Clear the synonyms for an existing Cultivar."""
+        messages = StringIO()
+        wb = Workbook()
+        ws = wb.active
+        cvws = CultivarsWorksheet(ws)
+        cvws.setup()
+        cv = Cultivar(name='Foxy')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        cv.set_synonyms_string('Vulpine')
+        cv.in_stock = True
+        cv.active = True
+        cv.invisible = False
+        db.session.add(cv)
+        db.session.commit()
+        cv2 = Cultivar(name='Foxy')
+        cv2.common_name = CommonName(name='Foxglove')
+        cv2.common_name.index = Index(name='Perennial')
+        cv2.in_stock = True
+        cv2.active = True
+        cv2.invisible = False
+        cvws.add_one(cv2)
+        assert cvws.save_row_to_db(row=2, file=messages)
+        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        messages.seek(0)
+        msgs = messages.read()
+        assert cvq is cv
+        assert not cv.synonyms
+        assert ('Synonyms for the Cultivar \'Foxy Foxglove\' have been '
+                'cleared.') in msgs
+
+    def test_save_row_to_db_new_with_new_for(self, db):
+        """Create a Cultivar with new_for data."""
+        messages = StringIO()
+        wb = Workbook()
+        ws = wb.active
+        cvws = CultivarsWorksheet(ws)
+        cvws.setup()
+        cv = Cultivar(name='Foxy')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        cv.new_for = 2101
+        cv.in_stock = True
+        cv.active = True
+        cv.invisible = False
+        cvws.add_one(cv)
+        assert cvws.save_row_to_db(row=2, file=messages)
+        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        messages.seek(0)
+        msgs = messages.read()
+        assert cvq.new_for == 2101
+        assert ('The Cultivar \'Foxy Foxglove\' has been set as new for '
+                '2101.') in msgs
+
+    def test_save_row_to_db_existing_with_new_for(self, db):
+        """Add a new_for value to an existing Cultivar."""
+        messages = StringIO()
+        wb = Workbook()
+        ws = wb.active
+        cvws = CultivarsWorksheet(ws)
+        cvws.setup()
+        cv = Cultivar(name='Foxy')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        cv.in_stock = True
+        cv.active = True
+        cv.invisible = False
+        db.session.add(cv)
+        db.session.commit()
+        cv2 = Cultivar(name='Foxy')
+        cv2.common_name = CommonName(name='Foxglove')
+        cv2.common_name.index = Index(name='Perennial')
+        cv2.new_for = 2101
+        cv2.in_stock = True
+        cv2.active = True
+        cv2.invisible = False
+        cvws.add_one(cv2)
+        assert cvws.save_row_to_db(row=2, file=messages)
+        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        assert cvq is cv
+        assert cv.new_for == 2101
+
+    def test_save_row_to_db_existing_changes_new_for(self, db):
+        """Replace existing new_for with new value."""
+        messages = StringIO()
+        wb = Workbook()
+        ws = wb.active
+        cvws = CultivarsWorksheet(ws)
+        cvws.setup()
+        cv = Cultivar(name='Foxy')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        cv.new_for = 2101
+        cv.in_stock = True
+        cv.active = True
+        cv.invisible = False
+        db.session.add(cv)
+        db.session.commit()
+        cv2 = Cultivar(name='Foxy')
+        cv2.common_name = CommonName(name='Foxglove')
+        cv2.common_name.index = Index(name='Perennial')
+        cv2.new_for = 2525
+        cv2.in_stock = True
+        cv2.active = True
+        cv2.invisible = False
+        cvws.add_one(cv2)
+        assert cvws.save_row_to_db(row=2, file=messages)
+        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        assert cvq is cv
+        assert cv.new_for == 2525
+
+    def test_save_row_to_db_existing_removes_new_for(self, db):
+        """Remove new_for if row lacks it."""
+        messages = StringIO()
+        wb = Workbook()
+        ws = wb.active
+        cvws = CultivarsWorksheet(ws)
+        cvws.setup()
+        cv = Cultivar(name='Foxy')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        cv.new_for = 2101
+        cv.in_stock = True
+        cv.active = True
+        cv.invisible = False
+        db.session.add(cv)
+        db.session.commit()
+        cv2 = Cultivar(name='Foxy')
+        cv2.common_name = CommonName(name='Foxglove')
+        cv2.common_name.index = Index(name='Perennial')
+        cv2.in_stock = True
+        cv2.active = True
+        cv2.invisible = False
+        cvws.add_one(cv2)
+        assert cvws.save_row_to_db(row=2, file=messages)
+        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        messages.seek(0)
+        msgs = messages.read()
+        assert cvq is cv
+        assert cv.new_for is None
+        assert ('The Cultivar \'Foxy Foxglove\' is no longer set as new for '
+                'any year.') in msgs
+
+    def test_save_row_to_db_new_default_bools(self, db):
+        """Create new Cultivar w/ defaults for in_stock, active, invisible."""
+        messages = StringIO()
+        wb = Workbook()
+        ws = wb.active
+        cvws = CultivarsWorksheet(ws)
+        cvws.setup()
+        cv = Cultivar(name='Foxy')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        cv.in_stock = True
+        cv.active = True
+        cv.invisible = False
+        cvws.add_one(cv)
+        assert cvws.save_row_to_db(row=2, file=messages)
+        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        messages.seek(0)
+        msgs = messages.read()
+        assert cvq.in_stock
+        assert cvq.active
+        assert not cvq.invisible
+        assert 'The Cultivar \'Foxy Foxglove\' is in stock' in msgs
+        assert 'The Cultivar \'Foxy Foxglove\' is active' in msgs
+        assert 'The Cultivar \'Foxy Foxglove\' will be shown on auto' in msgs
+
+    def test_save_row_to_db_new_opposite_bools(self, db):
+        """Create new Cultivar w/ opposites for in_stock, active, invisible."""
+        messages = StringIO()
+        wb = Workbook()
+        ws = wb.active
+        cvws = CultivarsWorksheet(ws)
+        cvws.setup()
+        cv = Cultivar(name='Foxy')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        cv.in_stock = False
+        cv.active = False
+        cv.invisible = True
+        cvws.add_one(cv)
+        assert cvws.save_row_to_db(row=2, file=messages)
+        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        messages.seek(0)
+        msgs = messages.read()
+        assert not cvq.in_stock
+        assert not cvq.active
+        assert cvq.invisible
+        assert 'The Cultivar \'Foxy Foxglove\' is out of stock' in msgs
+        assert 'The Cultivar \'Foxy Foxglove\' is inactive' in msgs
+        assert 'The Cultivar \'Foxy Foxglove\' will not be shown on' in msgs
+
+    def test_save_row_to_db_existing_flip_bools(self, db):
+        """Change values of bools."""
+        messages = StringIO()
+        wb = Workbook()
+        ws = wb.active
+        cvws = CultivarsWorksheet(ws)
+        cvws.setup()
+        cv = Cultivar(name='Foxy')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        cv.in_stock = True
+        cv.active = True
+        cv.invisible = False
+        db.session.add(cv)
+        db.session.commit()
+        cv2 = Cultivar(name='Foxy')
+        cv2.common_name = CommonName(name='Foxglove')
+        cv2.common_name.index = Index(name='Perennial')
+        cv2.in_stock = False
+        cv2.active = False
+        cv2.invisible = True
+        cvws.add_one(cv2)
+        assert cvws.save_row_to_db(row=2, file=messages)
+        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        messages.seek(0)
+        msgs = messages.read()
+        assert cvq is cv
+        assert not cv.in_stock
+        assert not cv.active
+        assert cv.invisible
+        assert 'The Cultivar \'Foxy Foxglove\' is out of stock' in msgs
+        assert 'The Cultivar \'Foxy Foxglove\' is inactive' in msgs
+        assert 'The Cultivar \'Foxy Foxglove\' will not be shown on' in msgs
+        messages = StringIO()
+        cv3 = Cultivar(name='Foxy')
+        cv3.common_name = CommonName(name='Foxglove')
+        cv3.common_name.index = Index(name='Perennial')
+        cv3.in_stock = True
+        cv3.active = True
+        cv3.invisible = False
+        cvws.add_one(cv3)
+        assert cvws.save_row_to_db(row=3, file=messages)
+        messages.seek(0)
+        msgs = messages.read()
+        assert cv.in_stock
+        assert cv.active
+        assert not cv.invisible
+        assert 'The Cultivar \'Foxy Foxglove\' is in stock' in msgs
+        assert 'The Cultivar \'Foxy Foxglove\' is active' in msgs
+        assert 'The Cultivar \'Foxy Foxglove\' will be shown on auto' in msgs
+
+    def test_save_row_to_db_new_null_bools(self, db):
+        """Treat null booleans as False."""
+        messages = StringIO()
+        wb = Workbook()
+        ws = wb.active
+        cvws = CultivarsWorksheet(ws)
+        cvws.setup()
+        cv = Cultivar(name='Foxy')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        cv.in_stock = None
+        cv.active = None
+        cv.invisible = None
+        cvws.add_one(cv)
+        assert cvws.save_row_to_db(row=2, file=messages)
+        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        messages.seek(0)
+        msgs = messages.read()
+        assert not cvq.in_stock
+        assert not cvq.active
+        assert not cvq.invisible
+        assert 'The Cultivar \'Foxy Foxglove\' is out of stock' in msgs
+        assert 'The Cultivar \'Foxy Foxglove\' is inactive' in msgs
+        assert 'The Cultivar \'Foxy Foxglove\' will be shown on auto' in msgs
+
+    def test_save_row_to_db_new_with_new_gwcn(self, db):
+        """Save a Cultivar to db with Grows With Common Names."""
+        messages = StringIO()
+        wb = Workbook()
+        ws = wb.active
+        cvws = CultivarsWorksheet(ws)
+        cvws.setup()
+        cv = Cultivar(name='Foxy')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        cv.in_stock = False
+        cv.active = False
+        cv.invisible = True
+        gwcn = CommonName(name='Butterfly Weed')
+        gwcn.index = Index(name='Perennial')
+        cv.gw_common_names.append(gwcn)
+        cvws.add_one(cv)
+        assert cvws.save_row_to_db(row=2, file=messages)
+        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        messages.seek(0)
+        msgs = messages.read()
+        assert cvq.gw_common_names[0].name == 'Butterfly Weed'
+        assert ('The CommonName \'Butterfly Weed\' has been added to Grows '
+                'With Common Names for the Cultivar \'Foxy '
+                'Foxglove\'.') in msgs
+
+    def test_save_row_to_db_new_with_existing_gwcn(self, db):
+        """Save a Cultivar to db with an existing CN as a GWCN."""
+        messages = StringIO()
+        wb = Workbook()
+        ws = wb.active
+        cvws = CultivarsWorksheet(ws)
+        cvws.setup()
+        cn = CommonName(name='Butterfly Weed')
+        cn.index = Index(name='Perennial')
+        db.session.add(cn)
+        db.session.commit()
+        cv = Cultivar(name='Foxy')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        cv.in_stock = False
+        cv.active = False
+        cv.invisible = True
+        gwcn = CommonName(name='Butterfly Weed')
+        gwcn.index = Index(name='Perennial')
+        cv.gw_common_names.append(gwcn)
+        cvws.add_one(cv)
+        assert cvws.save_row_to_db(row=2, file=messages)
+        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        messages.seek(0)
+        msgs = messages.read()
+        assert cvq.gw_common_names[0] is cn
+        assert ('The CommonName \'Butterfly Weed\' has been added to Grows '
+                'With Common Names for the Cultivar \'Foxy '
+                'Foxglove\'.') in msgs
+
+    def test_save_row_to_db_existing_with_new_gwcn(self, db):
+        """Add a GWCN to an existing Cultivar."""
+        messages = StringIO()
+        wb = Workbook()
+        ws = wb.active
+        cvws = CultivarsWorksheet(ws)
+        cvws.setup()
+        cv = Cultivar(name='Foxy')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        cv.in_stock = False
+        cv.active = False
+        cv.invisible = True
+        db.session.add(cv)
+        db.session.commit()
+        cv2 = Cultivar(name='Foxy')
+        cv2.common_name = CommonName(name='Foxglove')
+        cv2.common_name.index = Index(name='Perennial')
+        cv2.in_stock = False
+        cv2.active = False
+        cv2.invisible = True
+        gwcn = CommonName(name='Butterfly Weed')
+        gwcn.index = Index(name='Perennial')
+        cv2.gw_common_names.append(gwcn)
+        cvws.add_one(cv2)
+        assert cvws.save_row_to_db(row=2, file=messages)
+        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        messages.seek(0)
+        msgs = messages.read()
+        assert cvq is cv
+        assert cv.gw_common_names[0].name == 'Butterfly Weed'
+        assert ('The CommonName \'Butterfly Weed\' has been added to Grows '
+                'With Common Names for the Cultivar \'Foxy '
+                'Foxglove\'.') in msgs
+
+    def test_save_row_to_db_existing_removes_gwcn(self, db):
+        """Remove a GWCN from an existing Cultivar."""
+        messages = StringIO()
+        wb = Workbook()
+        ws = wb.active
+        cvws = CultivarsWorksheet(ws)
+        cvws.setup()
+        cv = Cultivar(name='Foxy')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        cv.in_stock = False
+        cv.active = False
+        cv.invisible = True
+        gwcn = CommonName(name='Butterfly Weed')
+        gwcn.index = cv.common_name.index
+        cv.gw_common_names.append(gwcn)
+        db.session.add(cv)
+        db.session.commit()
+        cv2 = Cultivar(name='Foxy')
+        cv2.common_name = CommonName(name='Foxglove')
+        cv2.common_name.index = Index(name='Perennial')
+        cv2.in_stock = False
+        cv2.active = False
+        cv2.invisible = True
+        cvws.add_one(cv2)
+        assert cvws.save_row_to_db(row=2, file=messages)
+        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        messages.seek(0)
+        msgs = messages.read()
+        assert cvq is cv
+        assert not cv.gw_common_names
+        assert ('The CommonName \'Butterfly Weed\' has been removed from '
+                'Grows With Common Names for the Cultivar \'Foxy '
+                'Foxglove\'.') in msgs
+
+    def test_save_row_to_db_existing_switches_gwcn(self, db):
+        """Remove old GWCN and add a new one."""
+        messages = StringIO()
+        wb = Workbook()
+        ws = wb.active
+        cvws = CultivarsWorksheet(ws)
+        cvws.setup()
+        cv = Cultivar(name='Foxy')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        cv.in_stock = False
+        cv.active = False
+        cv.invisible = True
+        gwcn = CommonName(name='Butterfly Weed')
+        gwcn.index = cv.common_name.index
+        cv.gw_common_names = [gwcn]
+        db.session.add(cv)
+        db.session.commit()
+        cv2 = Cultivar(name='Foxy')
+        cv2.common_name = CommonName(name='Foxglove')
+        cv2.common_name.index = Index(name='Perennial')
+        cv2.in_stock = False
+        cv2.active = False
+        cv2.invisible = True
+        gwcn2 = CommonName(name='Coleus')
+        gwcn2.index = Index(name='Annual')
+        cv2.gw_common_names = [gwcn2]
+        cvws.add_one(cv2)
+        assert cvws.save_row_to_db(row=2, file=messages)
+        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        messages.seek(0)
+        msgs = messages.read()
+        assert cvq is cv
+        assert gwcn not in cv.gw_common_names
+        assert cv.gw_common_names[0].name == 'Coleus'
+        assert len(cv.gw_common_names) == 1
+        assert ('The CommonName \'Butterfly Weed\' has been removed from '
+                'Grows With Common Names for the Cultivar \'Foxy '
+                'Foxglove\'.') in msgs
+        assert ('The CommonName \'Coleus\' has been added to Grows With '
+                'Common Names for the Cultivar \'Foxy Foxglove\'.') in msgs
+
+    def test_save_row_to_db_new_with_new_gwcv(self, db):
+        """Save a Cultivar with a GWCV."""
+        messages = StringIO()
+        wb = Workbook()
+        ws = wb.active
+        cvws = CultivarsWorksheet(ws)
+        cvws.setup()
+        cv = Cultivar(name='Foxy')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        cv.in_stock = False
+        cv.active = False
+        cv.invisible = True
+        gwcv = Cultivar(name='Soulmate')
+        gwcv.common_name = CommonName(name='Butterfly Weed')
+        gwcv.common_name.index = cv.common_name.index
+        cv.gw_cultivars = [gwcv]
+        cvws.add_one(cv)
+        assert cvws.save_row_to_db(row=2, file=messages)
+        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        messages.seek(0)
+        msgs = messages.read()
+        assert cvq.gw_cultivars[0].fullname == 'Soulmate Butterfly Weed'
+        assert ('The Cultivar \'Soulmate Butterfly Weed\' has been added to '
+                'Grows With Cultivars for the Cultivar \'Foxy '
+                'Foxglove\'.') in msgs
+
+    def test_save_row_to_db_new_with_existing_gwcv(self, db):
+        """Save a new Cultivar with an existing CV as a GWCV."""
+        messages = StringIO()
+        wb = Workbook()
+        ws = wb.active
+        cvws = CultivarsWorksheet(ws)
+        cvws.setup()
+        gwcv = Cultivar(name='Soulmate')
+        gwcv.common_name = CommonName(name='Butterfly Weed')
+        gwcv.common_name.index = Index(name='Perennial')
+        db.session.add(gwcv)
+        db.session.commit()
+        cv = Cultivar(name='Foxy')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        cv.in_stock = False
+        cv.active = False
+        cv.invisible = True
+        gwcv2 = Cultivar(name='Soulmate')
+        gwcv2.common_name = CommonName(name='Butterfly Weed')
+        gwcv2.common_name.index = cv.common_name.index
+        cv.gw_cultivars = [gwcv2]
+        cvws.add_one(cv)
+        assert cvws.save_row_to_db(row=2, file=messages)
+        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        messages.seek(0)
+        msgs = messages.read()
+        assert cvq.gw_cultivars[0] is gwcv
+        assert ('The Cultivar \'Soulmate Butterfly Weed\' has been added to '
+                'Grows With Cultivars for the Cultivar \'Foxy '
+                'Foxglove\'.') in msgs
+
+    def test_save_row_to_db_existing_with_new_gwcv(self, db):
+        """Add a GWCV to an existing Cultivar."""
+        messages = StringIO()
+        wb = Workbook()
+        ws = wb.active
+        cvws = CultivarsWorksheet(ws)
+        cvws.setup()
+        cv = Cultivar(name='Foxy')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        cv.in_stock = False
+        cv.active = False
+        cv.invisible = True
+        db.session.add(cv)
+        db.session.commit()
+        cv2 = Cultivar(name='Foxy')
+        cv2.common_name = CommonName(name='Foxglove')
+        cv2.common_name.index = Index(name='Perennial')
+        cv2.in_stock = False
+        cv2.active = False
+        cv2.invisible = True
+        gwcv = Cultivar(name='Soulmate')
+        gwcv.common_name = CommonName(name='Butterfly Weed')
+        gwcv.common_name.index = cv2.common_name.index
+        cv2.gw_cultivars = [gwcv]
+        cvws.add_one(cv2)
+        assert cvws.save_row_to_db(row=2, file=messages)
+        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        messages.seek(0)
+        msgs = messages.read()
+        assert cvq is cv
+        assert cv.gw_cultivars[0].fullname == 'Soulmate Butterfly Weed'
+        assert ('The Cultivar \'Soulmate Butterfly Weed\' has been added to '
+                'Grows With Cultivars for the Cultivar \'Foxy '
+                'Foxglove\'.') in msgs
+
+    def test_save_row_to_db_existing_removes_gwcv(self, db):
+        """Remove a gwcv from an existing Cultivar."""
+        messages = StringIO()
+        wb = Workbook()
+        ws = wb.active
+        cvws = CultivarsWorksheet(ws)
+        cvws.setup()
+        cv = Cultivar(name='Foxy')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        cv.in_stock = False
+        cv.active = False
+        cv.invisible = True
+        gwcv = Cultivar(name='Soulmate')
+        gwcv.common_name = CommonName(name='Butterfly Weed')
+        gwcv.common_name.index = cv.common_name.index
+        cv.gw_cultivars = [gwcv]
+        db.session.add(cv)
+        db.session.commit()
+        cv2 = Cultivar(name='Foxy')
+        cv2.common_name = CommonName(name='Foxglove')
+        cv2.common_name.index = Index(name='Perennial')
+        cv2.in_stock = False
+        cv2.active = False
+        cv2.invisible = True
+        cvws.add_one(cv2)
+        assert cvws.save_row_to_db(row=2, file=messages)
+        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        messages.seek(0)
+        msgs = messages.read()
+        assert cvq is cv
+        assert not cv.gw_cultivars
+        assert ('The Cultivar \'Soulmate Butterfly Weed\' has been removed '
+                'from Grows With Cultivars for the Cultivar \'Foxy '
+                'Foxglove\'.') in msgs
+
+    def test_save_row_to_db_existing_switches_gwcv(self, db):
+        """Remove old GWCV, add new one."""
+        messages = StringIO()
+        wb = Workbook()
+        ws = wb.active
+        cvws = CultivarsWorksheet(ws)
+        cvws.setup()
+        cv = Cultivar(name='Foxy')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        cv.in_stock = False
+        cv.active = False
+        cv.invisible = True
+        gwcv = Cultivar(name='Soulmate')
+        gwcv.common_name = CommonName(name='Butterfly Weed')
+        gwcv.common_name.index = cv.common_name.index
+        cv.gw_cultivars = [gwcv]
+        db.session.add(cv)
+        db.session.commit()
+        cv2 = Cultivar(name='Foxy')
+        cv2.common_name = CommonName(name='Foxglove')
+        cv2.common_name.index = Index(name='Perennial')
+        cv2.in_stock = False
+        cv2.active = False
+        cv2.invisible = True
+        gwcv2 = Cultivar(name='King')
+        gwcv2.common_name = CommonName(name='Coleus')
+        gwcv2.common_name.index = Index(name='Annual')
+        cv2.gw_cultivars = [gwcv2]
+        cvws.add_one(cv2)
+        assert cvws.save_row_to_db(row=2, file=messages)
+        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        messages.seek(0)
+        msgs = messages.read()
+        assert cvq is cv
+        assert gwcv not in cv.gw_cultivars
+        assert cv.gw_cultivars[0].fullname == 'King Coleus'
+        assert len(cv.gw_cultivars) == 1
+        assert ('The Cultivar \'King Coleus\' has been added to Grows With '
+                'Cultivars for the Cultivar \'Foxy Foxglove\'.') in msgs
+        assert ('The Cultivar \'Soulmate Butterfly Weed\' has been removed '
+                'from Grows With Cultivars for the Cultivar \'Foxy '
+                'Foxglove\'.') in msgs
+
+
+class TestPacketsWorksheetWithDB:
+    """Test methods of PacketsWorksheet that use the database."""
+    @mock.patch('app.seeds.excel2.db.session.flush')
+    def test_save_row_to_db_no_changes(self, m_f, db):
+        """Don't change a Packet if row data is the same."""
+        messages = StringIO()
+        wb = Workbook()
+        ws = wb.active
+        pws = PacketsWorksheet(ws)
+        pws.setup()
+        pkt = Packet(sku='8675309', price='3.50', quantity=100, units='seeds')
+        pkt.cultivar = Cultivar(name='Foxy')
+        pkt.cultivar.common_name = CommonName(name='Foxglove')
+        pkt.cultivar.common_name.index = Index(name='Perennial')
+        db.session.add(pkt)
+        db.session.commit()
+        pkt2 = Packet(sku='8675309', price='3.50')
+        pkt2.quantity = Quantity(value=100, units='seeds')
+        pkt2.cultivar = Cultivar(name='Foxy')
+        pkt2.cultivar.common_name = CommonName(name='Foxglove')
+        pkt2.cultivar.common_name.index = Index(name='Perennial')
+        pws.add_one(pkt2)
+        assert not pws.save_row_to_db(row=2, file=messages)
+        messages.seek(0)
+        msgs = messages.read()
+        assert not m_f.called
+        assert 'No changes were made to the Packet' in msgs
+
+    def test_save_row_to_db_new(self, db):
+        """Save a new Packet to the database."""
+        messages = StringIO()
+        wb = Workbook()
+        ws = wb.active
+        pws = PacketsWorksheet(ws)
+        pws.setup()
+        pkt = Packet(sku='8675309', price='3.50', quantity=100, units='seeds')
+        pkt.cultivar = Cultivar(name='Foxy')
+        pkt.cultivar.common_name = CommonName(name='Foxglove')
+        pkt.cultivar.common_name.index = Index(name='Perennial')
+        pws.add_one(pkt)
+        assert pws.save_row_to_db(row=2, file=messages)
+        messages.seek(0)
+        msgs = messages.read()
+        pktq = Packet.query.filter(Packet.sku == '8675309').one_or_none()
+        assert pktq.price == '3.50'
+        assert pktq.quantity.value == 100
+        assert pktq.quantity.units == 'seeds'
+        assert 'The Packet with SKU \'8675309\' does not yet exist' in msgs
+        assert 'Changes to the Packet' in msgs
+
+    def test_save_row_to_db_new_to_existing_cultivar(self, db):
+        """Add a Packet to an existing Cultivar."""
+        messages = StringIO()
+        wb = Workbook()
+        ws = wb.active
+        pws = PacketsWorksheet(ws)
+        pws.setup()
+        cv = Cultivar(name='Foxy')
+        cv.common_name = CommonName(name='Foxglove')
+        cv.common_name.index = Index(name='Perennial')
+        db.session.add(cv)
+        db.session.commit()
+        pkt = Packet(sku='8675309', price='3.50', quantity=100, units='seeds')
+        pkt.cultivar = Cultivar(name='Foxy')
+        pkt.cultivar.common_name = CommonName(name='Foxglove')
+        pkt.cultivar.common_name.index = Index(name='Perennial')
+        pws.add_one(pkt)
+        assert pws.save_row_to_db(row=2, file=messages)
+        pktq = Packet.query.filter(Packet.sku == '8675309').one_or_none()
+        assert pktq.cultivar is cv
+
+    def test_save_row_to_db_existing_new_price(self, db):
+        """Change the price of an existing packet."""
+        messages = StringIO()
+        wb = Workbook()
+        ws = wb.active
+        pws = PacketsWorksheet(ws)
+        pws.setup()
+        pkt = Packet(sku='8675309', price='3.50', quantity=100, units='seeds')
+        pkt.cultivar = Cultivar(name='Foxy')
+        pkt.cultivar.common_name = CommonName(name='Foxglove')
+        pkt.cultivar.common_name.index = Index(name='Perennial')
+        db.session.add(pkt)
+        db.session.commit()
+        pkt2 = Packet(sku='8675309', price='9.99')
+        pkt2.quantity = Quantity(value=100, units='seeds')
+        pkt2.cultivar = Cultivar(name='Foxy')
+        pkt2.cultivar.common_name = CommonName(name='Foxglove')
+        pkt2.cultivar.common_name.index = Index(name='Perennial')
+        pws.add_one(pkt2)
+        assert pws.save_row_to_db(row=2, file=messages)
+        messages.seek(0)
+        msgs = messages.read()
+        pktq = Packet.query.filter(Packet.sku == '8675309').one_or_none()
+        assert pktq is pkt
+        assert pkt.price == '9.99'
+        assert ('The price for Packet SKU \'8675309\' has been set to: '
+                '$9.99.') in msgs
+
+    def test_save_row_to_db_existing_new_quantity(self, db):
+        """Change quantity (value) of an existing packet."""
+        messages = StringIO()
+        wb = Workbook()
+        ws = wb.active
+        pws = PacketsWorksheet(ws)
+        pws.setup()
+        pkt = Packet(sku='8675309', price='3.50', quantity=100, units='seeds')
+        pkt.cultivar = Cultivar(name='Foxy')
+        pkt.cultivar.common_name = CommonName(name='Foxglove')
+        pkt.cultivar.common_name.index = Index(name='Perennial')
+        db.session.add(pkt)
+        db.session.commit()
+        pkt2 = Packet(sku='8675309', price='3.50')
+        pkt2.quantity = Quantity(value=9001, units='seeds')
+        pkt2.cultivar = Cultivar(name='Foxy')
+        pkt2.cultivar.common_name = CommonName(name='Foxglove')
+        pkt2.cultivar.common_name.index = Index(name='Perennial')
+        pws.add_one(pkt2)
+        assert pws.save_row_to_db(row=2, file=messages)
+        messages.seek(0)
+        msgs = messages.read()
+        pktq = Packet.query.filter(Packet.sku == '8675309').one_or_none()
+        assert pktq is pkt
+        assert pkt.quantity.value == 9001
+        assert ('The quantity for the Packet SKU \'8675309\' has been set to: '
+                '9001.') in msgs
+
+    def test_save_row_to_db_existing_new_units(self, db):
+        """Change units of an existing packet."""
+        messages = StringIO()
+        wb = Workbook()
+        ws = wb.active
+        pws = PacketsWorksheet(ws)
+        pws.setup()
+        pkt = Packet(sku='8675309', price='3.50', quantity=100, units='seeds')
+        pkt.cultivar = Cultivar(name='Foxy')
+        pkt.cultivar.common_name = CommonName(name='Foxglove')
+        pkt.cultivar.common_name.index = Index(name='Perennial')
+        db.session.add(pkt)
+        db.session.commit()
+        pkt2 = Packet(sku='8675309', price='3.50')
+        pkt2.quantity = Quantity(value=100, units='cubits')
+        pkt2.cultivar = Cultivar(name='Foxy')
+        pkt2.cultivar.common_name = CommonName(name='Foxglove')
+        pkt2.cultivar.common_name.index = Index(name='Perennial')
+        pws.add_one(pkt2)
+        assert pws.save_row_to_db(row=2, file=messages)
+        messages.seek(0)
+        msgs = messages.read()
+        pktq = Packet.query.filter(Packet.sku == '8675309').one_or_none()
+        assert pktq is pkt
+        assert pkt.quantity.units == 'cubits'
+        assert ('The units for the Packet SKU \'8675309\' have been set to: '
+                'cubits.') in msgs

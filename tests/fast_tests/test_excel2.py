@@ -1,5 +1,6 @@
 import json
 import pytest
+from io import StringIO
 from unittest import mock
 from openpyxl import Workbook
 from app.seeds.excel2 import (
@@ -20,6 +21,7 @@ from app.seeds.models import (
     Image,
     Index,
     Packet,
+    Quantity,
     Series
 )
 
@@ -172,14 +174,6 @@ class TestSeedsWorksheet:
         with pytest.raises(ValueError):
             sws.populate_cols_dict()
 
-    def test_freeze_title_row(self):
-        """Freeze cell A2 to cause the top row to act as column titles."""
-        wb = Workbook()
-        ws = wb.active
-        sws = SeedsWorksheet(ws)
-        sws.freeze_title_row()
-        assert sws._ws.freeze_panes == 'A2'
-
     @mock.patch('app.seeds.excel2.SeedsWorksheet.set_column_titles')
     @mock.patch('app.seeds.excel2.SeedsWorksheet.populate_cols_dict')
     def test_setup_new(self, m_pcd, m_sct):
@@ -269,6 +263,20 @@ class TestSeedsWorksheet:
         sws = SeedsWorksheet(ws)
         with pytest.raises(NotImplementedError):
             sws.save_row_to_db(None)
+
+    def test_beautify(self):
+        """Configure worksheet to be more human-readable."""
+        wb = Workbook()
+        ws = wb.active
+        sws = SeedsWorksheet(ws)
+        sws._ws.append(('One', 'Two', 'Three'))
+        sws._ws.append(('Four', 'Five', 'Six'))
+        sws.beautify(width=42, height=21)
+        assert sws._ws.freeze_panes == 'A2'
+        assert sws._ws.column_dimensions['A'].width == 42
+        assert sws._ws.column_dimensions['B'].width == 42
+        assert sws._ws.column_dimensions['C'].width == 42
+        assert sws._ws.row_dimensions[2].height == 21
 
 
 class TestIndexesWorksheet:
@@ -866,13 +874,14 @@ class TestPacketsWorksheet:
         pws.setup()
         assert m_s.call_args_list == [mock.call()]
 
-    def testadd_one(self):
+    def test_add_one(self):
         """Add a Packet to the Packets worksheet."""
         wb = Workbook()
         ws = wb.active
         pws = PacketsWorksheet(ws)
         pws.setup()
-        pkt = Packet(sku='8675309', price='3.50', quantity=100, units='seeds')
+        pkt = Packet(sku='8675309', price='3.50')
+        pkt.quantity = Quantity(value=100, units='seeds')
         cv = Cultivar(name='Foxy')
         cv.common_name = CommonName(name='Foxglove')
         cv.common_name.index = Index(name='Perennial')
@@ -972,3 +981,83 @@ class TestSeedsWorkbook:
         assert m_cv.called
         assert swb.packets._ws is swb._wb['Packets']
         assert m_pkt.called
+
+    @mock.patch('app.seeds.excel2.SeedsWorksheet.add')
+    @mock.patch('app.seeds.excel2.Index.query')
+    @mock.patch('app.seeds.excel2.CommonName.query')
+    @mock.patch('app.seeds.excel2.BotanicalName.query')
+    @mock.patch('app.seeds.excel2.Series.query')
+    @mock.patch('app.seeds.excel2.Cultivar.query')
+    @mock.patch('app.seeds.excel2.Packet.query')
+    def test_add_all_data_to_sheets(self,
+                                    m_pkt,
+                                    m_cv,
+                                    m_sr,
+                                    m_bn,
+                                    m_cn,
+                                    m_idx,
+                                    m_a):
+        """Call <sheet>.save_to_db(<obj>.query.all()) for each worksheet."""
+        swb = SeedsWorkbook()
+        swb.add_all_data_to_sheets()
+        m_a.assert_any_call(m_pkt.all())
+        m_a.assert_any_call(m_cv.all())
+        m_a.assert_any_call(m_sr.all())
+        m_a.assert_any_call(m_bn.all())
+        m_a.assert_any_call(m_cn.all())
+        m_a.assert_any_call(m_idx.all())
+
+    @mock.patch('app.seeds.excel2.IndexesWorksheet.save_to_db')
+    @mock.patch('app.seeds.excel2.CommonNamesWorksheet.save_to_db')
+    @mock.patch('app.seeds.excel2.BotanicalNamesWorksheet.save_to_db')
+    @mock.patch('app.seeds.excel2.SeriesWorksheet.save_to_db')
+    @mock.patch('app.seeds.excel2.CultivarsWorksheet.save_to_db')
+    @mock.patch('app.seeds.excel2.PacketsWorksheet.save_to_db')
+    def test_save_all_sheets_to_db(self,
+                                   m_pkt,
+                                   m_cv,
+                                   m_sr,
+                                   m_bn,
+                                   m_cn,
+                                   m_idx):
+        """Call save_to_db for each worksheet."""
+        messages = StringIO()
+        swb = SeedsWorkbook()
+        swb.save_all_sheets_to_db(file=messages)
+        messages.seek(0)
+        msgs = messages.read()
+        m_idx.assert_called_with(file=messages)
+        m_cn.assert_called_with(file=messages)
+        m_bn.assert_called_with(file=messages)
+        m_cv.assert_called_with(file=messages)
+        m_sr.assert_called_with(file=messages)
+        m_pkt.assert_called_with(file=messages)
+        assert '-- BEGIN saving all worksheets to database. --' in msgs
+        assert '-- END saving all worksheets to database. --' in msgs
+
+    @mock.patch('app.seeds.excel2.SeedsWorksheet.beautify')
+    def test_beautify_all_sheets(self, m_b):
+        """Call beautify on all sheets in workbook."""
+        swb = SeedsWorkbook()
+        swb.beautify_all_sheets(width=42, height=12)
+        assert m_b.call_count == 6
+        m_b.assert_any_call(width=42, height=12)
+
+    @mock.patch('app.seeds.excel2.openpyxl.load_workbook')
+    @mock.patch('app.seeds.excel2.SeedsWorkbook.load_all_sheets_from_workbook')
+    def test_load(self, m_lasfw, m_lw):
+        """Load a workbook into _wb, and load all sheets from it."""
+        swb = SeedsWorkbook()
+        wb = Workbook()
+        m_lw.return_value = wb
+        swb.load('file.xlsx')
+        m_lw.assert_called_with('file.xlsx')
+        assert swb._wb is wb
+        assert m_lasfw.called
+
+    @mock.patch('app.seeds.excel2.openpyxl.Workbook.save')
+    def test_save(self, m_s):
+        """Beautify a SeedsWorkbook and to a file."""
+        swb = SeedsWorkbook()
+        swb.save('file.xlsx')
+        m_s.assert_called_with('file.xlsx')

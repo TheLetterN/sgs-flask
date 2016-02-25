@@ -721,7 +721,7 @@ class EditCommonNameForm(Form):
         if cn.parent:
             self.parent_cn.data = cn.parent.id
         if cn.synonyms:
-            self.synonyms.data = cn.get_synonyms_string()
+            self.synonyms.data = cn.synonyms_string
         self.index.data = cn.index.id
         if cn.gw_common_names:
             self.gw_common_names.data = [gw_cn.id for gw_cn in
@@ -800,7 +800,7 @@ class EditBotanicalNameForm(Form):
         if bn.common_names:
             self.common_names.data = [cn.id for cn in bn.common_names]
         if bn.synonyms:
-            self.synonyms.data = bn.get_synonyms_string()
+            self.synonyms.data = bn.synonyms_string
 
     def set_common_names(self):
         """Set common_name with common names from the database."""
@@ -991,7 +991,7 @@ class EditCultivarForm(Form):
         if cultivar.series:
             self.series.data = cultivar.series.id
         if cultivar.synonyms:
-            self.synonyms.data = cultivar.get_synonyms_string()
+            self.synonyms.data = cultivar.synonyms_string
 
     def validate_name(self, field):
         """Raise ValidationError if changes would create duplicate cultivar."""

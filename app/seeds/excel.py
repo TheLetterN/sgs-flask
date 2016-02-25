@@ -1,7 +1,36 @@
+# -*- coding: utf-8 -*-
+# This file is part of SGS-Flask.
+
+# SGS-Flask is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# SGS-Flask is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Copyright Swallowtail Garden Seeds, Inc
+
+
+"""
+    sgs-flask.app.seeds.excel
+
+    This module implements an interface for moving data between the database
+    and xlsx (Excel spreadsheet) files.
+"""
+
+
 import json
 import sys
 import warnings
+
 import openpyxl
+
 from app import db, dbify
 from app.seeds.models import (
     BotanicalName,
@@ -15,13 +44,22 @@ from app.seeds.models import (
 )
 
 
-def lookup_dicts_to_json(items):
-    """Return a JSON string of lookup_dicts from a list of objects.
+def lookup_dicts_to_json(objects):
+    """Generate a JSON string of dictionaries for easily querying.
 
-    Obviously, the objects need the lookup_dict() method, so this function
-    is only used for groups of CommonName or Cultivar objects.
+    Note:
+        All objects passed must have the method `lookup_dict`.
+
+    Args:
+        objects: A list of objects to get lookup dictionaries from.
+
+    Raises:
+        TypeError: If any item in items lacks the lookup_dict method.
     """
-    return json.dumps(tuple(it.lookup_dict() for it in items))
+    if all(hasattr(obj, 'lookup_dict') for obj in objects):
+        return json.dumps(tuple(obj.lookup_dict() for obj in objects))
+    else:
+        raise TypeError('One or more objects lack the method \'lookup_dict\'!')
 
 
 def get_or_create_index(name, file=sys.stdout):
@@ -466,7 +504,7 @@ class CommonNamesWorksheet(SeedsWorksheet):
                 self.cell(
                     r, self.cols['Planting Instructions']
                 ).value = cn.instructions
-            syns = cn.get_synonyms_string()
+            syns = cn.synonyms_string
             if syns:
                 self.cell(r, self.cols['Synonyms']).value = syns
             inv_cell = self.cell(r, self.cols['Invisible'])
@@ -500,7 +538,7 @@ class CommonNamesWorksheet(SeedsWorksheet):
         instructions = self.cell(row, self.cols['Planting Instructions']).value
         synonyms = self.cell(row, self.cols['Synonyms']).value
         if not synonyms:
-            synonyms = ''  # Match result of CommonName.get_synonyms_string()
+            synonyms = ''  # Match result of CommonName.synonyms_string
         invis = self.cell(row, self.cols['Invisible']).value
         if invis and 'true' in invis.lower():
             invisible = True
@@ -551,12 +589,12 @@ class CommonNamesWorksheet(SeedsWorksheet):
                 cn.instructions = None
                 print('Planting instructions for the CommonName \'{0}\' have '
                       'been cleared.'.format(cn.name), file=file)
-        if synonyms != cn.get_synonyms_string():
+        if synonyms != cn.synonyms_string:
             edited = True
-            cn.set_synonyms_string(synonyms)
+            cn.synonyms_string = synonyms
             if synonyms:
                 print('Synonyms for the CommonName \'{0}\' set to: {1}'
-                      .format(cn.name, cn.get_synonyms_string()), file=file)
+                      .format(cn.name, cn.synonyms_string), file=file)
             else:
                 print('Synonyms for the CommonName \'{0}\' have been cleared.'
                       .format(cn.name), file=file)
@@ -654,7 +692,7 @@ class BotanicalNamesWorksheet(SeedsWorksheet):
                 r, self.cols['Common Names (JSON)']
             ).value = lookup_dicts_to_json(bn.common_names)
             self.cell(r, self.cols['Botanical Name']).value = bn.name
-            syns = bn.get_synonyms_string()
+            syns = bn.synonyms_string
             if syns:
                 self.cell(r, self.cols['Synonyms']).value = syns
         else:
@@ -719,12 +757,12 @@ class BotanicalNamesWorksheet(SeedsWorksheet):
                 print('The CommonName \'{0}\' has been removed from '
                       'CommonNames for the BotanicalName \'{1}\'.'
                       .format(cn.name, bn.name), file=file)
-        if synonyms != bn.get_synonyms_string():
+        if synonyms != bn.synonyms_string:
             edited = True
-            bn.set_synonyms_string(synonyms)
+            bn.synonyms_string = synonyms
             if synonyms:
                 print('Synonyms for the BotanicalName \'{0}\' set to: {1}'
-                      .format(bn.name, bn.get_synonyms_string()), file=file)
+                      .format(bn.name, bn.synonyms_string), file=file)
             else:
                 print('Synonyms for the BotanicalName \'{0}\' have been '
                       'cleared.'.format(bn.name), file=file)
@@ -904,7 +942,7 @@ class CultivarsWorksheet(SeedsWorksheet):
                 ).value = cv.thumbnail.filename
             if cv.description:
                 self.cell(r, self.cols['Description']).value = cv.description
-            syns = cv.get_synonyms_string()
+            syns = cv.synonyms_string
             if syns:
                 self.cell(r, self.cols['Synonyms']).value = syns
             if cv.new_for:
@@ -1062,12 +1100,12 @@ class CultivarsWorksheet(SeedsWorksheet):
                 cv.description = None
                 print('Description for the Cultivar \'{0}\' has been cleared.'
                       .format(cv.fullname), file=file)
-        if synonyms != cv.get_synonyms_string():
+        if synonyms != cv.synonyms_string:
             edited = True
-            cv.set_synonyms_string(synonyms)
+            cv.synonyms_string = synonyms
             if synonyms:
                 print('Synonyms for the Cultivar \'{0}\' set to: {1}'
-                      .format(cv.fullname, cv.get_synonyms_string()),
+                      .format(cv.fullname, cv.synonyms_string),
                       file=file)
             else:
                 print('Synonyms for the Cultivar \'{0}\' have been cleared.'

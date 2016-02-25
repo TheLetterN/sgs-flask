@@ -179,9 +179,9 @@ def add_common_name(idx_id=None):
         else:
             cn.instructions = None
         if form.synonyms.data:
-            cn.set_synonyms_string(form.synonyms.data)
+            cn.synonyms_string = form.synonyms.data
             flash('Synonyms for \'{0}\' set to: {1}'
-                  .format(cn.name, cn.get_synonyms_string()))
+                  .format(cn.name, cn.synonyms_string))
         if form.gw_common_names.data:
             for cn_id in form.gw_common_names.data:
                 gw_cn = CommonName.query.get(cn_id)
@@ -236,9 +236,9 @@ def add_botanical_name(cn_id=None):
             bn.name = form.name.data.strip()
         bn.common_names.append(cn)
         if form.synonyms.data:
-            bn.set_synonyms_string(form.synonyms.data)
+            bn.synonyms_string = form.synonyms.data
             flash('Synonyms for \'{0}\' set to: {1}'
-                  .format(bn.name, bn.get_synonyms_string()))
+                  .format(bn.name, bn.synonyms_string))
         db.session.commit()
         flash('Botanical name \'{0}\' belonging to \'{1}\' has been added.'.
               format(bn.name, cn.name))
@@ -340,9 +340,9 @@ def add_cultivar(cn_id=None):
             flash('Series set to: {0}'.format(cv.series.name))
             cv.set_slug()
         if form.synonyms.data:
-            cv.set_synonyms_string(form.synonyms.data)
+            cv.synonyms_string = form.synonyms.data
             flash('Synonyms for \'{0}\' set to: {1}'
-                  .format(cv.fullname, cv.get_synonyms_string()))
+                  .format(cv.fullname, cv.synonyms_string))
         if form.thumbnail.data:
             thumb_name = secure_filename(form.thumbnail.data.filename)
             upload_path = os.path.join(current_app.config.get('IMAGES_FOLDER'),
@@ -716,14 +716,14 @@ def edit_common_name(cn_id=None):
                 cn.parent = CommonName.query.get(form.parent_cn.data)
                 flash('\'{0}\' is now a subcategory of \'{1}\''
                       .format(cn.name, cn.parent.name))
-        if form.synonyms.data != cn.get_synonyms_string():
+        if form.synonyms.data != cn.synonyms_string:
             edited = True
             if form.synonyms.data:
                 flash('Synonyms for \'{0}\' changed to: {1}'
                       .format(cn.name, form.synonyms.data))
-                cn.set_synonyms_string(form.synonyms.data)
+                cn.synonyms_string = form.synonyms.data
             else:
-                cn.set_synonyms_string(None)
+                cn.synonyms_string = None
                 flash('Synonyms for \'{0}\' cleared.'.format(cn.name))
         if edited:
             db.session.commit()
@@ -779,14 +779,14 @@ def edit_botanical_name(bn_id=None):
                 flash('Added common name \'{0}\' to \'{1}\'.'
                       .format(cn.name, bn.name))
                 bn.common_names.append(cn)
-        if form.synonyms.data != bn.get_synonyms_string():
+        if form.synonyms.data != bn.synonyms_string:
             edited = True
             if form.synonyms.data:
-                bn.set_synonyms_string(form.synonyms.data)
+                bn.synonyms_string = form.synonyms.data
                 flash('Synonyms for \'{0}\' set to: {1}'
-                      .format(bn.name, bn.get_synonyms_string()))
+                      .format(bn.name, bn.synonyms_string))
             else:
-                bn.set_synonyms_string(None)
+                bn.synonyms_string = None
                 flash('Synonyms for \'{0}\' cleared.'.format(bn.name))
         if edited:
             db.session.commit()
@@ -1078,14 +1078,14 @@ def edit_cultivar(cv_id=None):
                 cv.invisible = True
         if not form.synonyms.data and cv.synonyms:
             edited = True
-            cv.set_synonyms_string(None)
+            cv.synonyms_string = None
             flash('Synonyms for \'{0}\' have been cleared.'
                   .format(cv.fullname))
-        elif form.synonyms.data != cv.get_synonyms_string():
+        elif form.synonyms.data != cv.synonyms_string:
             edited = True
-            cv.set_synonyms_string(form.synonyms.data)
+            cv.synonyms_string = form.synonyms.data
             flash('Synonyms for \'{0}\' set to: {1}'
-                  .format(cv.fullname, cv.get_synonyms_string()))
+                  .format(cv.fullname, cv.synonyms_string))
         if form.thumbnail.data:
             thumb_name = secure_filename(form.thumbnail.data.filename)
             img = Image.query.filter_by(filename=thumb_name).first()
@@ -1218,7 +1218,7 @@ def remove_botanical_name(bn_id=None):
             if bn.synonyms:
                 flash('Synonyms for \'{0}\' cleared and orphaned synonyms '
                       'have been deleted.'.format(bn.name))
-                bn.set_synonyms_string(None)
+                bn.synonyms_string = None
             flash('The botanical name \'{1}\' has been removed from '
                   'the database.'.format(bn.id, bn.name))
             db.session.delete(bn)
@@ -1374,7 +1374,7 @@ def remove_common_name(cn_id=None):
         if form.verify_removal.data:
             old_cn_slug = cn.slug
             if cn.synonyms:
-                cn.set_synonyms_string(None)
+                cn.synonyms_string = None
                 flash('Synonyms for \'{0}\' cleared, and orphaned synonyms '
                       'have been deleted.'.format(cn.name))
             cn2 = CommonName.query.get(form.move_to.data)
@@ -1560,7 +1560,7 @@ def remove_cultivar(cv_id=None):
             if cv.synonyms:
                 flash('Synonyms for \'{0}\' cleared, and orphaned synonyms '
                       'have been deleted.'.format(cv.fullname))
-                cv.set_synonyms_string(None)
+                cv.synonyms_string = None
             flash('The cultivar \'{0}\' has been deleted. Forever. I hope '
                   'you\'re happy with yourself.'.format(cv.fullname))
             old_path = url_for('seeds.cultivar',

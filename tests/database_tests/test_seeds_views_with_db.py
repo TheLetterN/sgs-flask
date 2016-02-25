@@ -77,7 +77,7 @@ class TestAddCommonNameRouteWithDB:
         assert 'Description for &#39;Foxglove&#39; set to' in str(rv.data)
         assert cn.instructions == 'Put in ground.'
         assert 'Planting instructions for' in str(rv.data)
-        assert cn.get_synonyms_string() == 'Digitalis'
+        assert cn.synonyms_string == 'Digitalis'
         assert 'Synonyms for' in str(rv.data)
         assert gwcn in cn.gw_common_names
         assert '&#39;Butterfly Weed&#39; added to Grows With' in str(rv.data)
@@ -155,7 +155,7 @@ class TestAddBotanicalNameRouteWithDB:
                          follow_redirects=True)
         bn = BotanicalName.query.filter_by(name='Asclepias incarnata').first()
         assert bn is not None
-        assert bn.get_synonyms_string() == 'Innagada davida, Canis lupus'
+        assert bn.synonyms_string == 'Innagada davida, Canis lupus'
         assert 'Botanical name &#39;Asclepias incarnata&#39;' in str(rv.data)
 
 
@@ -629,7 +629,7 @@ class TestEditBotanicalNameRouteWithDB:
         bn = BotanicalName(name='Digitalis purpurea')
         cn = CommonName(name='Foxglove')
         bn.common_name = cn
-        bn.set_synonyms_string('Digitalis über alles')
+        bn.synonyms_string = 'Digitalis über alles'
         db.session.add_all([bn, cn])
         db.session.commit()
         with app.test_client() as tc:
@@ -780,12 +780,12 @@ class TestEditCommonNameRouteWithDB:
     def test_edit_common_name_clears_synonyms(self, app, db):
         """Clear synonyms if form field is blank."""
         cn = CommonName(name='Foxglove')
-        cn.set_synonyms_string('Fauxglove')
+        cn.synonyms_string = 'Fauxglove'
         idx = Index('Flower')
         cn.index = idx
         db.session.add_all([cn, idx])
         db.session.commit()
-        assert cn.get_synonyms_string() == 'Fauxglove'
+        assert cn.synonyms_string == 'Fauxglove'
         with app.test_client() as tc:
             rv = tc.post(url_for('seeds.edit_common_name', cn_id=cn.id),
                          data=dict(name='Foxglove',
@@ -1634,7 +1634,7 @@ class TestEditCultivarRouteWithDB:
                          follow_redirects=True)
         assert 'Synonyms for &#39;Foxy Foxglove&#39; set to' in str(rv.data)
         assert syn not in cv.synonyms
-        assert cv.get_synonyms_string() == 'Fawksy'
+        assert cv.synonyms_string == 'Fawksy'
 
     def test_edit_cultivar_clears_description(self, app, db):
         """Set description to none if form fields empty."""

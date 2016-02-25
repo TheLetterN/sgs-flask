@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # This file is part of SGS-Flask.
 
 # SGS-Flask is free software: you can redistribute it and/or modify
@@ -25,7 +26,7 @@ from inflection import pluralize
 from slugify import slugify
 from sqlalchemy import inspect
 from sqlalchemy.ext.hybrid import hybrid_property
-from app import db, dbify
+from app import db
 
 
 botanical_names_to_common_names = db.Table(
@@ -83,7 +84,7 @@ def indexes_to_json(indexes):
 
 
 def save_indexes_to_json():
-    """Save all indexes to indexes.json"""
+    """Save all indexes the file specified by ``INDEXES_JSON_FILE``"""
     with open(current_app.config.get('INDEXES_JSON_FILE'),
               'w',
               encoding='utf-8') as ofile:
@@ -92,14 +93,22 @@ def save_indexes_to_json():
 
 class SynonymsMixin(object):
     """A mixin class containing methods that operate on synonyms."""
-    def get_synonyms_string(self):
-        """Return a comma separated list """
+    @property
+    def synonyms_string(self):
+        """str: A list of Synonyms for the parent object.
+
+        The setter parses a string list of synonyms and adds loaded or created
+        synonyms to the object's synonyms. If a falsey value is set, it removes
+        all synonyms from the object and deletes any synonyms which no longer
+        belong to any object.
+        """
         if self.synonyms:
             return ', '.join([syn.name for syn in self.synonyms])
         else:
             return ''
 
-    def set_synonyms_string(self, synonyms, dbify_syns=True):
+    @synonyms_string.setter
+    def synonyms_string(self, synonyms):
         db_changed = False
         if not synonyms:
             for syn in list(self.synonyms):
@@ -108,8 +117,7 @@ class SynonymsMixin(object):
                     db_changed = True
                     db.session.delete(syn)
         else:
-            syns = [dbify(syn) if dbify_syns else syn
-                    for syn in synonyms.split(', ')]
+            syns = synonyms.split(', ')
             for syn in list(self.synonyms):
                 if syn.name not in syns:
                     if inspect(syn).persistent:
@@ -572,23 +580,6 @@ class BotanicalName(SynonymsMixin, db.Model):
                 return False
         except:
             return False
-
-    def set_synonyms_string(self, synonyms, dbify_syns=False):
-        """Validate synonyms as botanical names before adding them.
-
-        Note that dbify_syns is set to False by default here, as we don't
-        want to titlecase botanical names.
-        """
-        if synonyms:
-            bad_syns = []
-            for syn in synonyms.split(', '):
-                if not BotanicalName.validate(syn.strip()):
-                    bad_syns.append(syn)
-            if bad_syns:
-                raise ValueError('One or more synonyms do not appear to be '
-                                 'valid botanical names: {0}'
-                                 .format(', '.join(bad_syns)))
-        super().set_synonyms_string(synonyms, dbify_syns)
 
 
 class Image(db.Model):

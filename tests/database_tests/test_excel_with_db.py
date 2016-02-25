@@ -552,13 +552,13 @@ class TestCommonNamesWorksheet:
         cnws.setup()
         cn = CommonName(name='Foxglove')
         cn.index = Index(name='Perennial')
-        cn.set_synonyms_string('Digitalis')
+        cn.synonyms_string = 'Digitalis'
         cnws.add_one(cn)
         assert cnws.save_row_to_db(row=2, file=messages)
         cnq = CommonName.query\
             .filter(CommonName._name == 'Foxglove')\
             .one_or_none()
-        assert cnq.get_synonyms_string() == 'Digitalis'
+        assert cnq.synonyms_string == 'Digitalis'
         messages.seek(0)
         msgs = messages.read()
         assert ('Synonyms for the CommonName \'Foxglove\' set to: '
@@ -573,19 +573,19 @@ class TestCommonNamesWorksheet:
         cnws.setup()
         cn = CommonName(name='Foxglove')
         cn.index = Index(name='Perennial')
-        cn.set_synonyms_string('Digitalis')
+        cn.synonyms_string = 'Digitalis'
         db.session.add(cn)
         db.session.commit()
         cn2 = CommonName(name='Foxglove')
         cn2.index = Index(name='Perennial')
-        cn2.set_synonyms_string('Vulpine Handwarmer')
+        cn2.synonyms_string = 'Vulpine Handwarmer'
         cnws.add_one(cn2)
         assert cnws.save_row_to_db(row=2, file=messages)
         cnq = CommonName.query\
             .filter(CommonName._name == 'Foxglove')\
             .one_or_none()
         assert cnq is cn
-        assert cn.get_synonyms_string() == 'Vulpine Handwarmer'
+        assert cn.synonyms_string == 'Vulpine Handwarmer'
         messages.seek(0)
         msgs = messages.read()
         assert ('Synonyms for the CommonName \'Foxglove\' set to: Vulpine '
@@ -600,7 +600,7 @@ class TestCommonNamesWorksheet:
         cnws.setup()
         cn = CommonName(name='Foxglove')
         cn.index = Index(name='Perennial')
-        cn.set_synonyms_string('Digitalis')
+        cn.synonyms_string = 'Digitalis'
         db.session.add(cn)
         db.session.commit()
         cn2 = CommonName(name='Foxglove')
@@ -611,7 +611,7 @@ class TestCommonNamesWorksheet:
             .filter(CommonName._name == 'Foxglove')\
             .one_or_none()
         assert cnq is cn
-        assert not cn.get_synonyms_string()
+        assert not cn.synonyms_string
         messages.seek(0)
         msgs = messages.read()
         assert ('Synonyms for the CommonName \'Foxglove\' have been '
@@ -1081,13 +1081,13 @@ class TestBotanicalNamesWorksheetWithDB:
         bn = BotanicalName(name='Digitalis purpurea')
         bn.common_names = [CommonName(name='Foxglove')]
         bn.common_names[0].index = Index(name='Perennial')
-        bn.set_synonyms_string('Digitalis über alles')
+        bn.synonyms_string = 'Digitalis über alles'
         bnws.add_one(bn)
         assert bnws.save_row_to_db(2, file=messages)
         bnq = BotanicalName.query\
             .filter(BotanicalName._name == 'Digitalis purpurea')\
             .one_or_none()
-        assert bnq.get_synonyms_string() == 'Digitalis über alles'
+        assert bnq.synonyms_string == 'Digitalis über alles'
         messages.seek(0)
         msgs = messages.read()
         assert ('Synonyms for the BotanicalName \'Digitalis purpurea\' set '
@@ -1103,20 +1103,20 @@ class TestBotanicalNamesWorksheetWithDB:
         bn = BotanicalName(name='Digitalis purpurea')
         bn.common_names = [CommonName(name='Foxglove')]
         bn.common_names[0].index = Index(name='Perennial')
-        bn.set_synonyms_string('Digitalis über alles')
+        bn.synonyms_string = 'Digitalis über alles'
         db.session.add(bn)
         db.session.commit()
         bn2 = BotanicalName(name='Digitalis purpurea')
         bn2.common_names = [CommonName(name='Foxglove')]
         bn2.common_names[0].index = Index(name='Perennial')
-        bn2.set_synonyms_string('Innagada davida')
+        bn2.synonyms_string = 'Innagada davida'
         bnws.add_one(bn2)
         assert bnws.save_row_to_db(2, file=messages)
         bnq = BotanicalName.query\
             .filter(BotanicalName._name == 'Digitalis purpurea')\
             .one_or_none()
         assert bnq is bn
-        assert bn.get_synonyms_string() == 'Innagada davida'
+        assert bn.synonyms_string == 'Innagada davida'
         messages.seek(0)
         msgs = messages.read()
         assert ('Synonyms for the BotanicalName \'Digitalis purpurea\' set '
@@ -1132,7 +1132,7 @@ class TestBotanicalNamesWorksheetWithDB:
         bn = BotanicalName(name='Digitalis purpurea')
         bn.common_names = [CommonName(name='Foxglove')]
         bn.common_names[0].index = Index(name='Perennial')
-        bn.set_synonyms_string('Digitalis über alles')
+        bn.synonyms_string = 'Digitalis über alles'
         db.session.add(bn)
         db.session.commit()
         bn2 = BotanicalName(name='Digitalis purpurea')
@@ -1144,7 +1144,7 @@ class TestBotanicalNamesWorksheetWithDB:
             .filter(BotanicalName._name == 'Digitalis purpurea')\
             .one_or_none()
         assert bnq is bn
-        assert not bn.get_synonyms_string()
+        assert not bn.synonyms_string
         messages.seek(0)
         msgs = messages.read()
         assert ('Synonyms for the BotanicalName \'Digitalis purpurea\' have '
@@ -1820,7 +1820,7 @@ class TestCultivarsWorksheetWithDB:
         cv = Cultivar(name='Foxy')
         cv.common_name = CommonName(name='Foxglove')
         cv.common_name.index = Index(name='Perennial')
-        cv.set_synonyms_string('Vulpine')
+        cv.synonyms_string = 'Vulpine'
         cv.in_stock = True
         cv.active = True
         cv.invisible = False
@@ -1829,7 +1829,7 @@ class TestCultivarsWorksheetWithDB:
         cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
         messages.seek(0)
         msgs = messages.read()
-        assert cvq.get_synonyms_string() == 'Vulpine'
+        assert cvq.synonyms_string == 'Vulpine'
         assert ('Synonyms for the Cultivar \'Foxy Foxglove\' set to: '
                 'Vulpine') in msgs
 
@@ -1843,7 +1843,7 @@ class TestCultivarsWorksheetWithDB:
         cv = Cultivar(name='Foxy')
         cv.common_name = CommonName(name='Foxglove')
         cv.common_name.index = Index(name='Perennial')
-        cv.set_synonyms_string('Vulpine')
+        cv.synonyms_string = 'Vulpine'
         cv.in_stock = True
         cv.active = True
         cv.invisible = False
@@ -1852,7 +1852,7 @@ class TestCultivarsWorksheetWithDB:
         cv2 = Cultivar(name='Foxy')
         cv2.common_name = CommonName(name='Foxglove')
         cv2.common_name.index = Index(name='Perennial')
-        cv2.set_synonyms_string('Fauxy')
+        cv2.synonyms_string = 'Fauxy'
         cv2.in_stock = True
         cv2.active = True
         cv2.invisible = False
@@ -1862,7 +1862,7 @@ class TestCultivarsWorksheetWithDB:
         messages.seek(0)
         msgs = messages.read()
         assert cvq is cv
-        assert cv.get_synonyms_string() == 'Fauxy'
+        assert cv.synonyms_string == 'Fauxy'
         assert ('Synonyms for the Cultivar \'Foxy Foxglove\' set to: '
                 'Fauxy') in msgs
 
@@ -1876,7 +1876,7 @@ class TestCultivarsWorksheetWithDB:
         cv = Cultivar(name='Foxy')
         cv.common_name = CommonName(name='Foxglove')
         cv.common_name.index = Index(name='Perennial')
-        cv.set_synonyms_string('Vulpine')
+        cv.synonyms_string = 'Vulpine'
         cv.in_stock = True
         cv.active = True
         cv.invisible = False

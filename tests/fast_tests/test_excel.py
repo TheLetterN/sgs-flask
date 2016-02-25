@@ -53,6 +53,18 @@ class TestExcel2Functions:
         assert lookup_dicts_to_json([gwcv1, gwcv2]) == \
             json.dumps((gwcv1.lookup_dict(), gwcv2.lookup_dict()))
 
+    def test_lookup_dicts_to_json_bad_args(self):
+        """Raise a TypeError if any objects lack the lookup_dict method."""
+        with pytest.raises(TypeError):
+            lookup_dicts_to_json((1, 2, 3))
+        cn1 = CommonName(name='Foxglove')
+        cn1.index = Index(name='Perennial')
+        cn2 = CommonName(name='Coleus')
+        cn2.index = Index(name='Annual')
+        idx = Index(name='Has no lookup_dict')
+        with pytest.raises(TypeError):
+            lookup_dicts_to_json((cn1, cn2, idx))
+
 
 class TestSeedsWorksheet:
     """Test methods of the SeedsWorksheet container class.
@@ -403,7 +415,7 @@ class TestCommonNamesWorksheet:
         cn.index = Index(name='Perennial')
         cn.parent = CommonName(name='Fauxglove')
         cn.invisible = True
-        cn.set_synonyms_string('Digitalis')
+        cn.synonyms_string = 'Digitalis'
         cnws.add_one(cn)
         assert cnws.cell(2, cnws.cols['Subcategory of']).value == 'Fauxglove'
         assert cnws.cell(2, cnws.cols['Description']).value == 'Spotty.'
@@ -523,7 +535,7 @@ class TestBotanicalNamesWorksheet:
         cn = CommonName(name='Rock')
         cn.index = Index(name='Music')
         bn.common_names = [cn]
-        bn.set_synonyms_string('Iron butterfly')
+        bn.synonyms_string = 'Iron butterfly'
         bnws.add_one(bn)
         assert bnws.cell(2, bnws.cols['Synonyms']).value == 'Iron butterfly'
 
@@ -760,7 +772,7 @@ class TestCultivarsWorksheet:
         cv = Cultivar(name='Foxy')
         cv.common_name = CommonName(name='Foxglove')
         cv.common_name.index = Index(name='Perennial')
-        cv.set_synonyms_string('Vulpine')
+        cv.synonyms_string = 'Vulpine'
         cvws.add_one(cv)
         assert cvws.cell(2, cvws.cols['Synonyms']).value == 'Vulpine'
 

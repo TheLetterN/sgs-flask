@@ -205,7 +205,7 @@ class TestEditBotanicalNameForm:
         """Populate form from a BotanicalName object."""
         bn = BotanicalName()
         bn.name = 'Asclepias incarnata'
-        bn.set_synonyms_string('Innagada davida')
+        bn.synonyms_string = 'Innagada davida'
         form = EditBotanicalNameForm()
         form.populate(bn)
         assert form.name.data == bn.name
@@ -263,7 +263,7 @@ class TestEditCommonNameForm:
         cnp.id = 2
         cnp.name = 'Coleus'
         cn.parent = cnp
-        cn.set_synonyms_string('Vertically Challenged Coleus')
+        cn.synonyms_string = 'Vertically Challenged Coleus'
         gwcn = CommonName()
         gwcn.id = 3
         gwcn.name = 'Foxglove'
@@ -324,7 +324,7 @@ class TestEditCultivarForm:
         series = Series(name='Spotty')
         series.id = 7
         cv.series = series
-        cv.set_synonyms_string('Fauxy')
+        cv.synonyms_string = 'Fauxy'
         form.populate(cv)
         assert form.name.data == 'Foxy'
         assert form.description.data == 'Like Hendrix!'

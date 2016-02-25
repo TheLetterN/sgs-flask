@@ -220,7 +220,7 @@ class TestSeedsWorksheet:
         assert m_pcd.called
         assert not m_sct.called
 
-    def testadd_one(self):
+    def test_add_one(self):
         """add_one should be an abstract method in this class."""
         wb = Workbook()
         ws = wb.active
@@ -231,11 +231,16 @@ class TestSeedsWorksheet:
     @mock.patch('app.seeds.excel.SeedsWorksheet.add_one')
     def test_add(self, m_ao):
         """add should call add_one for each item in iterable."""
+        messages = StringIO()
         wb = Workbook()
         ws = wb.active
         sws = SeedsWorksheet(ws)
-        sws.add(('Test',))
-        assert m_ao.called
+        sws.add(('Test',), file=messages)
+        m_ao.assert_called_with('Test', file=messages)
+        messages.seek(0)
+        msgs = messages.read()
+        assert '-- BEGIN adding data to SeedsWorksheet. --' in msgs
+        assert '-- END adding data to SeedsWorksheet. --' in msgs
 
     @mock.patch('app.seeds.excel.SeedsWorksheet.add_one')
     def test_add_bad_data(self, m_ao):
@@ -301,18 +306,23 @@ class TestIndexesWorksheet:
         iws.setup()
         assert m_s.call_args_list == [mock.call()]
 
-    def testadd_one(self):
+    def test_add_one(self):
         """Add a single Index to worksheet."""
+        messages = StringIO()
         wb = Workbook()
         ws = wb.active
         iws = IndexesWorksheet(ws)
         iws.setup()
         idx = Index(name='Perennial', description='Built to last.')
-        iws.add_one(idx)
+        iws.add_one(idx, file=messages)
         assert iws.cell(2, iws.cols['Index']).value == 'Perennial'
         assert iws.cell(2, iws.cols['Description']).value == 'Built to last.'
+        messages.seek(0)
+        msgs = messages.read()
+        assert ('Adding data from <Index \'Perennial\'> to row #2 of indexes '
+                'worksheet.') in msgs
 
-    def testadd_one_bad_type(self):
+    def test_add_one_bad_type(self):
         """Raise a TypeError given non-Index data."""
         wb = Workbook()
         ws = wb.active
@@ -353,15 +363,16 @@ class TestCommonNamesWorksheet:
         cnws.setup()
         assert m_s.call_args_list == [mock.call()]
 
-    def testadd_one_no_optionals(self):
+    def test_add_one_no_optionals(self):
         """Add a common name (with no optional data) to Common Names sheet."""
+        messages = StringIO()
         wb = Workbook()
         ws = wb.active
         cnws = CommonNamesWorksheet(ws)
         cnws.setup()
         cn = CommonName(name='Foxglove')
         cn.index = Index(name='Perennial')
-        cnws.add_one(cn)
+        cnws.add_one(cn, file=messages)
         assert cnws.cell(2, cnws.cols['Index']).value == 'Perennial'
         assert cnws.cell(2, cnws.cols['Common Name']).value == 'Foxglove'
         assert cnws.cell(2, cnws.cols['Subcategory of']).value is None
@@ -375,8 +386,12 @@ class TestCommonNamesWorksheet:
         assert cnws.cell(
             2, cnws.cols['Grows With Cultivars (JSON)']
         ).value is None
+        messages.seek(0)
+        msgs = messages.read()
+        assert ('Adding data from <CommonName \'Foxglove\'> to row #2 of '
+                'common names worksheet.') in msgs
 
-    def testadd_one_no_gw(self):
+    def test_add_one_no_gw(self):
         """Add a common name (with no Grows With) to Common Names sheet."""
         wb = Workbook()
         ws = wb.active
@@ -398,7 +413,7 @@ class TestCommonNamesWorksheet:
         assert cnws.cell(2, cnws.cols['Synonyms']).value == 'Digitalis'
         assert cnws.cell(2, cnws.cols['Invisible']).value == 'True'
 
-    def testadd_one_with_gw_cn(self):
+    def test_add_one_with_gw_cn(self):
         """Add a common name with some Grows With Common Names."""
         wb = Workbook()
         ws = wb.active
@@ -416,7 +431,7 @@ class TestCommonNamesWorksheet:
             2, cnws.cols['Grows With Common Names (JSON)']
         ).value == lookup_dicts_to_json([gwcn1, gwcn2])
 
-    def testadd_one_with_gw_cv(self):
+    def test_add_one_with_gw_cv(self):
         """Add a common name with some Grows With Cultivars."""
         wb = Workbook()
         ws = wb.active
@@ -437,7 +452,7 @@ class TestCommonNamesWorksheet:
             2, cnws.cols['Grows With Cultivars (JSON)']
         ).value == lookup_dicts_to_json([gwcv1, gwcv2])
 
-    def testadd_one_not_common_name(self):
+    def test_add_one_not_common_name(self):
         """Raise a TypeError given data that isn't a CommonName."""
         wb = Workbook()
         ws = wb.active
@@ -474,8 +489,9 @@ class TestBotanicalNamesWorksheet:
         bnws.setup()
         assert m_s.call_args_list == [mock.call()]
 
-    def testadd_one_no_optionals(self):
+    def test_add_one_no_optionals(self):
         """Add a BotanicalName object to Botanical Names sheet."""
+        messages = StringIO()
         wb = Workbook()
         ws = wb.active
         bnws = BotanicalNamesWorksheet(ws)
@@ -484,7 +500,7 @@ class TestBotanicalNamesWorksheet:
         cn = CommonName(name='Rock')
         cn.index = Index(name='Music')
         bn.common_names = [cn]
-        bnws.add_one(bn)
+        bnws.add_one(bn, file=messages)
         assert bnws.cell(
             2, bnws.cols['Common Names (JSON)']
         ).value == lookup_dicts_to_json([cn])
@@ -492,8 +508,12 @@ class TestBotanicalNamesWorksheet:
             2, bnws.cols['Botanical Name']
         ).value == 'Innagada davida'
         assert bnws.cell(2, bnws.cols['Synonyms']).value is None
+        messages.seek(0)
+        msgs = messages.read()
+        assert ('Adding data from <BotanicalName \'Innagada davida\'> to row '
+                '#2 of botanical names worksheet.') in msgs
 
-    def testadd_one_with_synonyms(self):
+    def test_add_one_with_synonyms(self):
         """Add a BotanicalName with synonyms to Botanical Names sheet."""
         wb = Workbook()
         ws = wb.active
@@ -507,7 +527,7 @@ class TestBotanicalNamesWorksheet:
         bnws.add_one(bn)
         assert bnws.cell(2, bnws.cols['Synonyms']).value == 'Iron butterfly'
 
-    def testadd_one_not_botanical_name(self):
+    def test_add_one_not_botanical_name(self):
         """Raise a TypeError given non-BotanicalName data."""
         wb = Workbook()
         ws = wb.active
@@ -542,8 +562,9 @@ class TestSeriesWorksheet:
         srws.setup()
         assert m_s.call_args_list == [mock.call()]
 
-    def testadd_one_no_optionals(self):
+    def test_add_one_no_optionals(self):
         """Add a Series object to the Series worksheet."""
+        messages = StringIO()
         wb = Workbook()
         ws = wb.active
         srws = SeriesWorksheet(ws)
@@ -551,15 +572,19 @@ class TestSeriesWorksheet:
         sr = Series(name='Polkadot')
         sr.common_name = CommonName(name='Foxglove')
         sr.common_name.index = Index(name='Perennial')
-        srws.add_one(sr)
+        srws.add_one(sr, file=messages)
         assert srws.cell(
             2, srws.cols['Common Name (JSON)']
         ).value == json.dumps(sr.common_name.lookup_dict())
         assert srws.cell(2, srws.cols['Series']).value == 'Polkadot'
         assert srws.cell(2, srws.cols['Position']).value == 'before cultivar'
         assert srws.cell(2, srws.cols['Description']).value is None
+        messages.seek(0)
+        msgs = messages.read()
+        assert ('Adding data from <Series \'Polkadot\'> to row #2 of series '
+                'worksheet') in msgs
 
-    def testadd_one_with_position(self):
+    def test_add_one_with_position(self):
         """Set Position column's cell with relevant position description."""
         wb = Workbook()
         ws = wb.active
@@ -578,7 +603,7 @@ class TestSeriesWorksheet:
         srws.add_one(sr2)
         assert srws.cell(3, srws.cols['Position']).value == 'after cultivar'
 
-    def testadd_one_with_description(self):
+    def test_add_one_with_description(self):
         """Set Description column's cell with Series desc."""
         wb = Workbook()
         ws = wb.active
@@ -590,7 +615,7 @@ class TestSeriesWorksheet:
         srws.add_one(sr)
         assert srws.cell(2, srws.cols['Description']).value == 'A bit spotty.'
 
-    def testadd_one_not_series(self):
+    def test_add_one_not_series(self):
         """Raise a TypeError if passed argument is not a Series object."""
         wb = Workbook()
         ws = wb.active
@@ -638,8 +663,9 @@ class TestCultivarsWorksheet:
         cvws.setup()
         assert m_s.call_args_list == [mock.call()]
 
-    def testadd_one_no_optionals(self):
+    def test_add_one_no_optionals(self):
         """Add a Cultivar to the Cultivars worksheet."""
+        messages = StringIO()
         wb = Workbook()
         ws = wb.active
         cvws = CultivarsWorksheet(ws)
@@ -647,7 +673,7 @@ class TestCultivarsWorksheet:
         cv = Cultivar(name='Foxy')
         cv.common_name = CommonName(name='Foxglove')
         cv.common_name.index = Index(name='Perennial')
-        cvws.add_one(cv)
+        cvws.add_one(cv, file=messages)
         assert cvws.cell(2, cvws.cols['Index']).value == 'Perennial'
         assert cvws.cell(2, cvws.cols['Common Name']).value == 'Foxglove'
         assert cvws.cell(2, cvws.cols['Cultivar Name']).value == 'Foxy'
@@ -666,8 +692,12 @@ class TestCultivarsWorksheet:
         assert cvws.cell(
             2, cvws.cols['Grows With Cultivars (JSON)']
         ).value is None
+        messages.seek(0)
+        msgs = messages.read()
+        assert ('Adding data from <Cultivar \'Foxy Foxglove\'> to row #2 of '
+                'cultivars worksheet.') in msgs
 
-    def testadd_one_with_series(self):
+    def test_add_one_with_series(self):
         """Add a Cultivar with Series to worksheet."""
         wb = Workbook()
         ws = wb.active
@@ -680,7 +710,7 @@ class TestCultivarsWorksheet:
         cvws.add_one(cv)
         assert cvws.cell(2, cvws.cols['Series']).value == 'Polkadot'
 
-    def testadd_one_with_botanical_name(self):
+    def test_add_one_with_botanical_name(self):
         """Add a Cultivar with a Botanical Name to worksheet."""
         wb = Workbook()
         ws = wb.active
@@ -695,7 +725,7 @@ class TestCultivarsWorksheet:
             2, cvws.cols['Botanical Name']
         ).value == 'Digitalis purpurea'
 
-    def testadd_one_with_thumbnail_filename(self):
+    def test_add_one_with_thumbnail_filename(self):
         """Add a Cultivar with a Thumbnail Filename to worksheet."""
         wb = Workbook()
         ws = wb.active
@@ -708,7 +738,7 @@ class TestCultivarsWorksheet:
         cvws.add_one(cv)
         assert cvws.cell(2, cvws.cols['Thumbnail Filename']).value == 'foo.jpg'
 
-    def testadd_one_with_description(self):
+    def test_add_one_with_description(self):
         """Add a Cultivar with a description to worksheet."""
         wb = Workbook()
         ws = wb.active
@@ -721,7 +751,7 @@ class TestCultivarsWorksheet:
         cvws.add_one(cv)
         assert cvws.cell(2, cvws.cols['Description']).value == 'Like a lady!'
 
-    def testadd_one_with_synonyms(self):
+    def test_add_one_with_synonyms(self):
         """Add a Cultivar with synonyms to worksheet."""
         wb = Workbook()
         ws = wb.active
@@ -734,7 +764,7 @@ class TestCultivarsWorksheet:
         cvws.add_one(cv)
         assert cvws.cell(2, cvws.cols['Synonyms']).value == 'Vulpine'
 
-    def testadd_one_with_new_for(self):
+    def test_add_one_with_new_for(self):
         """Add a Cultivar with New For to worksheet."""
         wb = Workbook()
         ws = wb.active
@@ -747,7 +777,7 @@ class TestCultivarsWorksheet:
         cvws.add_one(cv)
         assert cvws.cell(2, cvws.cols['New For']).value == 1984
 
-    def testadd_one_in_stock(self):
+    def test_add_one_in_stock(self):
         """Add an in-stock Cultivar to worksheet."""
         wb = Workbook()
         ws = wb.active
@@ -766,7 +796,7 @@ class TestCultivarsWorksheet:
         cvws.add_one(cv2)
         assert cvws.cell(3, cvws.cols['In Stock']).value == 'False'
 
-    def testadd_one_active(self):
+    def test_add_one_active(self):
         """Add an active Cultivar to worksheet."""
         wb = Workbook()
         ws = wb.active
@@ -785,7 +815,7 @@ class TestCultivarsWorksheet:
         cvws.add_one(cv2)
         assert cvws.cell(3, cvws.cols['Active']).value == 'False'
 
-    def testadd_one_invisible(self):
+    def test_add_one_invisible(self):
         """Add an invisible Cultivar to worksheet."""
         wb = Workbook()
         ws = wb.active
@@ -804,7 +834,7 @@ class TestCultivarsWorksheet:
         cvws.add_one(cv2)
         assert cvws.cell(3, cvws.cols['Invisible']).value == 'False'
 
-    def testadd_one_with_gw_common_names(self):
+    def test_add_one_with_gw_common_names(self):
         """Add a Cultivar with Grows With Common Names to worksheet."""
         wb = Workbook()
         ws = wb.active
@@ -821,7 +851,7 @@ class TestCultivarsWorksheet:
             2, cvws.cols['Grows With Common Names (JSON)']
         ).value == lookup_dicts_to_json((gwcn,))
 
-    def testadd_one_with_gw_cultivars(self):
+    def test_add_one_with_gw_cultivars(self):
         """Add a Cultivar with Grows With Cultivars to worksheet."""
         wb = Workbook()
         ws = wb.active
@@ -839,7 +869,7 @@ class TestCultivarsWorksheet:
             2, cvws.cols['Grows With Cultivars (JSON)']
         ).value == lookup_dicts_to_json((gwcv,))
 
-    def testadd_one_not_cultivar(self):
+    def test_add_one_not_cultivar(self):
         """Raise a TypeError given non-Cultivar data."""
         wb = Workbook()
         ws = wb.active
@@ -876,6 +906,7 @@ class TestPacketsWorksheet:
 
     def test_add_one(self):
         """Add a Packet to the Packets worksheet."""
+        messages = StringIO()
         wb = Workbook()
         ws = wb.active
         pws = PacketsWorksheet(ws)
@@ -886,7 +917,7 @@ class TestPacketsWorksheet:
         cv.common_name = CommonName(name='Foxglove')
         cv.common_name.index = Index(name='Perennial')
         pkt.cultivar = cv
-        pws.add_one(pkt)
+        pws.add_one(pkt, file=messages)
         assert pws.cell(
             2, pws.cols['Cultivar (JSON)']
         ).value == json.dumps(cv.lookup_dict())
@@ -894,8 +925,12 @@ class TestPacketsWorksheet:
         assert pws.cell(2, pws.cols['Price']).value == '3.50'
         assert pws.cell(2, pws.cols['Quantity']).value == '100'
         assert pws.cell(2, pws.cols['Units']).value == 'seeds'
+        messages.seek(0)
+        msgs = messages.read()
+        assert ('Adding data from <Packet SKU #8675309> to row #2 of packets '
+                'worksheet.') in msgs
 
-    def testadd_one_not_packet(self):
+    def test_add_one_not_packet(self):
         """Raise TypeError given non-Packet data."""
         wb = Workbook()
         ws = wb.active
@@ -998,14 +1033,15 @@ class TestSeedsWorkbook:
                                     m_idx,
                                     m_a):
         """Call <sheet>.save_to_db(<obj>.query.all()) for each worksheet."""
+        messages = StringIO()
         swb = SeedsWorkbook()
-        swb.add_all_data_to_sheets()
-        m_a.assert_any_call(m_pkt.all())
-        m_a.assert_any_call(m_cv.all())
-        m_a.assert_any_call(m_sr.all())
-        m_a.assert_any_call(m_bn.all())
-        m_a.assert_any_call(m_cn.all())
-        m_a.assert_any_call(m_idx.all())
+        swb.add_all_data_to_sheets(file=messages)
+        m_a.assert_any_call(m_pkt.all(), file=messages)
+        m_a.assert_any_call(m_cv.all(), file=messages)
+        m_a.assert_any_call(m_sr.all(), file=messages)
+        m_a.assert_any_call(m_bn.all(), file=messages)
+        m_a.assert_any_call(m_cn.all(), file=messages)
+        m_a.assert_any_call(m_idx.all(), file=messages)
 
     @mock.patch('app.seeds.excel.IndexesWorksheet.save_to_db')
     @mock.patch('app.seeds.excel.CommonNamesWorksheet.save_to_db')

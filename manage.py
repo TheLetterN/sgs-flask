@@ -77,22 +77,39 @@ def hello(goodbye=False):
 @manager.option(
     '-l',
     '--load',
-    help='Load an excel spreadsheet with given filename.')
+    help='Load an excel spreadsheet with given filename into the database.')
 @manager.option(
     '-s',
     '--save',
-    help='Save a database dump to an excel spreadsheet with given file name.')
+    help='Save a database dump to an excel spreadsheet with given filename.')
 @manager.option(
-    '-t',
-    '--timestamp',
-    action='store_true',
-    help='Append timestamp to filename when saving.')
-def excel(load=None, save=None, timestamp=None):
+    '-f',
+    '--logfile',
+    help='Output messages to given logfile instead of stdout.')
+def excel(load=None, save=None, logfile=None):
     """Interact with the excel module to utilize spreadsheets."""
+    if logfile:
+        if os.path.exists(logfile):
+            print('WARNING: The file specified by logfile \'{0}\' already '
+                  'exists. Would you like to overwrite it?'
+                  .format(logfile))
+            while True:
+                choice = input('Y/n: ').upper()
+                if choice == 'Y' or choice == 'YES' or choice == '':
+                    break
+                elif choice == 'N' or choice == 'NO':
+                    print('Action cancelled due to invalid logfile.')
+                    sys.exit(0)
+                else:
+                    print('Invalid input, please answer \'Y\' if you want to '
+                          'overwrite the file, or \'N\' if you do not. Would'
+                          'you like to overwite the file \'{0}\'?'
+                          .format(logfile))
+        file = open(logfile, 'w', encoding='utf-8')
+    else:
+        file = sys.stdout
     if load and save:
         raise ValueError('Cannot load and save at the same time!')
-    if timestamp and not save:
-        raise ValueError('Cannot append timestamp with no file to save!')
     if load:
         if os.path.exists(load):
             swb = SeedsWorkbook()
@@ -100,43 +117,33 @@ def excel(load=None, save=None, timestamp=None):
         else:
             raise FileNotFoundError('The file \'{0}\' does not exist!'
                                     .format(load))
+        swb.save_all_sheets_to_db(file=file)
     if save:
         if os.path.exists(save):
             print('WARNING: The file {0} exists. Would you like to overwrite '
                   'it?'.format(save))
-            swb = None
-            while swb is None:
+            while True:
                 choice = input('Y/n:  ').upper()
                 if choice == 'Y' or choice == 'YES' or choice == '':
-                    swb = SeedsWorkbook()
-                    swb.save(save)
+                    break
                 elif choice == 'N' or choice == 'NO':
                     print('Save cancelled. Exiting.')
                     sys.exit(0)
                 else:
                     print('Invalid input, please answer \'Y\' if you want to '
-                          'overwrite the file, or \'N\' if you do not.')
-        else:
-            swb = SeedsWorkbook(save)
-        print('Loading indexes database table into the Indexes worksheet.')
-        wb.load_indexes(Index.query.all())
-        print('Loading common_names database table into the CommonNames '
-              'worksheet.')
-        wb.load_common_names(CommonName.query.all())
-        print('Loading botanical_names database table into the BotanicalNames '
-              'worksheet.')
-        wb.load_botanical_names(BotanicalName.query.all())
-        print('Loading series database table into Series worksheet.')
-        wb.load_series(Series.query.all())
-        print('Loading cultivars database table into the Cultivars worksheet.')
-        wb.load_cultivars(Cultivar.query.all())
-        print('Loading packets database table into the Packets worksheet.')
-        wb.load_packets(Packet.query.all())
-        print('Saving workbook as \'{0}\'.'.format(save))
-        wb.save()
-        print('Worbook saved. Exiting.')
-        sys.exit(0)
-    print('Nothing to do here yet.')
+                          'overwrite the file, or \'N\' if you do not. Would'
+                          'you like to overwite the file \'{0}\'?'
+                          .format(save))
+        swb = SeedsWorkbook()
+        print('*** BEGIN saving all data to worksheet \'{0}\'. ***'
+              .format(save), file=file)
+        swb.add_all_data_to_sheets(file=file)
+        swb.beautify_all_sheets()
+        swb.save(save)
+        print('*** END saving all data to worksheet \'{0}\'. ***'
+              .format(save), file=file)
+    if file is not sys.stdout:
+        file.close()
 
 @manager.option(
     '-f',

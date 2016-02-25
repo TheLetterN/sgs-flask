@@ -271,17 +271,20 @@ class SeedsWorksheet(object):
             )
         self.populate_cols_dict()
 
-    def add_one(self, obj):
+    def add_one(self, obj, file=sys.stdout):
         """Add one object to the first empty row in the worksheet.
 
         What type of object is valid should be defined in the implementation
         of this method in the child class, and it should raise a TypeError if
         given invalid data.
+
+        It should also have the argument 'file' to pass a file-like object to,
+        defaulting to sys.stdout.
         """
         raise NotImplementedError('This method needs to be implemented by a '
                                   'class derived from SeedsWorksheet.')
 
-    def add(self, objects):
+    def add(self, objects, file=sys.stdout):
         """Add database model objects from an iterable.
 
         We want to add any valid data, and warn if any invalid data is present
@@ -291,11 +294,15 @@ class SeedsWorksheet(object):
             This method requires use of the abstract class add_one; as such,
             it should only be called from child classes of SeedsWorksheet.
         """
+        print('-- BEGIN adding data to {0}. --'
+              .format(self.__class__.__name__), file=file)
         for obj in objects:
             try:
-                self.add_one(obj)
+                self.add_one(obj, file=file)
             except TypeError as e:
                 warnings.warn(e.args[0], UserWarning)
+        print('-- END adding data to {0}. --'
+              .format(self.__class__.__name__), file=file)
 
     def save_row_to_db(self, row, file=sys.stdout):
         """Save a row from a worksheet to the database.
@@ -357,10 +364,17 @@ class IndexesWorksheet(SeedsWorksheet):
             titles = ('Index', 'Description')
             self._setup(titles)
 
-    def add_one(self, idx):
-        """Add a singe Index object to the Indexes worksheet."""
+    def add_one(self, idx, file=sys.stdout):
+        """Add a singe Index object to the Indexes worksheet.
+
+        Args:
+            idx (Index): The Index object to add.
+            file (io): A file-like object to print messages to.
+        """
         if isinstance(idx, Index):
             r = self.active_row
+            print('Adding data from {0} to row #{1} of indexes worksheet.'
+                  .format(idx, r), file=file)
             self.cell(r, self.cols['Index']).value = idx.name
             self.cell(r, self.cols['Description']).value = idx.description
         else:
@@ -427,10 +441,17 @@ class CommonNamesWorksheet(SeedsWorksheet):
                       'Grows With Cultivars (JSON)')
             self._setup(titles)
 
-    def add_one(self, cn):
-        """Add a single CommonName to a CommonNames worksheet."""
+    def add_one(self, cn, file=sys.stdout):
+        """Add a single CommonName to a CommonNames worksheet.
+
+        Args:
+            cn (CommonName): The CommonName object to add.
+            file (io): File-like object to print messages to.
+        """
         if isinstance(cn, CommonName):
             r = self.active_row
+            print('Adding data from {0} to row #{1} of common names worksheet.'
+                  .format(cn, r), file=file)
             self.cell(r, self.cols['Index']).value = cn.index.name
             self.cell(r, self.cols['Common Name']).value = cn.name
             if cn.parent:
@@ -618,10 +639,17 @@ class BotanicalNamesWorksheet(SeedsWorksheet):
                       'Synonyms')
             self._setup(titles)
 
-    def add_one(self, bn):
-        """Add a single BotanicalName to the Botanical Names worksheet."""
+    def add_one(self, bn, file=sys.stdout):
+        """Add a single BotanicalName to the Botanical Names worksheet.
+
+        Args:
+            bn (BotanicalName): The BotanicalName to add.
+            file (io): File-like object to print messages to.
+        """
         if isinstance(bn, BotanicalName):
             r = self.active_row
+            print('Adding data from {0} to row #{1} of botanical names '
+                  'worksheet.'.format(bn, r), file=file)
             self.cell(
                 r, self.cols['Common Names (JSON)']
             ).value = lookup_dicts_to_json(bn.common_names)
@@ -725,10 +753,17 @@ class SeriesWorksheet(SeedsWorksheet):
                       'Description')
             self._setup(titles)
 
-    def add_one(self, sr):
-        """Add a single Series to the Series worksheet."""
+    def add_one(self, sr, file=sys.stdout):
+        """Add a single Series to the Series worksheet.
+
+        Args:
+            sr (Series): The Series to add.
+            file (io): File-like object to output messages to.
+        """
         if isinstance(sr, Series):
             r = self.active_row
+            print('Adding data from {0} to row #{1} of series worksheet.'
+                  .format(sr, r), file=file)
             self.cell(
                 r, self.cols['Common Name (JSON)']
             ).value = json.dumps(sr.common_name.lookup_dict())
@@ -843,10 +878,17 @@ class CultivarsWorksheet(SeedsWorksheet):
                       'Grows With Cultivars (JSON)')
             self._setup(titles)
 
-    def add_one(self, cv):
-        """Add a single Cultivar to the Cultivars worksheet."""
+    def add_one(self, cv, file=sys.stdout):
+        """Add a single Cultivar to the Cultivars worksheet.
+
+        Args:
+            cv (Cultivar): The Cultivar to add.
+            file (io): File-like object to output messages to.
+        """
         if isinstance(cv, Cultivar):
             r = self.active_row
+            print('Adding data from {0} to row #{1} of cultivars worksheet.'
+                  .format(cv, r), file=file)
             self.cell(r, self.cols['Index']).value = cv.common_name.index.name
             self.cell(r, self.cols['Common Name']).value = cv.common_name.name
             self.cell(r, self.cols['Cultivar Name']).value = cv.name
@@ -1139,10 +1181,12 @@ class PacketsWorksheet(SeedsWorksheet):
                       'Units')
             self._setup(titles)
 
-    def add_one(self, pkt):
+    def add_one(self, pkt, file=sys.stdout):
         """Add a single Packet to the Packets worksheet."""
         if isinstance(pkt, Packet):
             r = self.active_row
+            print('Adding data from {0} to row #{1} of packets worksheet.'
+                  .format(pkt, r), file=file)
             self.cell(
                 r, self.cols['Cultivar (JSON)']
             ).value = json.dumps(pkt.cultivar.lookup_dict())
@@ -1277,12 +1321,12 @@ class SeedsWorkbook(object):
 
     def add_all_data_to_sheets(self, file=sys.stdout):
         """Add all relevant data from the database to respective worksheets."""
-        self.indexes.add(Index.query.all())
-        self.common_names.add(CommonName.query.all())
-        self.botanical_names.add(BotanicalName.query.all())
-        self.series.add(Series.query.all())
-        self.cultivars.add(Cultivar.query.all())
-        self.packets.add(Packet.query.all())
+        self.indexes.add(Index.query.all(), file=file)
+        self.common_names.add(CommonName.query.all(), file=file)
+        self.botanical_names.add(BotanicalName.query.all(), file=file)
+        self.series.add(Series.query.all(), file=file)
+        self.cultivars.add(Cultivar.query.all(), file=file)
+        self.packets.add(Packet.query.all(), file=file)
 
     def save_all_sheets_to_db(self, file=sys.stdout):
         """Save the contents of all worksheets to the database."""

@@ -109,7 +109,7 @@ class TestAddBotanicalNameForm:
                              'interrupt'
         with pytest.raises(ValidationError):
             form.validate_synonyms(form.synonyms)
-        form.synonyms.data = 'Digitalis watchus, Digitalis Walrus'
+        form.synonyms.data = 'Digitalis watchus, digitalis walrus'
         with pytest.raises(ValidationError):
             form.validate_synonyms(form.synonyms)
 

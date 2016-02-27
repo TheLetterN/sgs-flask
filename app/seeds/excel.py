@@ -129,10 +129,16 @@ def get_or_create_cultivar(name,
                            file=sys.stdout):
     """Load a cultivar if it iexists, create it if not.
 
-    Note:
+    Notes:
         The boolean attribute 'created' is attached to the CommonName
         instance so we know whether the returned CommonName was created or
         loaded.
+
+        Also, if a Series is created by this function, its position will be
+        set to the default Series.BEFORE_CULTIVAR, as it can easily be edited
+        later, and it's not necessary information for the creation of a
+        Cultivar. Ideally, the Series for a Cultivar that needs to be created
+        should already be in the database.
 
     Args:
         name (str): Name of the Cultivar.
@@ -178,11 +184,16 @@ def get_or_create_cultivar(name,
             else:
                 sr = Series(name=series)
                 sr.common_name = cv.common_name
+                sr.position = Series.BEFORE_CULTIVAR
                 print('The Series \'{0}\' does not yet exist, so it has been '
                       'created.'.format(sr.name), file=file)
             cv.series = sr
         print('The Cultivar \'{0}\' does not yet exist in the database, so it '
               'has been created.'.format(cv.fullname), file=file)
+    if cv.created:
+        cv.set_slug()
+        print('The slug for the Cultivar \'{0}\' has been set to: {1}'
+              .format(cv.fullname, cv.slug), file=file)
     return cv
 
 
@@ -851,8 +862,10 @@ class SeriesWorksheet(SeedsWorksheet):
         if sr:
             print('The Series \'{0}\' has been loaded from the database.'
                   .format(sr.name), file=file)
+            sr_created = False
         else:
             edited = True
+            sr_created = True
             sr = Series(name=series)
             sr.common_name = cn
             print('CommonName for the Series \'{0}\' set to: {1}'
@@ -860,7 +873,7 @@ class SeriesWorksheet(SeedsWorksheet):
             db.session.add(sr)
             print('The Series \'{0}\' does not yet exist in the database, so '
                   'it has been created.'.format(sr.name), file=file)
-        if position != sr.position:
+        if position != sr.position or sr_created:
             edited = True
             sr.position = position
             if sr.position == Series.AFTER_CULTIVAR:
@@ -1044,11 +1057,14 @@ class CultivarsWorksheet(SeedsWorksheet):
                       .format(cv.fullname, sr.name), file=file)
         if botanical_name:
             if not BotanicalName.validate(botanical_name):
+                obn = botanical_name
+                words = botanical_name.strip().split(' ')
+                words[0] = words[0].capitalize()
+                botanical_name = ' '.join(words)
                 print('The BotanicalName \'{0}\' does not appear to be a '
-                      'validly formatted botanical name. Attempting to fix '
-                      'it by capitalizing the first letter and making all '
-                      'others lowercase.'.format(botanical_name), file=file)
-            botanical_name = botanical_name.capitalize()
+                      'validly formatted botanical name. In an attempt to fix '
+                      'it, it has been changed to: \'{1}\''
+                      .format(obn, botanical_name), file=file)
             bn = BotanicalName.query\
                 .filter(BotanicalName._name == botanical_name)\
                 .one_or_none()

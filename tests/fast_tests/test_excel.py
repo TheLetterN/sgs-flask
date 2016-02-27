@@ -593,8 +593,8 @@ class TestSeriesWorksheet:
         assert srws.cell(2, srws.cols['Description']).value is None
         messages.seek(0)
         msgs = messages.read()
-        assert ('Adding data from <Series \'Polkadot\'> to row #2 of series '
-                'worksheet') in msgs
+        assert ('Adding data from <Series \'Polkadot Foxglove\'> to row #2 of '
+                'series worksheet') in msgs
 
     def test_add_one_with_position(self):
         """Set Position column's cell with relevant position description."""

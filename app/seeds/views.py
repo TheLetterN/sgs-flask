@@ -43,7 +43,7 @@ from .models import (
     Image,
     Packet,
     Quantity,
-    save_indexes_to_json,
+    save_indexes_to_json_file,
     Series,
     USDInt
 )
@@ -132,7 +132,7 @@ def add_index():
             flash('Description for \'{0}\' set to: {1}'
                   .format(index.name, index.description))
         db.session.commit()
-        save_indexes_to_json()
+        save_indexes_to_json_file()
         flash('New index \'{0}\' has been added to the database.'.
               format(index.name))
         return redirect(url_for('seeds.add_common_name', idx_id=index.id))
@@ -503,7 +503,7 @@ def edit_index(idx_id=None):
                   .format(index.name, form.name.data))
             old_slug = index.slug
             index.name = form.name.data
-            save_indexes_to_json()
+            save_indexes_to_json_file()
             new_slug = index.slug
             old_path = url_for('seeds.index_page', idx_slug=old_slug)
             new_path = url_for('seeds.index_page', idx_slug=new_slug)

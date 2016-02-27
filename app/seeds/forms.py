@@ -123,8 +123,7 @@ def botanical_name_select_list(obj=None):
     else:
         items = BotanicalName.query.order_by('_name')
     for bn in items:
-        if not bn.invisible:
-            bn_list.append((bn.id, bn.name))
+        bn_list.append((bn.id, bn.name))
     return bn_list
 
 

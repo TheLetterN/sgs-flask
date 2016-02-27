@@ -195,7 +195,7 @@ class TestAddBotanicalNameFormWithDB:
         form.cn = cn
         form.name.data = 'Innagada davida'
         form.validate_name(form.name)
-        form.name.data = 'Title Case is not a binomen'
+        form.name.data = 'McDuck is not a valid genus'
         with pytest.raises(ValidationError):
             form.validate_name(form.name)
         form.name.data = 'Asclepias incarnata'

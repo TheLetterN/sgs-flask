@@ -174,6 +174,22 @@ class TestExcel2WithDB:
         msgs = messages.read()
         assert 'The Cultivar \'Polkadot Petra Foxglove\' has been load' in msgs
 
+    def test_get_or_create_cultivar_create_sets_slug(self, db):
+        """Run Cultivar.set_slug after creation if cultivar was created."""
+        messages = StringIO()
+        cn = CommonName(name='Foxglove')
+        cn.index = Index(name='Perennial')
+        cv = get_or_create_cultivar(name='Petra',
+                                    common_name='Foxglove',
+                                    index='Perennial',
+                                    series='Polkadot',
+                                    file=messages)
+        messages.seek(0)
+        msgs = messages.read()
+        assert cv.slug == 'polkadot-petra'
+        assert ('The slug for the Cultivar \'Polkadot Petra Foxglove\' has '
+                'been set to: polkadot-petra') in msgs
+
 
 class TestSeedsWorksheetWithDB:
     """Test methods of SeedsWorksheet that (normally) need to use the db."""
@@ -1007,14 +1023,14 @@ class TestBotanicalNamesWorksheetWithDB:
         bnws = BotanicalNamesWorksheet(ws)
         bnws.setup()
         bn = BotanicalName()
-        bn._name = 'Invalid Botanical Name'
+        bn._name = 'invalid Botanical Name'
         bn.common_names = [CommonName(name='Foxglove')]
         bn.common_names[0].index = Index(name='Perennial')
         bnws.add_one(bn)
         assert not bnws.save_row_to_db(2, file=messages)
         messages.seek(0)
         msgs = messages.read()
-        assert msgs == ('Could not add the BotanicalName \'Invalid Botanical '
+        assert msgs == ('Could not add the BotanicalName \'invalid Botanical '
                         'Name\' because it does not appear to be a validly '
                         'formatted botanical name.\n')
 
@@ -1258,6 +1274,7 @@ class TestSeriesWorksheetWithDB:
         assert srq.common_name.index.name == 'Perennial'
         messages.seek(0)
         msgs = messages.read()
+        print(msgs)
         assert ('The Series \'Polkadot\' does not yet exist in the database, '
                 'so it has been created.') in msgs
         assert ('The Series name \'Polkadot\' will be placed before the '
@@ -1545,7 +1562,7 @@ class TestCultivarsWorksheetWithDB:
         cv.common_name = CommonName(name='Foxglove')
         cv.common_name.index = Index(name='Perennial')
         cv.botanical_name = BotanicalName()
-        cv.botanical_name._name = 'Digitalis Purpurea'
+        cv.botanical_name._name = 'digitalis purpurea'
         cv.botanical_name.common_names.append(cv.common_name)
         cv.in_stock = True
         cv.active = True
@@ -1556,8 +1573,9 @@ class TestCultivarsWorksheetWithDB:
         messages.seek(0)
         msgs = messages.read()
         assert cv.botanical_name.name == 'Digitalis purpurea'
-        assert ('The BotanicalName \'Digitalis Purpurea\' does not appear to '
-                'be a validly formatted botanical name') in msgs
+        assert ('The BotanicalName \'digitalis purpurea\' does not appear to '
+                'be a validly formatted botanical name. In an attempt to fix '
+                'it, it has been changed to: \'Digitalis purpurea\'') in msgs
 
     def test_save_row_to_db_new_with_existing_botanical_name(self, db):
         """Use existing BotanicalName instead of new one."""

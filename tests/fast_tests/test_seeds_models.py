@@ -4,8 +4,6 @@ import pytest
 from decimal import Decimal
 from flask import current_app
 from fractions import Fraction
-from inflection import pluralize
-from slugify import slugify
 from unittest import mock
 from app.seeds.models import (
     BotanicalName,
@@ -18,7 +16,7 @@ from app.seeds.models import (
     Series,
     Synonym,
     SynonymsMixin,
-    USDInt
+    USDollar
 )
 
 
@@ -95,104 +93,43 @@ class TestSynonymsMixin:
         assert smi.synonyms_string == 'space'
 
 
-class TestUSDInt:
-    """Test methods of the USDInt TypeDecorator in the seeds model."""
-    def test_int_to_usd(self):
+class TestUSDollar:
+    """Test methods of the USDollar TypeDecorator in the seeds model."""
+    def test_cents_to_usd(self):
         """Return a Decimal USD value given an integer."""
-        assert USDInt.int_to_usd(100) == Decimal('1.00')
-        assert USDInt.int_to_usd(299) == Decimal('2.99')
-        assert USDInt.int_to_usd(350) == Decimal('3.50')
+        assert USDollar.cents_to_usd(100) == Decimal('1.00')
+        assert USDollar.cents_to_usd(299) == Decimal('2.99')
+        assert USDollar.cents_to_usd(350) == Decimal('3.50')
 
-    def test_int_to_usd_bad_type(self):
-        """Raise a TypeError given non-int data."""
-        with pytest.raises(TypeError):
-            USDInt.int_to_usd(3.14)
-        with pytest.raises(TypeError):
-            USDInt.int_to_usd('400')
-        with pytest.raises(TypeError):
-            USDInt.int_to_usd(Decimal('100'))
-
-    def test_int_to_usd_two_decimal_places(self):
+    def test_cents_to_usd_two_decimal_places(self):
         """Always return a Decimal with 2 decimal places."""
-        assert str(USDInt.int_to_usd(100)) == '1.00'
-        assert str(USDInt.int_to_usd(350)) == '3.50'
-        assert str(USDInt.int_to_usd(1000)) == '10.00'
+        assert str(USDollar.cents_to_usd(100)) == '1.00'
+        assert str(USDollar.cents_to_usd(350)) == '3.50'
+        assert str(USDollar.cents_to_usd(1000)) == '10.00'
 
-    def test_usd_to_decimal_float(self):
-        """Floats should convert cleanly to Decimal."""
-        assert USDInt.usd_to_decimal(3.50) == Decimal('3.50')
-        assert USDInt.usd_to_decimal(3.14159) == Decimal('3.14')
-        assert USDInt.usd_to_decimal(1.999) == Decimal('1.99')
-
-    def test_usd_to_decimal_str(self):
-        """Strings containing a decimal number should be convertable."""
-        assert USDInt.usd_to_decimal('$3.50') == Decimal('3.50')
-        assert USDInt.usd_to_decimal('3.14159') == Decimal('3.14')
-        assert USDInt.usd_to_decimal('4') == Decimal('4.00')
-
-    def test_usd_to_decimal_bad_data(self):
-        """Raise ValueError given bad data."""
-        with pytest.raises(ValueError):
-            USDInt.usd_to_decimal(Fraction(3, 4))
-        with pytest.raises(ValueError):
-            USDInt.usd_to_decimal('$3.50 US')
-        with pytest.raises(ValueError):
-            USDInt.usd_to_decimal(['3.50'])
-
-    def test_usd_to_int_bad_string(self):
-        """Raise a ValueError given a string that can't be parsed."""
-        with pytest.raises(ValueError):
-            USDInt.usd_to_int('2 99')
-        with pytest.raises(ValueError):
-            USDInt.usd_to_int('$ 2.99 US')
-        with pytest.raises(ValueError):
-            USDInt.usd_to_int('tree fiddy')
-
-    def test_usd_to_int_bad_type(self):
-        """Raise a TypeError given a value that can't be coerced to int."""
-        with pytest.raises(TypeError):
-            USDInt.usd_to_int(Fraction(1, 4))
-        with pytest.raises(TypeError):
-            USDInt.usd_to_int(['2.99', '1.99'])
-        with pytest.raises(TypeError):
-            USDInt.usd_to_int({'price': '$2.99'})
-
-    def test_usd_to_int_valid_non_strings(self):
+    def test_usd_to_cents_valid_non_strings(self):
         """Return an int given a valid non-string type."""
-        assert USDInt.usd_to_int(1) == 100
-        assert USDInt.usd_to_int(2.99) == 299
-        assert USDInt.usd_to_int(3.999) == 399
-        assert USDInt.usd_to_int(Decimal('1.99')) == 199
-        assert USDInt.usd_to_int(3.14159265) == 314
+        assert USDollar.usd_to_cents(1) == 100
+        assert USDollar.usd_to_cents(2.99) == 299
+        assert USDollar.usd_to_cents(3.999) == 399
+        assert USDollar.usd_to_cents(Decimal('1.99')) == 199
+        assert USDollar.usd_to_cents(3.14159265) == 314
 
-    def test_usd_to_int_valid_string(self):
+    def test_usd_to_cents_valid_string(self):
         """Return an int given a valid string containing a dollar amount."""
-        assert USDInt.usd_to_int('$2.99') == 299
-        assert USDInt.usd_to_int('3.00') == 300
-        assert USDInt.usd_to_int('2.50$') == 250
-        assert USDInt.usd_to_int('$ 1.99') == 199
-        assert USDInt.usd_to_int('4.99 $') == 499
-        assert USDInt.usd_to_int(' 3.50 ') == 350
-        assert USDInt.usd_to_int('4') == 400
-        assert USDInt.usd_to_int('5.3') == 530
-        assert USDInt.usd_to_int('3.9999') == 399
+        assert USDollar.usd_to_cents('$2.99') == 299
+        assert USDollar.usd_to_cents('3.00') == 300
+        assert USDollar.usd_to_cents('2.50$') == 250
+        assert USDollar.usd_to_cents('$ 1.99') == 199
+        assert USDollar.usd_to_cents('4.99 $') == 499
+        assert USDollar.usd_to_cents(' 3.50 ') == 350
+        assert USDollar.usd_to_cents('4') == 400
+        assert USDollar.usd_to_cents('5.3') == 530
+        assert USDollar.usd_to_cents('3.9999') == 399
 
 
 class TestIndex:
     """Test methods of Index in the seeds model."""
-    def test_index_getter(self):
-        """Return ._name."""
-        index = Index()
-        index._name = 'Perennial Flower'
-        assert index.name == 'Perennial Flower'
-
-    def test_index_setter(self):
-        """Set ._name and a pluralized, slugified v. to .slug."""
-        index = Index()
-        index.name = 'Annual Flower'
-        assert index._name == 'Annual Flower'
-        assert index.slug == slugify(pluralize('Annual Flower'))
-
     def test_header(self):
         """Return '<._name> Seeds'"""
         index = Index()
@@ -214,17 +151,6 @@ class TestIndex:
 
 class TestCommonName:
     """Test methods of CommonName in the seeds model."""
-    def test_init_with_index(self):
-        """Set self.index to passed Index."""
-        idx = Index(name='Perennial')
-        cn = CommonName(name='Foxglove', index=idx)
-        assert cn.index is idx
-
-    def test_init_with_index_wrong_type(self):
-        """Raise a TypeError if trying to pass non-Index data via index."""
-        with pytest.raises(TypeError):
-            CommonName(name='Foxglove', index='Perennial')
-
     def test_repr(self):
         """Return string formatted <CommonName '<name>'>"""
         cn = CommonName(name='Coleus')
@@ -233,72 +159,12 @@ class TestCommonName:
     def test_header(self):
         """Return '<._name> Seeds'."""
         cn = CommonName()
-        cn._name = 'Foxglove'
+        cn.name = 'Foxglove'
         assert cn.header == 'Foxglove Seeds'
-
-    def test_name_getter(self):
-        """Return contents of ._name"""
-        cn = CommonName()
-        cn._name = 'Coleus'
-        assert cn.name == 'Coleus'
-
-    def test_name_setter(self):
-        """Set ._name and .slug using passed value."""
-        cn = CommonName()
-        cn.name = 'Butterfly Weed'
-        assert cn._name == 'Butterfly Weed'
-        assert cn.slug == slugify('Butterfly Weed')
 
 
 class TestBotanicalName:
     """Test methods of BotanicalName in the seeds model."""
-    def test_init_with_common_names(self):
-        """Set common names for BotanicalName if passed."""
-        idx = Index(name='Perennial')
-        cn1 = CommonName(name='Foxglove', index=idx)
-        cn2 = CommonName(name='Fauxglove', index=idx)
-        bn = BotanicalName(name='Digitalis über alles',
-                           common_names=[cn1, cn2])
-        assert cn1 in bn.common_names
-        assert cn2 in bn.common_names
-
-    def test_init_with_common_names_wrong_type(self):
-        """Raise a TypeError if common_names is not all of type CommonName."""
-        idx = Index(name='Perennial')
-        cn1 = CommonName(name='Foxglove', index=idx)
-        cn2 = CommonName(name='Fauxglove', index=idx)
-        with pytest.raises(TypeError):
-            BotanicalName(name='Digitalis über alles',
-                          common_names=[cn1, 'Not a CommonName', cn2])
-
-    def test_init_with_synonyms(self):
-        """Set synonyms with a string containing a list of Synonyms."""
-        bn = BotanicalName(name='Digitalis purpurea',
-                           synonyms='Digitalis über alles, '
-                                    'Digitalis does dallas')
-        assert len(bn.synonyms) == 2
-        assert bn.synonyms_string == ('Digitalis über alles, '
-                                      'Digitalis does dallas')
-
-    def test_name_getter(self):
-        """.name is the same as ._name."""
-        bn = BotanicalName()
-        bn._name = 'Asclepias incarnata'
-        assert bn.name == 'Asclepias incarnata'
-
-    def test_name_setter_valid_input(self):
-        """set ._name if valid."""
-        bn = BotanicalName()
-        bn.name = 'Asclepias incarnata'
-        assert bn._name == 'Asclepias incarnata'
-
-    def test_name_setter_falsey_input(self):
-        bn = BotanicalName()
-        bn.name = ''
-        assert bn._name is None
-        bn.name = None
-        assert bn._name is None
-
     def test_repr(self):
         """Return a string in format <BotanicalName '<botanical_name>'>"""
         bn = BotanicalName(name='Asclepias incarnata')
@@ -331,32 +197,6 @@ class TestBotanicalName:
 
 class TestSeries:
     """Test methods of the Series class in seeds.models."""
-    def test_init_with_common_name(self):
-        """Create a Series with a CommonName."""
-        cn = CommonName(name='Foxglove')
-        sr = Series(name='Polkadot', common_name=cn)
-        assert sr.common_name is cn
-
-    def test_init_with_common_name_wrong_type(self):
-        """Raise a TypeError if common_name is passed non-CommonName data."""
-        with pytest.raises(TypeError):
-            Series(name='Polkadot', common_name='Foxglove')
-
-    def test_init_with_default_position(self):
-        """Set position to Series.BEFORE_CULTIVAR if no series passed."""
-        sr = Series(name='Polkadot')
-        assert sr.position == Series.BEFORE_CULTIVAR
-
-    def test_init_with_position_before(self):
-        """Set position to Series.BEFORE_CULTIVAR if it is passed."""
-        sr = Series(name='Polkadot', position=Series.BEFORE_CULTIVAR)
-        assert sr.position == Series.BEFORE_CULTIVAR
-
-    def test_init_with_position_after(self):
-        """Set position to Series.AFTER_CULTIVAR if it is passed."""
-        sr = Series(name='Polkadot', position=Series.AFTER_CULTIVAR)
-        assert sr.position == Series.AFTER_CULTIVAR
-
     def test_repr(self):
         """Return formatted string with full name."""
         sr = Series(name='Polkadot', common_name=CommonName(name='Foxglove'))
@@ -372,102 +212,61 @@ class TestSeries:
         assert ser.fullname == 'Dalmatian Foxglove'
 
 
-class TestImage:
-    """Test methods of Image in the seeds model."""
-    def test_repr(self):
-        """Return string representing Image."""
-        image = Image(filename='hello.jpg')
-        assert image.__repr__() == '<Image filename: \'hello.jpg\'>'
-
-    @mock.patch('app.seeds.models.os.remove')
-    def test_delete_file(self, mock_remove):
-        """Delete image file using os.remove."""
-        image = Image()
-        image.filename = 'hello.jpg'
-        image.delete_file()
-        mock_remove.assert_called_with(image.full_path)
-
-    @mock.patch('app.seeds.models.os.path.exists')
-    def test_exists(self, mock_exists):
-        """Call os.path.exists for path of image file."""
-        mock_exists.return_value = True
-        image = Image()
-        image.filename = 'hello.jpg'
-        assert image.exists()
-        mock_exists.assert_called_with(image.full_path)
-
-    def test_full_path(self):
-        """Return the absolute file path for image name."""
-        image = Image()
-        image.filename = 'hello.jpg'
-        assert image.full_path ==\
-            os.path.join(current_app.config.get('IMAGES_FOLDER'),
-                         image.filename)
-
-
 class TestCultivar:
     """Test methods of Cultivar in the seeds model."""
-    def test_repr(self):
-        """Return a string formatted <Cultivar '<name>'>"""
-        cultivar = Cultivar()
-        cultivar.name = 'Soulmate'
-        assert cultivar.__repr__() == '<Cultivar \'Soulmate\'>'
+    @mock.patch('app.seeds.models.Cultivar.fullname',
+                new_callable=mock.PropertyMock)
+    def test_repr(self, m_fn):
+        """Return a string formatted <Cultivar '<fullname>'>"""
+        m_fn.return_value = 'Full Cultivar Name'
+        cv = Cultivar()
+        assert cv.__repr__() == '<Cultivar \'Full Cultivar Name\'>'
 
-    def test_fullname_getter(self):
-        """.fullname returns ._name, or a string with name and common name."""
-        cn = CommonName()
-        cultivar = Cultivar()
-        cn._name = 'Foxglove'
-        cultivar._name = 'Foxy'
-        assert cultivar.fullname == 'Foxy'
-        cultivar.common_name = cn
-        assert cultivar.fullname == 'Foxy Foxglove'
+    @mock.patch('app.seeds.models.Cultivar.name_with_series',
+                new_callable=mock.PropertyMock)
+    def test_fullname_getter(self, m_nws):
+        """Return string with all existing: series, name, and common_name."""
+        m_nws.return_value = 'Polkadot Petra'
+        cv = Cultivar()
+        cv.common_name = CommonName(name='Foxglove')
+        assert cv.fullname == 'Polkadot Petra Foxglove'
 
-    def test_name_getter(self):
-        """Return ._name"""
-        cultivar = Cultivar()
-        cultivar._name = 'Foxy'
-        assert cultivar.name == 'Foxy'
+    def test_name_with_series_no_series(self):
+        """Return Cultivar.name if no series present."""
+        cv = Cultivar(name='Foxy')
+        assert cv.name_with_series == 'Foxy'
 
-    def test_name_setter(self):
-        """Set ._name and a slugified version of name to .slug"""
-        cultivar = Cultivar()
-        cultivar.name = u'Cafe Crème'
-        assert cultivar._name == u'Cafe Crème'
-        assert cultivar.slug == slugify(u'Cafe Crème')
+    def test_name_with_series_before_cultivar(self):
+        """Return string with series before name."""
+        cv = Cultivar(
+            name='Petra',
+            series=Series(name='Polkadot', position=Series.BEFORE_CULTIVAR)
+        )
+        assert cv.name_with_series == 'Polkadot Petra'
 
-    def test_name_setter_none(self):
-        """Set ._name and slug to None if .name set to None."""
-        cultivar = Cultivar()
-        cultivar.name = None
-        assert cultivar._name is None
-        assert cultivar.slug is None
+    def test_name_with_series_after_cultivar(self):
+        """Return string with series after name."""
+        cv = Cultivar(
+            name='Violet',
+            series=Series(name='Queen', position=Series.AFTER_CULTIVAR)
+        )
+        assert cv.name_with_series == 'Violet Queen'
 
-    def test_lookup_dict(self):
-        """Generate a dict containing information used to look up."""
-        cv1 = Cultivar(name='Name Only')
-        cv2 = Cultivar(name='Name & Common Name')
-        cv3 = Cultivar(name='Name, Series, and Common Name')
-        cn = CommonName(name='Common Name')
-        cn.index = Index(name='Index')
-        sr = Series(name='Series')
-        cv2.common_name = cn
-        cv3.common_name = cn
-        cv3.series = sr
-        assert cv1.lookup_dict() == {'Cultivar Name': 'Name Only',
+    def test_name_with_series_after_cultivar_mix(self):
+        """Put the series name before cultivars named 'Mix'."""
+        cv = Cultivar(
+            name='Mix',
+            series=Series(name='Queen', position=Series.AFTER_CULTIVAR)
+        )
+        assert cv.name_with_series == 'Queen Mix'
+
+    def test_queryable_dict(self):
+        """Return a dict with queryable parameters for Cultivar."""
+        cv = Cultivar()
+        assert cv.queryable_dict == {'Cultivar Name': None,
                                      'Common Name': None,
                                      'Index': None,
                                      'Series': None}
-        assert cv2.lookup_dict() == {'Cultivar Name': 'Name & Common Name',
-                                     'Common Name': 'Common Name',
-                                     'Index': 'Index',
-                                     'Series': None}
-        assert cv3.lookup_dict() == {
-            'Cultivar Name': 'Name, Series, and Common Name',
-            'Common Name': 'Common Name',
-            'Index': 'Index',
-            'Series': 'Series'
-        }
 
 
 class TestPacket:
@@ -694,3 +493,36 @@ class TestQuantity:
         assert qty._numerator is None
         assert qty._denominator is None
         assert qty._float is None
+
+
+class TestImage:
+    """Test methods of Image in the seeds model."""
+    def test_repr(self):
+        """Return string representing Image."""
+        image = Image(filename='hello.jpg')
+        assert image.__repr__() == '<Image filename: \'hello.jpg\'>'
+
+    @mock.patch('app.seeds.models.os.remove')
+    def test_delete_file(self, mock_remove):
+        """Delete image file using os.remove."""
+        image = Image()
+        image.filename = 'hello.jpg'
+        image.delete_file()
+        mock_remove.assert_called_with(image.full_path)
+
+    @mock.patch('app.seeds.models.os.path.exists')
+    def test_exists(self, mock_exists):
+        """Call os.path.exists for path of image file."""
+        mock_exists.return_value = True
+        image = Image()
+        image.filename = 'hello.jpg'
+        assert image.exists()
+        mock_exists.assert_called_with(image.full_path)
+
+    def test_full_path(self):
+        """Return the absolute file path for image name."""
+        image = Image()
+        image.filename = 'hello.jpg'
+        assert image.full_path ==\
+            os.path.join(current_app.config.get('IMAGES_FOLDER'),
+                         image.filename)

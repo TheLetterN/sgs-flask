@@ -174,22 +174,6 @@ class TestExcel2WithDB:
         msgs = messages.read()
         assert 'The Cultivar \'Polkadot Petra Foxglove\' has been load' in msgs
 
-    def test_get_or_create_cultivar_create_sets_slug(self, db):
-        """Run Cultivar.set_slug after creation if cultivar was created."""
-        messages = StringIO()
-        cn = CommonName(name='Foxglove')
-        cn.index = Index(name='Perennial')
-        cv = get_or_create_cultivar(name='Petra',
-                                    common_name='Foxglove',
-                                    index='Perennial',
-                                    series='Polkadot',
-                                    file=messages)
-        messages.seek(0)
-        msgs = messages.read()
-        assert cv.slug == 'polkadot-petra'
-        assert ('The slug for the Cultivar \'Polkadot Petra Foxglove\' has '
-                'been set to: polkadot-petra') in msgs
-
 
 class TestSeedsWorksheetWithDB:
     """Test methods of SeedsWorksheet that (normally) need to use the db."""
@@ -271,7 +255,7 @@ class TestIndexesWorksheetWithDB:
         iws.add_one(idx)
         assert iws.save_row_to_db(row=2, file=messages)
         m_goci.assert_called_with(name='Perennial', file=messages)
-        assert Index.query.filter(Index._name == 'Perennial').one_or_none()
+        assert Index.query.filter(Index.name == 'Perennial').one_or_none()
         messages.seek(0)
         msgs = messages.read()
         assert 'Changes to Index \'Perennial\' have been flushed' in msgs
@@ -286,7 +270,7 @@ class TestIndexesWorksheetWithDB:
         idx = Index(name='Perennial', description='Built to last.')
         iws.add_one(idx)
         assert iws.save_row_to_db(row=2, file=messages)
-        idxq = Index.query.filter(Index._name == 'Perennial').one_or_none()
+        idxq = Index.query.filter(Index.name == 'Perennial').one_or_none()
         assert idxq.description == 'Built to last.'
         messages.seek(0)
         msgs = messages.read()
@@ -304,7 +288,7 @@ class TestIndexesWorksheetWithDB:
         db.session.commit()
         iws.add_one(Index(name='Perennial', description='Live long time.'))
         assert iws.save_row_to_db(row=2, file=messages)
-        idxq = Index.query.filter(Index._name == 'Perennial').one_or_none()
+        idxq = Index.query.filter(Index.name == 'Perennial').one_or_none()
         assert idxq is idx
         assert idx.description == 'Live long time.'
         messages.seek(0)
@@ -323,7 +307,7 @@ class TestIndexesWorksheetWithDB:
         db.session.commit()
         iws.add_one(Index(name='Perennial'))
         assert iws.save_row_to_db(row=2, file=messages)
-        idxq = Index.query.filter(Index._name == 'Perennial').one_or_none()
+        idxq = Index.query.filter(Index.name == 'Perennial').one_or_none()
         assert idxq is idx
         assert idx.description is None
         messages.seek(0)
@@ -366,7 +350,7 @@ class TestCommonNamesWorksheet:
         cnws.add_one(cn)
         assert cnws.save_row_to_db(row=2, file=messages)
         assert CommonName.query\
-            .filter(CommonName._name == 'Foxglove')\
+            .filter(CommonName.name == 'Foxglove')\
             .one_or_none()
         m_goccn.assert_called_with(name='Foxglove',
                                    index='Perennial',
@@ -389,7 +373,7 @@ class TestCommonNamesWorksheet:
         cnws.add_one(cn)
         assert cnws.save_row_to_db(row=2, file=messages)
         cnq = CommonName.query\
-            .filter(CommonName._name == 'Sauce Tomato')\
+            .filter(CommonName.name == 'Sauce Tomato')\
             .one_or_none()
         assert cnq.parent.name == 'Tomato'
         assert cnq.parent.index.name == 'Vegetable'
@@ -416,7 +400,7 @@ class TestCommonNamesWorksheet:
         cnws.add_one(cn)
         assert cnws.save_row_to_db(row=2, file=messages)
         cnq = CommonName.query\
-            .filter(CommonName._name == 'Sauce Tomato')\
+            .filter(CommonName.name == 'Sauce Tomato')\
             .one_or_none()
         assert cnq.parent is cnp
 
@@ -432,7 +416,7 @@ class TestCommonNamesWorksheet:
         cnws.add_one(cn)
         assert cnws.save_row_to_db(row=2, file=messages)
         cnq = CommonName.query\
-            .filter(CommonName._name == 'Foxglove')\
+            .filter(CommonName.name == 'Foxglove')\
             .one_or_none()
         assert cnq.description == 'A bit spotty.'
         messages.seek(0)
@@ -455,7 +439,7 @@ class TestCommonNamesWorksheet:
         cnws.add_one(cn2)
         assert cnws.save_row_to_db(row=2, file=messages)
         cnq = CommonName.query\
-            .filter(CommonName._name == 'Foxglove')\
+            .filter(CommonName.name == 'Foxglove')\
             .one_or_none()
         assert cnq is cn
         assert cn.description == 'More dots!'
@@ -480,7 +464,7 @@ class TestCommonNamesWorksheet:
         cnws.add_one(cn2)
         assert cnws.save_row_to_db(row=2, file=messages)
         cnq = CommonName.query\
-            .filter(CommonName._name == 'Foxglove')\
+            .filter(CommonName.name == 'Foxglove')\
             .one_or_none()
         assert cnq is cn
         assert cn.description is None
@@ -501,7 +485,7 @@ class TestCommonNamesWorksheet:
         cnws.add_one(cn)
         assert cnws.save_row_to_db(row=2, file=messages)
         cnq = CommonName.query\
-            .filter(CommonName._name == 'Foxglove')\
+            .filter(CommonName.name == 'Foxglove')\
             .one_or_none()
         assert cnq.instructions == 'Just add water!'
         messages.seek(0)
@@ -525,7 +509,7 @@ class TestCommonNamesWorksheet:
         cnws.add_one(cn2)
         assert cnws.save_row_to_db(row=2, file=messages)
         cnq = CommonName.query\
-            .filter(CommonName._name == 'Foxglove')\
+            .filter(CommonName.name == 'Foxglove')\
             .one_or_none()
         assert cnq is cn
         assert cn.instructions == 'Put them in soil.'
@@ -550,7 +534,7 @@ class TestCommonNamesWorksheet:
         cnws.add_one(cn2)
         assert cnws.save_row_to_db(row=2, file=messages)
         cnq = CommonName.query\
-            .filter(CommonName._name == 'Foxglove')\
+            .filter(CommonName.name == 'Foxglove')\
             .one_or_none()
         assert cnq is cn
         assert cn.instructions is None
@@ -572,7 +556,7 @@ class TestCommonNamesWorksheet:
         cnws.add_one(cn)
         assert cnws.save_row_to_db(row=2, file=messages)
         cnq = CommonName.query\
-            .filter(CommonName._name == 'Foxglove')\
+            .filter(CommonName.name == 'Foxglove')\
             .one_or_none()
         assert cnq.synonyms_string == 'Digitalis'
         messages.seek(0)
@@ -598,7 +582,7 @@ class TestCommonNamesWorksheet:
         cnws.add_one(cn2)
         assert cnws.save_row_to_db(row=2, file=messages)
         cnq = CommonName.query\
-            .filter(CommonName._name == 'Foxglove')\
+            .filter(CommonName.name == 'Foxglove')\
             .one_or_none()
         assert cnq is cn
         assert cn.synonyms_string == 'Vulpine Handwarmer'
@@ -624,7 +608,7 @@ class TestCommonNamesWorksheet:
         cnws.add_one(cn2)
         assert cnws.save_row_to_db(row=2, file=messages)
         cnq = CommonName.query\
-            .filter(CommonName._name == 'Foxglove')\
+            .filter(CommonName.name == 'Foxglove')\
             .one_or_none()
         assert cnq is cn
         assert not cn.synonyms_string
@@ -646,7 +630,7 @@ class TestCommonNamesWorksheet:
         cnws.add_one(cn)
         assert cnws.save_row_to_db(row=2, file=messages)
         cnq = CommonName.query\
-            .filter(CommonName._name == 'Foxglove')\
+            .filter(CommonName.name == 'Foxglove')\
             .one_or_none()
         assert not cnq.invisible
         messages.seek(0)
@@ -667,7 +651,7 @@ class TestCommonNamesWorksheet:
         cnws.add_one(cn)
         assert cnws.save_row_to_db(row=2, file=messages)
         cnq = CommonName.query\
-            .filter(CommonName._name == 'Foxglove')\
+            .filter(CommonName.name == 'Foxglove')\
             .one_or_none()
         assert cnq.invisible
         messages.seek(0)
@@ -688,7 +672,7 @@ class TestCommonNamesWorksheet:
         cnws.add_one(cn)
         assert cnws.save_row_to_db(row=2, file=messages)
         cnq = CommonName.query\
-            .filter(CommonName._name == 'Foxglove')\
+            .filter(CommonName.name == 'Foxglove')\
             .one_or_none()
         assert not cnq.invisible
         messages.seek(0)
@@ -697,7 +681,11 @@ class TestCommonNamesWorksheet:
                 'pages.') in msgs
 
     def test_save_row_to_db_new_with_new_gwcn(self, db):
-        """Create a new CommonName with Grows With Common Names."""
+        """Create a new CommonName with Grows With Common Names.
+
+        It should also add the CommonName to grows_woth_common_names for the
+        GWCN(s).
+        """
         messages = StringIO()
         wb = Workbook()
         ws = wb.active
@@ -711,14 +699,19 @@ class TestCommonNamesWorksheet:
         cnws.add_one(cn)
         assert cnws.save_row_to_db(row=2, file=messages)
         cnq = CommonName.query\
-            .filter(CommonName._name == 'Foxglove')\
+            .filter(CommonName.name == 'Foxglove')\
             .one_or_none()
-        assert cnq.gw_common_names[0].name == 'Butterfly Weed'
-        assert cnq.gw_common_names[0].index.name == 'Perennial'
+        gwcn = cnq.gw_common_names[0]
+        assert gwcn.name == 'Butterfly Weed'
+        assert gwcn.index.name == 'Perennial'
+        assert gwcn.gw_common_names[0] is cnq
         messages.seek(0)
         msgs = messages.read()
         assert ('The CommonName \'Butterfly Weed\' has been added to Grows '
                 'With Common Names for the CommonName \'Foxglove\'.') in msgs
+        assert ('The CommonName \'Foxglove\' has been added to Grows '
+                'With Common Names for the CommonName '
+                '\'Butterfly Weed\'.') in msgs
 
     def test_save_row_to_db_new_with_same_new_gwcn(self, db):
         """Don't cause an IntegrityError if GWCN is same as CN."""
@@ -735,7 +728,7 @@ class TestCommonNamesWorksheet:
         cnws.add_one(cn)
         assert cnws.save_row_to_db(row=2, file=messages)
         cnq = CommonName.query\
-            .filter(CommonName._name == 'Foxglove')\
+            .filter(CommonName.name == 'Foxglove')\
             .one_or_none()
         assert cnq.gw_common_names[0] is cnq
 
@@ -758,7 +751,7 @@ class TestCommonNamesWorksheet:
         cnws.add_one(cn)
         assert cnws.save_row_to_db(row=2, file=messages)
         cnq = CommonName.query\
-            .filter(CommonName._name == 'Foxglove')\
+            .filter(CommonName.name == 'Foxglove')\
             .one_or_none()
         assert cnq.gw_common_names[0] is gwcn
         messages.seek(0)
@@ -785,7 +778,7 @@ class TestCommonNamesWorksheet:
         cnws.add_one(cn2)
         assert cnws.save_row_to_db(row=2, file=messages)
         cnq = CommonName.query\
-            .filter(CommonName._name == 'Foxglove')\
+            .filter(CommonName.name == 'Foxglove')\
             .one_or_none()
         assert cnq is cn
         assert cn.gw_common_names[0].name == 'Butterfly Weed'
@@ -813,7 +806,7 @@ class TestCommonNamesWorksheet:
         cnws.add_one(cn2)
         assert cnws.save_row_to_db(row=2, file=messages)
         cnq = CommonName.query\
-            .filter(CommonName._name == 'Foxglove')\
+            .filter(CommonName.name == 'Foxglove')\
             .one_or_none()
         assert cnq is cn
         assert not cn.gw_common_names
@@ -845,7 +838,7 @@ class TestCommonNamesWorksheet:
         cnws.add_one(cn2)
         assert cnws.save_row_to_db(row=2, file=messages)
         cnq = CommonName.query\
-            .filter(CommonName._name == 'Foxglove')\
+            .filter(CommonName.name == 'Foxglove')\
             .one_or_none()
         assert cnq is cn
         assert gwcn not in cn.gw_common_names
@@ -874,7 +867,7 @@ class TestCommonNamesWorksheet:
         cnws.add_one(cn)
         assert cnws.save_row_to_db(row=2, file=messages)
         cnq = CommonName.query\
-            .filter(CommonName._name == 'Foxglove')\
+            .filter(CommonName.name == 'Foxglove')\
             .one_or_none()
         assert cnq.gw_cultivars[0].fullname == 'King Coleus'
         messages.seek(0)
@@ -903,7 +896,7 @@ class TestCommonNamesWorksheet:
         cnws.add_one(cn)
         assert cnws.save_row_to_db(row=2, file=messages)
         cnq = CommonName.query\
-            .filter(CommonName._name == 'Foxglove')\
+            .filter(CommonName.name == 'Foxglove')\
             .one_or_none()
         assert cnq.gw_cultivars[0] is gwcv
         messages.seek(0)
@@ -931,7 +924,7 @@ class TestCommonNamesWorksheet:
         cnws.add_one(cn2)
         assert cnws.save_row_to_db(row=2, file=messages)
         cnq = CommonName.query\
-            .filter(CommonName._name == 'Foxglove')\
+            .filter(CommonName.name == 'Foxglove')\
             .one_or_none()
         assert cnq is cn
         assert cn.gw_cultivars[0].fullname == 'King Coleus'
@@ -960,7 +953,7 @@ class TestCommonNamesWorksheet:
         cnws.add_one(cn2)
         assert cnws.save_row_to_db(row=2, file=messages)
         cnq = CommonName.query\
-            .filter(CommonName._name == 'Foxglove')\
+            .filter(CommonName.name == 'Foxglove')\
             .one_or_none()
         assert cnq is cn
         assert not cn.gw_cultivars
@@ -993,7 +986,7 @@ class TestCommonNamesWorksheet:
         cnws.add_one(cn2)
         assert cnws.save_row_to_db(row=2, file=messages)
         cnq = CommonName.query\
-            .filter(CommonName._name == 'Foxglove')\
+            .filter(CommonName.name == 'Foxglove')\
             .one_or_none()
         assert cnq is cn
         assert gwcv not in cn.gw_cultivars
@@ -1023,7 +1016,7 @@ class TestBotanicalNamesWorksheetWithDB:
         bnws = BotanicalNamesWorksheet(ws)
         bnws.setup()
         bn = BotanicalName()
-        bn._name = 'invalid Botanical Name'
+        bn.name = 'invalid Botanical Name'
         bn.common_names = [CommonName(name='Foxglove')]
         bn.common_names[0].index = Index(name='Perennial')
         bnws.add_one(bn)
@@ -1073,7 +1066,7 @@ class TestBotanicalNamesWorksheetWithDB:
         bnws.add_one(bn)
         assert bnws.save_row_to_db(2, file=messages)
         bnq = BotanicalName.query\
-            .filter(BotanicalName._name == 'Digitalis purpurea')\
+            .filter(BotanicalName.name == 'Digitalis purpurea')\
             .one_or_none()
         assert bnq.name == 'Digitalis purpurea'
         assert bnq.common_names[0].name == 'Foxglove'
@@ -1101,7 +1094,7 @@ class TestBotanicalNamesWorksheetWithDB:
         bnws.add_one(bn)
         assert bnws.save_row_to_db(2, file=messages)
         bnq = BotanicalName.query\
-            .filter(BotanicalName._name == 'Digitalis purpurea')\
+            .filter(BotanicalName.name == 'Digitalis purpurea')\
             .one_or_none()
         assert bnq.synonyms_string == 'Digitalis über alles'
         messages.seek(0)
@@ -1129,7 +1122,7 @@ class TestBotanicalNamesWorksheetWithDB:
         bnws.add_one(bn2)
         assert bnws.save_row_to_db(2, file=messages)
         bnq = BotanicalName.query\
-            .filter(BotanicalName._name == 'Digitalis purpurea')\
+            .filter(BotanicalName.name == 'Digitalis purpurea')\
             .one_or_none()
         assert bnq is bn
         assert bn.synonyms_string == 'Innagada davida'
@@ -1157,7 +1150,7 @@ class TestBotanicalNamesWorksheetWithDB:
         bnws.add_one(bn2)
         assert bnws.save_row_to_db(2, file=messages)
         bnq = BotanicalName.query\
-            .filter(BotanicalName._name == 'Digitalis purpurea')\
+            .filter(BotanicalName.name == 'Digitalis purpurea')\
             .one_or_none()
         assert bnq is bn
         assert not bn.synonyms_string
@@ -1186,7 +1179,7 @@ class TestBotanicalNamesWorksheetWithDB:
         bnws.add_one(bn2)
         assert bnws.save_row_to_db(2, file=messages)
         bnq = BotanicalName.query\
-            .filter(BotanicalName._name == 'Digitalis purpurea')\
+            .filter(BotanicalName.name == 'Digitalis purpurea')\
             .one_or_none()
         assert bnq is bn
         assert bn.common_names[0].name == 'Foxglove'
@@ -1214,7 +1207,7 @@ class TestBotanicalNamesWorksheetWithDB:
         bnws.add_one(bn2)
         assert bnws.save_row_to_db(2, file=messages)
         bnq = BotanicalName.query\
-            .filter(BotanicalName._name == 'Digitalis purpurea')\
+            .filter(BotanicalName.name == 'Digitalis purpurea')\
             .one_or_none()
         assert bnq is bn
         assert len(bn.common_names) == 1
@@ -1461,7 +1454,7 @@ class TestCultivarsWorksheetWithDB:
         cv.invisible = False
         cvws.add_one(cv)
         assert cvws.save_row_to_db(row=2, file=messages)
-        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        cvq = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
         assert cvq.name == 'Foxy'
         assert cvq.common_name.name == 'Foxglove'
         assert cvq.common_name.index.name == 'Perennial'
@@ -1490,7 +1483,7 @@ class TestCultivarsWorksheetWithDB:
         cv.invisible = False
         cvws.add_one(cv)
         assert cvws.save_row_to_db(row=2, file=messages)
-        cv = Cultivar.query.filter(Cultivar._name == 'Petra').one_or_none()
+        cv = Cultivar.query.filter(Cultivar.name == 'Petra').one_or_none()
         messages.seek(0)
         msgs = messages.read()
         assert cv.series.name == 'Polkadot'
@@ -1520,7 +1513,7 @@ class TestCultivarsWorksheetWithDB:
         cv.invisible = False
         cvws.add_one(cv)
         assert cvws.save_row_to_db(row=2, file=messages)
-        cv = Cultivar.query.filter(Cultivar._name == 'Petra').one_or_none()
+        cv = Cultivar.query.filter(Cultivar.name == 'Petra').one_or_none()
         messages.seek(0)
         msgs = messages.read()
         assert cv.series is sr
@@ -1543,7 +1536,7 @@ class TestCultivarsWorksheetWithDB:
         cv.invisible = False
         cvws.add_one(cv)
         assert cvws.save_row_to_db(row=2, file=messages)
-        cv = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        cv = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
         messages.seek(0)
         msgs = messages.read()
         assert cv.botanical_name.name == 'Digitalis purpurea'
@@ -1562,14 +1555,14 @@ class TestCultivarsWorksheetWithDB:
         cv.common_name = CommonName(name='Foxglove')
         cv.common_name.index = Index(name='Perennial')
         cv.botanical_name = BotanicalName()
-        cv.botanical_name._name = 'digitalis purpurea'
+        cv.botanical_name.name = 'digitalis purpurea'
         cv.botanical_name.common_names.append(cv.common_name)
         cv.in_stock = True
         cv.active = True
         cv.invisible = False
         cvws.add_one(cv)
         assert cvws.save_row_to_db(row=2, file=messages)
-        cv = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        cv = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
         messages.seek(0)
         msgs = messages.read()
         assert cv.botanical_name.name == 'Digitalis purpurea'
@@ -1599,7 +1592,7 @@ class TestCultivarsWorksheetWithDB:
         cv.invisible = False
         cvws.add_one(cv)
         assert cvws.save_row_to_db(row=2, file=messages)
-        cv = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        cv = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
         messages.seek(0)
         msgs = messages.read()
         assert cv.botanical_name is bn
@@ -1632,7 +1625,7 @@ class TestCultivarsWorksheetWithDB:
         assert cvws.save_row_to_db(row=2, file=messages)
         messages.seek(0)
         msgs = messages.read()
-        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        cvq = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
         assert cvq is cv
         assert cv.botanical_name.name == 'Digitalis purpurea'
         assert ('BotanicalName for the Cultivar \'Foxy Foxglove\' set to: '
@@ -1656,7 +1649,7 @@ class TestCultivarsWorksheetWithDB:
         cv.invisible = False
         cvws.add_one(cv)
         assert cvws.save_row_to_db(row=2, file=messages)
-        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        cvq = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
         messages.seek(0)
         msgs = messages.read()
         assert cvq.thumbnail.filename == 'foxy.jpg'
@@ -1680,7 +1673,7 @@ class TestCultivarsWorksheetWithDB:
         cv.invisible = False
         cvws.add_one(cv)
         assert cvws.save_row_to_db(row=2, file=messages)
-        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        cvq = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
         messages.seek(0)
         msgs = messages.read()
         assert cvq.thumbnail.filename == 'foxy.jpg'
@@ -1706,7 +1699,7 @@ class TestCultivarsWorksheetWithDB:
         cv.invisible = False
         cvws.add_one(cv)
         assert cvws.save_row_to_db(row=2, file=messages)
-        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        cvq = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
         messages.seek(0)
         msgs = messages.read()
         assert cvq.thumbnail is tn
@@ -1736,7 +1729,7 @@ class TestCultivarsWorksheetWithDB:
         cv2.invisible = False
         cvws.add_one(cv2)
         assert cvws.save_row_to_db(row=2, file=messages)
-        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        cvq = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
         messages.seek(0)
         msgs = messages.read()
         assert cvq is cv
@@ -1759,7 +1752,7 @@ class TestCultivarsWorksheetWithDB:
         cv.invisible = False
         cvws.add_one(cv)
         assert cvws.save_row_to_db(row=2, file=messages)
-        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        cvq = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
         messages.seek(0)
         msgs = messages.read()
         assert cvq.description == 'Like a lady.'
@@ -1789,7 +1782,7 @@ class TestCultivarsWorksheetWithDB:
         cv2.invisible = False
         cvws.add_one(cv2)
         assert cvws.save_row_to_db(row=2, file=messages)
-        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        cvq = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
         messages.seek(0)
         msgs = messages.read()
         assert cvq is cv
@@ -1820,7 +1813,7 @@ class TestCultivarsWorksheetWithDB:
         cv2.invisible = False
         cvws.add_one(cv2)
         assert cvws.save_row_to_db(row=2, file=messages)
-        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        cvq = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
         messages.seek(0)
         msgs = messages.read()
         assert cvq is cv
@@ -1844,7 +1837,7 @@ class TestCultivarsWorksheetWithDB:
         cv.invisible = False
         cvws.add_one(cv)
         assert cvws.save_row_to_db(row=2, file=messages)
-        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        cvq = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
         messages.seek(0)
         msgs = messages.read()
         assert cvq.synonyms_string == 'Vulpine'
@@ -1876,7 +1869,7 @@ class TestCultivarsWorksheetWithDB:
         cv2.invisible = False
         cvws.add_one(cv2)
         assert cvws.save_row_to_db(row=2, file=messages)
-        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        cvq = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
         messages.seek(0)
         msgs = messages.read()
         assert cvq is cv
@@ -1908,7 +1901,7 @@ class TestCultivarsWorksheetWithDB:
         cv2.invisible = False
         cvws.add_one(cv2)
         assert cvws.save_row_to_db(row=2, file=messages)
-        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        cvq = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
         messages.seek(0)
         msgs = messages.read()
         assert cvq is cv
@@ -1932,7 +1925,7 @@ class TestCultivarsWorksheetWithDB:
         cv.invisible = False
         cvws.add_one(cv)
         assert cvws.save_row_to_db(row=2, file=messages)
-        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        cvq = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
         messages.seek(0)
         msgs = messages.read()
         assert cvq.new_for == 2101
@@ -1963,7 +1956,7 @@ class TestCultivarsWorksheetWithDB:
         cv2.invisible = False
         cvws.add_one(cv2)
         assert cvws.save_row_to_db(row=2, file=messages)
-        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        cvq = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
         assert cvq is cv
         assert cv.new_for == 2101
 
@@ -1992,7 +1985,7 @@ class TestCultivarsWorksheetWithDB:
         cv2.invisible = False
         cvws.add_one(cv2)
         assert cvws.save_row_to_db(row=2, file=messages)
-        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        cvq = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
         assert cvq is cv
         assert cv.new_for == 2525
 
@@ -2020,7 +2013,7 @@ class TestCultivarsWorksheetWithDB:
         cv2.invisible = False
         cvws.add_one(cv2)
         assert cvws.save_row_to_db(row=2, file=messages)
-        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        cvq = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
         messages.seek(0)
         msgs = messages.read()
         assert cvq is cv
@@ -2043,7 +2036,7 @@ class TestCultivarsWorksheetWithDB:
         cv.invisible = False
         cvws.add_one(cv)
         assert cvws.save_row_to_db(row=2, file=messages)
-        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        cvq = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
         messages.seek(0)
         msgs = messages.read()
         assert cvq.in_stock
@@ -2068,7 +2061,7 @@ class TestCultivarsWorksheetWithDB:
         cv.invisible = True
         cvws.add_one(cv)
         assert cvws.save_row_to_db(row=2, file=messages)
-        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        cvq = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
         messages.seek(0)
         msgs = messages.read()
         assert not cvq.in_stock
@@ -2101,7 +2094,7 @@ class TestCultivarsWorksheetWithDB:
         cv2.invisible = True
         cvws.add_one(cv2)
         assert cvws.save_row_to_db(row=2, file=messages)
-        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        cvq = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
         messages.seek(0)
         msgs = messages.read()
         assert cvq is cv
@@ -2144,7 +2137,7 @@ class TestCultivarsWorksheetWithDB:
         cv.invisible = None
         cvws.add_one(cv)
         assert cvws.save_row_to_db(row=2, file=messages)
-        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        cvq = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
         messages.seek(0)
         msgs = messages.read()
         assert not cvq.in_stock
@@ -2172,7 +2165,7 @@ class TestCultivarsWorksheetWithDB:
         cv.gw_common_names.append(gwcn)
         cvws.add_one(cv)
         assert cvws.save_row_to_db(row=2, file=messages)
-        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        cvq = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
         messages.seek(0)
         msgs = messages.read()
         assert cvq.gw_common_names[0].name == 'Butterfly Weed'
@@ -2202,7 +2195,7 @@ class TestCultivarsWorksheetWithDB:
         cv.gw_common_names.append(gwcn)
         cvws.add_one(cv)
         assert cvws.save_row_to_db(row=2, file=messages)
-        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        cvq = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
         messages.seek(0)
         msgs = messages.read()
         assert cvq.gw_common_names[0] is cn
@@ -2236,7 +2229,7 @@ class TestCultivarsWorksheetWithDB:
         cv2.gw_common_names.append(gwcn)
         cvws.add_one(cv2)
         assert cvws.save_row_to_db(row=2, file=messages)
-        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        cvq = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
         messages.seek(0)
         msgs = messages.read()
         assert cvq is cv
@@ -2271,7 +2264,7 @@ class TestCultivarsWorksheetWithDB:
         cv2.invisible = True
         cvws.add_one(cv2)
         assert cvws.save_row_to_db(row=2, file=messages)
-        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        cvq = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
         messages.seek(0)
         msgs = messages.read()
         assert cvq is cv
@@ -2309,7 +2302,7 @@ class TestCultivarsWorksheetWithDB:
         cv2.gw_common_names = [gwcn2]
         cvws.add_one(cv2)
         assert cvws.save_row_to_db(row=2, file=messages)
-        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        cvq = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
         messages.seek(0)
         msgs = messages.read()
         assert cvq is cv
@@ -2323,7 +2316,10 @@ class TestCultivarsWorksheetWithDB:
                 'Common Names for the Cultivar \'Foxy Foxglove\'.') in msgs
 
     def test_save_row_to_db_new_with_new_gwcv(self, db):
-        """Save a Cultivar with a GWCV."""
+        """Save a Cultivar with a GWCV.
+
+        It should also add the Cultivar to GWCV.gw_cultivars.
+        """
         messages = StringIO()
         wb = Workbook()
         ws = wb.active
@@ -2341,10 +2337,15 @@ class TestCultivarsWorksheetWithDB:
         cv.gw_cultivars = [gwcv]
         cvws.add_one(cv)
         assert cvws.save_row_to_db(row=2, file=messages)
-        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        cvq = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
         messages.seek(0)
         msgs = messages.read()
-        assert cvq.gw_cultivars[0].fullname == 'Soulmate Butterfly Weed'
+        gwcv = cvq.gw_cultivars[0]
+        assert gwcv.fullname == 'Soulmate Butterfly Weed'
+        assert gwcv.gw_cultivars[0] is cvq
+        assert ('The Cultivar \'Foxy Foxglove\' has been added to '
+                'Grows With Cultivars for the Cultivar \'Soulmate Butterfly '
+                'Weed\'.') in msgs
         assert ('The Cultivar \'Soulmate Butterfly Weed\' has been added to '
                 'Grows With Cultivars for the Cultivar \'Foxy '
                 'Foxglove\'.') in msgs
@@ -2373,7 +2374,7 @@ class TestCultivarsWorksheetWithDB:
         cv.gw_cultivars = [gwcv2]
         cvws.add_one(cv)
         assert cvws.save_row_to_db(row=2, file=messages)
-        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        cvq = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
         messages.seek(0)
         msgs = messages.read()
         assert cvq.gw_cultivars[0] is gwcv
@@ -2408,7 +2409,7 @@ class TestCultivarsWorksheetWithDB:
         cv2.gw_cultivars = [gwcv]
         cvws.add_one(cv2)
         assert cvws.save_row_to_db(row=2, file=messages)
-        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        cvq = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
         messages.seek(0)
         msgs = messages.read()
         assert cvq is cv
@@ -2444,7 +2445,7 @@ class TestCultivarsWorksheetWithDB:
         cv2.invisible = True
         cvws.add_one(cv2)
         assert cvws.save_row_to_db(row=2, file=messages)
-        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        cvq = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
         messages.seek(0)
         msgs = messages.read()
         assert cvq is cv
@@ -2484,7 +2485,7 @@ class TestCultivarsWorksheetWithDB:
         cv2.gw_cultivars = [gwcv2]
         cvws.add_one(cv2)
         assert cvws.save_row_to_db(row=2, file=messages)
-        cvq = Cultivar.query.filter(Cultivar._name == 'Foxy').one_or_none()
+        cvq = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
         messages.seek(0)
         msgs = messages.read()
         assert cvq is cv

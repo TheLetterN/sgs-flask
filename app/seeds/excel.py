@@ -76,7 +76,7 @@ def get_or_create_index(name, file=sys.stdout):
     Returns:
         Index: The Index loaded/created.
     """
-    idx = Index.query.filter(Index._name == name).one_or_none()
+    idx = Index.query.filter(Index.name == name).one_or_none()
     if idx:
         print('The Index \'{0}\' has been loaded from the database.'
               .format(idx.name), file=file)
@@ -107,7 +107,7 @@ def get_or_create_common_name(name, index, file=sys.stdout):
     """
     cn = CommonName.query\
         .join(Index, Index.id == CommonName.index_id)\
-        .filter(CommonName._name == name, Index._name == index)\
+        .filter(CommonName.name == name, Index.name == index)\
         .one_or_none()
     if cn:
         print('The CommonName \'{0}\' has been loaded from the database.'
@@ -152,19 +152,19 @@ def get_or_create_cultivar(name,
             .join(CommonName, CommonName.id == Cultivar.common_name_id)\
             .join(Index, Index.id == CommonName.index_id)\
             .join(Series, Series.id == Cultivar.series_id)\
-            .filter(Cultivar._name == name,
-                    CommonName._name == common_name,
-                    Index._name == index,
+            .filter(Cultivar.name == name,
+                    CommonName.name == common_name,
+                    Index.name == index,
                     Series.name == series)\
             .one_or_none()
     else:
         cv = Cultivar.query\
             .join(CommonName, CommonName.id == Cultivar.common_name_id)\
             .join(Index, Index.id == CommonName.index_id)\
-            .filter(Cultivar._name == name,
-                    CommonName._name == common_name,
+            .filter(Cultivar.name == name,
+                    CommonName.name == common_name,
                     Cultivar.series_id == None,  # noqa
-                    Index._name == index)\
+                    Index.name == index)\
             .one_or_none()
     if cv:
         cv.created = False
@@ -190,10 +190,6 @@ def get_or_create_cultivar(name,
             cv.series = sr
         print('The Cultivar \'{0}\' does not yet exist in the database, so it '
               'has been created.'.format(cv.fullname), file=file)
-    if cv.created:
-        cv.set_slug()
-        print('The slug for the Cultivar \'{0}\' has been set to: {1}'
-              .format(cv.fullname, cv.slug), file=file)
     return cv
 
 
@@ -627,6 +623,11 @@ class CommonNamesWorksheet(SeedsWorksheet):
             for gwcn in gwcns:
                 if gwcn not in cn.gw_common_names:
                     edited = True
+                    if cn not in gwcn.gw_common_names:
+                        gwcn.gw_common_names.append(cn)
+                        print('The CommonName \'{0}\' has been added to Grows '
+                              'With Common Names for the CommonName \'{1}\'.'
+                              .format(cn.name, gwcn.name), file=file)
                     cn.gw_common_names.append(gwcn)
                     print('The CommonName \'{0}\' has been added to Grows '
                           'With Common Names for the CommonName \'{1}\'.'
@@ -737,7 +738,7 @@ class BotanicalNamesWorksheet(SeedsWorksheet):
               '--'.format(botanical_name, row), file=file)
         edited = False
         bn = BotanicalName.query\
-            .filter(BotanicalName._name == botanical_name)\
+            .filter(BotanicalName.name == botanical_name)\
             .one_or_none()
         if bn:
             print('The BotanicalName \'{0}\' has been loaded from the '
@@ -1041,8 +1042,8 @@ class CultivarsWorksheet(SeedsWorksheet):
                     .join(CommonName, CommonName.id == Series.common_name_id)\
                     .join(Index, Index.id == CommonName.index_id)\
                     .filter(Series.name == series,
-                            CommonName._name == common_name,
-                            Index._name == index)\
+                            CommonName.name == common_name,
+                            Index.name == index)\
                     .one_or_none()
                 if sr:
                     print('The Series \'{0}\' has been loaded from the '
@@ -1066,7 +1067,7 @@ class CultivarsWorksheet(SeedsWorksheet):
                       'it, it has been changed to: \'{1}\''
                       .format(obn, botanical_name), file=file)
             bn = BotanicalName.query\
-                .filter(BotanicalName._name == botanical_name)\
+                .filter(BotanicalName.name == botanical_name)\
                 .one_or_none()
             if bn and bn is not cv.botanical_name:
                 print('The BotanicalName \'{0}\' has been loaded from the '
@@ -1197,6 +1198,11 @@ class CultivarsWorksheet(SeedsWorksheet):
                 if gwcv not in cv.gw_cultivars:
                     edited = True
                     cv.gw_cultivars.append(gwcv)
+                    if cv not in gwcv.gw_cultivars:
+                        gwcv.gw_cultivars.append(cv)
+                        print('The Cultivar \'{0}\' has been added to Grows '
+                              'With Cultivars for the Cultivar \'{1}\'.'
+                              .format(cv.fullname, gwcv.fullname), file=file)
                     print('The Cultivar \'{0}\' has been added to Grows With '
                           'Cultivars for the Cultivar \'{1}\'.'
                           .format(gwcv.fullname, cv.fullname), file=file)

@@ -43,9 +43,8 @@ from .models import (
     Image,
     Packet,
     Quantity,
-    save_indexes_to_json_file,
     Series,
-    USDInt
+    USDollar
 )
 from .forms import (
     AddBotanicalNameForm,
@@ -132,7 +131,6 @@ def add_index():
             flash('Description for \'{0}\' set to: {1}'
                   .format(index.name, index.description))
         db.session.commit()
-        save_indexes_to_json_file()
         flash('New index \'{0}\' has been added to the database.'.
               format(index.name))
         return redirect(url_for('seeds.add_common_name', idx_id=index.id))
@@ -229,7 +227,7 @@ def add_botanical_name(cn_id=None):
     form = AddBotanicalNameForm()
     form.cn = cn
     if form.validate_on_submit():
-        bn = BotanicalName.query.filter_by(_name=form.name.data).first()
+        bn = BotanicalName.query.filter_by(name=form.name.data).first()
         if not bn:
             bn = BotanicalName()
             db.session.add(bn)
@@ -338,7 +336,6 @@ def add_cultivar(cn_id=None):
         if form.series.data:
             cv.series = Series.query.get(form.series.data)
             flash('Series set to: {0}'.format(cv.series.name))
-            cv.set_slug()
         if form.synonyms.data:
             cv.synonyms_string = form.synonyms.data
             flash('Synonyms for \'{0}\' set to: {1}'
@@ -410,11 +407,14 @@ def add_packet(cv_id=None):
         packet = Packet()
         db.session.add(packet)
         packet.cultivar = cv
-        packet.price = form.price.data.strip()
-        fq = Quantity.for_cmp(form.quantity.data)
+        packet.price = form.price.data
         fu = form.units.data.strip()
-        qty = Quantity.query.filter(Quantity.value == fq,
-                                    Quantity.units == fu).first()
+        fq = form.quantity.data
+        qty = Quantity.query.filter(
+            Quantity.value == fq,
+            Quantity.units == fu,
+            Quantity.is_decimal == Quantity.dec_check(fq)
+        ).one_or_none()
         if qty:
             packet.quantity = qty
         else:
@@ -503,8 +503,7 @@ def edit_index(idx_id=None):
                   .format(index.name, form.name.data))
             old_slug = index.slug
             index.name = form.name.data
-            save_indexes_to_json_file()
-            new_slug = index.slug
+            new_slug = index.generate_slug()
             old_path = url_for('seeds.index_page', idx_slug=old_slug)
             new_path = url_for('seeds.index_page', idx_slug=new_slug)
             flash(redirect_warning(
@@ -610,13 +609,13 @@ def edit_common_name(cn_id=None):
             cn.index = Index.query.get(form.index.data)
             flash('Index for \'{0}\' and all of its cultivars has been '
                   'changed to: {1}'.format(cn.name, cn.index.name))
-        if cn.slug != old_cn_slug or old_idx is not cn.index:
+        if cn.generate_slug() != old_cn_slug or old_idx is not cn.index:
             old_path = url_for('seeds.common_name',
                                idx_slug=old_idx.slug,
                                cn_slug=old_cn_slug)
             new_path = url_for('seeds.common_name',
                                idx_slug=cn.index.slug,
-                               cn_slug=cn.slug)
+                               cn_slug=cn.generate_slug())
             flash(redirect_warning(old_path,
                                    '<a href="{0}" target="_blank">{1}</a>'
                                    .format(url_for('seeds.add_redirect',
@@ -626,14 +625,14 @@ def edit_common_name(cn_id=None):
                                            new_path)))
             for cv in cn.cultivars:
                 if old_idx is not cn.index:
-                    cv.index = cn.index
+                    cv.common_name.index = cn.index
                 old_path = url_for('seeds.cultivar',
                                    idx_slug=old_idx.slug,
                                    cn_slug=old_cn_slug,
                                    cv_slug=cv.slug)
                 new_path = url_for('seeds.cultivar',
                                    idx_slug=cn.index.slug,
-                                   cn_slug=cn.slug,
+                                   cn_slug=cn.generate_slug(),
                                    cv_slug=cv.slug)
                 flash(redirect_warning(
                     old_path,
@@ -844,8 +843,6 @@ def edit_series(series_id=None):
                                    idx_slug=series.common_name.index.slug,
                                    cn_slug=old_cn.slug,
                                    cv_slug=cv.slug)
-                if old_name != series.name:
-                    cv.set_slug()
                 if cv.common_name is not series.common_name:
                     flash(Markup(
                         'Warning: the common name of the cultivar \'{0}\' is '
@@ -956,7 +953,6 @@ def edit_cultivar(cv_id=None):
             flash('Changed cultivar name from \'{0}\' to \'{1}\''.
                   format(cv.name, form.name.data))
             cv.name = form.name.data
-        cv.set_slug()
         if not cv.common_name or \
                 form.common_name.data != cv.common_name.id:
             edited = True
@@ -1157,17 +1153,21 @@ def edit_packet(pkt_id=None):
         if form.sku.data != packet.sku:
             edited = True
             packet.sku = form.sku.data.strip()
-        dec_p = USDInt.usd_to_decimal(form.price.data)
+        dec_p = USDollar.usd_to_decimal(form.price.data)
         if dec_p != packet.price:
             edited = True
             packet.price = dec_p
-        fq = Quantity.for_cmp(form.quantity.data)
+        fq = form.quantity.data
         fu = form.units.data.strip()
-        if fq != packet.quantity.value or fu != packet.quantity.units:
+        if (str(fq) != str(packet.quantity.value)
+                or fu != packet.quantity.units):
             edited = True
             oldqty = packet.quantity
-            qty = Quantity.query.filter(Quantity.value == fq,
-                                        Quantity.units == fu).first()
+            qty = Quantity.query.filter(
+                Quantity.value == fq,
+                Quantity.units == fu,
+                Quantity.is_decimal == Quantity.dec_check(fq)
+            ).one_or_none()
             if qty:
                 packet.quantity = qty
             else:
@@ -1564,7 +1564,7 @@ def remove_cultivar(cv_id=None):
             flash('The cultivar \'{0}\' has been deleted. Forever. I hope '
                   'you\'re happy with yourself.'.format(cv.fullname))
             old_path = url_for('seeds.cultivar',
-                               idx_slug=cv.index.slug,
+                               idx_slug=cv.common_name.index.slug,
                                cn_slug=cv.common_name.slug,
                                cv_slug=cv.slug)
             flash(Markup(
@@ -1866,7 +1866,7 @@ def cultivar(idx_slug=None, cn_slug=None, cv_slug=None):
                 (url_for('seeds.index'), 'All Seeds'),
                 (url_for('seeds.index_page',
                          idx_slug=idx_slug),
-                 cv.index.header),
+                 cv.common_name.index.header),
                 (url_for('seeds.common_name',
                          idx_slug=idx_slug,
                          cn_slug=cn_slug),

@@ -1,15 +1,88 @@
 from decimal import Decimal
+from unittest import mock
+import pytest
 from app.seeds.models import (
     BotanicalName,
     CommonName,
-    Image,
     Index,
     Cultivar,
     Packet,
     Quantity,
     Series
 )
-from tests.conftest import app, db  # noqa
+
+
+class TestIndexRelatedEventHandlers:
+    """Test event listener functions that involve Index instances."""
+    # before_index_insert_or_update
+    @mock.patch('app.seeds.models.Index.generate_slug')
+    def test_before_index_insert_or_update_flush(self, m_gs, db):
+        """Set the slug of an instance of Index before flushing to db."""
+        m_gs.return_value = 'new-index'
+        idx = Index(name='New Index')
+        db.session.add(idx)
+        db.session.flush()
+        assert m_gs.called
+        assert idx.slug == 'new-index'
+
+    # save_indexes_to_json_before_commit
+    @mock.patch('app.seeds.models.save_indexes_to_json_file')
+    def test_save_indexes_json_before_commit_new_index(self, m_sitjf, db):
+        """Run save_indexes_to_json_file if any new Indexes in session."""
+        idx = Index(name='New Index')
+        db.session.add(idx)
+        db.session.commit()
+        assert m_sitjf.call_count == 1
+
+    @mock.patch('app.seeds.models.save_indexes_to_json_file')
+    def test_save_indexes_to_json_before_commit_edited_index(self,
+                                                             m_sitjf,
+                                                             db):
+        """Run if any edited Indexes are in the session."""
+        idx = Index(name='New Index')
+        db.session.add(idx)
+        db.session.commit()
+        db.session.expunge(idx)
+        assert idx not in db.session
+        idxq = Index.query.filter(Index.name == 'New Index').one_or_none()
+        idxq.name = 'Edited Index'
+        db.session.commit()
+        assert m_sitjf.call_count == 2
+
+    @mock.patch('app.seeds.models.save_indexes_to_json_file')
+    def test_save_indexes_to_json_before_commit_deleted_index(self,
+                                                              m_sitjf,
+                                                              db):
+        """Run if any deleted Indexes are in the session."""
+        idx = Index(name='New Index')
+        db.session.add(idx)
+        db.session.commit()
+        db.session.expunge(idx)
+        idxq = Index.query.filter(Index.name == 'New Index').one_or_none()
+        db.session.delete(idxq)
+        db.session.commit()
+        assert m_sitjf.call_count == 2
+
+    @mock.patch('app.seeds.models.save_indexes_to_json_file')
+    def test_save_indexes_to_json_before_commit_no_indexes(self, m_sitjf, db):
+        """Do not run if there are no Indexes in the session."""
+        cn = CommonName(name='John')
+        db.session.add(cn)
+        db.session.commit()
+        assert not m_sitjf.called
+
+
+class TestCommonNameRelatedEventHandlers:
+    """Test event listener functions that involve CommonName instances."""
+    @mock.patch('app.seeds.models.CommonName.generate_slug')
+    def test_before_common_name_insert_or_update_flush(self, m_gs, db):
+        """Set the slug for a CommonName instance before flush."""
+        m_gs.return_value = 'new-common-name'
+        cn = CommonName(name='New Common Name')
+        db.session.add(cn)
+        db.session.flush()
+        assert m_gs.called
+        assert cn.slug == 'new-common-name'
 
 
 class TestBotanicalNameWithDB:
@@ -21,6 +94,18 @@ class TestBotanicalNameWithDB:
         bn.name = 'Asclepias incarnata'
         assert BotanicalName.query\
             .filter_by(name='Asclepias incarnata').first() is bn
+
+
+class TestBotanicalNameRelatedEventHandlers:
+    """Test event listener functions that involve BotanicalName instances."""
+    @mock.patch('app.seeds.models.BotanicalName.validate')
+    def test_before_botanical_name_insert_or_update_flush(self, m_v, db):
+        """Raise a ValueError if trying to flush an invalid BotanicalName."""
+        m_v.return_value = False
+        bn = BotanicalName(name='CAPSLOCK IS CRUISE CONTROL FOR COOL')
+        db.session.add(bn)
+        with pytest.raises(ValueError):
+            db.session.flush()
 
 
 class TestCultivarWithDB:
@@ -110,24 +195,18 @@ class TestCultivarWithDB:
              'Series': 'Series'}
         ) is cv7
 
-    def test_thumbnail_path_with_thumbnail(self, db):
-        """Return path to thumbnail if it exists."""
-        cultivar = Cultivar()
-        thumb = Image()
-        db.session.add_all([cultivar, thumb])
-        cultivar.name = 'Foxy'
-        thumb.filename = 'hello.jpg'
-        cultivar.thumbnail = thumb
-        db.session.commit()
-        assert cultivar.thumbnail_path == 'images/hello.jpg'
 
-    def test_thumbnail_path_no_thumbnail(self, db):
-        """Return path to defaulth thumbnail if cultivar has none."""
-        cultivar = Cultivar()
-        db.session.add(cultivar)
-        cultivar.name = 'Foxy'
-        db.session.commit()
-        assert cultivar.thumbnail_path == 'images/default_thumb.jpg'
+class TestCultivarRelatedEventHandlers:
+    """Test event listener functions that involve Cultivar instances."""
+    @mock.patch('app.seeds.models.Cultivar.generate_slug')
+    def test_before_cultivar_insert_or_update_flush(self, m_gs, db):
+        """Generate a slug for Cultivar before flushing to db."""
+        m_gs.return_value = 'new-cultivar'
+        cv = Cultivar(name='New Cultivar')
+        db.session.add(cv)
+        db.session.flush()
+        assert m_gs.called
+        assert cv.slug == 'new-cultivar'
 
 
 class TestPacketWithDB:

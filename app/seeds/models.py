@@ -35,6 +35,7 @@ Notes:
         OtM - One to Many
         MtO - Many to One
         MtM - Many to Many
+        OtO - One to One
 
     When creating instances of various models, it is often easier to use
     shorthand versions of their names, which are typically created by removing
@@ -78,10 +79,12 @@ from flask import current_app
 from fractions import Fraction
 from inflection import pluralize
 from slugify import slugify
-from sqlalchemy import inspect
-from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy import event, inspect
+from sqlalchemy.ext.hybrid import Comparator, hybrid_property
+from sqlalchemy.sql.expression import and_
+from flask_sqlalchemy import SignallingSession
 
-from app import db
+from app import db, dbify
 
 
 # Association Tables
@@ -128,6 +131,13 @@ cultivars_to_custom_pages = db.Table(
     db.Column('custom_pages_id', db.Integer, db.ForeignKey('custom_pages.id'))
 )
 
+cultivars_to_images = db.Table(
+    'cultivars_to_images',
+    db.Model.metadata,
+    db.Column('cultivar_id', db.Integer, db.ForeignKey('cultivars.id')),
+    db.Column('images_id', db.Integer, db.ForeignKey('images.id'))
+)
+
 
 # Module-level Functions
 def indexes_to_json(indexes):
@@ -148,7 +158,7 @@ def save_indexes_to_json_file():
         ofile.write(indexes_to_json(Index.query.all()))
 
 
-# Mixins
+# Helper Classes
 class SynonymsMixin(object):
     """A mixin class to easily interact with synonyms in child classes."""
     @property
@@ -186,14 +196,15 @@ class SynonymsMixin(object):
 
 
 # TypeDecorators
-class USDInt(db.TypeDecorator):
-    """Type to store US dollar amounts in the database as integers.
+class USDollar(db.TypeDecorator):
+    """Type for US dollar amounts to be stored in the database.
 
     Since we don't know for sure how the database will handle decimal numbers,
     it is safer to store our dollar amounts as integers to avoid the risk of
-    floating point errors leading to incorrect data.
+    floating point errors leading to incorrect data. Therfore, values will be
+    stored in cents and converted back to dollars upon retrieval.
 
-    A USDInt column will store a value of 2.99 as 299 in the database, and
+    A USDollar column will store a value of 2.99 as 299 in the database, and
     return it as 2.99 when retrieved.
 
     Attributes:
@@ -205,132 +216,93 @@ class USDInt(db.TypeDecorator):
         if value is None:  # pragma: no cover
             return None
         else:
-            return USDInt.usd_to_int(value)
+            return USDollar.usd_to_cents(value)
 
     def process_result_value(self, value, dialect):
         if value is None:  # pragma: no cover
             return None
         else:
-            return USDInt.int_to_usd(value)
+            return USDollar.cents_to_usd(value)
 
     @staticmethod
-    def int_to_usd(amount):
-        """Convert a db int to a Decimal representing a US dollar amount.
+    def cents_to_usd(cents):
+        """Convert a value in cents into a value in dollars.
 
         Args:
-            amount (int): The amount to convert from cents (int) to US
-                dollars (Decimal).
+            cents: An integer value in cents to be converted to a decimal
+                dollar value.
 
         Returns:
             Decimal: US cents converted to US dollars and quantized to
                 always have two digits to the right of the decimal.
 
-        Raises:
-            TypeError: If amount is not an integer.
-
         Examples:
-            >>> USDInt.int_to_usd(100)
+            >>> USDollar.cents_to_usd(100)
             Decimal('1.00')
 
-            >>> USDInt.int_to_usd(350)
+            >>> USDollar.cents_to_usd(350)
             Decimal('3.50')
 
-            >>> USDInt.int_to_usd(2999)
+            >>> USDollar.cents_to_usd(2999)
             Decimal('29.99')
 
         """
-        if isinstance(amount, int):
-            return (Decimal(amount) / 10**2).\
-                quantize(Decimal('1.00'))
-        else:
-            raise TypeError('amount must be an integer!')
+        cents = int(cents)
+        return (Decimal(cents) / 100).\
+            quantize(Decimal('1.00'))
 
     @staticmethod
-    def usd_to_int(amount):
-        """Convert a dollar value to db int.
+    def usd_to_decimal(usd):
+        """Convert a US dollar value to a `Decimal`.
 
         Args:
-            amount: Amount in US dollars to convert to an int (cents) for
-                storage in db. Valid types are strings which appear to contain
-                a dollar amount, or any type that can be converted to int.
-
-        Returns:
-            int: US dollar amount conveted to US cents so it can be stored in
-                the database as an integer.
-
-        Raises:
-            ValueError: If given a string that can't be parsed as an amount in
-                US dollars.
-            TypeError: If given a non-string that can't be converted to int.
+            usd: The value to convert to `Decimal`.
 
         Examples:
 
-            >>> USDInt.usd_to_int(Decimal('1.99'))
-            199
-
-            >>> USDInt.usd_to_int(5)
-            500
-
-            >>> USDInt.usd_to_int('$2.99')
-            299
-
-            >>> USDInt.usd_to_int('2.5')
-            250
-        """
-        if isinstance(amount, str):
-            try:
-                amt = Decimal(amount.replace('$', '').strip())
-                return int(amt * 10**2)
-            except:
-                raise ValueError('Amount contains invalid '
-                                 'characters or formatting!')
-        elif isinstance(amount, Fraction):
-            raise TypeError('Amount must be a decimal or integer!')
-        else:
-            try:
-                return int(amount * 10**2)
-            except:
-                raise TypeError('amount is of a type that could'
-                                ' not be converted to int!')
-
-    @staticmethod
-    def usd_to_decimal(val):
-        """Convert a value representing USD to a Decimal.
-
-        Args:
-            val: Amount in US dollars to convert to a Decimal number.
-
-        Returns:
-            Decimal: US Dollar value as a Decimal number.
-
-        Raises:
-            ValueError: If val cannot be converted to a Decimal.
-
-        Examples:
-            >>> USDInt.usd_to_decimal(1)
-            Decimal('1.00')
-
-            >>> USDInt.usd_to_decimal('$3.50')
+            >>> USDollar.usd_to_decimal(3.5)
             Decimal('3.50')
 
-            >>> USDInt.usd_to_decimal('2.99')
-            Decimal('2.99')
+            >>> USDollar.usd_to_decimal(2)
+            Decimal('2.00')
 
-            >>> USDInt.usd_to_decimal('4.5')
-            Decimal('4.50')
+            >>> USDollar.usd_to_decimal('9.99')
+            Decimal('9.99')
+
+            >>> USDollar.usd_to_decimal('$5')
+            Decimal('5.00')
+
+            >>> USDollar.usd_to_decimal('$ 4.49')
+            Decimal('4.49')
+
+            >>> USDollar.usd_to_decimal('3$')
+            Decimal('3.00')
         """
-        if isinstance(val, float):
-            # Decimal will use the exact value of floats instead of the value
-            # a float represents (which is a rounded version of stored value)
-            # so we must convert to str before converting to Decimal.
-            val = str(val)
-        if isinstance(val, str):
-            val = val.replace('$', '').strip()
-        try:
-            return Decimal(val).quantize(Decimal('1.00'), rounding=ROUND_DOWN)
-        except:
-            raise ValueError('Value could not be converted to a decimal '
-                             'number.')
+        usd = str(usd).replace('$', '').strip()
+        return Decimal(usd).quantize(Decimal('1.00'), rounding=ROUND_DOWN)
+
+    @staticmethod
+    def usd_to_cents(usd):
+        """Convert a US dollar amount to cents.
+
+        Args:
+            usd: A US Dollar amount to convert to cents.
+
+        Examples:
+
+            >>> USDollar.usd_to_cents(Decimal('1.99'))
+            199
+
+            >>> USDollar.usd_to_cents(5)
+            500
+
+            >>> USDollar.usd_to_cents('$2.99')
+            299
+
+            >>> USDollar.usd_to_cents('2.5')
+            250
+        """
+        return (int(USDollar.usd_to_decimal(usd) * 100))
 
 
 # Models
@@ -342,7 +314,7 @@ class Index(db.Model):
     (herb, vegetable) or its life cycle. (perennial, annual)
 
     Attributes:
-        _name: The name for the Index itself, such as 'Herb'  or 'Perennial'.
+        name: The name for the Index itself, such as 'Herb'  or 'Perennial'.
         slug: A URL-safe version of _name.
         description: An optional HTML description of the Index.
 
@@ -350,9 +322,11 @@ class Index(db.Model):
     """
     __tablename__ = 'indexes'
     id = db.Column(db.Integer, primary_key=True)
+
     # Data Required
-    _name = db.Column(db.String(64), unique=True)
+    name = db.Column(db.String(64), unique=True)
     slug = db.Column(db.String(64), unique=True)
+
     # Data Optional
     description = db.Column(db.Text)
 
@@ -370,36 +344,38 @@ class Index(db.Model):
         return '<{0} \'{1}\'>'.format(self.__class__.__name__,
                                       self.name)
 
-    @hybrid_property
-    def name(self):
-        """str: contents of ._name.
-
-        The setter sets ._name and also generates a slug for .slug.
-        """
-        return self._name
-
-    @name.expression
-    def name(cls):
-        return cls._name
-
-    @name.setter
-    def name(self, idx_name):
-        self._name = idx_name
-        if idx_name is not None:
-            self.slug = slugify(pluralize(idx_name))
-        else:
-            self.slug = None
-
     @property
     def header(self):
-        """str: contents of ._index in a str for headers, titles, etc."""
+        """str: contents of `name` in a str for headers, titles, etc."""
         # TODO : Maybe make the string setable via config?
-        return '{0} Seeds'.format(self._name)
+        return '{0} Seeds'.format(self.name)
 
     @property
     def plural(self):
-        """str: plural form of ._index."""
-        return pluralize(self._name)
+        """str: plural form of `name`."""
+        return pluralize(self.name) if self.name is not None else None
+
+    def generate_slug(self):
+        """Generate the string to use in URLs containing this `Index`."""
+        return slugify(self.plural) if self.name is not None else None
+
+
+@event.listens_for(Index, 'before_insert')
+@event.listens_for(Index, 'before_update')
+def before_index_insert_or_update(mapper, connection, target):
+    """Run tasks best done before flushing an `Index` to the database."""
+    target.slug = target.generate_slug()
+
+
+@event.listens_for(SignallingSession, 'before_commit')
+def save_indexes_json_before_commit(session):
+    """Save Indexes if any have been added, edited, or deleted."""
+    if any(isinstance(obj, Index) for obj in db.session):
+        # It is appropriate to run `save_indexes_to_json_file` even if there
+        # are deleted `Index` instances in the session, because the deleted
+        # instances will not be returned by `Index.query.all()`, so deleted
+        # indexes will be removed from the indexes JSON file.
+        save_indexes_to_json_file()
 
 
 class CommonName(SynonymsMixin, db.Model):
@@ -413,30 +389,32 @@ class CommonName(SynonymsMixin, db.Model):
         index: MtO relationship with Index; the Index this CommonName falls
             under.
             Backref: Index.common_names
-        _name: The common name of a seed. Examples: Coleus, Tomato,
+        name: The common name of a seed. Examples: Coleus, Tomato,
             Lettuce, Zinnia.
         slug: The URL-friendly version of this common name.
 
         description: An optional HTML description for this CommonName.
         instructions: Optional planting instructions for seeds with the
             specified CommonName.
-        gw_common_names: MtM relationship with CommonName; an optional
-            collection of CommonNames that grow well with the specified
-            CommonName.
         parent: An optional CommonName this is a subcategory of. For example,
             if this CommonName is 'Dwarf Coleus', it would have 'Coleus' as
             its parent. Backref: CommonName.children
+        gw_common_names: MtM relationship with CommonName; an optional
+            collection of CommonNames that grow well with the specified
+            CommonName.
         invisible: True if the specified CommonName is to be shown on auto-
             generated pages, False if it should only be shown on custom pages
-            that explicitly include it.
+            that explicitly include it. Default value: False.
 
         children: Backref from CommonName.parent.
         botanical_names: Backref from BotanicalName.common_names.
         series: Backref from Series.common_name. Note: series is plural here,
             as this is the many side of the relationship.
+        cultivars: Backref from Cultivar.common_name.
+        gw_cultivars: Bakcref from Cultivar.gw_common_names.
     """
     __tablename__ = 'common_names'
-    __table_args__ = (db.UniqueConstraint('_name',
+    __table_args__ = (db.UniqueConstraint('name',
                                           'index_id',
                                           name='cn_index_uc'),)
     id = db.Column(db.Integer, primary_key=True)
@@ -444,54 +422,48 @@ class CommonName(SynonymsMixin, db.Model):
     # Data Required
     index_id = db.Column(db.Integer, db.ForeignKey('indexes.id'))
     index = db.relationship('Index', backref='common_names')
-    _name = db.Column(db.String(64))
+    name = db.Column(db.String(64))
     slug = db.Column(db.String(64))
 
     # Data Optional
     description = db.Column(db.Text)
     instructions = db.Column(db.Text)
-    gw_common_names = db.relationship(
-        'CommonName',
-        secondary=cns_to_gw_cns,
-        primaryjoin=id == cns_to_gw_cns.c.common_name_id,
-        secondaryjoin=id == cns_to_gw_cns.c.gw_common_name_id
-    )
     parent_id = db.Column(db.Integer, db.ForeignKey('common_names.id'))
     parent = db.relationship('CommonName',
                              backref='children',
                              foreign_keys=parent_id,
                              remote_side=[id])
     invisible = db.Column(db.Boolean, default=False)
+    gw_common_names = db.relationship(
+        'CommonName',
+        secondary=cns_to_gw_cns,
+        primaryjoin=id == cns_to_gw_cns.c.common_name_id,
+        secondaryjoin=id == cns_to_gw_cns.c.gw_common_name_id
+    )
 
     def __init__(self,
                  name=None,
                  index=None,
                  description=None,
-                 instructions=None):
+                 instructions=None,
+                 parent=None,
+                 invisible=None,
+                 gw_cultivars=None):
         """Construct an instance of CommonName.
 
-        All arguments are optional to allow for creating an empty CommonName,
-        but a CommonName needs a name and Index to be ready for the database.
-
-        Args:
-            name: The common name for a seed or group of seeds.
-            index: The Index the CommonName will fall under.
-            description: An optional description for use on
-                pages listing seeds of a given common name.
-            instructions: Optional planting instructions.
-
-        Raises:
-            TypeError: If value passed via index is not an Index.
+        Note:
+            gw_common_names has been left out because it requires work to be
+            set correctly.
         """
         self.name = name
-        if index:
-            if isinstance(index, Index):
-                self.index = index
-            else:
-                raise TypeError('Cannot set CommonName.index to a value that '
-                                'is not of type Index.')
+        self.index = index
         self.description = description
         self.instructions = instructions
+        self.parent = parent
+        if invisible is not None:  # Do not override default value
+            self.invisible = invisible
+        if gw_cultivars:  # Can't set an SQLAlchemy collection to None
+            self.gw_cultivars = gw_cultivars
 
     def __repr__(self):
         return '<{0} \'{1}\'>'.format(self.__class__.__name__, self.name)
@@ -499,33 +471,12 @@ class CommonName(SynonymsMixin, db.Model):
     @property
     def header(self):
         """str: ._name formatted for headers and titles."""
-        return '{0} Seeds'.format(self._name)
-
-    @hybrid_property
-    def name(self):
-        """str: Return ._name
-
-        Setter:
-            Set ._name, and set .slug to a slugified version of ._name.
-        """
-        return self._name
-
-    @name.expression
-    def name(cls):
-        return cls._name
-
-    @name.setter
-    def name(self, name):
-        self._name = name
-        if name is not None:
-            self.slug = slugify(name)
-        else:
-            self.slug = None
+        return '{0} Seeds'.format(self.name)
 
     def lookup_dict(self):
         """Return a dictionary with name and index for easy DB lookup."""
         return {
-            'Common Name': self._name if self._name else None,
+            'Common Name': self.name if self.name else None,
             'Index': self.index.name if self.index else None}
 
     @classmethod
@@ -537,12 +488,23 @@ class CommonName(SynonymsMixin, db.Model):
         if index:
             return cls.query\
                 .join(Index, Index.id == CommonName.index_id)\
-                .filter(CommonName._name == name,
+                .filter(CommonName.name == name,
                         Index.name == index).one_or_none()
         else:
             return cls.query\
-                .filter(CommonName._name == name,
+                .filter(CommonName.name == name,
                         CommonName.index == None).one_or_none()  # noqa
+
+    def generate_slug(self):
+        """Generate the string to use in URLs for this `CommonName`."""
+        return slugify(self.name) if self.name is not None else None
+
+
+@event.listens_for(CommonName, 'before_insert')
+@event.listens_for(CommonName, 'before_update')
+def before_common_name_insert_or_update(mapper, connection, target):
+    """Run tasks best done before flushing a `CommonName` to the database."""
+    target.slug = target.generate_slug()
 
 
 class BotanicalName(SynonymsMixin, db.Model):
@@ -554,7 +516,7 @@ class BotanicalName(SynonymsMixin, db.Model):
     comment.
 
     Attributes:
-        _name: A botanical name associated with one or more seeds. Get
+        name: A botanical name associated with one or more seeds. Get
             and set via the name property.
         common_names: MtM relationship with CommonName; The CommonNames this
             BotanicalName belongs to. A BotanicalName can have multiple
@@ -563,10 +525,12 @@ class BotanicalName(SynonymsMixin, db.Model):
             multiple Indexes, which results in multiple CommonNames with the
             same name but different Indexes.
             Backref: CommonName.botanical_names.
+
+        cultivars: Backref from Cultivar.botanical_name.
     """
     __tablename__ = 'botanical_names'
     id = db.Column(db.Integer, primary_key=True)
-    _name = db.Column(db.String(64), unique=True)
+    name = db.Column(db.String(64), unique=True)
     common_names = db.relationship(
         'CommonName',
         secondary=botanical_names_to_common_names,
@@ -576,30 +540,15 @@ class BotanicalName(SynonymsMixin, db.Model):
     def __init__(self, name=None, common_names=None, synonyms=None):
         """Construct an instance of BotanicalName.
 
-        All arguments are optional, but a BotanicalName is not ready for the
-        database until it has a name. It should also have at least one
-        CommonName for it to be of any real use, but only a name is needed for
-        it to be queryable.
-
-        Args:
-            name: A botanical name for a species of plant.
-            common_names: A list of CommonNames this BotanicalName will belong
-                to.
-            synonyms: A string listing synonyms for the BotanicalName, as one
-                would use for the synonyms_string property.
-
-        Raises:
-            TypeError: If any value in common_names is not of type CommonName.
+        Note:
+            synonyms should be a string, not a collection of `Synonym` objects,
+            as the only relevant data `Synonym` objects contain is the synonyms
+            themselves.
         """
         self.name = name
-        if common_names:
-            if all(isinstance(cn, CommonName) for cn in common_names):
-                self.common_names = list(common_names)
-            else:
-                raise TypeError('common_names can only contain values of type '
-                                'CommonName!')
-        if synonyms:
-            self.synonyms_string = synonyms
+        if common_names:  # Can't set collection to None
+            self.common_names = common_names
+        self.synonyms_string = synonyms
 
     def __repr__(self):
         """Return representation of BotanicalName in human-readable format.
@@ -610,29 +559,6 @@ class BotanicalName(SynonymsMixin, db.Model):
         """
         return '<{0} \'{1}\'>'.format(self.__class__.__name__,
                                       self.name)
-
-    @hybrid_property
-    def name(self):
-        """str: The botanical name stored in ._name.
-
-        The setter sets _name to None if given a falsey value, otherwise it
-        will attempt to validate value and set _name to it if it passes, or
-        raise a ValueError if it does not appear to be a valid botanical name.
-        """
-        return self._name
-
-    @name.setter
-    def name(self, botanical_name):
-        if botanical_name:
-            if self.validate(botanical_name):
-                self._name = botanical_name.strip()
-            else:
-                raise ValueError('A valid botanical name must be a minimum of '
-                                 'two words, with the first letter of the '
-                                 'first word capitalized and all letters in '
-                                 'the second word must be lowercase.')
-        else:
-            self._name = None
 
     @staticmethod
     def validate(botanical_name):
@@ -653,7 +579,7 @@ class BotanicalName(SynonymsMixin, db.Model):
             False
 
             >>> BotanicalName.validate('Asclepias Incarnata')
-            False
+            True
 
             >>> BotanicalName.validate('Digitalis interspecies hybrid')
             True
@@ -676,40 +602,24 @@ class BotanicalName(SynonymsMixin, db.Model):
             return False
 
 
-class Image(db.Model):
-    """Table for image information.
-
-    Any image uploaded to be used with the cultivar model should utilize this
-    table for important image data like filename and location.
-
-    filename: File name of an image.
-    """
-    __tablename__ = 'images'
-    id = db.Column(db.Integer, primary_key=True)
-    filename = db.Column(db.String(32), unique=True)
-    cultivar_id = db.Column(db.Integer,
-                            db.ForeignKey('cultivars.id', use_alter=True))
-
-    def __init__(self, filename=None):
-        self.filename = filename
-
-    def __repr__(self):
-        return '<{0} filename: \'{1}\'>'.format(self.__class__.__name__,
-                                                self.filename)
-
-    @property
-    def full_path(self):
-        """str: The full path to the file this image entry represents."""
-        return os.path.join(current_app.config.get('IMAGES_FOLDER'),
-                            self.filename)
-
-    def delete_file(self):
-        """Deletes the image file associated with this Image object."""
-        os.remove(self.full_path)
-
-    def exists(self):
-        """Check whether or not file associated with this Image exists."""
-        return os.path.exists(self.full_path)
+@event.listens_for(BotanicalName, 'before_insert')
+@event.listens_for(BotanicalName, 'before_update')
+def before_botanical_name_insert_or_update(mapper, connection, target):
+    """Run tasks best run before adding a `BotanicalName` to the database."""
+    # Validating `BotanicalName.name` should always be handled at the highest
+    # level possible. Generally, this is either when a user inputs a name, or
+    # a name is loaded from a file. This check exists so that failures to
+    # validate `BotanicalName.name` before attempting to add it to the database
+    # are caught.
+    #
+    # This exception should **never** be raised in production code!
+    if not BotanicalName.validate(target.name):
+        raise ValueError('An attempt to insert an invalid BotanicalName into '
+                         'the database has occurred! Please ensure the name '
+                         'of any new or edited BotanicalName is validated '
+                         'before attempting to flush it to the database. You '
+                         'can use BotanicalName.validate(name) to check '
+                         'whether or not a name is valid.')
 
 
 class Series(db.Model):
@@ -721,25 +631,30 @@ class Series(db.Model):
     Elite Mambo (petunias).
 
     Attributes:
+        BEFORE_CULTIVAR: A constant integer representing that Series name
+            should come before the cultivar name when displayed together.
+        AFTER_CULTIVAR: A constant integer representing that Series name should
+            come after the cultivar when displayed together.
         name: The name of the series.
+
         common_name: MtO relationship with CommonName; the common name a series
             belongs to.
             Backref: CommonName.series
 
         description: An HTML description of the Series.
         position: An integer representing whether the series name belongs
-            before or after the cultivar name when displayed together.
-
-        BEFORE_CULTIVAR: A constant integer representing that Series name
-            should come before the cultivar name when displayed together.
-        AFTER_CULTIVAR: A constant integer representing that Series name should
-            come after the cultivar when displayed together.
+            before or after the cultivar name when displayed together. Default
+            value is BEFORE_CULTIVAR.
     """
     __tablename__ = 'series'
     __table_args__ = (db.UniqueConstraint('name',
                                           'common_name_id',
                                           name='_series_name_cn_uc'),)
     id = db.Column(db.Integer, primary_key=True)
+
+    # Constants
+    BEFORE_CULTIVAR = 0
+    AFTER_CULTIVAR = 1
 
     # Data Required
     name = db.Column(db.String(64))
@@ -748,44 +663,19 @@ class Series(db.Model):
 
     # Data Optional
     description = db.Column(db.Text)
-    position = db.Column(db.Integer, default=0)
-
-    # Constants
-    BEFORE_CULTIVAR = 0
-    AFTER_CULTIVAR = 1
+    position = db.Column(db.Integer, default=BEFORE_CULTIVAR)
 
     def __init__(self,
                  name=None,
                  common_name=None,
                  description=None,
                  position=None):
-        """Create an instance of a Series.
-
-        All arguments are optional, though a Series needs a name and a
-        CommonName to be distinctly queryable.
-
-        Args:
-            name: The name of the Series.
-            common_name: The CommonName this Series belongs to.
-            description: An optional description for the Series.
-            position: Where to include this Series name in relation to the
-                names of cultivars in this series. Defaults to being before the
-                cultivar.
-
-        Raises:
-            TypeError: If value passed to common_name isn't of type CommonName.
-        """
+        """Create an instance of a Series."""
         self.name = name
+        self.common_name = common_name
         self.description = description
-        if common_name:
-            if isinstance(common_name, CommonName):
-                self.common_name = common_name
-            else:
-                raise TypeError('common_name can only be of type CommonName!')
-        if position == Series.AFTER_CULTIVAR:
+        if position is not None:
             self.position = position
-        else:
-            self.position = Series.BEFORE_CULTIVAR
 
     def __repr__(self):
         """Return a string representing a Series instance."""
@@ -793,7 +683,7 @@ class Series(db.Model):
 
     @property
     def fullname(self):
-        """str: Series name + common name"""
+        """str: Name of `Series` with name of `CommonName`."""
         fn = []
         if self.name:
             fn.append(self.name)
@@ -808,51 +698,81 @@ class Series(db.Model):
 class Cultivar(SynonymsMixin, db.Model):
     """Table for cultivar data.
 
-    This table contains the primary identifying information for a cultivar of
-    seed we sell. Generally, this is the table called to get and display
-    cultivar data on the website.
+    A cultivar is an individual variety of plant, and represents the most
+    specific category seeds fall under. This is the primary attribute that
+    products (Packets) are attached to.
+
+    Note:
+        A Cultivar must have a unique combination of _name, common_name, and
+        series, otherwise it could result in multiple results from a query
+        intended to fetch only one Cultivar. Series can be None, as long as
+        the Cultivar is still a unique combination. For example, Polkadot Petra
+        Foxglove and Petra Foxglove (if it existed) would qualify as unique due
+        to one having a series and the other not, even though they have the
+        same _name and CommonName.
 
     Attributes:
-        __tablename__ (str): Name of the table: 'cultivars'
-        id (int): Auto-incremented ID # for use as primary key.
-        botanical_name_id (int): ForeignKey for botanical_name relationship.
-        botanical_name (relationship): Botanical name for this cultivar.
-        common_name_id (int): ForeignKey for common_name relationship.
-        common_name (relationship): Common name this cultivar belongs to.
-        description (str): Product description in HTML format.
-        active (bool): True if the cultivar will be re-stocked when low,
-            False if it will be discontinued when low.
-        gw_common_names (relationship): Common names this cultivar grows well
-            with. gw_cultivars (backref): Cultivars that grow well with a
-            common name.
-        gw_cultivars (relationship): Other cultivars this one grows well with.
-        images (relationship): Images associated with this cultivar.
-        in_stock (bool): True if a cultivar is in stock, False if not.
-        _name (str): The name of the cultivar; the main product name.
-        packets (relationship): Packets for sale of this cultivar.
-        series_id (int): ForeignKey for series relationship.
-        series (relationship): Series this cultivar belongs to.
-            cultivars (backref): Cultivars in given series.
-        slug (str): A URL-friendly version of _name.
-        invisible (bool): Whether or not this cultivar should be listed in
+        name: The part of the cultivar's name that is specific to the cultivar
+            itself, e.g. if a cultivar is called "Foxy Foxglove", _name will be
+            "Foxy".
+        slug: A URL-friendly version of _name.
+        common_name: MtO relationship with CommonName; the common name a
+            cultivar falls under.
+            Backref: CommonName.cultivars
+
+        series: MtO relationship with Series; the (optional) Series a Cultivar
+            belongs to. While it is optional, it must be used in queries for
+            Cultivars to ensure a unique result. Queries for Cultivars that
+            are not in a Series should include Cultivar.series == None in the
+            filter. (Note: == is used instead of is due to sqlalchemy treating
+            == None as is in filters.)
+            Backref: Series.cultivars
+        botanical_name: MtO relationship with BotanicalName; the botanical name
+            this cultivar falls under.
+            Backref: BotanicalName.cultivars
+        description: An optional HTML description of a Cultivar.
+        new_for: An optional year for which a cultivar is new.
+        active: True if the Cultivar's stock is being actively replenished,
+            False if not.
+        in_stock: True if a cultivar is in stock, False if not.
+        invisible: Whether or not this cultivar should be listed in
             automatically generated pages. Cultivars set to invisible can still
             be listed on custom pages.
-        thumbnail_id (int): ForeignKey of Image, used with thumbnail.
-        thumbnail (relationship): MtO relationship with Image for specifying
-            a thumbnail for cultivar.
-        new_for (int): Year a cultivar is new for.
-        __table_args__: Table-wide arguments, such as constraints.
+        gw_common_names: MtM relationship with CommonName; CommonNames this
+            Cultivar grows well with.
+            Backref: CommonName.gw_cultivars
+        gw_cultivars: MtM relationship with Cultivar; Cultivars this Cultivar
+            grows well with.
+        thumbnail: OtO relationship with Image; thumbnail data for this
+            Cultivar.
+            Backref: Image.cultivar
+        images: Images associated with this cultivar.
     """
     __tablename__ = 'cultivars'
     id = db.Column(db.Integer, primary_key=True)
+    __table_args__ = (db.UniqueConstraint('name',
+                                          'common_name_id',
+                                          'series_id',
+                                          name='_cultivar_name_cn_series_uc'),)
+
+    # Data Required
+    name = db.Column(db.String(64))
+    slug = db.Column(db.String(64))
+    common_name_id = db.Column(db.Integer, db.ForeignKey('common_names.id'))
+    common_name = db.relationship('CommonName', backref='cultivars')
+
+    # Data Optional
+    series_id = db.Column(db.Integer, db.ForeignKey('series.id'))
+    series = db.relationship('Series', backref='cultivars')
     botanical_name_id = db.Column(db.Integer,
                                   db.ForeignKey('botanical_names.id'))
     botanical_name = db.relationship('BotanicalName',
                                      backref='cultivars')
-    common_name_id = db.Column(db.Integer, db.ForeignKey('common_names.id'))
-    common_name = db.relationship('CommonName', backref='cultivars')
     description = db.Column(db.Text)
+    new_for = db.Column(db.Integer)
     active = db.Column(db.Boolean)
+    in_stock = db.Column(db.Boolean)
+    invisible = db.Column(db.Boolean, default=False)
     gw_common_names = db.relationship(
         'CommonName',
         secondary=gw_common_names_to_gw_cultivars,
@@ -860,43 +780,75 @@ class Cultivar(SynonymsMixin, db.Model):
     )
     gw_cultivars = db.relationship(
         'Cultivar',
+        back_populates='gw_cultivars',
         secondary=cultivars_to_gw_cultivars,
         primaryjoin=id == cultivars_to_gw_cultivars.c.cultivar_id,
         secondaryjoin=id == cultivars_to_gw_cultivars.c.gw_cultivar_id
     )
-    images = db.relationship('Image', foreign_keys=Image.cultivar_id)
-    in_stock = db.Column(db.Boolean)
-    _name = db.Column(db.String(64))
-    packets = db.relationship('Packet',
-                              cascade='all, delete-orphan',
-                              backref='cultivar')
-    series_id = db.Column(db.Integer, db.ForeignKey('series.id'))
-    series = db.relationship('Series', backref='cultivars')
-    slug = db.Column(db.String(64))
-    invisible = db.Column(db.Boolean, default=False)
     thumbnail_id = db.Column(db.Integer, db.ForeignKey('images.id'))
-    thumbnail = db.relationship('Image', foreign_keys=thumbnail_id)
-    new_for = db.Column(db.Integer)
-    __table_args__ = (db.UniqueConstraint('_name',
-                                          'common_name_id',
-                                          'series_id',
-                                          name='_cultivar_name_cn_series_uc'),)
+    thumbnail = db.relationship('Image',
+                                foreign_keys=thumbnail_id,
+                                backref=db.backref('cultivar', uselist=False))
+    images = db.relationship('Image',
+                             secondary=cultivars_to_images,
+                             backref='cultivars')
 
-    def __init__(self, name=None, description=None):
+    def __init__(self,
+                 name=None,
+                 common_name=None,
+                 series=None,
+                 botanical_name=None,
+                 description=None,
+                 new_for=None,
+                 active=None,
+                 in_stock=None,
+                 invisible=None,
+                 gw_common_names=None):
+        """Create an instance of Cultivar.
+
+        Note:
+            `gw_cultivars`, `images`, and `thumbnail` have been left out
+            because in practice they should have some work done to ensure they
+            are set correctly.
+        """
         self.name = name
+        self.common_name = common_name
+        self.series = series
+        self.botanical_name = botanical_name
         self.description = description
+        self.new_for = new_for
+        if active is not None:
+            self.active = active
+        if in_stock is not None:
+            self.in_stock = in_stock
+        if invisible is not None:
+            self.invisible = invisible
+        if gw_common_names:  # collection will break if set to None
+            self.gw_common_names = gw_common_names
 
     def __repr__(self):
         """Return representation of Cultivar in human-readable format."""
         return '<{0} \'{1}\'>'.format(self.__class__.__name__,
                                       self.fullname)
 
-    @hybrid_property
-    def index(self):
-        """Index belonging to this cultivar's common name."""
-        return self.common_name.index
+    @property
+    def name_with_series(self):
+        """str: contents of _name with series.name included in its position."""
+        if self.series:
+            #  While some seed names list the series after the name of the
+            #  cultivar, such as 'Violet Queen Cleome' and 'Rose Queen Cleome',
+            #  mixes in these series list the series name before 'Mix', so
+            #  the mix of the Queen series is 'Queen Mix Cleome' rather than
+            #  'Mix Queen Cleome'.
+            if (self.series.position != Series.AFTER_CULTIVAR or
+                    self.name.lower() == 'mix'):
+                return '{0} {1}'.format(self.series.name, self.name)
+            else:
+                return '{0} {1}'.format(self.name, self.series.name)
+        else:
+            return self.name
 
-    @hybrid_property
+    @property
     def fullname(self):
         """str: Full name of cultivar including common name and series."""
         fn = []
@@ -909,66 +861,47 @@ class Cultivar(SynonymsMixin, db.Model):
         else:
             return None
 
-    @hybrid_property
-    def name(self):
-        """str: contents _name.
+    @property
+    def queryable_dict(self):
+        """dict: A dict with name, common_name, series, and index of `self`.
 
-        Setter:
-            Sets ._name, and generates a slug and sets .slug.
+        Note:
+            Any or all values can be `None`, as passing <obj.attribute> == None
+            to db.Model.query.filter() will return `None` if no objects in the
+            database have the attribute in question set to `None`. A `dict`
+            with all values set to `None` won't raise an exception when used
+            for a query, it will just yield no results.
         """
-        return self._name
+        name = self.name
+        common_name = self.common_name.name if self.common_name else None
+        index = (self.common_name.index.name if self.common_name
+                 and self.common_name.index else None)
+        series = self.series.name if self.series else None
+        return {
+            'Cultivar Name': name,
+            'Common Name': common_name,
+            'Index': index,
+            'Series': series
+        }
 
-    @name.setter
-    def name(self, value):
-        self._name = value
-        self.set_slug()
+    @classmethod
+    def from_queryable_dict(cls, qd):
+        """Load a `Cultivar` given the names of its core components in a dict.
 
-    @hybrid_property
-    def name_with_series(self):
-        """str: contents of _name with series.name included in its position."""
-        if self.series:
-            if self.series.position != Series.AFTER_CULTIVAR or\
-                    'Mix' in self.name:
-                return '{0} {1}'.format(self.series.name, self._name)
-            else:
-                return '{0} {1}'.format(self._name, self.series.name)
-        else:
-            return self._name
-
-    @hybrid_property
-    def thumbnail_path(self):
-        """str: The path to this cultivar's thumbnail file.
-
-        Returns:
-            str: Local path to thumbnail if it exists, path to default thumb
-                image if it does not.
+        Args:
+            qd: A dictionary either created by `Cultivar.queryable_dict` or
+                with the same keys as one.
         """
-        if self.thumbnail:
-            return os.path.join('images',
-                                self.thumbnail.filename)
-        else:
-            return os.path.join('images', 'default_thumb.jpg')
+        name = dbify(qd['Cultivar Name'])
+        common_name = dbify(qd['Common Name'])
+        index = dbify(qd['Index'])
+        series = dbify(qd['Series'])
+        if name and common_name and index:
+            if series:
+                cls
 
     def lookup_dict(self):
-        """Return a dict of name, series, common_name, and index.
-
-        Since a Cultivar needs to be a unique combination of name, series, and
-        common_name (which requires an Index) the only way to look it up is via
-        some combination of cultivar name, series name, commo nname, and index
-        name.
-
-        Returns:
-            dict: A dict containing Cultivar.name, Cultivar.series.name, and
-            Cultivar.common_name.name, substituting None where not present.
-        """
-        return {
-            'Cultivar Name': None if not self.name else self.name,
-            'Series': None if not self.series else self.series.name,
-            'Common Name': None if not self.common_name else
-            self.common_name.name,
-            'Index': None if not self.common_name or not self.common_name.index
-            else self.common_name.index.name
-        }
+        return self.queryable_dict
 
     @classmethod
     def from_lookup_dict(cls, lud):
@@ -1028,12 +961,19 @@ class Cultivar(SynonymsMixin, db.Model):
             ).one_or_none()
         return obj
 
-    def set_slug(self):
-        """Sets self.slug to a slug made from name and series."""
-        if self._name:
-            self.slug = slugify(self.name_with_series)
-        else:
-            self.slug = None
+    def generate_slug(self):
+        """Generate a string for use in URLs for pages that use `Cultivar`."""
+        # Use `name_with_series` instead of `fullname` because the slug for
+        # a `Cultivar` is only needed on pages where the slug for `CommonName`
+        # has been passed to the view function.
+        return slugify(self.name_with_series)
+
+
+@event.listens_for(Cultivar, 'before_insert')
+@event.listens_for(Cultivar, 'before_update')
+def before_cultivar_insert_or_update(mapper, connection, target):
+    """Update a `Cultivar` before flushing changes to the database."""
+    target.slug = target.generate_slug()
 
 
 class Packet(db.Model):
@@ -1047,7 +987,7 @@ class Packet(db.Model):
     Attributes:
         __tablename__ (str): Name of the table: 'packets'
         id (int): Auto-incremented ID # for use as a primary key.
-        price (USDInt): Price (in US dollars) for this packet.
+        price (USDollar): Price (in US dollars) for this packet.
         quantity_id (int): ForeignKey for quantity relationship.
         quantity (relationship): Quantity (number and units) of seeds in this
             packet.
@@ -1056,10 +996,11 @@ class Packet(db.Model):
     """
     __tablename__ = 'packets'
     id = db.Column(db.Integer, primary_key=True)
-    price = db.Column(USDInt)
+    price = db.Column(USDollar)
     quantity_id = db.Column(db.Integer, db.ForeignKey('quantities.id'))
     quantity = db.relationship('Quantity', backref='packets')
     cultivar_id = db.Column(db.Integer, db.ForeignKey('cultivars.id'))
+    cultivar = db.relationship('Cultivar', backref='packets')
     sku = db.Column(db.String(32), unique=True)
 
     def __repr__(self):
@@ -1071,7 +1012,8 @@ class Packet(db.Model):
         if quantity and units:
             self.quantity = Quantity.query.filter(
                 Quantity.value == quantity,
-                Quantity.units == units
+                Quantity.units == units,
+                Quantity.is_decimal == Quantity.dec_check(quantity)
             ).one_or_none()
             if not self.quantity:
                 self.quantity = Quantity(value=quantity, units=units)
@@ -1122,6 +1064,7 @@ class Quantity(db.Model):
     units = db.Column(db.String(32))
     __table_args__ = (db.UniqueConstraint('_float',
                                           'units',
+                                          'is_decimal',
                                           name='_float_units_uc'),)
 
     def __init__(self, value=None, units=None):
@@ -1346,9 +1289,14 @@ class Quantity(db.Model):
         else:
             return None
 
-    @value.expression
+    class ValueComparator(Comparator):
+        def operate(self, op, other):
+            return and_(op(Quantity._float, Quantity.for_cmp(other)),
+                        Quantity.is_decimal == Quantity.dec_check(other))
+
+    @value.comparator
     def value(cls):
-        return cls._float
+        return Quantity.ValueComparator(cls)
 
     @value.setter
     def value(self, val):
@@ -1456,6 +1404,45 @@ class CustomPage(db.Model):
     cultivars = db.relationship('Cultivar',
                                 secondary=cultivars_to_custom_pages,
                                 backref='custom_pages')
+
+
+class Image(db.Model):
+    """Table for image information.
+
+    Any image uploaded to be used with the cultivar model should utilize this
+    table for important image data like filename and location.
+
+    filename: File name of an image.
+    """
+    __tablename__ = 'images'
+    id = db.Column(db.Integer, primary_key=True)
+    filename = db.Column(db.String(32), unique=True)
+
+    def __init__(self, filename=None):
+        self.filename = filename
+
+    def __repr__(self):
+        return '<{0} filename: \'{1}\'>'.format(self.__class__.__name__,
+                                                self.filename)
+
+    @property
+    def path(self):
+        """str: The path to the image file relative to the static folder."""
+        return os.path.join('images', self.filename)
+
+    @property
+    def full_path(self):
+        """str: The full path to the file this image entry represents."""
+        return os.path.join(current_app.config.get('IMAGES_FOLDER'),
+                            self.filename)
+
+    def delete_file(self):
+        """Deletes the image file associated with this Image object."""
+        os.remove(self.full_path)
+
+    def exists(self):
+        """Check whether or not file associated with this Image exists."""
+        return os.path.exists(self.full_path)
 
 
 if __name__ == '__main__':  # pragma: no cover

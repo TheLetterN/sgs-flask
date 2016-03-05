@@ -15,7 +15,6 @@
 
 # Copyright Swallowtail Garden Seeds, Inc
 
-from decimal import Decimal
 from titlecase import titlecase
 from flask import current_app, Markup, url_for
 from werkzeug import secure_filename
@@ -42,8 +41,9 @@ from .models import (
     Packet,
     Quantity,
     Cultivar,
-    Series
+    Series,
 )
+from .models import USDollar as USDollar_
 
 
 IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png']
@@ -97,9 +97,7 @@ class USDollar(object):
     def __call__(self, form, field):
         if field:
             try:
-                Decimal(field.data.replace('$', '').strip())
-                if '.' in field.data and len(field.data.split('.')[-1]) > 2:
-                    raise ValidationError(self.message)
+                USDollar_.usd_to_decimal(field.data)
             except:
                 raise ValidationError(self.message)
 
@@ -121,7 +119,7 @@ def botanical_name_select_list(obj=None):
     if obj and obj.botanical_names:
         items = obj.botanical_names
     else:
-        items = BotanicalName.query.order_by('_name')
+        items = BotanicalName.query.order_by('name')
     for bn in items:
         bn_list.append((bn.id, bn.name))
     return bn_list
@@ -156,7 +154,7 @@ def common_name_select_list():
             in the database.
     """
     cn_list = []
-    for cn in CommonName.query.order_by('_name'):
+    for cn in CommonName.query.order_by('name'):
         if not cn.invisible:
             val = cn.name + ' (' + cn.index.name + ')' if cn.index else cn.name
             cn_list.append((cn.id, val))
@@ -211,7 +209,7 @@ def cultivar_select_list(obj=None):
     if obj and obj.cultivars:
         items = obj.cultivars
     else:
-        items = Cultivar.query.order_by('_name')
+        items = Cultivar.query.order_by('name')
     return [(cv.id, cv.fullname) for cv in items]
 
 
@@ -359,12 +357,12 @@ class AddBotanicalNameForm(Form):
                                   'second word should be all lowercase.'.
                                   format(field.data))
         for bn in self.cn.botanical_names:
-            if bn._name == field.data:
+            if bn.name == field.data:
                 raise ValidationError(Markup(
                     'The botanical name \'{0}\' already belongs to the common '
                     'name \'{1}\'. <a href="{2}" target="_blank">Click here'
                     '</a> if you wish to edit it.'
-                    .format(bn._name,
+                    .format(bn.name,
                             self.cn.name,
                             url_for('seeds.edit_botanical_name', bn_id=bn.id))
                 ))
@@ -818,7 +816,7 @@ class EditBotanicalNameForm(Form):
                                   'second word should be all lowercase.'.
                                   format(field.data))
         bn = BotanicalName.query.filter(
-            BotanicalName._name == field.data.strip(),
+            BotanicalName.name == field.data.strip(),
             BotanicalName.id != self.bn.id
         ).one_or_none()
         if bn:
@@ -826,7 +824,7 @@ class EditBotanicalNameForm(Form):
                 'The botanical name \'{0}\' already exists under the common '
                 'name(s) {1}. <a href="{2}" target="_blank">Click here</a> if '
                 'you wish to edit it.'
-                .format(bn._name,
+                .format(bn.name,
                         ', '.join([cn.name for cn in bn.common_names]),
                         url_for('seeds.edit_botanical_name', bn_id=bn.id))
             ))

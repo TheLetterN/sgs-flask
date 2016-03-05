@@ -90,9 +90,6 @@ class TestValidators:
         with pytest.raises(ValidationError):
             form.name.data = '$3/4'
             usd.__call__(form, form.name)
-        with pytest.raises(ValidationError):
-            form.name.data = '12.999'
-            usd.__call__(form, form.name)
 
 
 class TestAddBotanicalNameForm:

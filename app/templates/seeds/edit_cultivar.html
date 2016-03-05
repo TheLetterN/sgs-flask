@@ -47,7 +47,7 @@
                             {{ form_field(form.name)|indent(28)|safe }}
                         </li>
                         <div>Current thumbnail:</div>
-                        <div><img src="{{ url_for('static', filename=cultivar.thumbnail_path) }}"></div>
+                        <div><img src="{{ url_for('static', filename=cultivar.thumbnail.path) }}"></div>
                         <li>
                             {{ form_field(form.thumbnail)|indent(28)|safe }}
                         </li>

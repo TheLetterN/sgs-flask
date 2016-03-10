@@ -247,8 +247,8 @@ class TestSeedsWorksheet:
         wb = Workbook()
         ws = wb.active
         sws = SeedsWorksheet(ws)
-        sws.add(('Test',), file=messages)
-        m_ao.assert_called_with('Test', file=messages)
+        sws.add(('Test',), stream=messages)
+        m_ao.assert_called_with('Test', stream=messages)
         messages.seek(0)
         msgs = messages.read()
         assert '-- BEGIN adding data to SeedsWorksheet. --' in msgs
@@ -326,7 +326,7 @@ class TestIndexesWorksheet:
         iws = IndexesWorksheet(ws)
         iws.setup()
         idx = Index(name='Perennial', description='Built to last.')
-        iws.add_one(idx, file=messages)
+        iws.add_one(idx, stream=messages)
         assert iws.cell(2, iws.cols['Index']).value == 'Perennial'
         assert iws.cell(2, iws.cols['Description']).value == 'Built to last.'
         messages.seek(0)
@@ -384,7 +384,7 @@ class TestCommonNamesWorksheet:
         cnws.setup()
         cn = CommonName(name='Foxglove')
         cn.index = Index(name='Perennial')
-        cnws.add_one(cn, file=messages)
+        cnws.add_one(cn, stream=messages)
         assert cnws.cell(2, cnws.cols['Index']).value == 'Perennial'
         assert cnws.cell(2, cnws.cols['Common Name']).value == 'Foxglove'
         assert cnws.cell(2, cnws.cols['Subcategory of']).value is None
@@ -512,7 +512,7 @@ class TestBotanicalNamesWorksheet:
         cn = CommonName(name='Rock')
         cn.index = Index(name='Music')
         bn.common_names = [cn]
-        bnws.add_one(bn, file=messages)
+        bnws.add_one(bn, stream=messages)
         assert bnws.cell(
             2, bnws.cols['Common Names (JSON)']
         ).value == queryable_dicts_to_json([cn])
@@ -584,7 +584,7 @@ class TestSeriesWorksheet:
         sr = Series(name='Polkadot')
         sr.common_name = CommonName(name='Foxglove')
         sr.common_name.index = Index(name='Perennial')
-        srws.add_one(sr, file=messages)
+        srws.add_one(sr, stream=messages)
         assert srws.cell(
             2, srws.cols['Common Name (JSON)']
         ).value == json.dumps(sr.common_name.queryable_dict)
@@ -685,7 +685,7 @@ class TestCultivarsWorksheet:
         cv = Cultivar(name='Foxy')
         cv.common_name = CommonName(name='Foxglove')
         cv.common_name.index = Index(name='Perennial')
-        cvws.add_one(cv, file=messages)
+        cvws.add_one(cv, stream=messages)
         assert cvws.cell(2, cvws.cols['Index']).value == 'Perennial'
         assert cvws.cell(2, cvws.cols['Common Name']).value == 'Foxglove'
         assert cvws.cell(2, cvws.cols['Cultivar Name']).value == 'Foxy'
@@ -929,7 +929,7 @@ class TestPacketsWorksheet:
         cv.common_name = CommonName(name='Foxglove')
         cv.common_name.index = Index(name='Perennial')
         pkt.cultivar = cv
-        pws.add_one(pkt, file=messages)
+        pws.add_one(pkt, stream=messages)
         assert pws.cell(
             2, pws.cols['Cultivar (JSON)']
         ).value == json.dumps(cv.queryable_dict)
@@ -1047,13 +1047,13 @@ class TestSeedsWorkbook:
         """Call <sheet>.save_to_db(<obj>.query.all()) for each worksheet."""
         messages = StringIO()
         swb = SeedsWorkbook()
-        swb.add_all_data_to_sheets(file=messages)
-        m_a.assert_any_call(m_pkt.all(), file=messages)
-        m_a.assert_any_call(m_cv.all(), file=messages)
-        m_a.assert_any_call(m_sr.all(), file=messages)
-        m_a.assert_any_call(m_bn.all(), file=messages)
-        m_a.assert_any_call(m_cn.all(), file=messages)
-        m_a.assert_any_call(m_idx.all(), file=messages)
+        swb.add_all_data_to_sheets(stream=messages)
+        m_a.assert_any_call(m_pkt.all(), stream=messages)
+        m_a.assert_any_call(m_cv.all(), stream=messages)
+        m_a.assert_any_call(m_sr.all(), stream=messages)
+        m_a.assert_any_call(m_bn.all(), stream=messages)
+        m_a.assert_any_call(m_cn.all(), stream=messages)
+        m_a.assert_any_call(m_idx.all(), stream=messages)
 
     @mock.patch('app.seeds.excel.IndexesWorksheet.save_to_db')
     @mock.patch('app.seeds.excel.CommonNamesWorksheet.save_to_db')
@@ -1071,15 +1071,15 @@ class TestSeedsWorkbook:
         """Call save_to_db for each worksheet."""
         messages = StringIO()
         swb = SeedsWorkbook()
-        swb.save_all_sheets_to_db(file=messages)
+        swb.save_all_sheets_to_db(stream=messages)
         messages.seek(0)
         msgs = messages.read()
-        m_idx.assert_called_with(file=messages)
-        m_cn.assert_called_with(file=messages)
-        m_bn.assert_called_with(file=messages)
-        m_cv.assert_called_with(file=messages)
-        m_sr.assert_called_with(file=messages)
-        m_pkt.assert_called_with(file=messages)
+        m_idx.assert_called_with(stream=messages)
+        m_cn.assert_called_with(stream=messages)
+        m_bn.assert_called_with(stream=messages)
+        m_cv.assert_called_with(stream=messages)
+        m_sr.assert_called_with(stream=messages)
+        m_pkt.assert_called_with(stream=messages)
         assert '-- BEGIN saving all worksheets to database. --' in msgs
         assert '-- END saving all worksheets to database. --' in msgs
 

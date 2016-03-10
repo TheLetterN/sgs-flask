@@ -29,7 +29,7 @@ from flask import (
 )
 from werkzeug import secure_filename
 from flask.ext.login import login_required
-from app import db, dbify, make_breadcrumbs, Permission
+from app import db, make_breadcrumbs, Permission
 from app.decorators import permission_required
 from app.pending import Pending
 from app.redirects import Redirect, RedirectsFile
@@ -37,6 +37,7 @@ from . import seeds
 from ..lastcommit import LastCommit
 from .models import (
     BotanicalName,
+    dbify,
     Index,
     CommonName,
     Cultivar,

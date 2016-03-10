@@ -31,9 +31,10 @@ import warnings
 
 import openpyxl
 
-from app import db, dbify
+from app import db
 from app.seeds.models import (
     BotanicalName,
+    dbify,
     CommonName,
     Cultivar,
     Image,
@@ -44,22 +45,23 @@ from app.seeds.models import (
 )
 
 
-def lookup_dicts_to_json(objects):
+def queryable_dicts_to_json(objects):
     """Generate a JSON string of dictionaries for easily querying.
 
     Note:
-        All objects passed must have the method `lookup_dict`.
+        All objects passed must have the property `queryable_dict`.
 
     Args:
-        objects: A list of objects to get lookup dictionaries from.
+        objects: A list of objects to get queryable dictionaries from.
 
     Raises:
-        TypeError: If any item in items lacks the lookup_dict method.
+        TypeError: If any item in items lacks the `queryable_dict` property.
     """
-    if all(hasattr(obj, 'lookup_dict') for obj in objects):
-        return json.dumps(tuple(obj.lookup_dict() for obj in objects))
+    if all(hasattr(obj, 'queryable_dict') for obj in objects):
+        return json.dumps(tuple(obj.queryable_dict for obj in objects))
     else:
-        raise TypeError('One or more objects lack the method \'lookup_dict\'!')
+        raise TypeError('One or more objects lack the property '
+                        '\'queryable_dict\'!')
 
 
 def get_or_create_index(name, file=sys.stdout):
@@ -105,10 +107,7 @@ def get_or_create_common_name(name, index, file=sys.stdout):
     Returns:
         CommonName: The CommonName loaded or created.
     """
-    cn = CommonName.query\
-        .join(Index, Index.id == CommonName.index_id)\
-        .filter(CommonName.name == name, Index.name == index)\
-        .one_or_none()
+    cn = CommonName.from_queryable_values(name=name, index=index)
     if cn:
         print('The CommonName \'{0}\' has been loaded from the database.'
               .format(cn.name), file=file)
@@ -127,7 +126,7 @@ def get_or_create_cultivar(name,
                            index,
                            series=None,
                            file=sys.stdout):
-    """Load a cultivar if it iexists, create it if not.
+    """Load a cultivar if it exists, create it if not.
 
     Notes:
         The boolean attribute 'created' is attached to the CommonName
@@ -147,25 +146,10 @@ def get_or_create_cultivar(name,
         series (optional[str]): The Series this Cultivar is in, if applicable.
         file (io): IO object to write messages to. Defaults to sys.stdout.
     """
-    if series:
-        cv = Cultivar.query\
-            .join(CommonName, CommonName.id == Cultivar.common_name_id)\
-            .join(Index, Index.id == CommonName.index_id)\
-            .join(Series, Series.id == Cultivar.series_id)\
-            .filter(Cultivar.name == name,
-                    CommonName.name == common_name,
-                    Index.name == index,
-                    Series.name == series)\
-            .one_or_none()
-    else:
-        cv = Cultivar.query\
-            .join(CommonName, CommonName.id == Cultivar.common_name_id)\
-            .join(Index, Index.id == CommonName.index_id)\
-            .filter(Cultivar.name == name,
-                    CommonName.name == common_name,
-                    Cultivar.series_id == None,  # noqa
-                    Index.name == index)\
-            .one_or_none()
+    cv = Cultivar.from_queryable_values(name=name,
+                                        common_name=common_name,
+                                        index=index,
+                                        series=series)
     if cv:
         cv.created = False
         print('The Cultivar \'{0}\' has been loaded from the database.'
@@ -519,11 +503,11 @@ class CommonNamesWorksheet(SeedsWorksheet):
             if cn.gw_common_names:
                 self.cell(
                     r, self.cols['Grows With Common Names (JSON)']
-                ).value = lookup_dicts_to_json(cn.gw_common_names)
+                ).value = queryable_dicts_to_json(cn.gw_common_names)
             if cn.gw_cultivars:
                 self.cell(
                     r, self.cols['Grows With Cultivars (JSON)']
-                ).value = lookup_dicts_to_json(cn.gw_cultivars)
+                ).value = queryable_dicts_to_json(cn.gw_cultivars)
         else:
             raise TypeError('The object \'{0}\' could not be added because '
                             'it is not of type \'CommonName\'!'.format(cn))
@@ -702,7 +686,7 @@ class BotanicalNamesWorksheet(SeedsWorksheet):
                   'worksheet.'.format(bn, r), file=file)
             self.cell(
                 r, self.cols['Common Names (JSON)']
-            ).value = lookup_dicts_to_json(bn.common_names)
+            ).value = queryable_dicts_to_json(bn.common_names)
             self.cell(r, self.cols['Botanical Name']).value = bn.name
             syns = bn.synonyms_string
             if syns:
@@ -816,7 +800,7 @@ class SeriesWorksheet(SeedsWorksheet):
                   .format(sr, r), file=file)
             self.cell(
                 r, self.cols['Common Name (JSON)']
-            ).value = json.dumps(sr.common_name.lookup_dict())
+            ).value = json.dumps(sr.common_name.queryable_dict)
             self.cell(r, self.cols['Series']).value = sr.name
             pos_cell = self.cell(r, self.cols['Position'])
             if sr.position == Series.AFTER_CULTIVAR:
@@ -970,11 +954,11 @@ class CultivarsWorksheet(SeedsWorksheet):
             if cv.gw_common_names:
                 self.cell(
                     r, self.cols['Grows With Common Names (JSON)']
-                ).value = lookup_dicts_to_json(cv.gw_common_names)
+                ).value = queryable_dicts_to_json(cv.gw_common_names)
             if cv.gw_cultivars:
                 self.cell(
                     r, self.cols['Grows With Cultivars (JSON)']
-                ).value = lookup_dicts_to_json(cv.gw_cultivars)
+                ).value = queryable_dicts_to_json(cv.gw_cultivars)
         else:
             raise TypeError('The object \'{0}\' could not be added because '
                             'it is not of type \'Cultivar\'!'.format(cv))
@@ -1249,7 +1233,7 @@ class PacketsWorksheet(SeedsWorksheet):
                   .format(pkt, r), file=file)
             self.cell(
                 r, self.cols['Cultivar (JSON)']
-            ).value = json.dumps(pkt.cultivar.lookup_dict())
+            ).value = json.dumps(pkt.cultivar.queryable_dict)
             self.cell(r, self.cols['SKU']).value = pkt.sku
             self.cell(r, self.cols['Price']).value = str(pkt.price)
             self.cell(r, self.cols['Quantity']).value = pkt.quantity.str_value
@@ -1284,7 +1268,10 @@ class PacketsWorksheet(SeedsWorksheet):
                   'database.'.format(pkt.sku), file=file)
         else:
             edited = True
-            pkt = Packet(sku=sku, price=price, quantity=quantity, units=units)
+            qty = Quantity.from_queryable_values(value=quantity, units=units)
+            if not qty:
+                qty = Quantity(value=quantity, units=units)
+            pkt = Packet(sku=sku, price=price, quantity=qty)
             db.session.add(pkt)
             pkt.cultivar = get_or_create_cultivar(
                 name=dbify(cv_dict['Cultivar Name']),
@@ -1300,16 +1287,14 @@ class PacketsWorksheet(SeedsWorksheet):
             pkt.price = price
             print('The price for Packet SKU \'{0}\' has been set to: ${1}.'
                   .format(pkt.sku, pkt.price), file=file)
-        if Quantity.for_cmp(quantity) != pkt.quantity._float:
+        qty = Quantity.from_queryable_values(value=quantity, units=units)
+        if not qty:
+            qty = Quantity(value=quantity, units=units)
+        if qty is not pkt.quantity:
             edited = True
-            pkt.quantity.value = quantity
+            pkt.quantity = qty
             print('The quantity for the Packet SKU \'{0}\' has been set to: '
-                  '{1}.'.format(pkt.sku, pkt.quantity.value), file=file)
-        if units != pkt.quantity.units:
-            edited = True
-            pkt.quantity.units = units
-            print('The units for the Packet SKU \'{0}\' have been set to: {1}.'
-                  .format(pkt.sku, pkt.quantity.units), file=file)
+                  '{1} {2}'.format(pkt.sku, qty.value, qty.units), file=file)
         if edited:
             db.session.flush()
             print('Changes to the Packet \'{0}\' have been flushed to '

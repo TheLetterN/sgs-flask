@@ -2509,7 +2509,9 @@ class TestPacketsWorksheetWithDB:
         ws = wb.active
         pws = PacketsWorksheet(ws)
         pws.setup()
-        pkt = Packet(sku='8675309', price='3.50', quantity=100, units='seeds')
+        pkt = Packet(sku='8675309',
+                     price='3.50',
+                     quantity=Quantity(value=100, units='seeds'))
         pkt.cultivar = Cultivar(name='Foxy')
         pkt.cultivar.common_name = CommonName(name='Foxglove')
         pkt.cultivar.common_name.index = Index(name='Perennial')
@@ -2534,7 +2536,9 @@ class TestPacketsWorksheetWithDB:
         ws = wb.active
         pws = PacketsWorksheet(ws)
         pws.setup()
-        pkt = Packet(sku='8675309', price='3.50', quantity=100, units='seeds')
+        pkt = Packet(sku='8675309',
+                     price='3.50',
+                     quantity=Quantity(value=100, units='seeds'))
         pkt.cultivar = Cultivar(name='Foxy')
         pkt.cultivar.common_name = CommonName(name='Foxglove')
         pkt.cultivar.common_name.index = Index(name='Perennial')
@@ -2561,7 +2565,9 @@ class TestPacketsWorksheetWithDB:
         cv.common_name.index = Index(name='Perennial')
         db.session.add(cv)
         db.session.commit()
-        pkt = Packet(sku='8675309', price='3.50', quantity=100, units='seeds')
+        pkt = Packet(sku='8675309',
+                     price='3.50',
+                     quantity=Quantity(value=100, units='seeds'))
         pkt.cultivar = Cultivar(name='Foxy')
         pkt.cultivar.common_name = CommonName(name='Foxglove')
         pkt.cultivar.common_name.index = Index(name='Perennial')
@@ -2577,7 +2583,9 @@ class TestPacketsWorksheetWithDB:
         ws = wb.active
         pws = PacketsWorksheet(ws)
         pws.setup()
-        pkt = Packet(sku='8675309', price='3.50', quantity=100, units='seeds')
+        pkt = Packet(sku='8675309',
+                     price='3.50',
+                     quantity=Quantity(value=100, units='seeds'))
         pkt.cultivar = Cultivar(name='Foxy')
         pkt.cultivar.common_name = CommonName(name='Foxglove')
         pkt.cultivar.common_name.index = Index(name='Perennial')
@@ -2605,7 +2613,9 @@ class TestPacketsWorksheetWithDB:
         ws = wb.active
         pws = PacketsWorksheet(ws)
         pws.setup()
-        pkt = Packet(sku='8675309', price='3.50', quantity=100, units='seeds')
+        pkt = Packet(sku='8675309',
+                     price='3.50',
+                     quantity=Quantity(value=100, units='seeds'))
         pkt.cultivar = Cultivar(name='Foxy')
         pkt.cultivar.common_name = CommonName(name='Foxglove')
         pkt.cultivar.common_name.index = Index(name='Perennial')
@@ -2624,7 +2634,7 @@ class TestPacketsWorksheetWithDB:
         assert pktq is pkt
         assert pkt.quantity.value == 9001
         assert ('The quantity for the Packet SKU \'8675309\' has been set to: '
-                '9001.') in msgs
+                '9001 seeds') in msgs
 
     def test_save_row_to_db_existing_new_units(self, db):
         """Change units of an existing packet."""
@@ -2633,7 +2643,9 @@ class TestPacketsWorksheetWithDB:
         ws = wb.active
         pws = PacketsWorksheet(ws)
         pws.setup()
-        pkt = Packet(sku='8675309', price='3.50', quantity=100, units='seeds')
+        pkt = Packet(sku='8675309',
+                     price='3.50',
+                     quantity=Quantity(value=100, units='seeds'))
         pkt.cultivar = Cultivar(name='Foxy')
         pkt.cultivar.common_name = CommonName(name='Foxglove')
         pkt.cultivar.common_name.index = Index(name='Perennial')
@@ -2651,5 +2663,5 @@ class TestPacketsWorksheetWithDB:
         pktq = Packet.query.filter(Packet.sku == '8675309').one_or_none()
         assert pktq is pkt
         assert pkt.quantity.units == 'cubits'
-        assert ('The units for the Packet SKU \'8675309\' have been set to: '
-                'cubits.') in msgs
+        assert ('The quantity for the Packet SKU \'8675309\' has been set to: '
+                '100 cubits') in msgs

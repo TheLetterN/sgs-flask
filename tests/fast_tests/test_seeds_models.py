@@ -7,6 +7,7 @@ from fractions import Fraction
 from unittest import mock
 from app.seeds.models import (
     BotanicalName,
+    dbify,
     Index,
     CommonName,
     Image,
@@ -18,6 +19,19 @@ from app.seeds.models import (
     SynonymsMixin,
     USDollar
 )
+
+
+class TestModuleFunctions:
+    """Test module-level functions in app.seeds.models."""
+    def test_dbify(self):
+        """Convert a string into a proper titlecase version."""
+        assert dbify('stuff') == 'Stuff'
+        assert dbify('This is a Title') == 'This Is a Title'
+        assert dbify('lowercase stuff') == 'Lowercase Stuff'
+        assert dbify('You will forget-me-not') == 'You Will Forget-me-not'
+        assert dbify('tears for fears') == 'Tears for Fears'
+        assert dbify('ashes to ashes') == 'Ashes to Ashes'
+        assert dbify('CRUISE CONTROL FOR COOL') == 'Cruise Control for Cool'
 
 
 class TestSynonymsMixin:
@@ -130,6 +144,12 @@ class TestUSDollar:
 
 class TestIndex:
     """Test methods of Index in the seeds model."""
+    def test_repr(self):
+        """Return string formatted <Index '<index>'>"""
+        index = Index()
+        index.name = 'vegetable'
+        assert index.__repr__() == '<Index \'vegetable\'>'
+
     def test_header(self):
         """Return '<._name> Seeds'"""
         index = Index()
@@ -141,12 +161,6 @@ class TestIndex:
         index = Index()
         index.name = 'Annual Flower'
         assert index.plural == 'Annual Flowers'
-
-    def test_repr(self):
-        """Return string formatted <Index '<index>'>"""
-        index = Index()
-        index.name = 'vegetable'
-        assert index.__repr__() == '<Index \'vegetable\'>'
 
 
 class TestCommonName:
@@ -161,6 +175,23 @@ class TestCommonName:
         cn = CommonName()
         cn.name = 'Foxglove'
         assert cn.header == 'Foxglove Seeds'
+
+    def test_queryable_dict(self):
+        """Return a dict containing the name and index of a CommonName."""
+        cn = CommonName()
+        assert cn.queryable_dict == {'Common Name': None, 'Index': None}
+        cn.name = 'Foxglove'
+        assert cn.queryable_dict == {'Common Name': 'Foxglove', 'Index': None}
+        cn.index = Index(name='Perennial')
+        assert cn.queryable_dict == {'Common Name': 'Foxglove',
+                                     'Index': 'Perennial'}
+
+    @mock.patch('app.seeds.models.CommonName.from_queryable_values')
+    def test_from_queryable_dict(self, m_fqv):
+        """Run CommonName.from_queryable_values with params from dict."""
+        CommonName.from_queryable_dict(d={'Common Name': 'Foxglove',
+                                          'Index': 'Perennial'})
+        m_fqv.assert_called_with(name='Foxglove', index='Perennial')
 
 
 class TestBotanicalName:
@@ -268,6 +299,19 @@ class TestCultivar:
                                      'Index': None,
                                      'Series': None}
 
+    @mock.patch('app.seeds.models.Cultivar.from_queryable_values')
+    def test_from_queryable_dict(self, m_fqv):
+        """Call Cultivar.from_queryable_values without a Series."""
+        d = {'Cultivar Name': 'Petra',
+             'Common Name': 'Foxglove',
+             'Index': 'Perennial',
+             'Series': 'Polkadot'}
+        Cultivar.from_queryable_dict(d)
+        m_fqv.assert_called_with(name='Petra',
+                                 common_name='Foxglove',
+                                 index='Perennial',
+                                 series='Polkadot')
+
 
 class TestPacket:
     """Test methods of Packet in the seeds model."""
@@ -285,27 +329,6 @@ class TestPacket:
         assert pk.info == 'SKU #8675309: $3.50 for None None'
         pk.quantity = Quantity(100, 'seeds')
         assert pk.info == 'SKU #8675309: $3.50 for 100 seeds'
-
-    def test_init_with_no_args(self):
-        """Create a Packet object with no data given  no args."""
-        pkt = Packet()
-        assert not pkt.sku
-        assert not pkt.price
-        assert not pkt.quantity
-
-    def test_init_with_no_quantity(self):
-        """Create a Packet with no quantity set given only sku and price."""
-        pkt = Packet(sku='8675309', price=Decimal('3.50'))
-        assert pkt.sku == '8675309'
-        assert pkt.price == Decimal('3.50')
-        assert not pkt.quantity
-
-    def test_init_quantity_or_units(self):
-        """Raise a ValueError if only one of quantity or units passed."""
-        with pytest.raises(ValueError):
-            Packet(sku='8675309', price=Decimal('3.50'), quantity=100)
-        with pytest.raises(ValueError):
-            Packet(sku='8675309', price=Decimal('3.50'), units='seeds')
 
 
 class TestQuantity:
@@ -342,18 +365,18 @@ class TestQuantity:
         with pytest.raises(TypeError):
             Quantity.fraction_to_str('4/3')
 
-    def test_for_cmp(self):
+    def test_to_float(self):
         """Return floats for any given integer, decimal, or fraction."""
-        assert isinstance(Quantity.for_cmp(3.145), float)
-        assert isinstance(Quantity.for_cmp(Decimal('2.544')), float)
-        assert isinstance(Quantity.for_cmp('5.456'), float)
-        assert isinstance(Quantity.for_cmp(132), float)
-        assert isinstance(Quantity.for_cmp(Fraction(3, 4)), float)
+        assert isinstance(Quantity.to_float(3.145), float)
+        assert isinstance(Quantity.to_float(Decimal('2.544')), float)
+        assert isinstance(Quantity.to_float('5.456'), float)
+        assert isinstance(Quantity.to_float(132), float)
+        assert isinstance(Quantity.to_float(Fraction(3, 4)), float)
 
     def test_str_to_fraction(self):
         """Return a Fraction given a valid string containing a fraction.
 
-        If val not str, raise TypeError, if not parseable, raise ValueError.
+        If val is not parseable, raise ValueError.
         """
         assert Quantity.str_to_fraction('3/4') == Fraction(3, 4)
         assert Quantity.str_to_fraction('1 1/2') == Fraction(3, 2)
@@ -367,14 +390,6 @@ class TestQuantity:
             Quantity.str_to_fraction('$2.5')
         with pytest.raises(ValueError):
             Quantity.str_to_fraction('$2 3/4')
-        with pytest.raises(TypeError):
-            Quantity.str_to_fraction(Fraction(3, 4))
-        with pytest.raises(TypeError):
-            Quantity.str_to_fraction(2.5)
-        with pytest.raises(TypeError):
-            Quantity.str_to_fraction(100)
-        with pytest.raises(TypeError):
-            Quantity.str_to_fraction(Decimal('2.5'))
 
     def test_html_value(self):
         """Return HTML entities or special HTML for fractions.

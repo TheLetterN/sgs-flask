@@ -79,12 +79,13 @@ from flask import current_app
 from fractions import Fraction
 from inflection import pluralize
 from slugify import slugify
+from titlecase import titlecase
 from sqlalchemy import event, inspect
 from sqlalchemy.ext.hybrid import Comparator, hybrid_property
 from sqlalchemy.sql.expression import and_
 from flask_sqlalchemy import SignallingSession
 
-from app import db, dbify
+from app import db
 
 
 # Association Tables
@@ -140,18 +141,49 @@ cultivars_to_images = db.Table(
 
 
 # Module-level Functions
-def indexes_to_json(indexes):
-    """Return a list of tuples containing Index headers and slugs.
+def dbify(string):
+    """Format a string to be stored in the database.
 
-    This way we can dump needed Index information into a JSON file so we don't
-    have to query the database every time we load a page with the nav bar on
-    it.
+    Args:
+        string (str): The string to be converted.
+
+    Returns:
+        str: A string formatted for database usage.
+        None: If string is None or empty.
     """
+    def cb(word, **kwargs):
+        """Override default behaviors in titlecase that give incorrect results.
+
+        Hyphenated phrases should only capitalize the first letter. The default
+        behavior of titlecase is to capitalize the first letter in each part.
+        e.g forget-me-not > Forget-Me-Not, while we want forget-me-not >
+        Forget-me-not.
+
+        Returns:
+            str: Corrected hyphenated word.
+        """
+        if '-' in word:
+            return word[0].upper() + word[1:].lower()
+
+    if string:
+        return titlecase(string.lower().strip(), callback=cb)
+    else:
+        return None
+
+
+def indexes_to_json(indexes):
+    """Return a list of tuples containing `Index` headers and slugs."""
     return json.dumps({idx.id: (idx.header, idx.slug) for idx in indexes})
 
 
 def save_indexes_to_json_file():
-    """Save all indexes the file specified by ``INDEXES_JSON_FILE``"""
+    """Save all indexes the file specified by ``INDEXES_JSON_FILE``
+
+    Since indexes are rarely changed and there are only going to be a handful
+    of them, it is better to store them in a JSON file and load them that way
+    in the main nav interface, as otherwise there would a db query for `Index`
+    values every time a page with the main nav is loaded.
+    """
     with open(current_app.config.get('INDEXES_JSON_FILE'),
               'w',
               encoding='utf-8') as ofile:
@@ -208,7 +240,7 @@ class USDollar(db.TypeDecorator):
     return it as 2.99 when retrieved.
 
     Attributes:
-        impl: The type of column this decorates. Type: sqlalchemy.types.Integer
+        impl: The type of column this decorates: `sqlalchemy.types.Integer`.
     """
     impl = db.Integer
 
@@ -310,15 +342,15 @@ class Index(db.Model):
     """Table for seed indexes.
 
     Indexes are the first/broadest divisions we use to sort seeds. The
-    Index a seed falls under is usually based on what type of plant it is
+    `Index` a seed falls under is usually based on what type of plant it is
     (herb, vegetable) or its life cycle. (perennial, annual)
 
     Attributes:
-        name: The name for the Index itself, such as 'Herb'  or 'Perennial'.
+        name: The name for the `Index` itself, such as 'Herb'  or 'Perennial'.
         slug: A URL-safe version of _name.
-        description: An optional HTML description of the Index.
+        description: An optional HTML description of the `Index`.
 
-        common_names: Backref from CommonName.index.
+        common_names: Backref from `CommonName.index`.
     """
     __tablename__ = 'indexes'
     id = db.Column(db.Integer, primary_key=True)
@@ -364,6 +396,7 @@ class Index(db.Model):
 @event.listens_for(Index, 'before_update')
 def before_index_insert_or_update(mapper, connection, target):
     """Run tasks best done before flushing an `Index` to the database."""
+    target.name = dbify(target.name)
     target.slug = target.generate_slug()
 
 
@@ -381,14 +414,14 @@ def save_indexes_json_before_commit(session):
 class CommonName(SynonymsMixin, db.Model):
     """Table for common names.
 
-    A CommonName is the next subdivision below Index in how we sort seeds.
+    A `CommonName` is the next subdivision below `Index` in how we sort seeds.
     It is usually the common name for the species or group of species a seed
     belongs to.
 
     Attributes:
-        index: MtO relationship with Index; the Index this CommonName falls
-            under.
-            Backref: Index.common_names
+        index: MtO relationship with `Index`; the `Index` this `CommonName`
+            falls under.
+            Backref: `Index.common_names`
         name: The common name of a seed. Examples: Coleus, Tomato,
             Lettuce, Zinnia.
         slug: The URL-friendly version of this common name.
@@ -396,22 +429,24 @@ class CommonName(SynonymsMixin, db.Model):
         description: An optional HTML description for this CommonName.
         instructions: Optional planting instructions for seeds with the
             specified CommonName.
-        parent: An optional CommonName this is a subcategory of. For example,
-            if this CommonName is 'Dwarf Coleus', it would have 'Coleus' as
-            its parent. Backref: CommonName.children
-        gw_common_names: MtM relationship with CommonName; an optional
+        parent: An optional `CommonName` this is a subcategory of. For example,
+            if this `CommonName` is 'Dwarf Coleus', it would have 'Coleus' as
+            its parent.
+            Backref: `CommonName.children`
+        gw_common_names: MtM self-referential relationship; an optional
             collection of CommonNames that grow well with the specified
-            CommonName.
-        invisible: True if the specified CommonName is to be shown on auto-
+            `CommonName`.
+        invisible: True if the specified `CommonName` is to be shown on auto-
             generated pages, False if it should only be shown on custom pages
             that explicitly include it. Default value: False.
 
-        children: Backref from CommonName.parent.
-        botanical_names: Backref from BotanicalName.common_names.
-        series: Backref from Series.common_name. Note: series is plural here,
+        children: Backref from `CommonName.parent`.
+        botanical_names: Backref from `BotanicalName.common_names`.
+        series: Backref from `Series.common_name`. Note: series is plural here,
             as this is the many side of the relationship.
-        cultivars: Backref from Cultivar.common_name.
-        gw_cultivars: Bakcref from Cultivar.gw_common_names.
+        cultivars: Backref from `Cultivar.common_name`.
+        gw_cultivars: Backref from `Cultivar.gw_common_names`.
+        synonyms: Backref from `Synonym.common_name`.
     """
     __tablename__ = 'common_names'
     __table_args__ = (db.UniqueConstraint('name',
@@ -449,10 +484,10 @@ class CommonName(SynonymsMixin, db.Model):
                  parent=None,
                  invisible=None,
                  gw_cultivars=None):
-        """Construct an instance of CommonName.
+        """Construct an instance of `CommonName`.
 
         Note:
-            gw_common_names has been left out because it requires work to be
+            `gw_common_names` has been left out because it requires work to be
             set correctly.
         """
         self.name = name
@@ -473,27 +508,43 @@ class CommonName(SynonymsMixin, db.Model):
         """str: ._name formatted for headers and titles."""
         return '{0} Seeds'.format(self.name)
 
-    def lookup_dict(self):
-        """Return a dictionary with name and index for easy DB lookup."""
+    @property
+    def queryable_dict(self):
+        """dict: The values needed to query a discrete `Cultivar` instance."""
         return {
-            'Common Name': self.name if self.name else None,
-            'Index': self.index.name if self.index else None}
+            'Common Name': self.name,
+            'Index': self.index.name if self.index else None
+        }
 
     @classmethod
-    def from_lookup_dict(cls, lookup):
-        name = lookup['Common Name']
-        index = lookup['Index']
-        if not name:
-            raise ValueError('Cannot look up CommonName without a name!')
-        if index:
-            return cls.query\
-                .join(Index, Index.id == CommonName.index_id)\
-                .filter(CommonName.name == name,
-                        Index.name == index).one_or_none()
-        else:
-            return cls.query\
-                .filter(CommonName.name == name,
-                        CommonName.index == None).one_or_none()  # noqa
+    def from_queryable_values(cls, name, index):
+        """Return a `CommonName` instance filtered by `name` and `index`.
+
+        Args:
+            name: The name of the `CommonName` instance to query for.
+            index: The name of the `Index` the `CommonName` instance being
+                queried for belongs to.
+
+        Returns:
+            CommonName: A discrete instance of `CommonName`.
+        """
+        return cls.query\
+            .join(Index, Index.id == cls.index_id)\
+            .filter(cls.name == name, Index.name == index)\
+            .one_or_none()
+
+    @classmethod
+    def from_queryable_dict(cls, d):
+        """Return a `CommonName` instance with information from a dict.
+
+        Args:
+            d: A dict containing the name and index name of a `CommonName`.
+
+        Returns:
+            CommonName: A discrete instance of `CommonName`.
+        """
+        return cls.from_queryable_values(name=d['Common Name'],
+                                         index=d['Index'])
 
     def generate_slug(self):
         """Generate the string to use in URLs for this `CommonName`."""
@@ -504,6 +555,7 @@ class CommonName(SynonymsMixin, db.Model):
 @event.listens_for(CommonName, 'before_update')
 def before_common_name_insert_or_update(mapper, connection, target):
     """Run tasks best done before flushing a `CommonName` to the database."""
+    target.name = dbify(target.name)
     target.slug = target.generate_slug()
 
 
@@ -518,15 +570,16 @@ class BotanicalName(SynonymsMixin, db.Model):
     Attributes:
         name: A botanical name associated with one or more seeds. Get
             and set via the name property.
-        common_names: MtM relationship with CommonName; The CommonNames this
-            BotanicalName belongs to. A BotanicalName can have multiple
-            CommonNames because sometimes there are multiple CommonNames for a
-            species of plant, or there could be a species that falls under
-            multiple Indexes, which results in multiple CommonNames with the
-            same name but different Indexes.
-            Backref: CommonName.botanical_names.
+        common_names: MtM relationship with `CommonName`; The CommonNames this
+            botanical name belongs to. A botanical name can have multiple
+            common names because sometimes there are multiple common names for
+            a species of plant, or there could be a species that falls under
+            multiple indexes, which results in multiple common names with the
+            same name but different indexes.
+            Backref: `CommonName.botanical_names`
 
-        cultivars: Backref from Cultivar.botanical_name.
+        synonyms: Backref from `Synonyms.botanical_name`.
+        cultivars: Backref from `Cultivar.botanical_name`.
     """
     __tablename__ = 'botanical_names'
     id = db.Column(db.Integer, primary_key=True)
@@ -585,8 +638,8 @@ class BotanicalName(SynonymsMixin, db.Model):
             True
 
         Args:
-            botanical_name (str): A string containing a botanical name to
-                                  check for valid formatting.
+            botanical_name: A string containing a botanical name to
+                check for valid formatting.
 
         Returns:
             bool: True if botanical_name looks valid, False if it doesn't look
@@ -631,20 +684,22 @@ class Series(db.Model):
     Elite Mambo (petunias).
 
     Attributes:
-        BEFORE_CULTIVAR: A constant integer representing that Series name
+        BEFORE_CULTIVAR: A constant integer representing that series name
             should come before the cultivar name when displayed together.
-        AFTER_CULTIVAR: A constant integer representing that Series name should
+        AFTER_CULTIVAR: A constant integer representing that series name should
             come after the cultivar when displayed together.
+
         name: The name of the series.
+        common_name: MtO relationship with `CommonName`; the common name a
+            Series belongs to.
+            Backref: `CommonName.series`
 
-        common_name: MtO relationship with CommonName; the common name a series
-            belongs to.
-            Backref: CommonName.series
-
-        description: An HTML description of the Series.
+        description: An HTML description of the series.
         position: An integer representing whether the series name belongs
             before or after the cultivar name when displayed together. Default
-            value is BEFORE_CULTIVAR.
+            value is `BEFORE_CULTIVAR`.
+
+        cultivars: Backref from `Cultivar.series`.
     """
     __tablename__ = 'series'
     __table_args__ = (db.UniqueConstraint('name',
@@ -678,7 +733,7 @@ class Series(db.Model):
             self.position = position
 
     def __repr__(self):
-        """Return a string representing a Series instance."""
+        """Return a string representing a `Series` instance."""
         return '<{0} \'{1}\'>'.format(self.__class__.__name__, self.fullname)
 
     @property
@@ -695,58 +750,72 @@ class Series(db.Model):
             return None
 
 
+@event.listens_for(Series, 'before_insert')
+@event.listens_for(Series, 'before_update')
+def before_series_insert_or_update(mapper, connection, target):
+    """Run tasks on `Series` that should be done before flush."""
+    target.name = dbify(target.name)
+
+
 class Cultivar(SynonymsMixin, db.Model):
     """Table for cultivar data.
 
     A cultivar is an individual variety of plant, and represents the most
     specific category seeds fall under. This is the primary attribute that
-    products (Packets) are attached to.
+    products (packets) are attached to.
 
     Note:
-        A Cultivar must have a unique combination of _name, common_name, and
+        A cultivar must have a unique combination of name, common name, and
         series, otherwise it could result in multiple results from a query
-        intended to fetch only one Cultivar. Series can be None, as long as
-        the Cultivar is still a unique combination. For example, Polkadot Petra
-        Foxglove and Petra Foxglove (if it existed) would qualify as unique due
-        to one having a series and the other not, even though they have the
-        same _name and CommonName.
+        intended to fetch only one cultivar. Series can be None, as long as
+        the cultivar is still a unique combination. For example, Polkadot
+        Petra Foxglove and Petra Foxglove (if it existed) would qualify as
+        unique due to one having a series and the other not, even though they
+        have the same _name and common name.
 
     Attributes:
         name: The part of the cultivar's name that is specific to the cultivar
-            itself, e.g. if a cultivar is called "Foxy Foxglove", _name will be
+            itself, e.g. if a cultivar is called "Foxy Foxglove", name will be
             "Foxy".
         slug: A URL-friendly version of _name.
-        common_name: MtO relationship with CommonName; the common name a
+        common_name: MtO relationship with `CommonName`; the common name a
             cultivar falls under.
-            Backref: CommonName.cultivars
+            Backref: `CommonName.cultivars`
 
-        series: MtO relationship with Series; the (optional) Series a Cultivar
-            belongs to. While it is optional, it must be used in queries for
-            Cultivars to ensure a unique result. Queries for Cultivars that
-            are not in a Series should include Cultivar.series == None in the
-            filter. (Note: == is used instead of is due to sqlalchemy treating
-            == None as is in filters.)
-            Backref: Series.cultivars
-        botanical_name: MtO relationship with BotanicalName; the botanical name
-            this cultivar falls under.
-            Backref: BotanicalName.cultivars
-        description: An optional HTML description of a Cultivar.
+        series: MtO relationship with `Series`; the (optional) series a
+            cultivar belongs to. While it is optional, it must be used in
+            queries for cultivars to ensure a unique result. Queries for
+            cultivars that are not in a series should include
+            Cultivar.series == None in the filter.
+            Note: '==' is used instead of 'is' due to sqlalchemy treating
+            'x == None' as 'x is None' in filters.
+            Backref: `Series.cultivars`
+        botanical_name: MtO relationship with `BotanicalName`; the botanical
+            name of this cultivar.
+            Backref: `BotanicalName.cultivars`
+        description: An optional HTML description of a cultivar.
         new_for: An optional year for which a cultivar is new.
-        active: True if the Cultivar's stock is being actively replenished,
+        active: True if the cultivar's stock is being actively replenished,
             False if not.
         in_stock: True if a cultivar is in stock, False if not.
-        invisible: Whether or not this cultivar should be listed in
+        invisible: Whether or not this cultivar should be shown on
             automatically generated pages. Cultivars set to invisible can still
-            be listed on custom pages.
-        gw_common_names: MtM relationship with CommonName; CommonNames this
-            Cultivar grows well with.
-            Backref: CommonName.gw_cultivars
-        gw_cultivars: MtM relationship with Cultivar; Cultivars this Cultivar
-            grows well with.
-        thumbnail: OtO relationship with Image; thumbnail data for this
-            Cultivar.
-            Backref: Image.cultivar
-        images: Images associated with this cultivar.
+            be shown on custom pages.
+        gw_common_names: MtM relationship with `CommonName`; common names this
+            cultivar grows well with.
+            Backref: `CommonName.gw_cultivars`
+        gw_cultivars: MtM self-referential relationship; cultivars this
+            cultivar grows well with.
+        thumbnail: OtO relationship with `Image`; thumbnail data for this
+            cultivar.
+            Backref: `Image.cultivar`
+        images: MtM relationship with `Image`; images which include this
+            cultivar.
+            Backref: `Image.cultivars`
+
+        synonyms: Backref from `Synonym.cultivar`.
+        packets: Backref from `Packet.cultivar`.
+        custom_pages: Backref from `CustomPage.cultivar`.
     """
     __tablename__ = 'cultivars'
     id = db.Column(db.Integer, primary_key=True)
@@ -885,81 +954,60 @@ class Cultivar(SynonymsMixin, db.Model):
         }
 
     @classmethod
-    def from_queryable_dict(cls, qd):
-        """Load a `Cultivar` given the names of its core components in a dict.
+    def from_queryable_values(cls, name, common_name, index, series=None):
+        """Query a `Cultivar` from the database given its core values.
+
+        The core values of a `Cultivar` are its name, its common name, the
+        index it belongs to, and optionally the series it is in.
 
         Args:
-            qd: A dictionary either created by `Cultivar.queryable_dict` or
-                with the same keys as one.
+            name: The name of the cultivar, not including series or common
+                name.
+            common_name: The common name of the cultivar.
+            index: The index the cultivar's common name (and thus the cultivar
+                itself) falls under.
+            series: The (optional) series a cultivar is in, if applicable.
+
+        Returns:
+            Cultivar: A discrete instance of `Cultivar`.
+            None: If no cultivar exists with the given parameters.
         """
-        name = dbify(qd['Cultivar Name'])
-        common_name = dbify(qd['Common Name'])
-        index = dbify(qd['Index'])
-        series = dbify(qd['Series'])
-        if name and common_name and index:
-            if series:
-                cls
-
-    def lookup_dict(self):
-        return self.queryable_dict
-
-    @classmethod
-    def from_lookup_dict(cls, lud):
-        """Load a Cultivar from db based on lookup dict.
-
-        Args:
-            lud (dict): A dictionary with values to use in querying for
-                a cultivar.
-        """
-        name = lud['Cultivar Name']
-        series = lud['Series']
-        common_name = lud['Common Name']
-        index = lud['Index']
-        return Cultivar.lookup(name, series, common_name, index)
-
-    @classmethod
-    def lookup(cls, name, series=None, common_name=None, index=None):
-        """Query a Cultivar based on its name, series, and common name.
-
-        Since cultivars don't necessarily need a series or common name (though
-        they should in theory always have a common name) we need to be able to
-        query for cultivars that may not have a series or common name. This
-        method allows querying based on any combination of the necessary
-        parameters.
-
-        Args:
-            name (str): Name of the cultivar to query.
-            series (optional[str]): Name of the series, if applicable, that
-                the cultivar belongs to.
-            common_name (str): The common name the cultivar belongs to.
-            index (str): The index the common name (and thusly cultivar)
-                belongs to.
-        """
-        if common_name and not index:
-            raise ValueError('Common name cannot be used without an index!')
-        if series and common_name:
-            obj = cls.query.join(CommonName,
-                                 CommonName.id == Cultivar.common_name_id)\
+        if series:
+            return cls.query\
+                .join(CommonName, CommonName.id == cls.common_name_id)\
+                .join(Index, Index.id == CommonName.index_id)\
                 .join(Series, Series.id == Cultivar.series_id)\
-                .join(Index, Index.id == CommonName.index_id)\
-                .filter(Cultivar.name == name,
+                .filter(cls.name == name,
                         CommonName.name == common_name,
-                        Series.name == series).one_or_none()
-        elif common_name and not series:
-            obj = cls.query.join(CommonName,
-                                 CommonName.id == Cultivar.common_name_id)\
-                .join(Index, Index.id == CommonName.index_id)\
-                .filter(Cultivar.series == None,  # noqa
-                        Cultivar.name == name,
-                        CommonName.name == common_name,
-                        Index.name == index).one_or_none()
+                        Index.name == index,
+                        Series.name == series)\
+                .one_or_none()
         else:
-            obj = cls.query.filter(
-                Cultivar.name == name,
-                Cultivar.series == None,  # noqa
-                Cultivar.common_name == None  # noqa
-            ).one_or_none()
-        return obj
+            return cls.query\
+                .join(CommonName, CommonName.id == cls.common_name_id)\
+                .join(Index, Index.id == CommonName.index_id)\
+                .filter(cls.name == name,
+                        cls.series_id == None,  # noqa
+                        CommonName.name == common_name,
+                        Index.name == index)\
+                .one_or_none()
+
+    @classmethod
+    def from_queryable_dict(cls, d):
+        """Query a `Cultivar` from db given its core values in a dict.
+
+        Args:
+            d: A dictionary containing the necessary values to query a discrete
+                `Cultivar` from the database.
+
+        Returns:
+            Cultivar: A discrete instance of `Cultivar`.
+            None: If no `Cultivar` exists with the given parameters.
+        """
+        return cls.from_queryable_values(name=d['Cultivar Name'],
+                                         common_name=d['Common Name'],
+                                         index=d['Index'],
+                                         series=d['Series'])
 
     def generate_slug(self):
         """Generate a string for use in URLs for pages that use `Cultivar`."""
@@ -973,6 +1021,7 @@ class Cultivar(SynonymsMixin, db.Model):
 @event.listens_for(Cultivar, 'before_update')
 def before_cultivar_insert_or_update(mapper, connection, target):
     """Update a `Cultivar` before flushing changes to the database."""
+    target.name = dbify(target.name)
     target.slug = target.generate_slug()
 
 
@@ -985,41 +1034,39 @@ class Packet(db.Model):
     jumbo) and prices associated with different packet sizes.
 
     Attributes:
-        __tablename__ (str): Name of the table: 'packets'
-        id (int): Auto-incremented ID # for use as a primary key.
-        price (USDollar): Price (in US dollars) for this packet.
-        quantity_id (int): ForeignKey for quantity relationship.
-        quantity (relationship): Quantity (number and units) of seeds in this
-            packet.
-        cultivar_id (int): ForeignKey for relationship with cultivars.
-        sku (str): Product SKU for the packet.
+        sku: Product SKU for the packet.
+        price: Price (in US dollars) for this packet.
+        quantity: MtO relationship with `Quantity`; the quantity (including
+            units of measurement) of seeds in a `Packet`.
+            Backref: `Quantity.packets`
+        cultivar: MtO relationship with `Cultivar`; the cultivar a `Packet`
+            belongs to.
+            Backref: `Cultivar.packets`
     """
     __tablename__ = 'packets'
     id = db.Column(db.Integer, primary_key=True)
+    sku = db.Column(db.String(32), unique=True)
     price = db.Column(USDollar)
     quantity_id = db.Column(db.Integer, db.ForeignKey('quantities.id'))
     quantity = db.relationship('Quantity', backref='packets')
     cultivar_id = db.Column(db.Integer, db.ForeignKey('cultivars.id'))
     cultivar = db.relationship('Cultivar', backref='packets')
-    sku = db.Column(db.String(32), unique=True)
 
     def __repr__(self):
         return '<{0} SKU #{1}>'.format(self.__class__.__name__, self.sku)
 
-    def __init__(self, sku=None, price=None, quantity=None, units=None):
+    def __init__(self, sku=None, price=None, quantity=None):
+        """Create an instance of Packet.
+
+        Note:
+            `cultivar` is not used because in practice packets are added to
+            cultivars, while rarely (if ever) is a cultivar directly set for a
+            packet.
+        """
         self.sku = sku
         self.price = price
-        if quantity and units:
-            self.quantity = Quantity.query.filter(
-                Quantity.value == quantity,
-                Quantity.units == units,
-                Quantity.is_decimal == Quantity.dec_check(quantity)
-            ).one_or_none()
-            if not self.quantity:
-                self.quantity = Quantity(value=quantity, units=units)
-        elif quantity or units:
-            raise ValueError('Cannot set quantity without both quantity and '
-                             'units.')
+        if quantity:
+            self.quantity = quantity
 
     @property
     def info(self):
@@ -1039,33 +1086,33 @@ class Packet(db.Model):
 class Quantity(db.Model):
     """Table for quantities.
 
-    Quantities contain a number and a unit of measure. Since numbers could be
-    integer, decimal, or fraction, all quantities are stored as fractions
-    and floats, where the floats are only used if the quantity is a decimal
-    number, and for querying that needs comparison of sizes of quantity.
+    A Quantity consists of a numerical value and a unit of measurement. Since
+    some numerical values may be integers, some may be fractions, and some may
+    be decimal numbers, all numerical values are stored in internal use
+    attributes `_numerator`, `_denominator`, and `_float`. Integers and
+    fractions are returned using `_numerator` and `_denominator` (since a
+    fraction with a denominator of 1 is an integer) while decimal numbers are
+    specified by setting `is_decimal` to True, and utilize `_float` to return
+    the value.
 
     Attributes:
-        __tablename__ (str): The name of the table: 'quantities'
-        id (int): Auto-incremented primary key ID number.
-        _denominator (int): Denominator of fraction version of quantity.
-        _float (float): Floating point value for decimal values and comparison.
-        is_decimal (bool): Whether or not the stored quantity represents a
-            decimal number, as opposed to fraction or int.
-        _numerator (int): Numerator of fraction version of quantity.
-        units (str): Unit of measurement of a quantity. (seeds, grams, etc.)
-        __table_args__: Table-wide arguments, such as constraints.
+        is_decimal: Whether or not the stored quantity represents a
+            decimal number, as opposed to fraction or integer.
+        units: Unit of measurement of a quantity. (seeds, grams, etc.)
+
+        packets: Backref from `Packet.quantity`.
     """
     __tablename__ = 'quantities'
     id = db.Column(db.Integer, primary_key=True)
-    _denominator = db.Column(db.Integer)
-    _float = db.Column(db.Float)
-    is_decimal = db.Column(db.Boolean, default=False)
-    _numerator = db.Column(db.Integer)
-    units = db.Column(db.String(32))
     __table_args__ = (db.UniqueConstraint('_float',
                                           'units',
                                           'is_decimal',
                                           name='_float_units_uc'),)
+    _numerator = db.Column(db.Integer)
+    _denominator = db.Column(db.Integer)
+    _float = db.Column(db.Float)
+    is_decimal = db.Column(db.Boolean, default=False)
+    units = db.Column(db.String(32))
 
     def __init__(self, value=None, units=None):
         if value:
@@ -1133,7 +1180,7 @@ class Quantity(db.Model):
         """Convert a Fraction to a string containing a mixed number.
 
         Args:
-            val (Fraction): A fraction to convert to a string fraction or
+            val: A fraction to convert to a string fraction or
                 mixed number.
 
         Returns:
@@ -1164,14 +1211,14 @@ class Quantity(db.Model):
             raise TypeError('val must be of type Fraction')
 
     @staticmethod
-    def for_cmp(val):
-        """Convert a value into appropriate float for querying.
+    def to_float(val):
+        """Convert a value into a float as would be stored in `_float`.
 
         Args:
             val: Value to convert to a float.
 
         Returns:
-            float: If value is a decimal number.
+            float: The converted value.
         """
         if Quantity.dec_check(val):
             return float(val)
@@ -1186,11 +1233,11 @@ class Quantity(db.Model):
         """Convert a string containing a number into a fraction.
 
         Args:
-            val (str): String containing a fraction or mixed number to convert
-                to a Fraction.
+            val: A string containing a fraction or mixed number to convert
+                to a `Fraction`.
 
         Returns:
-            Fraction: Fraction of given value.
+            Fraction
 
         Raises:
             TypeError: If val is not a string.
@@ -1209,28 +1256,25 @@ class Quantity(db.Model):
             >>> Quantity.str_to_fraction('1.1')
             Fraction(11, 10)
         """
-        if isinstance(val, str):
-            val = val.strip()
-            try:
-                return Fraction(val)
-            except:
-                if ' ' in val:
-                    parts = val.split(' ')
-                    if len(parts) == 2 and '/' in parts[1]:
-                        try:
-                            whole = int(parts[0])
-                            frac = Fraction(parts[1])
-                            return frac + whole
-                        except:
-                            pass
-            raise ValueError('value {0} of type {1} could not be converted to '
-                             'Fraction'.format(val, type(val)))
-        else:
-            raise TypeError('val must be a str')
+        val = val.strip()
+        try:
+            return Fraction(val)
+        except:
+            if ' ' in val:
+                parts = val.split(' ')
+                if len(parts) == 2 and '/' in parts[1]:
+                    try:
+                        whole = int(parts[0])
+                        frac = Fraction(parts[1])
+                        return frac + whole
+                    except:
+                        pass
+        raise ValueError('value {0} of type {1} could not be converted to '
+                         'Fraction'.format(val, type(val)))
 
     @property
     def html_value(self):
-        """str: A representation of a fraction in HTML."""
+        """str: A string of `self.value` w/ fractions in HTML if applicable."""
         if isinstance(self.value, Fraction):
             if self.value == Fraction(1, 4):
                 return '&frac14;'
@@ -1289,9 +1333,35 @@ class Quantity(db.Model):
         else:
             return None
 
+    @classmethod
+    def from_queryable_values(cls, value, units):
+        """Query a Quantity from the database given its value and units."""
+        return cls.query\
+            .filter(cls.value == value,
+                    cls.units == units,
+                    cls.is_decimal == cls.dec_check(value))\
+            .one_or_none()
+
     class ValueComparator(Comparator):
+        """Comparator for `Quantity.value`.
+
+        This comparator allows using values in queries in human-readable form,
+        as they would be entered when setting `value` for an instance of
+        `Quantity`. This way users do not have to convert values to float or
+        worry about what kind of number the value is.
+        """
         def operate(self, op, other):
-            return and_(op(Quantity._float, Quantity.for_cmp(other)),
+            """Check a value in a query filter.
+
+            Since `_float` and `is_decimal` are needed to retrieve the Quantity
+            instance with the correct value, a filter using `value` needs check
+            whether or not a `value` is a decimal number, and convert it to a
+            float in order to compare it to `_float` and `is_decimal`. Luckily
+            since `is_decimal` is just a boolean value, using == to check
+            against it is perfectly fine regardless of what operator is being
+            used to check `value`.
+            """
+            return and_(op(Quantity._float, Quantity.to_float(other)),
                         Quantity.is_decimal == Quantity.dec_check(other))
 
     @value.comparator
@@ -1329,8 +1399,29 @@ class Quantity(db.Model):
             return str(self.value)
 
 
+@event.listens_for(Packet.quantity, 'set')
+def delete_orphaned_quantity(target, value, oldvalue, initiatior):
+    """Delete quantities that no longer have packets associated with them."""
+    if hasattr(oldvalue, 'packets') and len(oldvalue.packets) <= 1:
+        if target in oldvalue.packets or not oldvalue.packets:
+            db.session.delete(oldvalue)
+
+
 class Synonym(db.Model):
-    """Table for synonyms of other objects."""
+    """Table for synonyms of other objects.
+
+    Attributes:
+        name: The synonym itself.
+        common_name: MtO relationship with `CommonName`; a common name this is
+            a synonym of.
+            Backref: `CommonName.synonyms`
+        botanical_name: MtO relationship with `BotanicalName`; a botanical name
+            this is a synonym of.
+            Backref: `BotanicalName.synonyms`
+        cultivar: MtO relationship with `Cultivar`; the cultivar this is a
+            synonym of.
+            Backref: `Cultivar.synonyms`
+    """
     __tablename__ = 'synonyms'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64))
@@ -1359,7 +1450,15 @@ class Synonym(db.Model):
 
     @property
     def parent(self):
-        """Returns whatever foreign row this synonym belongs to."""
+        """object: Return whatever object this synonym is linked to.
+
+        Note:
+            Validation of whether or not a synonym is only linked to one
+            object is handled by this property as well, as it needs to check
+            validity anyway to ensure it returns the correct value. Rather
+            than using a separate validation method, the best way to validate
+            a `Synonym` is just to try to access `Synonym.parent`.
+        """
         parents = []
         if self.common_name:
             parents.append(self.common_name)
@@ -1379,6 +1478,19 @@ class Synonym(db.Model):
             )
 
 
+@event.listens_for(Synonym, 'before_insert')
+@event.listens_for(Synonym, 'before_update')
+def before_synonym_insert_or_update(mapper, connection, target):
+    """Run tasks needed before flushing a `Synonym` to the database."""
+    # Since Synonym has multiple possible relationships, but each synonym
+    # should only correspond to one object, we need to ensure a Synonym only
+    # has one relationship set before flushing it to the database.
+    #
+    # Simply running the Synonym.parent property will raise an appropriate
+    # exception if more than one relationship is set.
+    target.parent
+
+
 class CustomPage(db.Model):
     """Table for custom pages that cover edge cases.
 
@@ -1388,14 +1500,11 @@ class CustomPage(db.Model):
     generic pages to be made.
 
     Attributes:
-        __tablename__ (str): Name of the table: 'custom_pages'
-        id (int): Auto-incremented ID # as primary key.
-        title (str): Page title to be used in <title> and for lookups.
-        content (str): The HTML content of the page, including parseable
-            tokens.
-        cultivars (relationship): Relationship to link cultivars to custom
-            pages.
-            backref: custom_pages
+        title: Page title to be used in <title> and for queries.
+        content: The HTML content of the page, including parseable tokens.
+        cultivars: MtM relationship with `Cultivar`; cultivars that should be
+            listed on the custom page.
+            Backref: `Cultivar.custom_pages`
     """
     __tablename__ = 'custom_pages'
     id = db.Column(db.Integer, primary_key=True)
@@ -1412,7 +1521,11 @@ class Image(db.Model):
     Any image uploaded to be used with the cultivar model should utilize this
     table for important image data like filename and location.
 
-    filename: File name of an image.
+    Attributes:
+        filename: File name of an image.
+
+        cultivar: Backref from `Cultivar.thumbnail`.
+        cultivars: Backref from `Cultivar.images`.
     """
     __tablename__ = 'images'
     id = db.Column(db.Integer, primary_key=True)

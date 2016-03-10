@@ -28,7 +28,6 @@ of the website for Swallowtail Garden Seeds.
 import json
 import os
 from collections import OrderedDict
-from titlecase import titlecase
 from flask import Flask, current_app
 from flask.ext.login import AnonymousUserMixin, LoginManager
 from flask.ext.mail import Mail
@@ -109,36 +108,6 @@ def make_breadcrumbs(*args):
     else:
         raise ValueError('Could not parse arguments. Please make sure your '
                          'arguments are tuples formatted (route, page title)!')
-
-
-def dbify(string):
-    """Format a string to be stored in the database.
-
-    Args:
-        string (str): The string to be converted.
-
-    Returns:
-        str: A string formatted for database usage.
-        None: If string is None or empty.
-    """
-    def cb(word, **kwargs):
-        """Override default behaviors in titlecase that give incorrect results.
-
-        Hyphenated phrases should only capitalize the first letter. The default
-        behavior of titlecase is to capitalize the first letter in each part.
-        e.g forget-me-not > Forget-Me-Not, while we want forget-me-not >
-        Forget-me-not.
-
-        Returns:
-            str: Corrected hyphenated word.
-        """
-        if '-' in word:
-            return word[0].upper() + word[1:].lower()
-
-    if string:
-        return titlecase(string.lower().strip(), callback=cb)
-    else:
-        return None
 
 
 def create_app(config_name):

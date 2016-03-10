@@ -8,7 +8,7 @@ from app.seeds.excel import (
     CommonNamesWorksheet,
     CultivarsWorksheet,
     IndexesWorksheet,
-    lookup_dicts_to_json,
+    queryable_dicts_to_json,
     PacketsWorksheet,
     SeedsWorkbook,
     SeedsWorksheet,
@@ -28,42 +28,42 @@ from app.seeds.models import (
 
 class TestExcel2Functions:
     """Test module level functions."""
-    def test_lookup_dicts_to_json(self):
+    def test_queryable_dicts_to_json(self):
         """Generate a JSON string for looking up Grows With cns/cvs.
 
-        It can take either, as both have the lookup_dict() method.
+        It can take either, as both have the queryable_dict method.
         """
         gwcn1 = CommonName(name='Foxglove')
         gwcn1.index = Index(name='Perennial')
-        assert lookup_dicts_to_json([gwcn1]) == \
-            json.dumps((gwcn1.lookup_dict(),))
+        assert queryable_dicts_to_json([gwcn1]) == \
+            json.dumps((gwcn1.queryable_dict,))
         gwcn2 = CommonName(name='Butterfly Weed')
         gwcn2.index = Index(name='Perennial')
-        assert lookup_dicts_to_json([gwcn1, gwcn2]) == \
-            json.dumps((gwcn1.lookup_dict(), gwcn2.lookup_dict()))
+        assert queryable_dicts_to_json([gwcn1, gwcn2]) == \
+            json.dumps((gwcn1.queryable_dict, gwcn2.queryable_dict))
         gwcv1 = Cultivar(name='Soulmate')
         gwcv1.common_name = CommonName(name='Butterfly Weed')
         gwcv1.common_name.index = Index(name='Perennial')
-        assert lookup_dicts_to_json([gwcv1]) == \
-            json.dumps((gwcv1.lookup_dict(),))
+        assert queryable_dicts_to_json([gwcv1]) == \
+            json.dumps((gwcv1.queryable_dict,))
         gwcv2 = Cultivar(name='Petra')
         gwcv2.common_name = CommonName(name='Foxglove')
         gwcv2.common_name.index = Index(name='Perennial')
         gwcv2.series = Series(name='Polkadot')
-        assert lookup_dicts_to_json([gwcv1, gwcv2]) == \
-            json.dumps((gwcv1.lookup_dict(), gwcv2.lookup_dict()))
+        assert queryable_dicts_to_json([gwcv1, gwcv2]) == \
+            json.dumps((gwcv1.queryable_dict, gwcv2.queryable_dict))
 
-    def test_lookup_dicts_to_json_bad_args(self):
+    def test_queryable_dicts_to_json_bad_args(self):
         """Raise a TypeError if any objects lack the lookup_dict method."""
         with pytest.raises(TypeError):
-            lookup_dicts_to_json((1, 2, 3))
+            queryable_dicts_to_json((1, 2, 3))
         cn1 = CommonName(name='Foxglove')
         cn1.index = Index(name='Perennial')
         cn2 = CommonName(name='Coleus')
         cn2.index = Index(name='Annual')
         idx = Index(name='Has no lookup_dict')
         with pytest.raises(TypeError):
-            lookup_dicts_to_json((cn1, cn2, idx))
+            queryable_dicts_to_json((cn1, cn2, idx))
 
 
 class TestSeedsWorksheet:
@@ -441,7 +441,7 @@ class TestCommonNamesWorksheet:
         cnws.add_one(cn)
         assert cnws.cell(
             2, cnws.cols['Grows With Common Names (JSON)']
-        ).value == lookup_dicts_to_json([gwcn1, gwcn2])
+        ).value == queryable_dicts_to_json([gwcn1, gwcn2])
 
     def test_add_one_with_gw_cv(self):
         """Add a common name with some Grows With Cultivars."""
@@ -462,7 +462,7 @@ class TestCommonNamesWorksheet:
         cnws.add_one(cn)
         assert cnws.cell(
             2, cnws.cols['Grows With Cultivars (JSON)']
-        ).value == lookup_dicts_to_json([gwcv1, gwcv2])
+        ).value == queryable_dicts_to_json([gwcv1, gwcv2])
 
     def test_add_one_not_common_name(self):
         """Raise a TypeError given data that isn't a CommonName."""
@@ -515,7 +515,7 @@ class TestBotanicalNamesWorksheet:
         bnws.add_one(bn, file=messages)
         assert bnws.cell(
             2, bnws.cols['Common Names (JSON)']
-        ).value == lookup_dicts_to_json([cn])
+        ).value == queryable_dicts_to_json([cn])
         assert bnws.cell(
             2, bnws.cols['Botanical Name']
         ).value == 'Innagada davida'
@@ -587,7 +587,7 @@ class TestSeriesWorksheet:
         srws.add_one(sr, file=messages)
         assert srws.cell(
             2, srws.cols['Common Name (JSON)']
-        ).value == json.dumps(sr.common_name.lookup_dict())
+        ).value == json.dumps(sr.common_name.queryable_dict)
         assert srws.cell(2, srws.cols['Series']).value == 'Polkadot'
         assert srws.cell(2, srws.cols['Position']).value == 'before cultivar'
         assert srws.cell(2, srws.cols['Description']).value is None
@@ -861,7 +861,7 @@ class TestCultivarsWorksheet:
         cvws.add_one(cv)
         assert cvws.cell(
             2, cvws.cols['Grows With Common Names (JSON)']
-        ).value == lookup_dicts_to_json((gwcn,))
+        ).value == queryable_dicts_to_json((gwcn,))
 
     def test_add_one_with_gw_cultivars(self):
         """Add a Cultivar with Grows With Cultivars to worksheet."""
@@ -879,7 +879,7 @@ class TestCultivarsWorksheet:
         cvws.add_one(cv)
         assert cvws.cell(
             2, cvws.cols['Grows With Cultivars (JSON)']
-        ).value == lookup_dicts_to_json((gwcv,))
+        ).value == queryable_dicts_to_json((gwcv,))
 
     def test_add_one_not_cultivar(self):
         """Raise a TypeError given non-Cultivar data."""
@@ -932,7 +932,7 @@ class TestPacketsWorksheet:
         pws.add_one(pkt, file=messages)
         assert pws.cell(
             2, pws.cols['Cultivar (JSON)']
-        ).value == json.dumps(cv.lookup_dict())
+        ).value == json.dumps(cv.queryable_dict)
         assert pws.cell(2, pws.cols['SKU']).value == '8675309'
         assert pws.cell(2, pws.cols['Price']).value == '3.50'
         assert pws.cell(2, pws.cols['Quantity']).value == '100'

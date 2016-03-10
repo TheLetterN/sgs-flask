@@ -31,10 +31,10 @@ from wtforms import (
     ValidationError
 )
 from wtforms.validators import DataRequired, Length
-from app import dbify
 from app.redirects import RedirectsFile
 from .models import (
     BotanicalName,
+    dbify,
     Index,
     CommonName,
     Image,

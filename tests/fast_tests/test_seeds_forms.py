@@ -15,6 +15,7 @@ from app.seeds.forms import (
     NotSpace,
     ReplaceMe,
     RRPath,
+    select_field_choices,
     USDollar
 )
 from app.redirects import Redirect
@@ -26,6 +27,68 @@ from app.seeds.models import (
     Series
 )
 from tests.conftest import app  # noqa
+
+
+class TestModuleFunctions:
+    """Test module-level functions in app.seeds.forms."""
+    def test_select_field_choices_from_items_by_id(self):
+        """Generate a list of tuples based on objects ordered by id."""
+        item1 = mock.MagicMock()
+        item2 = mock.MagicMock()
+        item3 = mock.MagicMock()
+        item1.id = 1
+        item2.id = 2
+        item3.id = 3
+        item1.name = 'Zinnia'
+        item2.name = 'Acanthus'
+        item3.name = 'Sunflower'
+        sfcs = select_field_choices(items=[item1, item2, item3],
+                                    title_attribute='name',
+                                    order_by='id')
+        assert sfcs == [(1, 'Zinnia'), (2, 'Acanthus'), (3, 'Sunflower')]
+
+    def test_select_field_choices_from_items_by_name(self):
+        """Generate a list of tuples based on objects ordered by name."""
+        item1 = mock.MagicMock()
+        item2 = mock.MagicMock()
+        item3 = mock.MagicMock()
+        item1.id = 1
+        item2.id = 2
+        item3.id = 3
+        item1.name = 'Zinnia'
+        item2.name = 'Acanthus'
+        item3.name = 'Sunflower'
+        sfcs = select_field_choices(items=[item1, item2, item3],
+                                    title_attribute='name',
+                                    order_by='name')
+        assert sfcs == [(2, 'Acanthus'), (3, 'Sunflower'), (1, 'Zinnia')]
+
+    def test_select_field_choices_no_items_or_model(self):
+        """Return an empty list if given no items or model."""
+        assert select_field_choices() == []
+
+    def test_select_field_choices_with_model_and_items(self):
+        """Ignore model if items are passed.
+
+        If it doesn't ignore model, it will try to query it, which will result
+        in an exception because MagicMock has no 'query' attribute, and even if
+        we used an object that had the attribute it would try to query a
+        nonexistent database!
+        """
+        item1 = mock.MagicMock()
+        item2 = mock.MagicMock()
+        item3 = mock.MagicMock()
+        item1.id = 1
+        item2.id = 2
+        item3.id = 3
+        item1.name = 'Zinnia'
+        item2.name = 'Acanthus'
+        item3.name = 'Sunflower'
+        sfcs = select_field_choices(model=mock.MagicMock,
+                                    items=[item1, item2, item3],
+                                    title_attribute='name',
+                                    order_by='id')
+        assert sfcs == [(1, 'Zinnia'), (2, 'Acanthus'), (3, 'Sunflower')]
 
 
 class TestValidators:

@@ -10,17 +10,13 @@ from app.seeds.forms import (
     AddPacketForm,
     AddCultivarForm,
     AddSeriesForm,
-    botanical_name_select_list,
-    index_select_list,
-    common_name_select_list,
     EditBotanicalNameForm,
     EditIndexForm,
     EditCommonNameForm,
     EditCultivarForm,
     EditPacketForm,
     EditSeriesForm,
-    packet_select_list,
-    cultivar_select_list,
+    select_field_choices,
     SelectBotanicalNameForm,
     SelectIndexForm,
     SelectCommonNameForm,
@@ -42,139 +38,35 @@ from app.seeds.models import (
 
 class TestFunctionsWithDB:
     """Test module-level methods with the database."""
-    def test_botanical_name_select_list_no_obj(self, db):
-        """Generate correct list of tuples from botanical names in db."""
-        bn1 = BotanicalName()
-        bn2 = BotanicalName()
-        bn3 = BotanicalName()
-        db.session.add_all([bn1, bn2, bn3])
-        bn1.name = 'Asclepias incarnata'
-        bn2.name = 'Echinacea purpurea'
-        bn3.name = 'Innagada davida'
-        db.session.commit()
-        bnlist = botanical_name_select_list()
-        assert (bn1.id, bn1.name) in bnlist
-        assert (bn2.id, bn2.name) in bnlist
-        assert (bn3.id, bn3.name) in bnlist
-
-    def test_botanical_name_select_list_with_obj(self, db):
-        """Generate list with indexes belonging to object."""
-        bn1 = BotanicalName(name='Digitalis über alles')
-        bn2 = BotanicalName(name='Innagada davida')
-        bn3 = BotanicalName(name='Biggus dickus')
-        db.session.add_all([bn1, bn2, bn3])
-        obj = mock.MagicMock()
-        obj.botanical_names = [bn1, bn2]
-        db.session.commit()
-        bnlist = botanical_name_select_list(obj)
-        assert len(bnlist) == len(obj.botanical_names)
-        assert (bn1.id, bn1.name) in bnlist
-        assert (bn2.id, bn2.name) in bnlist
-        assert (bn3.id, bn3.name) not in bnlist
-
-    def test_index_select_list_no_obj(self, db):
-        """Generate correct list of tuples from indexes in db."""
-        idx1 = Index()
-        idx2 = Index()
-        idx3 = Index()
-        db.session.add_all([idx1, idx2, idx3])
-        idx1.name = 'Annual Flower'.title()
-        idx2.name = 'Perennial Flower'.title()
-        idx3.name = 'Vegetable'.title()
-        db.session.commit()
-        idxlist = index_select_list()
-        assert (idx1.id, idx1.name) in idxlist
-        assert (idx2.id, idx2.name) in idxlist
-        assert (idx3.id, idx3.name) in idxlist
-
-    def test_index_select_list_with_obj(self, db):
-        """Generate list from indexes in obj."""
+    def test_select_field_choices_with_model_by_id(self, db):
+        """Generate tuple list from queried items ordered by id."""
         idx1 = Index(name='Perennial')
         idx2 = Index(name='Annual')
-        idx3 = Index(name='Herb')
+        idx3 = Index(name='Rock')
+        idx1.id = 1
+        idx2.id = 2
+        idx3.id = 3
         db.session.add_all([idx1, idx2, idx3])
-        obj = mock.MagicMock()
-        obj.indexes = [idx1, idx2]
-        idxlist = index_select_list(obj)
-        assert len(idxlist) == len(obj.indexes)
-        assert (idx1.id, idx1.name) in idxlist
-        assert (idx2.id, idx2.name) in idxlist
-        assert (idx3.id, idx3.name) not in idxlist
+        db.session.flush()
+        stls = select_field_choices(model=Index,
+                                    title_attribute='name',
+                                    order_by='id')
+        assert stls == [(1, 'Perennial'), (2, 'Annual'), (3, 'Rock')]
 
-    def test_common_name_select_list(self, db):
-        """Generate correct list of tuples from common names in db."""
-        cn1 = CommonName()
-        cn2 = CommonName()
-        cn3 = CommonName()
-        db.session.add_all([cn1, cn2, cn3])
-        cn1.name = 'Coleus'
-        cn2.name = 'Sunflower'
-        cn3.name = 'Zinnia'
-        db.session.commit()
-        cnlist = common_name_select_list()
-        assert (cn1.id, cn1.name) in cnlist
-        assert (cn2.id, cn2.name) in cnlist
-        assert (cn3.id, cn3.name) in cnlist
-
-    def test_packet_select_list(self, db):
-        """Generate list of tuples from packets in database."""
-        pkt1 = Packet()
-        pkt2 = Packet()
-        pkt3 = Packet()
-        cv1 = Cultivar()
-        cv2 = Cultivar()
-        cv3 = Cultivar()
-        cn1 = CommonName()
-        cn2 = CommonName()
-        db.session.add_all([pkt1, pkt2, pkt3, cv1, cv2, cv3, cn1, cn2])
-        pkt1.price = Decimal('1.99')
-        pkt2.price = Decimal('2.99')
-        pkt3.price = Decimal('3.99')
-        pkt1.quantity = Quantity(value=100, units='seeds')
-        pkt2.quantity = Quantity(value=200, units='seeds')
-        pkt3.quantity = Quantity(value=50, units='seeds')
-        pkt1.sku = 'F41'
-        pkt2.sku = 'F42'
-        pkt3.sku = 'B13'
-        cv1.name = 'Foxy'
-        cv2.name = 'Snow Thimble'
-        cv3.name = 'Soulmate'
-        cn1.name = 'Foxglove'
-        cn2.name = 'Butterfly Weed'
-        cv1.common_name = cn1
-        cv2.common_name = cn1
-        cv3.common_name = cn2
-        cv1.packets.append(pkt1)
-        cv2.packets.append(pkt2)
-        cv3.packets.append(pkt3)
-        db.session.commit()
-        pktlst = packet_select_list()
-        expected = [(pkt3.id,
-                     'Butterfly Weed, Soulmate: SKU #B13: $3.99 for 50 seeds'),
-                    (pkt1.id,
-                     'Foxglove, Foxy: SKU #F41: $1.99 for 100 seeds'),
-                    (pkt2.id,
-                     'Foxglove, Snow Thimble: SKU #F42: $2.99 for 200 seeds')]
-        assert pktlst == expected
-
-    def test_cultivar_select_list(self, db):
-        """Generate correct list of tuples from cultivars in db."""
-        idx = Index(name='Perennial')
-        cv1 = Cultivar(name='Foxy')
-        cv1.common_name = CommonName(name='Foxglove')
-        cv1.common_name.index = idx
-        cv2 = Cultivar(name='Soulmate')
-        cv2.common_name = CommonName(name='Butterfly Weed')
-        cv2.common_name.index = idx
-        cv3 = Cultivar(name='New York')
-        cv3.common_name = CommonName(name='Aster')
-        cv3.common_name.index = idx
-        db.session.add_all([idx, cv1, cv2, cv3])
-        db.session.commit()
-        cultivarlist = cultivar_select_list()
-        assert (cv1.id, cv1.fullname) in cultivarlist
-        assert (cv2.id, cv2.fullname) in cultivarlist
-        assert (cv3.id, cv3.fullname) in cultivarlist
+    def test_select_field_choices_with_model_by_name(self, db):
+        """Generate tuple list from queried items ordered by name."""
+        idx1 = Index(name='Perennial')
+        idx2 = Index(name='Annual')
+        idx3 = Index(name='Rock')
+        idx1.id = 1
+        idx2.id = 2
+        idx3.id = 3
+        db.session.add_all([idx1, idx2, idx3])
+        db.session.flush()
+        stls = select_field_choices(model=Index,
+                                    title_attribute='name',
+                                    order_by='name')
+        assert stls == [(2, 'Annual'), (1, 'Perennial'), (3, 'Rock')]
 
 
 class TestAddBotanicalNameFormWithDB:
@@ -221,33 +113,6 @@ class TestAddIndexFormWithDB:
 
 class TestAddCommonNameFormWithDB:
     """Test custom methods of AddCommonNameForm."""
-    def test_set_selects(self, db):
-        """Set .indexes.choices with Categories from the db."""
-        idx = Index()
-        cn1 = CommonName()
-        cn2 = CommonName()
-        cv1 = Cultivar()
-        cv2 = Cultivar()
-        db.session.add_all([idx, cn1, cn2, cv1, cv2])
-        idx.name = 'Perennial Flower'.title()
-        cn1.name = 'Foxglove'
-        cn1.index = idx
-        cn2.name = 'Butterfly Weed'
-        cn2.index = idx
-        cv1.name = 'Foxy'
-        cv1.common_name = cn1
-        cv2.name = 'Soulmate'
-        cv2.common_name = cn2
-        db.session.commit()
-        form = AddCommonNameForm()
-        form.set_selects()
-        assert (cn1.id, 'Foxglove (Perennial Flower)') in\
-            form.gw_common_names.choices
-        assert (cn2.id, 'Butterfly Weed (Perennial Flower)') in\
-            form.gw_common_names.choices
-        assert (cv1.id, cv1.fullname) in form.gw_cultivars.choices
-        assert (cv2.id, cv2.fullname) in form.gw_cultivars.choices
-
     def test_validate_name(self, db):
         """Raise a Validation error if CommonName & Index combo in db."""
         cn = CommonName(name='Foxglove')
@@ -280,16 +145,6 @@ class TestAddPacketFormWithDB:
 
 class TestAddCultivarFormWithDB:
     """Test custom methods of AddCultivarForm."""
-    def test_set_selects(self, db):
-        """Selects should be set from database."""
-        bn = BotanicalName()
-        db.session.add(bn)
-        bn.name = 'Asclepias incarnata'
-        db.session.commit()
-        form = AddCultivarForm()
-        form.set_selects()
-        assert (bn.id, bn.name) in form.botanical_name.choices
-
     def test_validate_name(self, db):
         """Raise error if cultivar already exists.
 
@@ -371,42 +226,6 @@ class TestEditBotanicalNameFormWithDB:
         assert (cn1.id, cn1.name) in form.common_names.choices
         assert (cn2.id, cn2.name) in form.common_names.choices
         assert (cn3.id, cn3.name) in form.common_names.choices
-
-
-class TestEditCommonNameFormWithDB:
-    """Test custom methods of EditCommonNameForm."""
-    def test_set_selects(self, db):
-        """Set selects with data from the db."""
-        idx1 = Index()
-        idx2 = Index()
-        cn1 = CommonName()
-        cn2 = CommonName()
-        cv1 = Cultivar()
-        cv2 = Cultivar()
-        db.session.add_all([idx1, idx2, cn1, cn2, cv1, cv2])
-        idx1.name = 'Annual Flower'
-        idx2.name = 'Perennial Flower'
-        cn1.name = 'Foxglove'
-        cn1.index = idx2
-        cn2.name = 'Butterfly Weed'
-        cn2.index = idx1
-        cv1.name = 'Foxy'
-        cv1.common_name = cn1
-        cv2.name = 'Soulmate'
-        cv2.common_name = cn2
-        db.session.commit()
-        form = EditCommonNameForm()
-        form.set_selects()
-        assert (cn1.id, 'Foxglove (Perennial Flower)') in\
-            form.gw_common_names.choices
-        assert (cn2.id, 'Butterfly Weed (Annual Flower)') in\
-            form.gw_common_names.choices
-        assert (cv1.id, cv1.fullname) in form.gw_cultivars.choices
-        assert (cv2.id, cv2.fullname) in form.gw_cultivars.choices
-        assert (cn1.id, 'Foxglove (Perennial Flower)') in\
-            form.parent_cn.choices
-        assert (cn2.id, 'Butterfly Weed (Annual Flower)') in\
-            form.parent_cn.choices
 
 
 class TestEditIndexFormWithDB:
@@ -538,72 +357,3 @@ class TestSelectCommonNameFormWithDB:
         assert (cn1.id, cn1.name) in form.common_name.choices
         assert (cn2.id, cn2.name) in form.common_name.choices
         assert (cn3.id, cn3.name) in form.common_name.choices
-
-
-class TestSelectCultivarFormWithDB:
-    """Test custom methods of SelectCultivarForm."""
-    def test_set_cultivar(self, db):
-        """Set select with cultivars loaded from database.
-        """
-        idx1 = Index(name='Perennial')
-        idx2 = Index(name='Vegetable')
-        cv1 = Cultivar()
-        cv2 = Cultivar()
-        cv3 = Cultivar()
-        db.session.add_all([cv1, cv2, cv3])
-        cv1.name = 'Soulmate'
-        cv1.common_name = CommonName(name='Butterfly Weed')
-        cv1.common_name.index = idx1
-        cv2.name = 'Tumbling Tom'
-        cv2.common_name = CommonName(name='Tomato')
-        cv2.common_name.index = idx2
-        cv3.name = 'Foxy'
-        cv3.common_name = CommonName(name='Foxglove')
-        cv3.common_name.idnex = idx1
-        db.session.commit()
-        form = SelectCultivarForm()
-        form.set_cultivar()
-        assert (cv1.id, cv1.fullname) in form.cultivar.choices
-        assert (cv2.id, cv2.fullname) in form.cultivar.choices
-        assert (cv3.id, cv3.fullname) in form.cultivar.choices
-
-
-class TestSelectPacketFormWithDB:
-    """Test custom methods of SelectPacketForm."""
-    def test_set_packet(self, db):
-        """Set select with packets loaded from database."""
-        cultivar = Cultivar()
-        cn = CommonName()
-        packet = Packet()
-        db.session.add_all([cultivar, cn, packet])
-        cultivar.name = 'Foxy'
-        cn.name = 'Foxglove'
-        packet.price = Decimal('2.99')
-        packet.quantity = Quantity(value=100, units='seeds')
-        packet.sku = '8675309'
-        cultivar.common_name = cn
-        cultivar.packets.append(packet)
-        db.session.commit()
-        form = SelectPacketForm()
-        form.set_packet()
-        assert (packet.id,
-                'Foxglove, Foxy: SKU #8675309: $2.99 for 100 seeds') in\
-            form.packet.choices
-
-
-class TestSelectSeriesFormWithDB:
-    """Test custom methods of SelectSeriesForm."""
-    def test_set_series(self, db):
-        """Populate series with choices from database."""
-        s1 = Series(name='Dalmatian')
-        s1.common_name = CommonName(name='Dog')
-        s2 = Series(name='Polkadot')
-        s2.common_name = CommonName(name='Underpants')
-        s3 = Series(name='World')
-        s3.common_name = CommonName(name='Wayne\'s')
-        db.session.add_all([s1, s2, s3])
-        form = SelectSeriesForm()
-        form.set_series()
-        assert s1.id, 'Dog, Dalmatian' in form.series.choices
-        assert s2.id, 'Underpants, Polkadot' in form.series.choices
-        assert s3.id, 'Wayne\'s, World' in form.series.choices

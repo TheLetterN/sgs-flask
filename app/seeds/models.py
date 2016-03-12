@@ -505,8 +505,16 @@ class CommonName(SynonymsMixin, db.Model):
 
     @property
     def header(self):
-        """str: ._name formatted for headers and titles."""
+        """str: `name` formatted for headers and titles."""
         return '{0} Seeds'.format(self.name)
+
+    @property
+    def select_field_title(self):
+        """str: The title to use for a given `CommonName` in select fields."""
+        if self.index and self.index.name:
+            return '{0} ({1})'.format(self.name, self.index.name)
+        else:
+            return self.name
 
     @property
     def queryable_dict(self):

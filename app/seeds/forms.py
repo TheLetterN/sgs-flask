@@ -49,8 +49,50 @@ from .models import USDollar as USDollar_
 IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png']
 
 
+# Module functions
+def select_field_choices(model=None,
+                         items=None,
+                         title_attribute='name',
+                         order_by='id'):
+    """Create a list of select field choices from a model or list of items.
+
+    Note:
+        If both `model` and `items` are passed, `model` will be ignored, as the
+        only use it could have if `items` are passed would be to check against
+        the type of `items`, which would likely create more overhead than it's
+        worth. This approach also allows mixing of item types if the need
+        arises.
+
+    Args:
+        model: An optional database model (such as `app.seeds.models.Index`) to
+            query from if no `items` are given.
+        items: An optional list of database model instances to generate the
+            select list from.
+        title_attribute: The item attribute to use as a title for the select
+            choice.
+        order_by: Attribute to order results by.
+
+    Returns:
+        list: A list of tuples formatted (item.id, <title>), with title coming
+            from the attribute specified by `title_attribute`. If model is not
+            set and items is falsey, return an empty list.
+    """
+    if not items:
+        if model:
+            items = model.query.order_by(order_by).all()
+        else:
+            return []
+    else:
+        items = sorted(items, key=lambda x: getattr(x, order_by))
+    return [(item.id, getattr(item, title_attribute)) for item in items]
+
+
+# Custom validators
+#
+# Note: Each validator has a `messages` attribute, which is just the error
+# message to display when triggered.
 class NotSpace(object):
-    """Validator raises a ValidationError if a field is just whitespace."""
+    """Validator to ensure a field is not purely whitespace."""
     def __init__(self, message=None):
         if not message:
             message = 'Field cannot consist entirely of whitespace.'
@@ -62,7 +104,11 @@ class NotSpace(object):
 
 
 class ReplaceMe(object):
-    """Validator for if a field still contains <replace me> data."""
+    """Validator for fields populated with data that needs to be edited.
+
+    These fields can be populated with strings that need to be edited by the
+    user to be valid. The parts that need to be edited are enclosed in <>.
+    """
     def __init__(self, message=None):
         if not message:
             self.message = 'Field contains data that needs to be replaced. '\
@@ -88,7 +134,7 @@ class RRPath(object):
 
 
 class USDollar(object):
-    """Validator raises ValidationError if can't be parsed as a USD value."""
+    """Validator to ensure data in fields for USD amounts is parseable."""
     def __init__(self, message=None):
         if not message:
             message = 'Field must be a valid US Dollar value.'
@@ -102,134 +148,26 @@ class USDollar(object):
                 raise ValidationError(self.message)
 
 
-def botanical_name_select_list(obj=None):
-    """Generate a list of BotanicalNames for populating Select fields.
-    Either load the botanical names belonging to passed object, or all if no
-    object is passed.
-
-    Attributes:
-        obj (object): A database object with a botanical_names relationship
-            to gather botanical names from.
-
-    Returns:
-        list: A list of tuples containing the id and name of each botanical
-            name in the database.
-    """
-    bn_list = []
-    if obj and obj.botanical_names:
-        items = obj.botanical_names
-    else:
-        items = BotanicalName.query.order_by('name')
-    for bn in items:
-        bn_list.append((bn.id, bn.name))
-    return bn_list
-
-
-def index_select_list(obj=None):
-    """Generate a list of Indexes for populating Select fields.
-
-    Attributes:
-        obj (object): A database object with an indexes relationship to gather
-            indexes from.
-
-    Returns:
-        list: A list of tuples containing the id and name of each index
-            in the database.
-
-    Raises:
-        ValueError: If passed object has no indexes.
-    """
-    if obj and obj.indexes:
-        items = obj.indexes
-    else:
-        items = Index.query.order_by('id')
-    return [(index.id, index.name) for index in items]
-
-
-def common_name_select_list():
-    """Generate a list of all CommonNames for populating Select fields.
-
-    Returns:
-        list: A list of tuples containing the id and name of each common name
-            in the database.
-    """
-    cn_list = []
-    for cn in CommonName.query.order_by('name'):
-        if not cn.invisible:
-            val = cn.name + ' (' + cn.index.name + ')' if cn.index else cn.name
-            cn_list.append((cn.id, val))
-    return cn_list
-
-
-def packet_select_list():
-    """Generate a list of all Packets for populating Select fields.
-
-    Returns:
-        list: A list of tuples containing the id and info of each packet in
-            the database.
-    """
-    packets = Packet.query.all()
-    packets.sort(key=lambda x: x.cultivar.common_name.name)
-    return [(pkt.id, '{0}, {1}: {2}'.
-                     format(pkt.cultivar.common_name.name,
-                            pkt.cultivar.name_with_series,
-                            pkt.info)) for pkt in packets]
-
-
-def series_select_list(obj=None):
-    """Generate a list of all Series for populating Select fields.
-
-    Attributes:
-        obj (object): Optional object with a relationship with series to draw
-            series objects from.
-
-    Returns:
-        list: A list of tuples with id and name of each series.
-    """
-    if obj:
-        sl = [(series.id, series.name) for series in obj.series]\
-            if obj.series else []
-    else:
-        sl = [(series.id,  series.common_name.name + ', ' + series.name) for
-              series in Series.query.all()]
-    return sl
-
-
-def cultivar_select_list(obj=None):
-    """"Generate a list of all Seeds for populating select fields.
-
-    Attributes:
-        obj (object): Optional object with a cultivars relationship to draw
-            cultivars from.
-
-    Returns:
-        list: A list of tuples containing the ids and full names of each
-            cultivar in the database.
-    """
-    if obj and obj.cultivars:
-        items = obj.cultivars
-    else:
-        items = Cultivar.query.order_by('name')
-    return [(cv.id, cv.fullname) for cv in items]
-
-
+# Forms
+#
+# Note: `submit` in forms is always the button for form submission, and `field`
+# in validators is always the field being validated.
 class AddIndexForm(Form):
-    """Form for adding a new index to the database.
+    """Form for adding a new `Index` to the database.
 
     Attributes:
-        index (StringField): Field for the index name.
-        description (TextAreaField): Field for the index's description.
-        submit (SubmitField): Submit button.
+        index: Field for the name of an `Index`.
+        description: Field for the description of an`Index`.
     """
     index = StringField('Index', validators=[Length(1, 64), NotSpace()])
     description = TextAreaField('Description', validators=[NotSpace()])
     submit = SubmitField('Add Index')
 
     def validate_index(self, field):
-        """Raise a ValidationError if submitted index already exists.
+        """Raise a ValidationError if submitted `Index` already exists.
 
         Raises:
-            ValidationError: If submitted index already exists in the
+            ValidationError: If submitted `Index` already exists in the
                 database.
         """
         idx = Index.query.filter(Index.name == dbify(field.data)).one_or_none()
@@ -243,30 +181,32 @@ class AddIndexForm(Form):
 
 
 class AddCommonNameForm(Form):
-    """Form for adding a new common name to the database.
+    """Form for adding a new `CommonName` to the database.
 
     Attributes:
-        idx_id (int): ID for Index to use in validation.
-        description (TextAreaField): Field for description of common name.
-        gw_common_names (SelectMultipleField): Select field for common names
-            that grow well with this common name.
-        gw_cultivars (SelectMultipleField): Select field for cultivars that
-            grow well with this common name.
-        instructions (TextAreaField): Field for planting instructions.
-        name (StringField): Field for the common name itself.
-        next_page (RadioField): Page to move on to after form submission.
-        parent_cn (SelectField)" Field to optionally make this common name a
-            subcategory of another.
-        submit (SubmitField): Submit button.
+        idx_id: ID for the `Index` to use in validation.
+        name: Field for the name of a `CommonName`.
+        parent_cn: Field for an (optional) `CommonName` that a `CommonName` is
+            a subcategory of.
+        description: Field for the description of a `CommonName`.
+        instructions: Field for planting instructions.
         synonyms (StringField): Field for synonyms of this common name.
+        gw_common_names: Select field for instances of `CommonName` that grow
+        well with a `CommonName`.
+        gw_cultivars: Select field for instances of `Cultivar` that grow well
+            with a `CommonName`.
+        next_page:  Radio field to select page to redirect to after submitting
+            a `CommonName`.
     """
     idx_id = None
+    name = StringField('Common Name', validators=[Length(1, 64), NotSpace()])
+    parent_cn = SelectField('Subcategory of', coerce=int)
     description = TextAreaField('Description', validators=[NotSpace()])
-    gw_common_names = SelectMultipleField('Common Names', coerce=int)
-    gw_cultivars = SelectMultipleField('Cultivars', coerce=int)
     instructions = TextAreaField('Planting Instructions',
                                  validators=[NotSpace()])
-    name = StringField('Common Name', validators=[Length(1, 64), NotSpace()])
+    synonyms = StringField('Synonyms', validators=[NotSpace()])
+    gw_common_names = SelectMultipleField('Common Names', coerce=int)
+    gw_cultivars = SelectMultipleField('Cultivars', coerce=int)
     next_page = RadioField(
         'After submission, go to',
         choices=[('add_botanical_name', 'Add Botanical Name (optional)'),
@@ -274,25 +214,35 @@ class AddCommonNameForm(Form):
                  ('add_cultivar', 'Add Cultivar')],
         default='add_cultivar'
     )
-    parent_cn = SelectField('Subcategory of', coerce=int)
     submit = SubmitField('Add Common Name')
-    synonyms = StringField('Synonyms', validators=[NotSpace()])
 
     def set_selects(self):
-        """Populate indexes with Indexes from the database."""
-        self.gw_common_names.choices = common_name_select_list()
-        self.gw_cultivars.choices = cultivar_select_list()
-        self.parent_cn.choices = common_name_select_list()
+        """Populate choices for select (and select multiple) fields."""
+        self.gw_common_names.choices = select_field_choices(
+            model=CommonName,
+            title_attribute='select_field_title',
+            order_by='name'
+        )
+        self.gw_cultivars.choices = select_field_choices(
+            model=Cultivar,
+            title_attribute='fullname',
+            order_by='name'
+        )
+        self.parent_cn.choices = select_field_choices(
+            model=CommonName,
+            title_attribute='select_field_title',
+            order_by='name'
+        )
         self.parent_cn.choices.insert(0, (0, 'N/A'))
 
     def validate_name(self, field):
-        """Raise ValidationError if Index + CommonName combo already exists.
+        """Raise `ValidationError` if `CommonName` already exists.
 
-        Args:
-            field: The field to validate: .name.
+        A new `CommonName` must be a unique combination of `CommonName.name`
+        and `CommonName.index_id`.
 
         Raises:
-            ValidationError: If a CommonName with the same name and Index
+            ValidationError: If a `CommonName` with the same name and `Index`
                 already exists.
         """
         cn = CommonName.query.filter(
@@ -309,7 +259,7 @@ class AddCommonNameForm(Form):
                 ))
 
     def validate_synonyms(self, field):
-        """Raise a ValidationError if any synonyms are too long.
+        """Raise `ValidationError` if any synonyms are too long.
 
         Raises:
             ValidationError: If any synonym is too long.
@@ -473,11 +423,18 @@ class AddCultivarForm(Form):
         Attributes:
             cn (CommonName): Optional common name to refine lists from.
         """
-        self.botanical_name.choices = botanical_name_select_list(cn)
+        self.botanical_name.choices = select_field_choices(model=BotanicalName,
+                                                           order_by='name')
         self.botanical_name.choices.insert(0, (0, 'None'))
-        self.gw_common_names.choices = common_name_select_list()
-        self.gw_cultivars.choices = cultivar_select_list()
-        self.series.choices = series_select_list(cn)
+        self.gw_common_names.choices = select_field_choices(
+            model=CommonName,
+            title_attribute='select_field_title',
+            order_by='name'
+        )
+        self.gw_cultivars.choices = select_field_choices(model=Cultivar,
+                                                         order_by='name')
+        self.series.choices = select_field_choices(items=cn.series,
+                                                   order_by='name')
         self.series.choices.insert(0, (0, 'None'))
 
     def validate_name(self, field):
@@ -730,12 +687,21 @@ class EditCommonNameForm(Form):
 
     def set_selects(self):
         """Populate indexes with Indexes from the database."""
-        self.index.choices = index_select_list()
-        self.gw_common_names.choices = common_name_select_list()
+        self.index.choices = select_field_choices(model=Index)
+        self.gw_common_names.choices = select_field_choices(
+            model=CommonName,
+            title_attribute='select_field_title',
+            order_by='name'
+        )
         self.gw_common_names.choices.insert(0, (0, 'None'))
-        self.gw_cultivars.choices = cultivar_select_list()
+        self.gw_cultivars.choices = select_field_choices(model=Cultivar,
+                                                         order_by='name')
         self.gw_cultivars.choices.insert(0, (0, 'None'))
-        self.parent_cn.choices = common_name_select_list()
+        self.parent_cn.choices = select_field_choices(
+            model=CommonName,
+            title_attribute='select_field_title',
+            order_by='name'
+        )
         self.parent_cn.choices.insert(0, (0, 'N/A'))
 
     def validate_name(self, field):
@@ -801,7 +767,11 @@ class EditBotanicalNameForm(Form):
 
     def set_common_names(self):
         """Set common_name with common names from the database."""
-        self.common_names.choices = common_name_select_list()
+        self.common_names.choices = select_field_choices(
+            model=CommonName,
+            title_attribute='select_field_title',
+            order_by='name'
+        )
 
     def validate_name(self, field):
         """Raise a ValidationError if name is not valid.
@@ -875,7 +845,11 @@ class EditSeriesForm(Form):
 
     def set_common_name(self):
         """Set common name choices with common names from db."""
-        self.common_name.choices = common_name_select_list()
+        self.common_name.choices = select_field_choices(
+            model=CommonName,
+            title_attribute='select_field_title',
+            order_by='name'
+        )
 
     def populate(self, series):
         """Populate fields with information from a db entry."""
@@ -950,14 +924,25 @@ class EditCultivarForm(Form):
 
     def set_selects(self):
         """Set choices for all select fields with values from database."""
-        self.botanical_name.choices = botanical_name_select_list()
+        self.botanical_name.choices = select_field_choices(model=BotanicalName,
+                                                           order_by='name')
         self.botanical_name.choices.insert(0, (0, 'None'))
-        self.common_name.choices = common_name_select_list()
-        self.gw_common_names.choices = common_name_select_list()
+        self.common_name.choices = select_field_choices(
+            model=CommonName,
+            title_attribute='select_field_title',
+            order_by='name'
+        )
+        self.gw_common_names.choices = select_field_choices(
+            model=CommonName,
+            title_attribute='select_field_title',
+            order_by='name'
+        )
         self.gw_common_names.choices.insert(0, (0, 'None'))
-        self.gw_cultivars.choices = cultivar_select_list()
+        self.gw_cultivars.choices = select_field_choices(model=Cultivar,
+                                                         order_by='name')
         self.gw_cultivars.choices.insert(0, (0, 'None'))
-        self.series.choices = series_select_list()
+        self.series.choices = select_field_choices(model=Series,
+                                                   order_by='name')
         self.series.choices.insert(0, (0, 'N/A'))
 
     def populate(self, cultivar):
@@ -1214,7 +1199,8 @@ class SelectBotanicalNameForm(Form):
 
     def set_botanical_name(self):
         """Populate names with BotanicalNames from the database."""
-        self.botanical_name.choices = botanical_name_select_list()
+        self.botanical_name.choices = select_field_choices(model=BotanicalName,
+                                                           order_by='name')
 
 
 class SelectIndexForm(Form):
@@ -1229,7 +1215,7 @@ class SelectIndexForm(Form):
 
     def set_index(self):
         """Populate index with Indexes from the database."""
-        self.index.choices = index_select_list()
+        self.index.choices = select_field_choices(model=Index)
 
 
 class SelectCommonNameForm(Form):
@@ -1244,7 +1230,11 @@ class SelectCommonNameForm(Form):
 
     def set_common_name(self):
         """Populate common_name with CommonNames from the database."""
-        self.common_name.choices = common_name_select_list()
+        self.common_name.choices = select_field_choices(
+            model=CommonName,
+            title_attribute='select_field_title',
+            order_by='name'
+        )
 
 
 class SelectPacketForm(Form):
@@ -1259,7 +1249,9 @@ class SelectPacketForm(Form):
 
     def set_packet(self):
         """Populate packet with Packets from database."""
-        self.packet.choices = packet_select_list()
+        self.packet.choices = select_field_choices(model=Packet,
+                                                   order_by='sku',
+                                                   title_attribute='info')
 
 
 class SelectCultivarForm(Form):
@@ -1274,7 +1266,8 @@ class SelectCultivarForm(Form):
 
     def set_cultivar(self):
         """Populate cultivar with Cultivars from the database."""
-        self.cultivar.choices = cultivar_select_list()
+        self.cultivar.choices = select_field_choices(model=Cultivar,
+                                                     order_by='name')
 
 
 class SelectSeriesForm(Form):
@@ -1289,4 +1282,5 @@ class SelectSeriesForm(Form):
 
     def set_series(self):
         """Populate series with Series from the database."""
-        self.series.choices = series_select_list()
+        self.series.choices = select_field_choices(model=Series,
+                                                   order_by='name')

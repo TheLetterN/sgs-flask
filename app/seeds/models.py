@@ -171,25 +171,6 @@ def dbify(string):
         return None
 
 
-def indexes_to_json(indexes):
-    """Return a list of tuples containing `Index` headers and slugs."""
-    return json.dumps({idx.id: (idx.header, idx.slug) for idx in indexes})
-
-
-def save_indexes_to_json_file():
-    """Save all indexes the file specified by ``INDEXES_JSON_FILE``
-
-    Since indexes are rarely changed and there are only going to be a handful
-    of them, it is better to store them in a JSON file and load them that way
-    in the main nav interface, as otherwise there would a db query for `Index`
-    values every time a page with the main nav is loaded.
-    """
-    with open(current_app.config.get('INDEXES_JSON_FILE'),
-              'w',
-              encoding='utf-8') as ofile:
-        ofile.write(indexes_to_json(Index.query.all()))
-
-
 # Helper Classes
 class SynonymsMixin(object):
     """A mixin class to easily interact with synonyms in child classes."""
@@ -391,6 +372,29 @@ class Index(db.Model):
         """Generate the string to use in URLs containing this `Index`."""
         return slugify(self.plural) if self.name is not None else None
 
+    @classmethod
+    def save_to_json_file(cls, json_file=None):
+        """Save given or all `Index` instances to a JSON file.
+
+        Args:
+            json_file: Optional filename to save JSON indexes to. If not given,
+                it will default to `config.INDEXES_JSON_FILE`.
+
+        Since indexes are rarely changed and there are only going to be a
+        handful of them, it is better to store them in a JSON file and load
+        them that way in the main nav interface, as otherwise there would a db
+        query for `Index` values every time a page with the main nav is loaded.
+        """
+        indexes = cls.query.all()
+        if not json_file:
+            json_file = current_app.config.get('INDEXES_JSON_FILE')
+        with open(json_file,
+                  'w',
+                  encoding='utf-8') as ofile:
+            ofile.write(
+                json.dumps({idx.id: (idx.header, idx.slug) for idx in indexes})
+            )
+
 
 @event.listens_for(Index, 'before_insert')
 @event.listens_for(Index, 'before_update')
@@ -408,7 +412,7 @@ def save_indexes_json_before_commit(session):
         # are deleted `Index` instances in the session, because the deleted
         # instances will not be returned by `Index.query.all()`, so deleted
         # indexes will be removed from the indexes JSON file.
-        save_indexes_to_json_file()
+        Index.save_to_json_file()
 
 
 class CommonName(SynonymsMixin, db.Model):

@@ -35,17 +35,17 @@ class TestIndexRelatedEventHandlers:
         assert idx.name == 'dbified-index'
 
     # save_indexes_to_json_before_commit
-    @mock.patch('app.seeds.models.save_indexes_to_json_file')
-    def test_save_indexes_json_before_commit_new_index(self, m_sitjf, db):
-        """Run save_indexes_to_json_file if any new Indexes in session."""
+    @mock.patch('app.seeds.models.Index.save_to_json_file')
+    def test_save_indexes_json_before_commit_new_index(self, m_stjf, db):
+        """Run Index.save_to_json_file() if any new Indexes in session."""
         idx = Index(name='New Index')
         db.session.add(idx)
         db.session.commit()
-        assert m_sitjf.call_count == 1
+        assert m_stjf.call_count == 1
 
-    @mock.patch('app.seeds.models.save_indexes_to_json_file')
+    @mock.patch('app.seeds.models.Index.save_to_json_file')
     def test_save_indexes_to_json_before_commit_edited_index(self,
-                                                             m_sitjf,
+                                                             m_stjf,
                                                              db):
         """Run if any edited Indexes are in the session."""
         idx = Index(name='New Index')
@@ -56,11 +56,11 @@ class TestIndexRelatedEventHandlers:
         idxq = Index.query.filter(Index.name == 'New Index').one_or_none()
         idxq.name = 'Edited Index'
         db.session.commit()
-        assert m_sitjf.call_count == 2
+        assert m_stjf.call_count == 2
 
-    @mock.patch('app.seeds.models.save_indexes_to_json_file')
+    @mock.patch('app.seeds.models.Index.save_to_json_file')
     def test_save_indexes_to_json_before_commit_deleted_index(self,
-                                                              m_sitjf,
+                                                              m_stjf,
                                                               db):
         """Run if any deleted Indexes are in the session."""
         idx = Index(name='New Index')
@@ -70,15 +70,15 @@ class TestIndexRelatedEventHandlers:
         idxq = Index.query.filter(Index.name == 'New Index').one_or_none()
         db.session.delete(idxq)
         db.session.commit()
-        assert m_sitjf.call_count == 2
+        assert m_stjf.call_count == 2
 
-    @mock.patch('app.seeds.models.save_indexes_to_json_file')
-    def test_save_indexes_to_json_before_commit_no_indexes(self, m_sitjf, db):
+    @mock.patch('app.seeds.models.Index.save_to_json_file')
+    def test_save_indexes_to_json_before_commit_no_indexes(self, m_stjf, db):
         """Do not run if there are no Indexes in the session."""
         cn = CommonName(name='John')
         db.session.add(cn)
         db.session.commit()
-        assert not m_sitjf.called
+        assert not m_stjf.called
 
 
 class TestCommonNameWithDB:

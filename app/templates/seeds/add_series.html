@@ -25,7 +25,7 @@
         <meta name="robots" content="noindex, nofollow">
 {% endblock %}
 {% block main %}
-            <h1>Add a Series to {{ cn.name }}:</h1>
+            <h1>Add a Series to {{ form.cn.name }}:</h1>
             <form method="POST">
                 {{ form.hidden_tag() }}
                 <ol>
@@ -33,7 +33,7 @@
                         {{ form_field(form.name)|indent(28)|safe }}
                     </li>
                     <li>
-                        Insert series name {{ form.position }} cultivar name in cultivars belonging to this series.
+                        Insert series name {{ form.position }} cultivar name in cultivars belonging to this series. (e.g. &quot;<em>Polkadot</em> Petra Foxglove&quot; vs. &quot;Violet <em>Queen</em> Cleome&quot;.)
                     </li>
                     <li>
                         {{ form_field(form.description)|indent(28)|safe }}

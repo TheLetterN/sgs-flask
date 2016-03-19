@@ -82,10 +82,57 @@ from slugify import slugify
 from titlecase import titlecase
 from sqlalchemy import event, inspect
 from sqlalchemy.ext.hybrid import Comparator, hybrid_property
+from sqlalchemy.orm.mapper import Mapper
 from sqlalchemy.sql.expression import and_
 from flask_sqlalchemy import SignallingSession
 
 from app import db
+
+
+# Session Info Handling
+@event.listens_for(Mapper, 'after_configured', once=True)
+def intitialize_session_info():
+    """Set up `db.session.info`
+
+    This way we ensure that keys in `db.session.info` will (hopefully) exist
+    before any attempt is made to access them.
+
+    This is done here because `db.session` has not been initialized until after
+    this file has been parsed, so attempting to use `db.session` in the global
+    namespace of this module will result in a `RuntimeError`.
+    """
+    db.session.info['pending_commit'] = False
+
+
+@event.listens_for(SignallingSession, 'after_flush')
+def set_pending_commit_after_flush(session, flush_context):
+    """Set pending_commit to True if session flushed with changes.
+
+    This way we know changes have been made, but still need to be committed.
+    This takes a lot of the hassle out of figuring out whether or not changes
+    have been made during editing, as any changes can be flushed once made, and
+    we know from pending_commit whether or not changes have been made.
+    """
+    if session.new or session.dirty or session.deleted:
+        session.info['pending_commit'] = True
+
+
+@event.listens_for(SignallingSession, 'after_commit')
+def set_pending_commit_after_commit(session):
+    """Set pending_commit to False after commit.
+
+    Obviously, the session isn't pending commit once it's been committed.
+    """
+    session.info['pending_commit'] = False
+
+
+@event.listens_for(SignallingSession, 'after_rollback')
+def set_pending_commit_after_rollback(session):
+    """Set pending_commit to False after rollback.
+
+    If the session has been rolled back, there are no changes to commit.
+    """
+    session.info['pending_commit'] = False
 
 
 # Association Tables
@@ -806,7 +853,7 @@ class Cultivar(SynonymsMixin, db.Model):
             name of this cultivar.
             Backref: `BotanicalName.cultivars`
         description: An optional HTML description of a cultivar.
-        new_for: An optional year for which a cultivar is new.
+        new_until: An optional date to mark a `Cultivar` as new until.
         active: True if the cultivar's stock is being actively replenished,
             False if not.
         in_stock: True if a cultivar is in stock, False if not.
@@ -850,7 +897,7 @@ class Cultivar(SynonymsMixin, db.Model):
     botanical_name = db.relationship('BotanicalName',
                                      backref='cultivars')
     description = db.Column(db.Text)
-    new_for = db.Column(db.Integer)
+    new_until = db.Column(db.Date)
     active = db.Column(db.Boolean)
     in_stock = db.Column(db.Boolean)
     invisible = db.Column(db.Boolean, default=False)
@@ -1067,18 +1114,15 @@ class Packet(db.Model):
     def __repr__(self):
         return '<{0} SKU #{1}>'.format(self.__class__.__name__, self.sku)
 
-    def __init__(self, sku=None, price=None, quantity=None):
+    def __init__(self, sku=None, price=None, quantity=None, cultivar=None):
         """Create an instance of Packet.
-
-        Note:
-            `cultivar` is not used because in practice packets are added to
-            cultivars, while rarely (if ever) is a cultivar directly set for a
-            packet.
         """
         self.sku = sku
         self.price = price
         if quantity:
             self.quantity = quantity
+        if cultivar:
+            self.cultivar = cultivar
 
     @property
     def info(self):
@@ -1136,6 +1180,67 @@ class Quantity(db.Model):
         return '<{0} \'{1} {2}\'>'.format(self.__class__.__name__,
                                           self.value,
                                           self.units)
+
+    @property
+    def html_value(self):
+        """str: A string of `self.value` w/ fractions in HTML if applicable."""
+        if isinstance(self.value, Fraction):
+            if self.value == Fraction(1, 4):
+                return '&frac14;'
+            elif self.value == Fraction(1, 2):
+                return '&frac12;'
+            elif self.value == Fraction(3, 4):
+                return '&frac34;'
+            elif self.value == Fraction(1, 3):
+                return '&#8531;'
+            elif self.value == Fraction(2, 3):
+                return '&#8532;'
+            elif self.value == Fraction(1, 5):
+                return '&#8533;'
+            elif self.value == Fraction(2, 5):
+                return '&#8534;'
+            elif self.value == Fraction(3, 5):
+                return '&#8535;'
+            elif self.value == Fraction(4, 5):
+                return '&#8536;'
+            elif self.value == Fraction(1, 6):
+                return '&#8537;'
+            elif self.value == Fraction(5, 6):
+                return '&#8538;'
+            elif self.value == Fraction(1, 8):
+                return '&#8539;'
+            elif self.value == Fraction(3, 8):
+                return '&#8540;'
+            elif self.value == Fraction(5, 8):
+                return '&#8541;'
+            elif self.value == Fraction(7, 8):
+                return '&#8542;'
+            else:
+                return '<span class="fraction"><sup>{0}</sup>&frasl;'\
+                    '<sub>{1}</sub></span>'.format(self._numerator,
+                                                   self._denominator)
+        return str(self.value)
+
+    @hybrid_property
+    def value(self):
+        """"int, float, Fraction: The value of a quantity in the same format
+                it was entered.
+
+            Setter:
+                Convert value a Fraction, store its numerator and denominator,
+                and store a floating point version to allow querying based on
+                quantity value. Flag is_decimal if the initial value is a
+                decimal (floating point) number.
+        """
+        if self._float is not None:
+            if self.is_decimal:
+                return self._float
+            elif self._denominator == 1:
+                return self._numerator
+            else:
+                return Fraction(self._numerator, self._denominator)
+        else:
+            return None
 
     @staticmethod
     def dec_check(val):
@@ -1283,67 +1388,6 @@ class Quantity(db.Model):
                         pass
         raise ValueError('value {0} of type {1} could not be converted to '
                          'Fraction'.format(val, type(val)))
-
-    @property
-    def html_value(self):
-        """str: A string of `self.value` w/ fractions in HTML if applicable."""
-        if isinstance(self.value, Fraction):
-            if self.value == Fraction(1, 4):
-                return '&frac14;'
-            elif self.value == Fraction(1, 2):
-                return '&frac12;'
-            elif self.value == Fraction(3, 4):
-                return '&frac34;'
-            elif self.value == Fraction(1, 3):
-                return '&#8531;'
-            elif self.value == Fraction(2, 3):
-                return '&#8532;'
-            elif self.value == Fraction(1, 5):
-                return '&#8533;'
-            elif self.value == Fraction(2, 5):
-                return '&#8534;'
-            elif self.value == Fraction(3, 5):
-                return '&#8535;'
-            elif self.value == Fraction(4, 5):
-                return '&#8536;'
-            elif self.value == Fraction(1, 6):
-                return '&#8537;'
-            elif self.value == Fraction(5, 6):
-                return '&#8538;'
-            elif self.value == Fraction(1, 8):
-                return '&#8539;'
-            elif self.value == Fraction(3, 8):
-                return '&#8540;'
-            elif self.value == Fraction(5, 8):
-                return '&#8541;'
-            elif self.value == Fraction(7, 8):
-                return '&#8542;'
-            else:
-                return '<span class="fraction"><sup>{0}</sup>&frasl;'\
-                    '<sub>{1}</sub></span>'.format(self._numerator,
-                                                   self._denominator)
-        return str(self.value)
-
-    @hybrid_property
-    def value(self):
-        """"int, float, Fraction: The value of a quantity in the same format
-                it was entered.
-
-            Setter:
-                Convert value a Fraction, store its numerator and denominator,
-                and store a floating point version to allow querying based on
-                quantity value. Flag is_decimal if the initial value is a
-                decimal (floating point) number.
-        """
-        if self._float is not None:
-            if self.is_decimal:
-                return self._float
-            elif self._denominator == 1:
-                return self._numerator
-            else:
-                return Fraction(self._numerator, self._denominator)
-        else:
-            return None
 
     @classmethod
     def from_queryable_values(cls, value, units):

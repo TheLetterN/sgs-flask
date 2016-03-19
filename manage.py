@@ -105,9 +105,9 @@ def excel(load=None, save=None, logfile=None):
                           'overwrite the file, or \'N\' if you do not. Would'
                           'you like to overwite the file \'{0}\'?'
                           .format(logfile))
-        file = open(logfile, 'w', encoding='utf-8')
+        stream = open(logfile, 'w', encoding='utf-8')
     else:
-        file = sys.stdout
+        stream = sys.stdout
     if load and save:
         raise ValueError('Cannot load and save at the same time!')
     if load:
@@ -117,7 +117,7 @@ def excel(load=None, save=None, logfile=None):
         else:
             raise FileNotFoundError('The file \'{0}\' does not exist!'
                                     .format(load))
-        swb.save_all_sheets_to_db(file=file)
+        swb.save_all_sheets_to_db(stream=stream)
     if save:
         if os.path.exists(save):
             print('WARNING: The file {0} exists. Would you like to overwrite '
@@ -136,14 +136,14 @@ def excel(load=None, save=None, logfile=None):
                           .format(save))
         swb = SeedsWorkbook()
         print('*** BEGIN saving all data to worksheet \'{0}\'. ***'
-              .format(save), file=file)
-        swb.add_all_data_to_sheets(file=file)
+              .format(save), file=stream)
+        swb.add_all_data_to_sheets(stream=stream)
         swb.beautify_all_sheets()
         swb.save(save)
         print('*** END saving all data to worksheet \'{0}\'. ***'
-              .format(save), file=file)
-    if file is not sys.stdout:
-        file.close()
+              .format(save), file=stream)
+    if stream is not sys.stdout:
+        stream.close()
 
 @manager.option(
     '-f',

@@ -15,16 +15,20 @@
  
    Copyright Swallowtail Garden Seeds, Inc 
 #}
-{% with messages = get_flashed_messages() %}
+{% with messages = get_flashed_messages(with_categories=true) %}
 
     {% if messages %}
-    {% for message in messages %}
-        {% if 'Error:' in message %}
+    {% for category, message in messages %}
+        {% if 'Error:' in message or category == 'error' %}
         <div class="flashed_error">{{ message }}</div>
-        {% elif 'Warning:' in message %}
-        <div class="flashed_warning">{{ message }}</div>
+        {% elif 'Warning:' in message or category == 'warning' %}
+        <div class="flashed_warning">
+            {{ message|indent(12)|safe }}
+        </div>
         {% else %}
-        <div class="flashed_message">{{ message }}</div>
+        <div class="flashed_message">
+            {{ message|indent(12)|safe }}
+        </div>
         {% endif %}
     {% endfor %}
     {% endif %}

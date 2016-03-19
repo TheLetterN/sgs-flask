@@ -1,3 +1,4 @@
+import datetime
 import pytest
 from io import StringIO
 from unittest import mock
@@ -1909,8 +1910,8 @@ class TestCultivarsWorksheetWithDB:
         assert ('Synonyms for the Cultivar \'Foxy Foxglove\' have been '
                 'cleared.') in msgs
 
-    def test_save_row_to_db_new_with_new_for(self, db):
-        """Create a Cultivar with new_for data."""
+    def test_save_row_to_db_new_with_new_until(self, db):
+        """Create a Cultivar with new_until data."""
         messages = StringIO()
         wb = Workbook()
         ws = wb.active
@@ -1919,7 +1920,7 @@ class TestCultivarsWorksheetWithDB:
         cv = Cultivar(name='Foxy')
         cv.common_name = CommonName(name='Foxglove')
         cv.common_name.index = Index(name='Perennial')
-        cv.new_for = 2101
+        cv.new_until = datetime.date(2012, 12, 21)
         cv.in_stock = True
         cv.active = True
         cv.invisible = False
@@ -1928,12 +1929,12 @@ class TestCultivarsWorksheetWithDB:
         cvq = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
         messages.seek(0)
         msgs = messages.read()
-        assert cvq.new_for == 2101
-        assert ('The Cultivar \'Foxy Foxglove\' has been set as new for '
-                '2101.') in msgs
+        assert cvq.new_until == datetime.date(2012, 12, 21)
+        assert ('The Cultivar \'Foxy Foxglove\' has been set as new until '
+                '12/21/2012') in msgs
 
-    def test_save_row_to_db_existing_with_new_for(self, db):
-        """Add a new_for value to an existing Cultivar."""
+    def test_save_row_to_db_existing_with_new_until(self, db):
+        """Add a new_until value to an existing Cultivar."""
         messages = StringIO()
         wb = Workbook()
         ws = wb.active
@@ -1950,7 +1951,7 @@ class TestCultivarsWorksheetWithDB:
         cv2 = Cultivar(name='Foxy')
         cv2.common_name = CommonName(name='Foxglove')
         cv2.common_name.index = Index(name='Perennial')
-        cv2.new_for = 2101
+        cv2.new_until = datetime.date(2012, 12, 21)
         cv2.in_stock = True
         cv2.active = True
         cv2.invisible = False
@@ -1958,10 +1959,10 @@ class TestCultivarsWorksheetWithDB:
         assert cvws.save_row_to_db(row=2, stream=messages)
         cvq = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
         assert cvq is cv
-        assert cv.new_for == 2101
+        assert cv.new_until == datetime.date(2012, 12, 21)
 
-    def test_save_row_to_db_existing_changes_new_for(self, db):
-        """Replace existing new_for with new value."""
+    def test_save_row_to_db_existing_changes_new_until(self, db):
+        """Replace existing new_until with new value."""
         messages = StringIO()
         wb = Workbook()
         ws = wb.active
@@ -1970,7 +1971,7 @@ class TestCultivarsWorksheetWithDB:
         cv = Cultivar(name='Foxy')
         cv.common_name = CommonName(name='Foxglove')
         cv.common_name.index = Index(name='Perennial')
-        cv.new_for = 2101
+        cv.new_until = datetime.date(2012, 12, 21)
         cv.in_stock = True
         cv.active = True
         cv.invisible = False
@@ -1979,7 +1980,7 @@ class TestCultivarsWorksheetWithDB:
         cv2 = Cultivar(name='Foxy')
         cv2.common_name = CommonName(name='Foxglove')
         cv2.common_name.index = Index(name='Perennial')
-        cv2.new_for = 2525
+        cv2.new_until = datetime.date(2012, 12, 12)
         cv2.in_stock = True
         cv2.active = True
         cv2.invisible = False
@@ -1987,10 +1988,10 @@ class TestCultivarsWorksheetWithDB:
         assert cvws.save_row_to_db(row=2, stream=messages)
         cvq = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
         assert cvq is cv
-        assert cv.new_for == 2525
+        assert cv.new_until == datetime.date(2012, 12, 12)
 
-    def test_save_row_to_db_existing_removes_new_for(self, db):
-        """Remove new_for if row lacks it."""
+    def test_save_row_to_db_existing_removes_new_until(self, db):
+        """Remove new_until if row lacks it."""
         messages = StringIO()
         wb = Workbook()
         ws = wb.active
@@ -1999,7 +2000,7 @@ class TestCultivarsWorksheetWithDB:
         cv = Cultivar(name='Foxy')
         cv.common_name = CommonName(name='Foxglove')
         cv.common_name.index = Index(name='Perennial')
-        cv.new_for = 2101
+        cv.new_until = datetime.date(2012, 12, 21)
         cv.in_stock = True
         cv.active = True
         cv.invisible = False
@@ -2017,9 +2018,8 @@ class TestCultivarsWorksheetWithDB:
         messages.seek(0)
         msgs = messages.read()
         assert cvq is cv
-        assert cv.new_for is None
-        assert ('The Cultivar \'Foxy Foxglove\' is no longer set as new for '
-                'any year.') in msgs
+        assert cv.new_until is None
+        assert 'The Cultivar \'Foxy Foxglove\' is no longer set as new' in msgs
 
     def test_save_row_to_db_new_default_bools(self, db):
         """Create new Cultivar w/ defaults for in_stock, active, invisible."""

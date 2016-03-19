@@ -2,20 +2,18 @@ from unittest import mock
 import pytest
 from wtforms import ValidationError
 from app.seeds.forms import (
-    AddBotanicalNameForm,
-    AddCommonNameForm,
     AddPacketForm,
     AddRedirectForm,
-    AddCultivarForm,
     EditBotanicalNameForm,
-    EditIndexForm,
     EditCommonNameForm,
     EditCultivarForm,
     EditSeriesForm,
+    IsBotanicalName,
     NotSpace,
     ReplaceMe,
     RRPath,
     select_field_choices,
+    SynonymLength,
     USDollar
 )
 from app.redirects import Redirect
@@ -93,6 +91,17 @@ class TestModuleFunctions:
 
 class TestValidators:
     """Test custom validator classes."""
+    @mock.patch('app.seeds.forms.BotanicalName.validate')
+    def test_isbotanicalname(self, m_bnv):
+        """Raise a ValidationError if field data is not a valid bot. name."""
+        m_bnv.return_value = False
+        field = mock.MagicMock()
+        field.data = 'invalid botanical name'
+        with pytest.raises(ValidationError):
+            ibn = IsBotanicalName()
+            ibn.__call__(None, field)
+        m_bnv.assert_called_with('invalid botanical name')
+
     def test_notspace(self, app):
         """Raise validation error if field data is whitespace."""
         ns = NotSpace()
@@ -138,7 +147,7 @@ class TestValidators:
         with pytest.raises(ValidationError):
             rr.__call__(form, form.old_path)
 
-    def test_usdollar(self, app):
+    def test_usdollar(self):
         """Raise validation error if value can't be converted to USD."""
         usd = USDollar()
         form = EditBotanicalNameForm()
@@ -154,61 +163,58 @@ class TestValidators:
             form.name.data = '$3/4'
             usd.__call__(form, form.name)
 
-
-class TestAddBotanicalNameForm:
-    """Test custom methods of AddBotanicalNameForm."""
-    def test_validate_synonyms(self, app):
-        """Raise validation error if any synonyms don't work."""
-        form = AddBotanicalNameForm()
-        form.name.data = 'Digitalis purpurea'
-        form.synonyms.data = 'Digitalis watchus, Digitalis thermometer'
-        form.validate_synonyms(form.synonyms)
-        form.synonyms.data = 'Digitalis watchus, He just kept talking in one '\
-                             'long incredibly unbroken sentence moving from '\
-                             'topic to topic so that no one had a chance to '\
-                             'interrupt'
+    def test_synonymlength_too_short(self):
+        """Raise ValidationError if any synonym is too short."""
+        sl = SynonymLength(6, 12)
+        field = mock.MagicMock()
+        field.data = 'oops'
         with pytest.raises(ValidationError):
-            form.validate_synonyms(form.synonyms)
-        form.synonyms.data = 'Digitalis watchus, digitalis walrus'
-        with pytest.raises(ValidationError):
-            form.validate_synonyms(form.synonyms)
+            sl.__call__(None, field)
 
-
-class TestAddCommonNameForm:
-    """Test custom methods of AddCommonNameForm."""
-    def test_validate_synonyms(self, app):
-        """Raise a ValidationError if any synonyms are more than 64 chars."""
-        form = AddCommonNameForm()
-        form.name.data = 'Foxglove'
-        form.synonyms.data = 'Sixty-four characters is actually quite a lot '\
-                             'of characters to fit in one name, the limit is '\
-                             'perfectly reasonable'
+    def test_synonymlength_too_long(self):
+        """Raise ValidationError if any synonym is too long."""
+        sl = SynonymLength(1, 6)
+        field = mock.MagicMock()
+        field.data = 'Too long; didn\'t read'
         with pytest.raises(ValidationError):
-            form.validate_synonyms(form.synonyms)
+            sl.__call__(None, field)
+
+    def test_synonymlength_no_data(self):
+        """Don't raise a ValidationError if no synonyms given.
+
+        Note that min_length is 1 here, as this validator should only care
+        about synonym length if synonyms are present.
+        """
+        sl = SynonymLength(1, 6)
+        field = mock.MagicMock()
+        field.data = ''
+        sl.__call__(None, field)
+        field.data = None
+        sl.__call__(None, field)
 
 
 class TestAddPacketForm:
     """Test custom methods of AddPacketForm."""
     def test_validate_quantity(self, app):
         """Raise ValidationError if quantity can't be parsed."""
-        form = AddPacketForm()
-        form.quantity.data = '100'
-        form.validate_quantity(form.quantity)
-        form.quantity.data = '2.3423'
-        form.validate_quantity(form.quantity)
-        form.quantity.data = '3/4'
-        form.validate_quantity(form.quantity)
-        form.quantity.data = '1 1/2'
-        form.validate_quantity(form.quantity)
-        form.quantity.data = '$2'
+        field = mock.MagicMock()
+        field.data = '100'
+        AddPacketForm.validate_quantity(None, field)
+        field.data = '2.3423'
+        AddPacketForm.validate_quantity(None, field)
+        field.data = '3/4'
+        AddPacketForm.validate_quantity(None, field)
+        field.data = '1 1/2'
+        AddPacketForm.validate_quantity(None, field)
+        field.data = '$2'
         with pytest.raises(ValidationError):
-            form.validate_quantity(form.quantity)
-        form.quantity.data = '3/4/13'
+            AddPacketForm.validate_quantity(None, field)
+        field.data = '3/4/13'
         with pytest.raises(ValidationError):
-            form.validate_quantity(form.quantity)
-            form.quantity.data = '127.0.0.1'
+            AddPacketForm.validate_quantity(None, field)
+            field.data = '127.0.0.1'
         with pytest.raises(ValidationError):
-            form.validate_quantity(form.quantity)
+            AddPacketForm.validate_quantity(None, field)
 
 
 class TestAddRedirectForm:
@@ -242,21 +248,6 @@ class TestAddRedirectForm:
             form.new_path.data = '/three'
             with pytest.raises(ValidationError):
                 form.validate_new_path(form.new_path)
-
-
-class TestAddCultivarForm:
-    """Test custom methods of AddCultivarForm."""
-    def test_validate_synonyms(self, app):
-        """Raise ValidationError if any synonyms are invalid."""
-        form = AddCultivarForm()
-        form.name.data = 'Foxy'
-        form.synonyms.data = 'Digitalis'
-        form.validate_synonyms(form.synonyms)
-        form.synonyms.data = 'Digitalis, He just spoke in one long incredibly'\
-                             ' unbroken sentence moving from topic to topic'\
-                             ' it was quite hypnotic'
-        with pytest.raises(ValidationError):
-            form.validate_synonyms(form.synonyms)
 
 
 class TestEditBotanicalNameForm:
@@ -293,19 +284,6 @@ class TestEditBotanicalNameForm:
         form.synonyms.data = 'Digitalis watchus, innagada davida'
         with pytest.raises(ValidationError):
             form.validate_synonyms(form.synonyms)
-
-
-class TestEditIndexForm:
-    """Test custom methods of EditIndexForm."""
-    def test_populate(self, app):
-        """Populate form from a Index object."""
-        index = Index()
-        index.name = 'Annual Flowers'
-        index.description = 'Not really built to last.'
-        form = EditIndexForm()
-        form.populate(index)
-        assert form.name.data == index.name
-        assert form.description.data == index.description
 
 
 class TestEditCommonNameForm:

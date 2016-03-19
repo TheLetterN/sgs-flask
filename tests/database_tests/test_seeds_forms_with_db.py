@@ -1,7 +1,5 @@
 import pytest
 from decimal import Decimal
-from unittest import mock
-from werkzeug import FileStorage, secure_filename
 from wtforms import ValidationError
 from app.seeds.forms import (
     AddBotanicalNameForm,
@@ -11,24 +9,18 @@ from app.seeds.forms import (
     AddCultivarForm,
     AddSeriesForm,
     EditBotanicalNameForm,
-    EditIndexForm,
-    EditCommonNameForm,
     EditCultivarForm,
     EditPacketForm,
     EditSeriesForm,
     select_field_choices,
     SelectBotanicalNameForm,
     SelectIndexForm,
-    SelectCommonNameForm,
-    SelectCultivarForm,
-    SelectPacketForm,
-    SelectSeriesForm
+    SelectCommonNameForm
 )
 from app.seeds.models import (
     BotanicalName,
     Index,
     CommonName,
-    Image,
     Packet,
     Quantity,
     Cultivar,
@@ -69,59 +61,64 @@ class TestFunctionsWithDB:
         assert stls == [(2, 'Annual'), (1, 'Perennial'), (3, 'Rock')]
 
 
-class TestAddBotanicalNameFormWithDB:
-    """Test custom methods of AddBotanicalNameForm."""
-    def test_validate_name(self, db):
-        """Raise error if name in DB or invalid botanical name."""
-        bn = BotanicalName()
-        bn2 = BotanicalName()
-        cn = CommonName()
-        db.session.add_all([bn, bn2, cn])
-        cn.name = 'Butterfly Weed'
-        bn.name = 'Asclepias incarnata'
-        bn2.name = 'Canis lupus familiaris'
-        bn.common_names.append(cn)
-        bn2.common_names.append(cn)
-        db.session.commit()
-        form = AddBotanicalNameForm()
-        form.cn = cn
-        form.name.data = 'Innagada davida'
-        form.validate_name(form.name)
-        form.name.data = 'McDuck is not a valid genus'
-        with pytest.raises(ValidationError):
-            form.validate_name(form.name)
-        form.name.data = 'Asclepias incarnata'
-        with pytest.raises(ValidationError):
-            form.validate_name(form.name)
-
-
 class TestAddIndexFormWithDB:
     """Test custom methods of AddIndexForm."""
-    def test_validate_index(self, db):
-        """Raise a ValidationError if index already in db."""
-        index = Index()
+    def test_validate_name(self, db):
+        """Raise a ValidationError if index name already in db."""
+        index = Index(name='Annual')
         db.session.add(index)
-        index.name = 'Annual Flowers'
         db.session.commit()
         form = AddIndexForm()
-        form.index.data = 'Perennial Flowers'
-        form.validate_index(form.index)
-        form.index.data = 'annual flowers'
+        form.name.data = 'Perennial'
+        form.validate_name(form.name)
+        form.name.data = 'Annual'
         with pytest.raises(ValidationError):
-            form.validate_index(form.index)
+            form.validate_name(form.name)
 
 
 class TestAddCommonNameFormWithDB:
     """Test custom methods of AddCommonNameForm."""
     def test_validate_name(self, db):
         """Raise a Validation error if CommonName & Index combo in db."""
-        cn = CommonName(name='Foxglove')
-        cn.index = Index(name='Perennial')
+        cn = CommonName(name='Foxglove', index=Index(name='Perennial'))
         db.session.add(cn)
         db.session.commit()
-        form = AddCommonNameForm()
+        form = AddCommonNameForm(cn.index)
+        form.name.data = 'Fauxglove'
+        form.validate_name(form.name)
         form.name.data = 'Foxglove'
-        form.idx_id = cn.index.id
+        with pytest.raises(ValidationError):
+            form.validate_name(form.name)
+
+
+class TestAddBotanicalNameFormWithDB:
+    """Test custom methods of AddBotanicalNameForm."""
+    def test_validate_name(self, db):
+        """Raise error if name in DB or invalid botanical name."""
+        bn = BotanicalName(name='Asclepias incarnata')
+        cn = CommonName(name='Butterfly Weed')
+        db.session.add_all([bn, cn])
+        bn.common_names.append(cn)
+        db.session.commit()
+        form = AddBotanicalNameForm(cn=cn)
+        form.name.data = 'Innagada davida'
+        form.validate_name(form.name)
+        form.name.data = 'Asclepias incarnata'
+        with pytest.raises(ValidationError):
+            form.validate_name(form.name)
+
+
+class TestAddSeriesForm:
+    """Test custom methods of AddSeriesForm."""
+    def test_validate_name(self, db):
+        series = Series(name='Polkadot',
+                        common_name=CommonName(name='Foxglove'))
+        db.session.add(series)
+        db.session.commit()
+        form = AddSeriesForm(cn=series.common_name)
+        form.name.data = 'Dalmatian'
+        form.validate_name(form.name)
+        form.name.data = 'Polkadot'
         with pytest.raises(ValidationError):
             form.validate_name(form.name)
 
@@ -137,7 +134,7 @@ class TestAddPacketFormWithDB:
         cultivar.name = 'Jenny'
         packet.cultivar = cultivar
         db.session.commit()
-        form = AddPacketForm()
+        form = AddPacketForm(cultivar=cultivar)
         form.sku.data = '8675309'
         with pytest.raises(ValidationError):
             form.validate_sku(form.sku)
@@ -158,55 +155,24 @@ class TestAddCultivarFormWithDB:
         cv2 = Cultivar(name='Silky Gold')
         cv2.common_name = CommonName(name='Butterfly Weed')
         cv2.common_name.index = Index(name='Annual')
-        cv3 = Cultivar(name='Tumbling Tom')
+        cv3 = Cultivar(name='Tumbling Tom',
+                       common_name=CommonName(name='Tomato'))
         db.session.add_all([cv1, cv2, cv3])
         db.session.commit()
-        form1 = AddCultivarForm()
-        form1.cn_id = cv1.common_name.id
+        form1 = AddCultivarForm(cn=cv1.common_name)
         form1.name.data = 'Petra'
         form1.validate_name(form1.name)
         form1.series.data = cv1.series.id
         with pytest.raises(ValidationError):
             form1.validate_name(form1.name)
-        form2 = AddCultivarForm()
-        form2.cn_id = cv2.common_name.id
+        form2 = AddCultivarForm(cn=cv2.common_name)
         form2.name.data = 'Silky Gold'
         with pytest.raises(ValidationError):
             form2.validate_name(form2.name)
-        form3 = AddCultivarForm()
+        form3 = AddCultivarForm(cn=cv3.common_name)
         form3.name.data = 'Tumbling Tom'
         with pytest.raises(ValidationError):
             form3.validate_name(form3.name)
-
-    def test_validate_thumbnail(self, db):
-        "Raise ValidationError if image already exists with same filename."""
-        image = Image()
-        db.session.add(image)
-        image.filename = secure_filename('frogfacts.png')
-        db.session.commit()
-        form = AddCultivarForm()
-        form.thumbnail.data = FileStorage()
-        form.thumbnail.data.filename = 'frogfacts.png'
-        with pytest.raises(ValidationError):
-            form.validate_thumbnail(form.thumbnail)
-
-
-class TestAddSeriesForm:
-    """Test custom methods of AddSeriesForm."""
-    def test_validate_name(self, db):
-        series = Series()
-        cn = CommonName(name='Foxglove')
-        series.common_name = cn
-        series.name = 'Polkadot'
-        db.session.add(series, cn)
-        db.session.commit()
-        form = AddSeriesForm()
-        form.cn = cn
-        form.name.data = 'Dalmatian'
-        form.validate_name(form.name)
-        form.name.data = 'Polkadot'
-        with pytest.raises(ValidationError):
-            form.validate_name(form.name)
 
 
 class TestEditBotanicalNameFormWithDB:
@@ -226,21 +192,6 @@ class TestEditBotanicalNameFormWithDB:
         assert (cn1.id, cn1.name) in form.common_names.choices
         assert (cn2.id, cn2.name) in form.common_names.choices
         assert (cn3.id, cn3.name) in form.common_names.choices
-
-
-class TestEditIndexFormWithDB:
-    """Test custom methods of EditIndexForm."""
-    def test_populate(self, db):
-        """Populate form from a Index object."""
-        index = Index()
-        db.session.add(index)
-        index.name = 'Annual Flowers'
-        index.description = 'Not really built to last.'
-        db.session.commit()
-        form = EditIndexForm()
-        form.populate(index)
-        assert form.name.data == index.name
-        assert form.description.data == index.description
 
 
 class TestEditCultivarFormWithDB:

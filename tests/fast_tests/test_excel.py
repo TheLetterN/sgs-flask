@@ -1,3 +1,4 @@
+import datetime
 import json
 import pytest
 from io import StringIO
@@ -656,7 +657,7 @@ class TestCultivarsWorksheet:
                   'Thumbnail Filename',
                   'Description',
                   'Synonyms',
-                  'New For',
+                  'New Until',
                   'In Stock',
                   'Active',
                   'Invisible',
@@ -694,7 +695,7 @@ class TestCultivarsWorksheet:
         assert cvws.cell(2, cvws.cols['Thumbnail Filename']).value is None
         assert cvws.cell(2, cvws.cols['Description']).value is None
         assert cvws.cell(2, cvws.cols['Synonyms']).value is None
-        assert cvws.cell(2, cvws.cols['New For']).value is None
+        assert cvws.cell(2, cvws.cols['New Until']).value is None
         assert cvws.cell(2, cvws.cols['In Stock']).value == 'False'
         assert cvws.cell(2, cvws.cols['Active']).value == 'False'
         assert cvws.cell(2, cvws.cols['Invisible']).value == 'False'
@@ -776,8 +777,12 @@ class TestCultivarsWorksheet:
         cvws.add_one(cv)
         assert cvws.cell(2, cvws.cols['Synonyms']).value == 'Vulpine'
 
-    def test_add_one_with_new_for(self):
-        """Add a Cultivar with New For to worksheet."""
+    def test_add_one_with_new_until(self):
+        """Add a Cultivar with New Until to worksheet.
+
+        New Until values should be dates formatted MM/DD/YYYY because 'murica.
+        """
+        dt = datetime.date(2012, 12, 21)
         wb = Workbook()
         ws = wb.active
         cvws = CultivarsWorksheet(ws)
@@ -785,9 +790,11 @@ class TestCultivarsWorksheet:
         cv = Cultivar(name='Foxy')
         cv.common_name = CommonName(name='Foxglove')
         cv.common_name.index = Index(name='Perennial')
-        cv.new_for = 1984
+        cv.new_until = dt
         cvws.add_one(cv)
-        assert cvws.cell(2, cvws.cols['New For']).value == 1984
+        assert cvws.cell(
+            2, cvws.cols['New Until']
+        ).value == dt.strftime('%m/%d/%Y')
 
     def test_add_one_in_stock(self):
         """Add an in-stock Cultivar to worksheet."""

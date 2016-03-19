@@ -25,6 +25,7 @@
 """
 
 
+import datetime
 import json
 import sys
 import warnings
@@ -928,7 +929,7 @@ class CultivarsWorksheet(SeedsWorksheet):
                       'Thumbnail Filename',
                       'Description',
                       'Synonyms',
-                      'New For',
+                      'New Until',
                       'In Stock',
                       'Active',
                       'Invisible',
@@ -965,8 +966,10 @@ class CultivarsWorksheet(SeedsWorksheet):
             syns = cv.synonyms_string
             if syns:
                 self.cell(r, self.cols['Synonyms']).value = syns
-            if cv.new_for:
-                self.cell(r, self.cols['New For']).value = cv.new_for
+            if cv.new_until:
+                self.cell(
+                    r, self.cols['New Until']
+                ).value = cv.new_until.strftime('%m/%d/%Y')
             is_cell = self.cell(r, self.cols['In Stock'])
             is_cell.value = 'True' if cv.in_stock else 'False'
             act_cell = self.cell(r, self.cols['Active'])
@@ -1007,7 +1010,11 @@ class CultivarsWorksheet(SeedsWorksheet):
         synonyms = self.cell(row, self.cols['Synonyms']).value
         if not synonyms:
             synonyms = ''
-        new_for = self.cell(row, self.cols['New For']).value
+        nus = self.cell(row, self.cols['New Until']).value
+        if nus:
+            new_until = datetime.datetime.strptime(nus, '%m/%d/%Y').date()
+        else:
+            new_until = None
         n_stk = self.cell(row, self.cols['In Stock']).value
         if n_stk and 'true' in n_stk.lower():
             in_stock = True
@@ -1133,16 +1140,17 @@ class CultivarsWorksheet(SeedsWorksheet):
             else:
                 print('Synonyms for the Cultivar \'{0}\' have been cleared.'
                       .format(cv.fullname), file=stream)
-        if str(new_for) != str(cv.new_for):
+        if new_until != cv.new_until:
             edited = True
-            if new_for:
-                cv.new_for = int(new_for)
-                print('The Cultivar \'{0}\' has been set as new for {1}.'
-                      .format(cv.fullname, cv.new_for), file=stream)
+            if new_until:
+                cv.new_until = new_until
+                print('The Cultivar \'{0}\' has been set as new until {1}.'
+                      .format(cv.fullname, cv.new_until.strftime('%m/%d/%Y')),
+                      file=stream)
             else:
-                cv.new_for = None
-                print('The Cultivar \'{0}\' is no longer set as new for any '
-                      'year.'.format(cv.fullname), file=stream)
+                cv.new_until = None
+                print('The Cultivar \'{0}\' is no longer set as new.'
+                      .format(cv.fullname), file=stream)
         if in_stock != cv.in_stock:
             edited = True
             cv.in_stock = in_stock

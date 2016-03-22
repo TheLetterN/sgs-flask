@@ -423,19 +423,6 @@ def add_common_name(idx_id=None):
             cn.synonyms_string = form.synonyms.data
             messages.append('Synonyms set to: \'{0}\'.'
                             .format(cn.synonyms_string))
-        if form.gw_common_names.data:
-            for cn_id in form.gw_common_names.data:
-                gw_cn = CommonName.query.get(cn_id)
-                cn.gw_common_names.append(gw_cn)
-                gw_cn.gw_common_names.append(cn)
-                messages.append('\'{0}\' grows well with \'{1}\'.'
-                                .format(gw_cn.name, cn.name))
-        if form.gw_cultivars.data:
-            for cv_id in form.gw_cultivars.data:
-                gw_cv = Cultivar.query.get(cv_id)
-                cn.gw_cultivars.append(gw_cv)
-                messages.append('\'{0}\' grows well with \'{1}\'.'
-                                .format(gw_cv.fullname, cn.name))
         db.session.commit()
         messages.append('New common name \'{0}\' added to the database.'
                         .format(cn.name))
@@ -566,19 +553,6 @@ def add_cultivar(cn_id=None):
             cv.synonyms_string = form.synonyms.data
             messages.append('Synonyms set to: \'{0}\'.'
                             .format(cv.synonyms_string))
-        if form.gw_common_names.data:
-            for cn_id in form.gw_common_names.data:
-                gw_cn = CommonName.query.get(cn_id)
-                cv.gw_common_names.append(gw_cn)
-                messages.append('\'{0}\' grows well with \'{1}\'.'
-                                .format(gw_cn.name, cv.fullname))
-        if form.gw_cultivars.data:
-            for cv_id in form.gw_cultivars.data:
-                gw_cv = Cultivar.query.get(cv_id)
-                cv.gw_cultivars.append(gw_cv)
-                gw_cv.gw_cultivars.append(cv)
-                messages.append('\'{0}\' grows well with \'{1}\'.'
-                                .format(gw_cv.fullname, cv.fullname))
         if form.new_until.data and form.new_until.data > datetime.date.today():
             cv.new_until = form.new_until.data
             messages.append('\'{0}\' will be marked as new until: {1}'
@@ -833,41 +807,6 @@ def edit_common_name(cn_id=None):
                 cn.description = None
                 flash('Description for \'{0}\' has been cleared.'
                       .format(cn.name))
-        if cn.gw_common_names:
-            for gw_cn in list(cn.gw_common_names):
-                if gw_cn.id not in form.gw_common_names.data:
-                    edited = True
-                    flash('\'{0}\' removed from Grows With for \'{1}\', and '
-                          'vice versa.'.format(gw_cn.name, cn.name))
-                    if cn in gw_cn.gw_common_names:
-                        gw_cn.gw_common_names.remove(cn)
-                    cn.gw_common_names.remove(gw_cn)
-        if form.gw_common_names.data:
-            for gw_cn_id in form.gw_common_names.data:
-                if gw_cn_id != 0 and gw_cn_id != cn.id:
-                    gw_cn = CommonName.query.get(gw_cn_id)
-                    if gw_cn not in cn.gw_common_names:
-                        edited = True
-                        flash('\'{0}\' added to Grows With for \'{1}\', and '
-                              'vice versa.'.format(gw_cn.name, cn.name))
-                        cn.gw_common_names.append(gw_cn)
-                        gw_cn.gw_common_names.append(cn)
-        if cn.gw_cultivars:
-            for gw_cv in list(cn.gw_cultivars):
-                if gw_cv.id not in form.gw_cultivars.data:
-                    edited = True
-                    flash('\'{0}\' removed from Grows With for \'{1}\', and '
-                          'vice versa'.format(gw_cv.name, cn.name))
-                    cn.gw_cultivars.remove(gw_cv)
-        if form.gw_cultivars.data:
-            for gw_cv_id in form.gw_cultivars.data:
-                if gw_cv_id != 0:
-                    gw_cv = Cultivar.query.get(gw_cv_id)
-                    if gw_cv not in cn.gw_cultivars:
-                        edited = True
-                        flash('\'{0}\' added to Grows With for \'{1}\', and '
-                              'vice versa.'.format(gw_cv.fullname, cn.name))
-                        cn.gw_cultivars.append(gw_cv)
         if not form.instructions.data:
             form.instructions.data = None
         if form.instructions.data != cn.instructions:
@@ -1181,42 +1120,6 @@ def edit_cultivar(cv_id=None):
                 cv.description = None
                 flash('Description for \'{0}\' has been cleared.'
                       .format(cv.fullname))
-        if cv.gw_common_names:
-            for gw_cn in list(cv.gw_common_names):
-                if gw_cn.id not in form.gw_common_names.data:
-                    edited = True
-                    flash('\'{0}\' removed from Grows With for \'{1}\', and '
-                          'vice versa.'.format(gw_cn.name, cv.fullname))
-                    cv.gw_common_names.remove(gw_cn)
-        if form.gw_common_names.data:
-            for gw_cn_id in form.gw_common_names.data:
-                if gw_cn_id != 0:
-                    gw_cn = CommonName.query.get(gw_cn_id)
-                    if gw_cn not in cv.gw_common_names:
-                        edited = True
-                        flash('\'{0}\' added to Grows With for \'{1}\', and '
-                              'vice versa.'.format(gw_cn.name, cv.fullname))
-                        cv.gw_common_names.append(gw_cn)
-        if cv.gw_cultivars:
-            for gw_cv in list(cv.gw_cultivars):
-                if gw_cv.id not in form.gw_cultivars.data:
-                    edited = True
-                    flash('\'{0}\' removed from Grows With for \'{1}\', and '
-                          'vice versa'.format(gw_cv.fullname, cv.fullname))
-                    if cv in gw_cv.gw_cultivars:
-                        gw_cv.gw_cultivars.remove(cv)
-                    cv.gw_cultivars.remove(gw_cv)
-        if form.gw_cultivars.data:
-            for gw_cv_id in form.gw_cultivars.data:
-                if gw_cv_id != 0 and gw_cv_id != cv.id:
-                    gw_cv = Cultivar.query.get(gw_cv_id)
-                    if gw_cv not in cv.gw_cultivars:
-                        edited = True
-                        flash('\'{0}\' added to Grows With for \'{1}\', and '
-                              'vice versa.'.format(gw_cv.fullname,
-                                                   cv.fullname))
-                        cv.gw_cultivars.append(gw_cv)
-                        gw_cv.gw_cultivars.append(cv)
         if form.in_stock.data:
             if not cv.in_stock:
                 edited = True

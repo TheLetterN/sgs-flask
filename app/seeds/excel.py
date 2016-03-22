@@ -488,9 +488,7 @@ class CommonNamesWorksheet(SeedsWorksheet):
                       'Description',
                       'Planting Instructions',
                       'Synonyms',
-                      'Invisible',
-                      'Grows With Common Names (JSON)',
-                      'Grows With Cultivars (JSON)')
+                      'Invisible')
             self._setup(titles)
 
     def add_one(self, cn, stream=sys.stdout):
@@ -523,14 +521,6 @@ class CommonNamesWorksheet(SeedsWorksheet):
                 self.cell(r, self.cols['Synonyms']).value = syns
             inv_cell = self.cell(r, self.cols['Invisible'])
             inv_cell.value = 'True' if cn.invisible else 'False'
-            if cn.gw_common_names:
-                self.cell(
-                    r, self.cols['Grows With Common Names (JSON)']
-                ).value = queryable_dicts_to_json(cn.gw_common_names)
-            if cn.gw_cultivars:
-                self.cell(
-                    r, self.cols['Grows With Cultivars (JSON)']
-                ).value = queryable_dicts_to_json(cn.gw_cultivars)
         else:
             raise TypeError('The object \'{0}\' could not be added because '
                             'it is not of type \'CommonName\'!'.format(cn))
@@ -558,14 +548,6 @@ class CommonNamesWorksheet(SeedsWorksheet):
             invisible = True
         else:
             invisible = False
-        gwcn_json = self.cell(
-            row, self.cols['Grows With Common Names (JSON)']
-        ).value
-        gwcn_dicts = json.loads(gwcn_json) if gwcn_json else None
-        gwcv_json = self.cell(
-            row, self.cols['Grows With Cultivars (JSON)']
-        ).value
-        gwcv_dicts = json.loads(gwcv_json) if gwcv_json else None
 
         print('-- BEGIN editing/creating CommonName \'{0}\' from row #{1}. --'
               .format(name, row), file=stream)
@@ -621,57 +603,6 @@ class CommonNamesWorksheet(SeedsWorksheet):
             else:
                 print('The CommonName \'{0}\' is visible on generated pages.'
                       .format(cn.name), file=stream)
-        if gwcn_dicts:
-            gwcns = tuple(get_or_create_common_name(
-                name=dbify(d['Common Name']),
-                index=dbify(d['Index']),
-                stream=stream
-            ) for d in gwcn_dicts)
-            for gwcn in gwcns:
-                if gwcn not in cn.gw_common_names:
-                    edited = True
-                    if cn not in gwcn.gw_common_names:
-                        gwcn.gw_common_names.append(cn)
-                        print('The CommonName \'{0}\' has been added to Grows '
-                              'With Common Names for the CommonName \'{1}\'.'
-                              .format(cn.name, gwcn.name), file=stream)
-                    cn.gw_common_names.append(gwcn)
-                    print('The CommonName \'{0}\' has been added to Grows '
-                          'With Common Names for the CommonName \'{1}\'.'
-                          .format(gwcn.name, cn.name), file=stream)
-        else:
-            gwcns = tuple()
-        for gwcn in list(cn.gw_common_names):
-            if gwcn not in gwcns:
-                edited = True
-                cn.gw_common_names.remove(gwcn)
-                print('The CommonName \'{0}\' has been removed from Grows '
-                      'With Common Names for the CommonName \'{1}\'.'
-                      .format(gwcn.name, cn.name), file=stream)
-        if gwcv_dicts:
-            gwcvs = tuple(get_or_create_cultivar(
-                name=dbify(d['Cultivar Name']),
-                common_name=dbify(d['Common Name']),
-                index=dbify(d['Index']),
-                series=dbify(d['Series']),
-                stream=stream
-            ) for d in gwcv_dicts)
-            for gwcv in gwcvs:
-                if gwcv not in cn.gw_cultivars:
-                    edited = True
-                    cn.gw_cultivars.append(gwcv)
-                    print('The Cultivar \'{0}\' has been added to Grows With '
-                          'Cultivars for the CommonName \'{1}\'.'
-                          .format(gwcv.fullname, cn.name), file=stream)
-        else:
-            gwcvs = tuple()
-        for gwcv in list(cn.gw_cultivars):
-            if gwcv not in gwcvs:
-                edited = True
-                cn.gw_cultivars.remove(gwcv)
-                print('The Cultivar \'{0}\' has been removed from Grows With '
-                      'Cultivars for the CommonName \'{1}\'.'
-                      .format(gwcv.fullname, cn.name), file=stream)
         if edited:
             db.session.flush()
             print('Changes to the CommonName \'{0}\' have been flushed to the '
@@ -932,9 +863,7 @@ class CultivarsWorksheet(SeedsWorksheet):
                       'New Until',
                       'In Stock',
                       'Active',
-                      'Invisible',
-                      'Grows With Common Names (JSON)',
-                      'Grows With Cultivars (JSON)')
+                      'Invisible')
             self._setup(titles)
 
     def add_one(self, cv, stream=sys.stdout):
@@ -976,14 +905,6 @@ class CultivarsWorksheet(SeedsWorksheet):
             act_cell.value = 'True' if cv.active else 'False'
             inv_cell = self.cell(r, self.cols['Invisible'])
             inv_cell.value = 'True' if cv.invisible else 'False'
-            if cv.gw_common_names:
-                self.cell(
-                    r, self.cols['Grows With Common Names (JSON)']
-                ).value = queryable_dicts_to_json(cv.gw_common_names)
-            if cv.gw_cultivars:
-                self.cell(
-                    r, self.cols['Grows With Cultivars (JSON)']
-                ).value = queryable_dicts_to_json(cv.gw_cultivars)
         else:
             raise TypeError('The object \'{0}\' could not be added because '
                             'it is not of type \'Cultivar\'!'.format(cv))
@@ -1030,14 +951,6 @@ class CultivarsWorksheet(SeedsWorksheet):
             invisible = True
         else:
             invisible = False
-        gwcn_json = self.cell(
-            row, self.cols['Grows With Common Names (JSON)']
-        ).value
-        gwcn_dicts = json.loads(gwcn_json) if gwcn_json else None
-        gwcv_json = self.cell(
-            row, self.cols['Grows With Cultivars (JSON)']
-        ).value
-        gwcv_dicts = json.loads(gwcv_json) if gwcv_json else None
 
         print('-- BEGIN editing/creating Cultivar \'{0}\' from row #{1}. '
               '--'.format(cultivar + ' ' + common_name, row), file=stream)
@@ -1178,57 +1091,6 @@ class CultivarsWorksheet(SeedsWorksheet):
             else:
                 print('The Cultivar \'{0}\' will be shown on auto-generated '
                       'pages.'.format(cv.fullname), file=stream)
-        if gwcn_dicts:
-            gwcns = tuple(get_or_create_common_name(
-                name=dbify(d['Common Name']),
-                index=dbify(d['Index']),
-                stream=stream
-            ) for d in gwcn_dicts)
-            for gwcn in gwcns:
-                if gwcn not in cv.gw_common_names:
-                    edited = True
-                    cv.gw_common_names.append(gwcn)
-                    print('The CommonName \'{0}\' has been added to Grows '
-                          'With Common Names for the Cultivar \'{1}\'.'
-                          .format(gwcn.name, cv.fullname), file=stream)
-        else:
-            gwcns = tuple()
-        for gwcn in list(cv.gw_common_names):
-            if gwcn not in gwcns:
-                edited = True
-                cv.gw_common_names.remove(gwcn)
-                print('The CommonName \'{0}\' has been removed from Grows '
-                      'With Common Names for the Cultivar \'{1}\'.'
-                      .format(gwcn.name, cv.fullname), file=stream)
-        if gwcv_dicts:
-            gwcvs = tuple(get_or_create_cultivar(
-                name=dbify(d['Cultivar Name']),
-                common_name=dbify(d['Common Name']),
-                index=dbify(d['Index']),
-                series=dbify(d['Series']),
-                stream=stream
-            ) for d in gwcv_dicts)
-            for gwcv in gwcvs:
-                if gwcv not in cv.gw_cultivars:
-                    edited = True
-                    cv.gw_cultivars.append(gwcv)
-                    if cv not in gwcv.gw_cultivars:
-                        gwcv.gw_cultivars.append(cv)
-                        print('The Cultivar \'{0}\' has been added to Grows '
-                              'With Cultivars for the Cultivar \'{1}\'.'
-                              .format(cv.fullname, gwcv.fullname), file=stream)
-                    print('The Cultivar \'{0}\' has been added to Grows With '
-                          'Cultivars for the Cultivar \'{1}\'.'
-                          .format(gwcv.fullname, cv.fullname), file=stream)
-        else:
-            gwcvs = tuple()
-        for gwcv in list(cv.gw_cultivars):
-            if gwcv not in gwcvs:
-                edited = True
-                cv.gw_cultivars.remove(gwcv)
-                print('The Cultivar \'{0}\' has been removed from Grows With '
-                      'Cultivars for the Cultivar \'{1}\'.'
-                      .format(gwcv.fullname, cv.fullname), file=stream)
         if edited:
             db.session.flush()
             print('Changes to the Cultivar \'{0}\' have been flushed to '

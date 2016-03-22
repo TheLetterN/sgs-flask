@@ -360,9 +360,7 @@ class TestCommonNamesWorksheet:
                   'Description',
                   'Planting Instructions',
                   'Synonyms',
-                  'Invisible',
-                  'Grows With Common Names (JSON)',
-                  'Grows With Cultivars (JSON)')
+                  'Invisible')
         m_s.assert_called_with(titles)
 
     @mock.patch('app.seeds.excel.CommonNamesWorksheet._setup')
@@ -393,19 +391,13 @@ class TestCommonNamesWorksheet:
         assert cnws.cell(2, cnws.cols['Planting Instructions']).value is None
         assert cnws.cell(2, cnws.cols['Synonyms']).value is None
         assert cnws.cell(2, cnws.cols['Invisible']).value == 'False'
-        assert cnws.cell(
-            2, cnws.cols['Grows With Common Names (JSON)']
-        ).value is None
-        assert cnws.cell(
-            2, cnws.cols['Grows With Cultivars (JSON)']
-        ).value is None
         messages.seek(0)
         msgs = messages.read()
         assert ('Adding data from <CommonName \'Foxglove\'> to row #2 of '
                 'common names worksheet.') in msgs
 
-    def test_add_one_no_gw(self):
-        """Add a common name (with no Grows With) to Common Names sheet."""
+    def test_add_one_with_optionals(self):
+        """Add a common name with optionals to Common Names sheet."""
         wb = Workbook()
         ws = wb.active
         cnws = CommonNamesWorksheet(ws)
@@ -425,45 +417,6 @@ class TestCommonNamesWorksheet:
         ).value == 'Just add water!'
         assert cnws.cell(2, cnws.cols['Synonyms']).value == 'Digitalis'
         assert cnws.cell(2, cnws.cols['Invisible']).value == 'True'
-
-    def test_add_one_with_gw_cn(self):
-        """Add a common name with some Grows With Common Names."""
-        wb = Workbook()
-        ws = wb.active
-        cnws = CommonNamesWorksheet(ws)
-        cnws.setup()
-        cn = CommonName(name='Foxglove')
-        cn.index = Index(name='Perennial')
-        gwcn1 = CommonName(name='Tomato')
-        gwcn1.index = Index(name='Vegetable')
-        gwcn2 = CommonName(name='Basil')
-        gwcn2.index = Index(name='Herb')
-        cn.gw_common_names = [gwcn1, gwcn2]
-        cnws.add_one(cn)
-        assert cnws.cell(
-            2, cnws.cols['Grows With Common Names (JSON)']
-        ).value == queryable_dicts_to_json([gwcn1, gwcn2])
-
-    def test_add_one_with_gw_cv(self):
-        """Add a common name with some Grows With Cultivars."""
-        wb = Workbook()
-        ws = wb.active
-        cnws = CommonNamesWorksheet(ws)
-        cnws.setup()
-        cn = CommonName(name='Foxglove')
-        cn.index = Index(name='Perennial')
-        gwcv1 = Cultivar(name='Soulmate')
-        gwcv1.common_name = CommonName(name='Butterfly Weed')
-        gwcv1.common_name.index = Index(name='Perennial')
-        gwcv2 = Cultivar(name='Petra')
-        gwcv2.common_name = CommonName(name='Foxglove')
-        gwcv2.common_name.index = Index(name='Perennial')
-        gwcv2.series = Series(name='Polkadot')
-        cn.gw_cultivars = [gwcv1, gwcv2]
-        cnws.add_one(cn)
-        assert cnws.cell(
-            2, cnws.cols['Grows With Cultivars (JSON)']
-        ).value == queryable_dicts_to_json([gwcv1, gwcv2])
 
     def test_add_one_not_common_name(self):
         """Raise a TypeError given data that isn't a CommonName."""
@@ -660,9 +613,7 @@ class TestCultivarsWorksheet:
                   'New Until',
                   'In Stock',
                   'Active',
-                  'Invisible',
-                  'Grows With Common Names (JSON)',
-                  'Grows With Cultivars (JSON)')
+                  'Invisible')
         m_s.assert_called_with(titles)
 
     @mock.patch('app.seeds.excel.CultivarsWorksheet._setup')
@@ -699,12 +650,6 @@ class TestCultivarsWorksheet:
         assert cvws.cell(2, cvws.cols['In Stock']).value == 'False'
         assert cvws.cell(2, cvws.cols['Active']).value == 'False'
         assert cvws.cell(2, cvws.cols['Invisible']).value == 'False'
-        assert cvws.cell(
-            2, cvws.cols['Grows With Common Names (JSON)']
-        ).value is None
-        assert cvws.cell(
-            2, cvws.cols['Grows With Cultivars (JSON)']
-        ).value is None
         messages.seek(0)
         msgs = messages.read()
         assert ('Adding data from <Cultivar \'Foxy Foxglove\'> to row #2 of '
@@ -852,41 +797,6 @@ class TestCultivarsWorksheet:
         cv2.invisible = False
         cvws.add_one(cv2)
         assert cvws.cell(3, cvws.cols['Invisible']).value == 'False'
-
-    def test_add_one_with_gw_common_names(self):
-        """Add a Cultivar with Grows With Common Names to worksheet."""
-        wb = Workbook()
-        ws = wb.active
-        cvws = CultivarsWorksheet(ws)
-        cvws.setup()
-        cv = Cultivar(name='Foxy')
-        cv.common_name = CommonName(name='Foxglove')
-        cv.common_name.index = Index(name='Perennial')
-        gwcn = CommonName(name='Butterfly Weed')
-        gwcn.index = Index(name='Perennial')
-        cv.gw_common_names = [gwcn]
-        cvws.add_one(cv)
-        assert cvws.cell(
-            2, cvws.cols['Grows With Common Names (JSON)']
-        ).value == queryable_dicts_to_json((gwcn,))
-
-    def test_add_one_with_gw_cultivars(self):
-        """Add a Cultivar with Grows With Cultivars to worksheet."""
-        wb = Workbook()
-        ws = wb.active
-        cvws = CultivarsWorksheet(ws)
-        cvws.setup()
-        cv = Cultivar(name='Foxy')
-        cv.common_name = CommonName(name='Foxglove')
-        cv.common_name.index = Index(name='Perennial')
-        gwcv = Cultivar(name='Soulmate')
-        gwcv.common_name = CommonName(name='Butterfly Weed')
-        gwcv.common_name.index = Index(name='Perennial')
-        cv.gw_cultivars = [gwcv]
-        cvws.add_one(cv)
-        assert cvws.cell(
-            2, cvws.cols['Grows With Cultivars (JSON)']
-        ).value == queryable_dicts_to_json((gwcv,))
 
     def test_add_one_not_cultivar(self):
         """Raise a TypeError given non-Cultivar data."""

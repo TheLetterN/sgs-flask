@@ -146,38 +146,13 @@ botanical_names_to_common_names = db.Table(
 )
 
 
-cns_to_gw_cns = db.Table(
-    'cns_to_gw_cns',
-    db.Model.metadata,
-    db.Column('common_name_id', db.Integer, db.ForeignKey('common_names.id')),
-    db.Column('gw_common_name_id',
-              db.Integer,
-              db.ForeignKey('common_names.id'))
-)
-
-
-gw_common_names_to_gw_cultivars = db.Table(
-    'gw_common_names_to_gw_cultivars',
-    db.Model.metadata,
-    db.Column('common_names_id', db.Integer, db.ForeignKey('common_names.id')),
-    db.Column('cultivars_id', db.Integer, db.ForeignKey('cultivars.id'))
-)
-
-
-cultivars_to_gw_cultivars = db.Table(
-    'cultivars_to_gw_cultivars',
-    db.Model.metadata,
-    db.Column('cultivar_id', db.Integer, db.ForeignKey('cultivars.id')),
-    db.Column('gw_cultivar_id', db.Integer, db.ForeignKey('cultivars.id'))
-)
-
-
 cultivars_to_custom_pages = db.Table(
     'cultivars_to_custom_pages',
     db.Model.metadata,
     db.Column('cultivar_id', db.Integer, db.ForeignKey('cultivars.id')),
     db.Column('custom_pages_id', db.Integer, db.ForeignKey('custom_pages.id'))
 )
+
 
 cultivars_to_images = db.Table(
     'cultivars_to_images',
@@ -484,9 +459,6 @@ class CommonName(SynonymsMixin, db.Model):
             if this `CommonName` is 'Dwarf Coleus', it would have 'Coleus' as
             its parent.
             Backref: `CommonName.children`
-        gw_common_names: MtM self-referential relationship; an optional
-            collection of CommonNames that grow well with the specified
-            `CommonName`.
         invisible: True if the specified `CommonName` is to be shown on auto-
             generated pages, False if it should only be shown on custom pages
             that explicitly include it. Default value: False.
@@ -496,7 +468,6 @@ class CommonName(SynonymsMixin, db.Model):
         series: Backref from `Series.common_name`. Note: series is plural here,
             as this is the many side of the relationship.
         cultivars: Backref from `Cultivar.common_name`.
-        gw_cultivars: Backref from `Cultivar.gw_common_names`.
         synonyms: Backref from `Synonym.common_name`.
     """
     __tablename__ = 'common_names'
@@ -520,12 +491,6 @@ class CommonName(SynonymsMixin, db.Model):
                              foreign_keys=parent_id,
                              remote_side=[id])
     invisible = db.Column(db.Boolean, default=False)
-    gw_common_names = db.relationship(
-        'CommonName',
-        secondary=cns_to_gw_cns,
-        primaryjoin=id == cns_to_gw_cns.c.common_name_id,
-        secondaryjoin=id == cns_to_gw_cns.c.gw_common_name_id
-    )
 
     def __init__(self,
                  name=None,
@@ -533,14 +498,8 @@ class CommonName(SynonymsMixin, db.Model):
                  description=None,
                  instructions=None,
                  parent=None,
-                 invisible=None,
-                 gw_cultivars=None):
-        """Construct an instance of `CommonName`.
-
-        Note:
-            `gw_common_names` has been left out because it requires work to be
-            set correctly.
-        """
+                 invisible=None):
+        """Construct an instance of `CommonName`."""
         self.name = name
         self.index = index
         self.description = description
@@ -548,8 +507,6 @@ class CommonName(SynonymsMixin, db.Model):
         self.parent = parent
         if invisible is not None:  # Do not override default value
             self.invisible = invisible
-        if gw_cultivars:  # Can't set an SQLAlchemy collection to None
-            self.gw_cultivars = gw_cultivars
 
     def __repr__(self):
         return '<{0} \'{1}\'>'.format(self.__class__.__name__, self.name)
@@ -860,11 +817,6 @@ class Cultivar(SynonymsMixin, db.Model):
         invisible: Whether or not this cultivar should be shown on
             automatically generated pages. Cultivars set to invisible can still
             be shown on custom pages.
-        gw_common_names: MtM relationship with `CommonName`; common names this
-            cultivar grows well with.
-            Backref: `CommonName.gw_cultivars`
-        gw_cultivars: MtM self-referential relationship; cultivars this
-            cultivar grows well with.
         thumbnail: OtO relationship with `Image`; thumbnail data for this
             cultivar.
             Backref: `Image.cultivar`
@@ -901,18 +853,6 @@ class Cultivar(SynonymsMixin, db.Model):
     active = db.Column(db.Boolean)
     in_stock = db.Column(db.Boolean)
     invisible = db.Column(db.Boolean, default=False)
-    gw_common_names = db.relationship(
-        'CommonName',
-        secondary=gw_common_names_to_gw_cultivars,
-        backref='gw_cultivars'
-    )
-    gw_cultivars = db.relationship(
-        'Cultivar',
-        back_populates='gw_cultivars',
-        secondary=cultivars_to_gw_cultivars,
-        primaryjoin=id == cultivars_to_gw_cultivars.c.cultivar_id,
-        secondaryjoin=id == cultivars_to_gw_cultivars.c.gw_cultivar_id
-    )
     thumbnail_id = db.Column(db.Integer, db.ForeignKey('images.id'))
     thumbnail = db.relationship('Image',
                                 foreign_keys=thumbnail_id,
@@ -930,14 +870,12 @@ class Cultivar(SynonymsMixin, db.Model):
                  new_for=None,
                  active=None,
                  in_stock=None,
-                 invisible=None,
-                 gw_common_names=None):
+                 invisible=None):
         """Create an instance of Cultivar.
 
         Note:
-            `gw_cultivars`, `images`, and `thumbnail` have been left out
-            because in practice they should have some work done to ensure they
-            are set correctly.
+            `images` and `thumbnail` have been left out because in practice
+            they should have some work done to ensure they are set correctly.
         """
         self.name = name
         self.common_name = common_name
@@ -951,8 +889,6 @@ class Cultivar(SynonymsMixin, db.Model):
             self.in_stock = in_stock
         if invisible is not None:
             self.invisible = invisible
-        if gw_common_names:  # collection will break if set to None
-            self.gw_common_names = gw_common_names
 
     def __repr__(self):
         """Return representation of Cultivar in human-readable format."""

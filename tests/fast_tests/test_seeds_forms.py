@@ -288,37 +288,6 @@ class TestEditBotanicalNameForm:
 
 class TestEditCommonNameForm:
     """Test custom methods of EditCommonNameForm."""
-    def test_populate(self, app):
-        """Populate form from CommonName object."""
-        cn = CommonName()
-        cn.id = 1
-        cn.name = 'Dwarf Coleus'
-        idx = Index()
-        idx.id = 1
-        idx.name = 'Perennial Flower'
-        cn.index = idx
-        cnp = CommonName()
-        cnp.id = 2
-        cnp.name = 'Coleus'
-        cn.parent = cnp
-        cn.synonyms_string = 'Vertically Challenged Coleus'
-        gwcn = CommonName()
-        gwcn.id = 3
-        gwcn.name = 'Foxglove'
-        cn.gw_common_names.append(gwcn)
-        gwcv = Cultivar()
-        gwcv.name = 'Foxy'
-        gwcv.id = 1
-        cn.gw_cultivars.append(gwcv)
-        cn.description = 'Not mint.'
-        form = EditCommonNameForm()
-        form.populate(cn)
-        assert form.name.data == cn.name
-        assert form.description.data == cn.description
-        assert form.synonyms.data == 'Vertically Challenged Coleus'
-        assert form.index.data == idx.id
-        assert gwcn.id in form.gw_common_names.data
-        assert gwcv.id in form.gw_cultivars.data
 
     def test_validate_synonyms_too_long(self):
         """Raise ValidationError if any synonyms are too long."""
@@ -336,43 +305,6 @@ class TestEditCommonNameForm:
 
 class TestEditCultivarForm:
     """Test custom methods for EditCultivarForm."""
-    def test_populate(self):
-        """Populate form with values from a Cultivar."""
-        form = EditCultivarForm()
-        cv = Cultivar(name='Foxy', description='Like Hendrix!')
-        cv.id = 1
-        bn = BotanicalName(name='Digitalis purpurea')
-        bn.id = 2
-        cv.botanical_name = bn
-        idx = Index(name='Perennial Flower')
-        idx.id = 3
-        cn = CommonName(name='Foxglove')
-        cn.id = 4
-        cn.index = idx
-        cv.common_name = cn
-        cv.in_stock = True
-        cv.active = True
-        gwcn = CommonName(name='Butterfly Weed')
-        gwcn.id = 5
-        cv.gw_common_names.append(gwcn)
-        gwcv = Cultivar(name='Soulmate')
-        gwcv.common_name = gwcn
-        gwcv.id = 6
-        cv.gw_cultivars.append(gwcv)
-        series = Series(name='Spotty')
-        series.id = 7
-        cv.series = series
-        cv.synonyms_string = 'Fauxy'
-        form.populate(cv)
-        assert form.name.data == 'Foxy'
-        assert form.description.data == 'Like Hendrix!'
-        assert form.common_name.data == cn.id
-        assert form.in_stock.data
-        assert form.active.data
-        assert gwcn.id in form.gw_common_names.data
-        assert gwcv.id in form.gw_cultivars.data
-        assert form.series.data == series.id
-        assert form.synonyms.data == 'Fauxy'
 
     def test_validate_synonyms_same_name(self):
         """Raise ValidationError if any synonym same as name."""

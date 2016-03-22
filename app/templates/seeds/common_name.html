@@ -20,7 +20,6 @@
 {# block head: 2 indentations of 4 spaces each. (8 spaces total.) #}
 {# block main: 3 indentations of 4 spaces each. (12 spaces total.) #}
 {% from 'includes/cultivar_box.html' import cultivar_box with context %}
-{% from 'includes/grows_with.html' import grows_with %}
 {% set subcategories = cn.children %}
 {% set series = cn.series %}
 {% block head %}
@@ -33,7 +32,6 @@
                 {% if cn.description %}
                 <p class="description">{{ cn.description|safe }}</p>
                 {% endif %}
-                {% if cn.gw_common_names or cn.gw_cultivars %}<p class="grows_with">Grows nicely with: {{ grows_with(cn) }}.</p>{% endif %}
             </div>
             {% if cn.parent %}
             <a href="{{ url_for('seeds.common_name', idx_slug=idx.slug, cn_slug=cn.parent.slug) }}">Back to {{ cn.parent.name }}</a>

@@ -250,10 +250,6 @@ class AddCommonNameForm(Form):
         description: Text field for the optional description of a `CommonName`.
         instructions: Text field for optional planting instructions.
         synonyms: Text field for optional synonyms of added `CommonName`.
-        gw_common_names: Select field for instances of `CommonName` that grow
-        well with added `CommonName`.
-        gw_cultivars: Select field for instances of `Cultivar` that grow well
-            with aded `CommonName`.
         next_page: Radio field to select page to redirect to after submitting
             a `CommonName`.
 
@@ -267,8 +263,6 @@ class AddCommonNameForm(Form):
                                  validators=[NotSpace()])
     synonyms = StringField('Synonyms',
                            validators=[NotSpace(), SynonymLength(0, 64)])
-    gw_common_names = SelectMultipleField('Common Names', coerce=int)
-    gw_cultivars = SelectMultipleField('Cultivars', coerce=int)
     next_page = RadioField(
         'After submission, go to',
         choices=[('add_botanical_name', 'Add Botanical Name (optional)'),
@@ -313,16 +307,6 @@ class AddCommonNameForm(Form):
 
     def set_selects(self):
         """Populate choices for select (and select multiple) fields."""
-        self.gw_common_names.choices = select_field_choices(
-            model=CommonName,
-            title_attribute='select_field_title',
-            order_by='name'
-        )
-        self.gw_cultivars.choices = select_field_choices(
-            model=Cultivar,
-            title_attribute='fullname',
-            order_by='name'
-        )
         self.parent_cn.choices = select_field_choices(
             items=self.index.common_names,
             title_attribute='name',
@@ -448,10 +432,6 @@ class AddCultivarForm(Form):
         synonyms: String field for optional synonyms of this cultivar.
         new_until: Date field for optional date to mark added `Cultivar` as new
             until.
-        gw_common_names: Select multiple field for `CommonName` instances that
-            grow well with added `Cultivar`.
-        gw_cultivars: Select multiple field for `Cultivar` instances that grow
-            well with added `Cultivar`.
         in_stock: Checkbox for whether or not added `Cultivar` is in stock.
         active: Checkbox for whether or not added `Cultivar` is to be actively
             replenished when stock gets low.
@@ -470,8 +450,6 @@ class AddCultivarForm(Form):
     description = TextAreaField('Description', validators=[NotSpace()])
     synonyms = StringField('Synonyms', validators=[SynonymLength(1, 64),
                                                    NotSpace()])
-    gw_common_names = SelectMultipleField('Common Names', coerce=int)
-    gw_cultivars = SelectMultipleField('Cultivars', coerce=int)
     new_until = DateField('New until (leave as-is if not new)',
                           format='%m/%d/%Y',
                           default=datetime.date.today())
@@ -530,16 +508,6 @@ class AddCultivarForm(Form):
             order_by='name'
         )
         self.botanical_name.choices.insert(0, (0, 'None'))
-        self.gw_common_names.choices = select_field_choices(
-            model=CommonName,
-            title_attribute='select_field_title',
-            order_by='name'
-        )
-        self.gw_cultivars.choices = select_field_choices(
-            model=Cultivar,
-            title_attribute='fullname',
-            order_by='name'
-        )
         self.series.choices = select_field_choices(items=self.cn.series,
                                                    order_by='name')
         self.series.choices.insert(0, (0, 'None'))
@@ -715,10 +683,6 @@ class EditCommonNameForm(Form):
         cn_id (int): ID of common name to edit.
         index (SelectField): Select for indexes.
         description (TextAreaField): Field for description of common name.
-        gw_common_names (SelectMultipleField): Field for common names that
-            grow well with this one.
-        gw_cultivars (SelectMultipleField): Field for cultivars that grow well
-            with this common name.
         instructions (TextAreaField): Field for planting instructions.
         name (StringField): CommonName name to edit.
         submit (SubmitField): Submit button.
@@ -729,8 +693,6 @@ class EditCommonNameForm(Form):
                         coerce=int,
                         validators=[DataRequired()])
     description = TextAreaField('Description', validators=[NotSpace()])
-    gw_common_names = SelectMultipleField('Common Names', coerce=int)
-    gw_cultivars = SelectMultipleField('Cultivars', coerce=int)
     instructions = TextAreaField('Planting Instructions',
                                  validators=[NotSpace()])
     name = StringField('Common Name', validators=[Length(1, 64), NotSpace()])
@@ -752,26 +714,10 @@ class EditCommonNameForm(Form):
         if cn.synonyms:
             self.synonyms.data = cn.synonyms_string
         self.index.data = cn.index.id
-        if cn.gw_common_names:
-            self.gw_common_names.data = [gw_cn.id for gw_cn in
-                                         cn.gw_common_names]
-        if cn.gw_cultivars:
-            self.gw_cultivars.data = [gw_cultivar.id for
-                                      gw_cultivar in
-                                      cn.gw_cultivars]
 
     def set_selects(self):
         """Populate indexes with Indexes from the database."""
         self.index.choices = select_field_choices(model=Index)
-        self.gw_common_names.choices = select_field_choices(
-            model=CommonName,
-            title_attribute='select_field_title',
-            order_by='name'
-        )
-        self.gw_common_names.choices.insert(0, (0, 'None'))
-        self.gw_cultivars.choices = select_field_choices(model=Cultivar,
-                                                         order_by='name')
-        self.gw_cultivars.choices.insert(0, (0, 'None'))
         self.parent_cn.choices = select_field_choices(
             model=CommonName,
             title_attribute='select_field_title',
@@ -965,10 +911,6 @@ class EditCultivarForm(Form):
             active.
         visible (BooleanField): Field for whether or not this cultivar is
             shown on auto-generated pages.
-        gw_common_names (SelectMultipleField): Field for selecting common names
-            that grow well with this cultivar.
-        gw_cultivars (SelectMultipleField): Field for selecting cultivars that
-            grow well with this cultivar.
         in_stock (Boolean): Field for whether or not cultivar is in stock.
         name (StringField): Field for name of cultivar.
         series (SelectField): Field for selecting a series this cultivar
@@ -989,8 +931,6 @@ class EditCultivarForm(Form):
                           default=datetime.date.today())
     active = BooleanField('Actively replenished')
     visible = BooleanField('Visible on auto-generated pages')
-    gw_common_names = SelectMultipleField('Common Names', coerce=int)
-    gw_cultivars = SelectMultipleField('Cultivars', coerce=int)
     in_stock = BooleanField('In Stock')
     name = StringField('Cultivar Name', validators=[Length(1, 64), NotSpace()])
     series = SelectField('Select Series', coerce=int)
@@ -1010,15 +950,6 @@ class EditCultivarForm(Form):
             title_attribute='select_field_title',
             order_by='name'
         )
-        self.gw_common_names.choices = select_field_choices(
-            model=CommonName,
-            title_attribute='select_field_title',
-            order_by='name'
-        )
-        self.gw_common_names.choices.insert(0, (0, 'None'))
-        self.gw_cultivars.choices = select_field_choices(model=Cultivar,
-                                                         order_by='name')
-        self.gw_cultivars.choices.insert(0, (0, 'None'))
         self.series.choices = select_field_choices(model=Series,
                                                    order_by='name')
         self.series.choices.insert(0, (0, 'N/A'))
@@ -1040,13 +971,6 @@ class EditCultivarForm(Form):
             self.active.data = True
         if not cultivar.invisible:
             self.visible.data = True
-        if cultivar.gw_common_names:
-            self.gw_common_names.data = [gw_cn.id for gw_cn in
-                                         cultivar.gw_common_names]
-        if cultivar.gw_cultivars:
-            self.gw_cultivars.data = [gw_cv.id for
-                                      gw_cv in
-                                      cultivar.gw_cultivars]
         self.name.data = cultivar.name
         if cultivar.series:
             self.series.data = cultivar.series.id

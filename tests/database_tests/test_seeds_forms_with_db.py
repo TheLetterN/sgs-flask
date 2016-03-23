@@ -1,3 +1,5 @@
+from unittest import mock
+
 import pytest
 from decimal import Decimal
 from wtforms import ValidationError
@@ -175,25 +177,6 @@ class TestAddCultivarFormWithDB:
             form3.validate_name(form3.name)
 
 
-class TestEditBotanicalNameFormWithDB:
-    """Test custom methods of EditBotanicalNameForm."""
-    def test_set_common_names(self, db):
-        """Set common_names.choices with CommonNames from db."""
-        cn1 = CommonName()
-        cn2 = CommonName()
-        cn3 = CommonName()
-        db.session.add_all([cn1, cn2, cn3])
-        cn1.name = 'Coleus'
-        cn2.name = 'Sunflower'
-        cn3.name = 'Zinnia'
-        db.session.commit()
-        form = EditBotanicalNameForm()
-        form.set_common_names()
-        assert (cn1.id, cn1.name) in form.common_names.choices
-        assert (cn2.id, cn2.name) in form.common_names.choices
-        assert (cn3.id, cn3.name) in form.common_names.choices
-
-
 class TestEditCultivarFormWithDB:
     """Test custom methods of EditCultivarForm."""
     def test_set_selects(self, db):
@@ -208,38 +191,23 @@ class TestEditCultivarFormWithDB:
         db.session.commit()
         form = EditCultivarForm()
         form.set_selects()
-        assert (bn.id, bn.name) in form.botanical_name.choices
-        assert (cn.id, cn.name) in form.common_name.choices
+        assert (bn.id, bn.name) in form.botanical_name_id.choices
+        assert (cn.id, cn.name) in form.common_name_id.choices
 
 
 class TestEditPacketFormWithDB:
     """Test custom methods of EditPacketForm."""
-    def test_populate(self, db):
-        """Populate form with info from database."""
-        pkt = Packet()
-        db.session.add(pkt)
-        pkt.price = Decimal('2.99')
-        pkt.quantity = Quantity(value=100, units='seeds')
-        pkt.sku = '8675309'
-        db.session.commit()
-        form = EditPacketForm()
-        form.populate(pkt)
-        assert form.price.data == pkt.price
-        assert form.units.data == pkt.quantity.units
-        assert form.quantity.data == pkt.quantity.value
-        assert form.sku.data == pkt.sku
-
-    def test_validate_quantity(self, db):
+    def test_validate_qty_val(self, db):
         """Raise a ValidationError if field.data can't be used as quantity."""
-        form = EditPacketForm()
-        form.quantity.data = 'Forty-two'
+        field = mock.MagicMock()
+        field.data = 'Forty-two'
         with pytest.raises(ValidationError):
-            form.validate_quantity(form.quantity)
+            EditPacketForm.validate_qty_val(None, field)
 
 
 class TestEditSeriesFormWithDB:
     """Test custom methods of EditSeriesForm."""
-    def test_set_common_name(self, db):
+    def test_set_selects(self, db):
         """Populate common_name select with ids from database."""
         cn1 = CommonName(name='Foxglove')
         cn2 = CommonName(name='Butterfly Weed')
@@ -247,10 +215,10 @@ class TestEditSeriesFormWithDB:
         db.session.add_all([cn1, cn2, cn3])
         db.session.commit()
         form = EditSeriesForm()
-        form.set_common_name()
-        assert (cn1.id, cn1.name) in form.common_name.choices
-        assert (cn2.id, cn2.name) in form.common_name.choices
-        assert (cn3.id, cn3.name) in form.common_name.choices
+        form.set_selects()
+        assert (cn1.id, cn1.name) in form.common_name_id.choices
+        assert (cn2.id, cn2.name) in form.common_name_id.choices
+        assert (cn3.id, cn3.name) in form.common_name_id.choices
 
 
 class TestSelectBotanicalFormWithDB:

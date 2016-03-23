@@ -105,7 +105,7 @@ class TestValidators:
     def test_notspace(self, app):
         """Raise validation error if field data is whitespace."""
         ns = NotSpace()
-        form = EditBotanicalNameForm()
+        form = mock.MagicMock()
         form.name.data = 'foo'
         ns.__call__(form, form.name)
         with pytest.raises(ValidationError):
@@ -150,7 +150,7 @@ class TestValidators:
     def test_usdollar(self):
         """Raise validation error if value can't be converted to USD."""
         usd = USDollar()
-        form = EditBotanicalNameForm()
+        form = mock.MagicMock()
         form.name.data = '$3.50'
         usd.__call__(form, form.name)
         form.name.data = '2.99'
@@ -252,93 +252,50 @@ class TestAddRedirectForm:
 
 class TestEditBotanicalNameForm:
     """Test custom methods of EditBotanicalNameForm."""
-    def test_populate(self, app):
-        """Populate form from a BotanicalName object."""
-        bn = BotanicalName()
-        bn.name = 'Asclepias incarnata'
-        bn.synonyms_string = 'Innagada davida'
-        form = EditBotanicalNameForm()
-        form.populate(bn)
-        assert form.name.data == bn.name
-        assert form.synonyms.data == 'Innagada davida'
-
-    def test_validate_synonyms_too_long(self):
+    def test_validate_synonyms_string_too_long(self):
         """Raise ValidationError if any synonyms are too long."""
-        form = EditBotanicalNameForm()
-        form.name.data = 'Digitalis purpurea'
-        form.synonyms.data = 'Digitalis watchus, Innagada davida'
-        form.validate_synonyms(form.synonyms)
-        form.synonyms.data = 'Digitalis watchus, He just kept talking in one '\
-                             'long incredibly unbroken sentence moving from '\
-                             'topic to topic so that no one had a chance to '\
-                             'interrupt'
+        field = mock.MagicMock()
+        field.data = 'Digitalis watchus, Innagada davida'
+        EditBotanicalNameForm.validate_synonyms_string(None, field)
+        field.data = ('Digitalis watchus, He just kept talking in one long '
+                      'incredibly unbroken sentence moving from topic to '
+                      'topic so that no one had a chance to interrupt')
         with pytest.raises(ValidationError):
-            form.validate_synonyms(form.synonyms)
+            EditBotanicalNameForm.validate_synonyms_string(None, field)
 
-    def test_validate_synonyms(self):
+    def test_validate_synonyms_string_not_bn(self):
         """Raise ValidationError if any synonyms are not valid binomen."""
-        form = EditBotanicalNameForm()
-        form.name.data = 'Digitalis purpurea'
-        form.synonyms.data = 'Digitalis watchus, Innagada davida'
-        form.validate_synonyms(form.synonyms)
-        form.synonyms.data = 'Digitalis watchus, innagada davida'
+        field = mock.MagicMock()
+        field.data = 'Digitalis watchus, Innagada davida'
+        EditBotanicalNameForm.validate_synonyms_string(None, field)
+        field.data = 'Digitalis watchus, innagada davida'
         with pytest.raises(ValidationError):
-            form.validate_synonyms(form.synonyms)
+            EditBotanicalNameForm.validate_synonyms_string(None, field)
 
 
 class TestEditCommonNameForm:
     """Test custom methods of EditCommonNameForm."""
-
-    def test_validate_synonyms_too_long(self):
+    def test_validate_synonyms_string(self):
         """Raise ValidationError if any synonyms are too long."""
-        form = EditCommonNameForm()
-        form.name.data = 'Foxglove'
-        form.synonyms.data = 'Digitalis'
-        form.validate_synonyms(form.synonyms)
-        form.synonyms.data = 'Digitalis, He just kept talking in one long '\
-                             'incredibly unbroken sentence moving from topic '\
-                             'to topic so that no one had a chance to '\
-                             'interrupt'
+        field = mock.MagicMock()
+        field.data = 'Digitalis'
+        EditCommonNameForm.validate_synonyms_string(None, field)
+        field.data = 'Digitalis, He just kept talking in one long '\
+                     'incredibly unbroken sentence moving from topic '\
+                     'to topic so that no one had a chance to interrupt'
         with pytest.raises(ValidationError):
-            form.validate_synonyms(form.synonyms)
+            EditCommonNameForm.validate_synonyms_string(None, field)
 
 
 class TestEditCultivarForm:
     """Test custom methods for EditCultivarForm."""
-
-    def test_validate_synonyms_same_name(self):
-        """Raise ValidationError if any synonym same as name."""
-        form = EditCultivarForm()
-        form.name.data = 'Foxy'
-        form.synonyms.data = 'Fauxy, Fawksy'
-        form.validate_synonyms(form.synonyms)
-        form.synonyms.data = 'Fauxy, Fawksy, Foxy'
-        with pytest.raises(ValidationError):
-            form.validate_synonyms(form.synonyms)
-
-    def test_validate_synonyms_too_long(self):
+    def test_validate_synonyms_string_too_long(self):
         """Raise ValidationError if any synonym is too long."""
-        form = EditCultivarForm()
-        form.name.data = 'Foxy'
-        form.synonyms.data = 'Fauxy, Fawksy'
-        form.validate_synonyms(form.synonyms)
-        form.synonyms.data = 'Fauxy, He just kept talking in one long '\
-                             'incredibly unbroken sentence moving from topic '\
-                             'to topic so that no one had a chance to '\
-                             'interrupt.'
+        field = mock.MagicMock()
+        field.data = 'Fauxy, Fawksy'
+        EditCultivarForm.validate_synonyms_string(None, field)
+        field.data = ('Fauxy, He just kept talking in one long incredibly '
+                      'unbroken sentence moving from topic to topic so that '
+                      'no one had a chance to interrupt.')
         with pytest.raises(ValidationError):
-            form.validate_synonyms(form.synonyms)
-
-
-class TestEditSeriesForm:
-    """Test custom methods in EditSeriesForm."""
-    def test_populate(self):
-        """Populate form with information from a Series object."""
-        form = EditSeriesForm()
-        series = Series(name='Polkadot', description='A bit spotty.')
-        series.common_name = CommonName('Foxglove')
-        series.common_name.id = 1
-        form.populate(series)
-        assert form.name.data == 'Polkadot'
-        assert form.common_name.data == 1
-        assert form.description.data == 'A bit spotty.'
+            EditCultivarForm.validate_synonyms_string(None, field)

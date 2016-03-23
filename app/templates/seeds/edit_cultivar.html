@@ -32,13 +32,13 @@
                     <fieldset>
                         <legend>Groups:</legend>
                         <li>
-                            {{ form_field(form.common_name)|indent(28)|safe }}
+                            {{ form_field(form.common_name_id)|indent(28)|safe }}
                         </li>
                         <li>
-                            {{ form_field(form.botanical_name)|indent(28)|safe }}
+                            {{ form_field(form.botanical_name_id)|indent(28)|safe }}
                         </li>
                         <li>
-                            {{ form_field(form.series)|indent(28)|safe }}
+                            {{ form_field(form.series_id)|indent(28)|safe }}
                         </li>
                     </fieldset>
                     <fieldset>
@@ -55,10 +55,13 @@
                             {{ form_field(form.description)|indent(28)|safe }}
                         </li>
                         <li>
-                            {{ form_field(form.synonyms)|indent(28)|safe }}
+                            {{ form_field(form.synonyms_string)|indent(28)|safe }}
                     </fieldset>
                     <fieldset>
                         <legend>Status:</legend>
+                        <li>
+                            {{ form_field(form.new_until)|indent(28)|safe }}
+                        </li>
                         <li>
                             {{ form_field(form.in_stock)|indent(28)|safe }}
                         </li>
@@ -66,7 +69,7 @@
                             {{ form_field(form.active)|indent(28)|safe }}
                         </li>
                         <li>
-                            {{ form_field(form.visible)|indent(28)|safe }}
+                            {{ form_field(form.invisible)|indent(28)|safe }}
                         </li>
                     </fieldset>
                     <li>

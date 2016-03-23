@@ -771,6 +771,9 @@ class Series(db.Model):
 def before_series_insert_or_update(mapper, connection, target):
     """Run tasks on `Series` that should be done before flush."""
     target.name = dbify(target.name)
+    if target.cultivars:
+        for cv in target.cultivars:
+            cv.slug = cv.generate_slug()
 
 
 class Cultivar(SynonymsMixin, db.Model):
@@ -1157,27 +1160,6 @@ class Quantity(db.Model):
                                                    self._denominator)
         return str(self.value)
 
-    @hybrid_property
-    def value(self):
-        """"int, float, Fraction: The value of a quantity in the same format
-                it was entered.
-
-            Setter:
-                Convert value a Fraction, store its numerator and denominator,
-                and store a floating point version to allow querying based on
-                quantity value. Flag is_decimal if the initial value is a
-                decimal (floating point) number.
-        """
-        if self._float is not None:
-            if self.is_decimal:
-                return self._float
-            elif self._denominator == 1:
-                return self._numerator
-            else:
-                return Fraction(self._numerator, self._denominator)
-        else:
-            return None
-
     @staticmethod
     def dec_check(val):
         """Check if a given value is a decimal number.
@@ -1333,6 +1315,27 @@ class Quantity(db.Model):
                     cls.units == units,
                     cls.is_decimal == cls.dec_check(value))\
             .one_or_none()
+
+    @hybrid_property
+    def value(self):
+        """"int, float, Fraction: The value of a quantity in the same format
+                it was entered.
+
+            Setter:
+                Convert value a Fraction, store its numerator and denominator,
+                and store a floating point version to allow querying based on
+                quantity value. Flag is_decimal if the initial value is a
+                decimal (floating point) number.
+        """
+        if self._float is not None:
+            if self.is_decimal:
+                return self._float
+            elif self._denominator == 1:
+                return self._numerator
+            else:
+                return Fraction(self._numerator, self._denominator)
+        else:
+            return None
 
     class ValueComparator(Comparator):
         """Comparator for `Quantity.value`.
@@ -1548,6 +1551,17 @@ class Image(db.Model):
     def exists(self):
         """Check whether or not file associated with this Image exists."""
         return os.path.exists(self.full_path)
+
+    def add_postfix(self, postfix):
+        """Rename an image to add a postfix to it.
+
+        Usually this would be used for when an image with the same filename is
+        added, thus allowing the old one to be renamed instead of overwritten.
+        """
+        old_path = self.full_path
+        parts = os.path.splitext(self.filename)
+        self.filename = parts[0] + postfix + parts[1]
+        os.rename(old_path, self.full_path)
 
 
 if __name__ == '__main__':  # pragma: no cover

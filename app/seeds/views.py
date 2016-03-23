@@ -18,7 +18,6 @@
 
 import datetime
 import os
-from copy import deepcopy
 from flask import (
     abort,
     current_app,
@@ -40,7 +39,6 @@ from . import seeds
 from ..lastcommit import LastCommit
 from .models import (
     BotanicalName,
-    dbify,
     Index,
     CommonName,
     Cultivar,
@@ -102,6 +100,16 @@ EDIT_ROUTES = (
     'edit_cultivar',
     'edit_packet'
 )
+
+
+class NotEnabledError(RuntimeError):
+    """Exception for trying to run a disabled feature.
+
+    Attributes:
+        message: The message to display when the error is raised.
+    """
+    def __init__(self, message):
+        self.message = message
 
 
 def make_breadcrumbs(*args):
@@ -286,7 +294,7 @@ def redirect_common_name_warnings(common_name,
                     new_idx_slug=new_idx_slug,
                     new_cn_slug=new_cn_slug
                 ))
-            except ValueError:
+            except NotEnabledError:
                 pass
     warnings.append(redirect_warning(
         old_path,
@@ -323,10 +331,14 @@ def redirect_cultivar_warning(cultivar,
 
     Raises:
         ValueError: If no slugs were passed.
+        NotEnabledError: If ``SHOW_CULTIVAR_PAGES`` is not enabled in config.
 
     Returns:
         str: The redirect warning message.
     """
+    if not current_app.config.get('SHOW_CULTIVAR_PAGES'):
+        raise NotEnabledError('This function cannot be run without '
+                              'SHOW_CULTIVAR_PAGES enabled in config!')
     if (not old_idx_slug and not old_cn_slug and not old_cv_slug and
             not new_idx_slug and not new_cn_slug and not new_cv_slug):
         raise ValueError('At least one slug must be passed!')
@@ -682,11 +694,10 @@ def edit_index(idx_id=None):
     if form.validate_on_submit():
         edited = False
         messages = []
-        old_index = None
+        old_slug = index.slug
         messages.append('Editing index \'{0}\':'.format(index.name))
         if form.name.data != index.name:
             edited = True
-            old_index = deepcopy(index)
             index.name = form.name.data
             messages.append('Name changed to: \'{0}\'.'.format(index.name))
         if form.description.data != index.description:
@@ -703,18 +714,17 @@ def edit_index(idx_id=None):
             messages.append('Changes to \'{0}\' committed to the database.'
                             .format(index.name))
             flash_all(messages)
-            if old_index.slug != index.slug:
+
+            if old_slug != index.slug:
                 warnings = None
-                try:
-                    warnings = redirect_index_warnings(
-                        index,
-                        old_idx_slug=old_index.slug,
-                        new_idx_slug=index.slug
-                    )
-                except ValueError:
-                    pass
+                warnings = redirect_index_warnings(
+                    index,
+                    old_idx_slug=old_slug,
+                    new_idx_slug=index.slug
+                )
                 if warnings:
                     flash_all(warnings, 'warning')
+
             return redirect(url_for('seeds.manage'))
         else:
             messages.append('No changes to \'{0}\' were made.'
@@ -735,124 +745,94 @@ def edit_common_name(cn_id=None):
     """"Edit a common name stored in the database.
 
     Args:
-        cn_id (int): The id number of the common name to edit.
+        cn_id: The id number of the common name to edit.
     """
-    if cn_id is None:
-        return redirect(url_for('seeds.select_common_name',
-                                dest='seeds.edit_common_name'))
-    cn = CommonName.query.get(cn_id)
+    cn = CommonName.query.get(cn_id) if cn_id else None
     if not cn:
         return redirect(url_for('seeds.select_common_name',
                                 dest='seeds.edit_common_name'))
-    form = EditCommonNameForm()
-    form.set_selects()
-    form.cn_id = cn.id
+    form = EditCommonNameForm(obj=cn)
     if form.validate_on_submit():
         edited = False
-        form.name.data = dbify(form.name.data)
-        old_cn_slug = cn.slug
+        messages = []
+        old_slugs = {'cn': cn.slug, 'idx': cn.index.slug}
+        messages.append('Editing common name \'{0}\':'.format(cn.name))
+        if form.index_id.data != cn.index.id:
+            edited = True
+            cn.index = Index.query.get(form.index_id.data)
+            messages.append('Index changed to: \'{0}\'.'.format(cn.index.name))
         if form.name.data != cn.name:
             edited = True
-            flash('Common name \'{0}\' changed to \'{1}\'.'.
-                  format(cn.name, form.name.data))
             cn.name = form.name.data
-        old_idx = cn.index
-        if form.index.data != cn.index.id:
-            cn.index = Index.query.get(form.index.data)
-            flash('Index for \'{0}\' and all of its cultivars has been '
-                  'changed to: {1}'.format(cn.name, cn.index.name))
-        if cn.generate_slug() != old_cn_slug or old_idx is not cn.index:
-            old_path = url_for('seeds.common_name',
-                               idx_slug=old_idx.slug,
-                               cn_slug=old_cn_slug)
-            new_path = url_for('seeds.common_name',
-                               idx_slug=cn.index.slug,
-                               cn_slug=cn.generate_slug())
-            flash(redirect_warning(old_path,
-                                   '<a href="{0}" target="_blank">{1}</a>'
-                                   .format(url_for('seeds.add_redirect',
-                                                   old_path=old_path,
-                                                   new_path=new_path,
-                                                   status_code=301),
-                                           new_path)))
-            for cv in cn.cultivars:
-                if old_idx is not cn.index:
-                    cv.common_name.index = cn.index
-                old_path = url_for('seeds.cultivar',
-                                   idx_slug=old_idx.slug,
-                                   cn_slug=old_cn_slug,
-                                   cv_slug=cv.slug)
-                new_path = url_for('seeds.cultivar',
-                                   idx_slug=cn.index.slug,
-                                   cn_slug=cn.generate_slug(),
-                                   cv_slug=cv.slug)
-                flash(redirect_warning(
-                    old_path,
-                    '<a href="{0}" target="_blank">{1}</a>'
-                    .format(url_for('seeds.add_redirect',
-                                    old_path=old_path,
-                                    new_path=new_path,
-                                    status_code=301),
-                            new_path)
-                ))
+            messages.append('Name changed to: \'{0}\'.'.format(cn.name))
+        if form.parent_id.data == 0:
+            form.parent_id.data = None
+        if (cn.parent and form.parent_id.data != cn.parent.id or
+                form.parent_id.data and not cn.parent):
+            edited = True
+            if form.parent_id.data:
+                cn.parent = CommonName.query.get(form.parent_id.data)
+                messages.append('\'{0}\' is now a subcategory of \'{1}\'.'
+                                .format(cn.name, cn.parent.name))
+            else:
+                cn.parent = None
+                messages.append('\'{0}\' is no longer a subcategory.'
+                                .format(cn.name))
         if not form.description.data:
             form.description.data = None
         if form.description.data != cn.description:
             edited = True
             if form.description.data:
                 cn.description = form.description.data
-                flash('Description for \'{0}\' changed to: {1}'
-                      .format(cn.name, cn.description))
+                messages.append('Description changed to: <p>{0}</p>'
+                                .format(cn.description))
             else:
                 cn.description = None
-                flash('Description for \'{0}\' has been cleared.'
-                      .format(cn.name))
+                messages.append('Description cleared.')
         if not form.instructions.data:
             form.instructions.data = None
         if form.instructions.data != cn.instructions:
             edited = True
             if form.instructions.data:
                 cn.instructions = form.instructions.data
-                flash('Planting instructions for \'{0}\' changed to: {1}'
-                      .format(cn.name, cn.instructions))
+                messages.append('Planting instructions set to: <p>{0}</p>'
+                                .format(cn.instructions))
             else:
                 cn.instructions = None
-                flash('Planting instructions for \'{0}\' have been cleared.'
-                      .format(cn.name))
-        if form.parent_cn.data == 0:
-            if cn.parent:
-                edited = True
-                flash('\'{0}\' is no longer a subcategory of any other common '
-                      'name.'.format(cn.name))
-                cn.parent = None
-        else:
-            if form.parent_cn.data != cn.id and\
-                    (not cn.parent or form.parent_cn.data != cn.parent.id):
-                edited = True
-                cn.parent = CommonName.query.get(form.parent_cn.data)
-                flash('\'{0}\' is now a subcategory of \'{1}\''
-                      .format(cn.name, cn.parent.name))
-        if form.synonyms.data != cn.synonyms_string:
+                messages.append('Planting instructions cleared.')
+        if form.synonyms_string.data != cn.synonyms_string:
             edited = True
-            if form.synonyms.data:
-                flash('Synonyms for \'{0}\' changed to: {1}'
-                      .format(cn.name, form.synonyms.data))
-                cn.synonyms_string = form.synonyms.data
+            if form.synonyms_string.data:
+                cn.synonyms_string = form.synonyms_string.data
+                messages.append('Synonyms changed to: \'{0}\'.'
+                                .format(cn.synonyms_string))
             else:
                 cn.synonyms_string = None
-                flash('Synonyms for \'{0}\' cleared.'.format(cn.name))
+                messages.append('Synonyms cleared.')
         if edited:
+            messages.append('Changes to \'{0}\' committed to the database.'
+                            .format(cn.name))
             db.session.commit()
+            flash_all(messages)
+
+            if old_slugs['cn'] != cn.slug or old_slugs['idx'] != cn.index.slug:
+                warnings = None
+                warnings = redirect_common_name_warnings(
+                    cn,
+                    old_idx_slug=old_slugs['idx'],
+                    old_cn_slug=old_slugs['cn'],
+                    new_idx_slug=cn.index.slug,
+                    new_cn_slug=cn.slug
+                )
+                if warnings:
+                    flash_all(warnings, 'warning')
+
             return redirect(url_for('seeds.manage'))
         else:
-            flash('No changes made to common name: \'{0}\''.format(cn.name))
+            messages.append('No changes to \'{0}\' were made.'.format(cn.name))
+            flash_all(messages)
             return redirect(url_for('seeds.edit_common_name', cn_id=cn.id))
-    form.populate(cn)
-    crumbs = make_breadcrumbs(
-        (url_for('seeds.manage'), 'Manage Seeds'),
-        (url_for('seeds.edit_index'), 'Edit Index'),
-        (url_for('seeds.edit_common_name'), 'Edit Common Name')
-    )
+    crumbs = cblr.crumble_route_group('edit_common_name', EDIT_ROUTES)
     return render_template('seeds/edit_common_name.html',
                            crumbs=crumbs,
                            form=form)
@@ -863,62 +843,52 @@ def edit_common_name(cn_id=None):
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
 def edit_botanical_name(bn_id=None):
-    if bn_id is None:
-        return redirect(url_for('seeds.select_botanical_name',
-                                dest='seeds.edit_botanical_name'))
-    bn = BotanicalName.query.get(bn_id)
+    bn = BotanicalName.query.get(bn_id) if bn_id else None
     if bn is None:
         return redirect(url_for('seeds.select_botanical_name',
                                 dest='seeds.edit_botanical_name'))
-    form = EditBotanicalNameForm()
-    form.set_common_names()
-    form.bn = bn
+    form = EditBotanicalNameForm(obj=bn)
     if form.validate_on_submit():
         edited = False
+        messages = []
+        messages.append('Editing botanical name \'{0}\'.'.format(bn.name))
         form.name.data = form.name.data.strip()
         if form.name.data != bn.name:
                 edited = True
-                flash('Botanical name \'{0}\' changed to \'{1}\'.'.
-                      format(bn.name, form.name.data))
                 bn.name = form.name.data
+                messages.append('Name changed to: \'{0}\'.'.format(bn.name))
         for cn in list(bn.common_names):
             if cn.id not in form.common_names.data:
                 edited = True
-                flash('Removed common name \'{0}\' from \'{1}\'.'
-                      .format(cn.name, bn.name))
                 bn.common_names.remove(cn)
+                messages.append('Removed common name \'{0}\'.'.format(cn.name))
         cnids = [cona.id for cona in bn.common_names]
         for cnid in form.common_names.data:
             if cnid not in cnids:
                 edited = True
                 cn = CommonName.query.get(cnid)
-                flash('Added common name \'{0}\' to \'{1}\'.'
-                      .format(cn.name, bn.name))
                 bn.common_names.append(cn)
-        if form.synonyms.data != bn.synonyms_string:
+                messages.append('Added common name \'{0}\'.'.format(cn.name))
+        if form.synonyms_string.data != bn.synonyms_string:
             edited = True
-            if form.synonyms.data:
-                bn.synonyms_string = form.synonyms.data
-                flash('Synonyms for \'{0}\' set to: {1}'
-                      .format(bn.name, bn.synonyms_string))
+            if form.synonyms_string.data:
+                bn.synonyms_string = form.synonyms_string.data
+                messages.append('Synonyms changed to: \'{0}\'.'
+                                .format(bn.synonyms_string))
             else:
                 bn.synonyms_string = None
-                flash('Synonyms for \'{0}\' cleared.'.format(bn.name))
+                messages.append('Synonyms cleared.')
         if edited:
             db.session.commit()
+            messages.append('Changes to \'{0}\' committed to the database.'
+                            .format(bn.name))
+            flash_all(messages)
             return redirect(url_for('seeds.manage'))
         else:
-            flash('No changes made to the botanical name: \'{0}\'.'.
-                  format(bn.name))
+            messages.append('No changes to \'{0}\' were made.'.format(bn.name))
+            flash_all(messages)
             return redirect(url_for('seeds.edit_botanical_name', bn_id=bn_id))
-    form.populate(bn)
-    crumbs = make_breadcrumbs(
-        (url_for('seeds.manage'), 'Manage Seeds'),
-        (url_for('seeds.edit_index'), 'Edit Index'),
-        (url_for('seeds.edit_common_name'), 'Edit Common Name'),
-        (url_for('seeds.edit_botanical_name'),
-         'Edit Botanical Name')
-    )
+    crumbs = cblr.crumble_route_group('edit_botanical_name', EDIT_ROUTES)
     return render_template('/seeds/edit_botanical_name.html',
                            crumbs=crumbs,
                            form=form)
@@ -930,95 +900,85 @@ def edit_botanical_name(bn_id=None):
 @permission_required(Permission.MANAGE_SEEDS)
 def edit_series(series_id=None):
     """Display page for editing a Series from the database."""
-    if series_id is None:
-        return redirect(url_for('seeds.select_series',
-                                dest='seeds.edit_series'))
-    series = Series.query.get(series_id)
+    series = Series.query.get(series_id) if series_id else None
     if series is None:
         return redirect(url_for('seeds.select_series',
                                 dest='seeds.edit_series'))
-    form = EditSeriesForm()
-    form.set_common_name()
-    form.sr_id = series.id
+    form = EditSeriesForm(obj=series)
     if form.validate_on_submit():
         edited = False
+        messages = []
+        messages.append('Editing series \'{0}\':'.format(series.name))
         old_cn = series.common_name
-        if form.common_name.data != series.common_name.id:
+        if form.common_name_id.data != series.common_name.id:
             edited = True
-            series.common_name = CommonName.query.get(form.common_name.data)
-            flash('Common name for \'{0}\' changed to: {1}'.
-                  format(series.fullname, series.common_name.name))
-        form.name.data = dbify(form.name.data)
+            series.common_name = CommonName.query.get(form.common_name_id.data)
+            messages.append('Common name changed to: \'{0}\'.'
+                            .format(series.common_name.name))
         old_name = series.name
         if form.name.data != series.name:
             edited = True
-            series.name = dbify(form.name.data)
-            flash('Series name changed to: {0}'.format(series.name))
-        if old_name != series.name or old_cn is not series.common_name:
-            for cv in series.cultivars:
-                old_path = url_for('seeds.cultivar',
-                                   idx_slug=series.common_name.index.slug,
-                                   cn_slug=old_cn.slug,
-                                   cv_slug=cv.slug)
-                if cv.common_name is not series.common_name:
-                    flash(Markup(
-                        'Warning: the common name of the cultivar \'{0}\' is '
-                        'not \'{1}\'. You should probably <a href="{2}" '
-                        'target="_blank">edit {0}</a> to use the same common '
-                        'name as the series it belongs to.'
-                        .format(cv.fullname,
-                                series.common_name.name,
-                                url_for('seeds.edit_cultivar', cv_id=cv.id))
-                    ))
-                new_path = url_for('seeds.cultivar',
-                                   idx_slug=series.common_name.index.slug,
-                                   cn_slug=series.common_name.slug,
-                                   cv_slug=cv.slug)
-                flash(redirect_warning(
-                    old_path,
-                    '<a href="{0}" target="_blank">{1}</a>'
-                    .format(url_for('seeds.add_redirect',
-                                    old_path=old_path,
-                                    new_path=new_path,
-                                    status_code=301),
-                            new_path)
-                ))
-
+            series.name = form.name.data
+            messages.append('Name changed to: {0}'.format(series.name))
         if not form.description.data:
             form.description.data = None
         if form.description.data != series.description:
             edited = True
             if form.description.data:
-                flash('Description for series \'{0}\' changed to: {1}'
-                      .format(series.fullname, form.description.data))
                 series.description = form.description.data
+                messages.append('Description set to: <p>{0}</p>'
+                                .format(series.description))
             else:
-                flash('Description for series \'{0}\' has been cleared.'
-                      .format(series.fullname))
                 series.description = None
+                messages.append('Description cleared.')
         if form.position.data != series.position:
             edited = True
             series.position = form.position.data
             if form.position.data == Series.BEFORE_CULTIVAR:
-                flash('Series name will now be placed before cultivar name in '
-                      'cultivars in the {0} series.'.format(series.name))
+                messages.append('\'{0}\' will now be placed before cultivar '
+                                'name in cultivars belonging to the series.'
+                                .format(series.name))
             elif form.position.data == Series.AFTER_CULTIVAR:
-                flash('Series name will now be placed after cultivar name in '
-                      'cultivars in the {0} series.'.format(series.name))
+                messages.append('\'{0}\' will now be placed after cultivar '
+                                'name in cultivars belonging to the series.'
+                                .format(series.name))
+        if old_cn is not series.common_name:
+            for cv in series.cultivars:
+                if cv.common_name is not series.common_name:
+                    old_cvname = cv.fullname
+                    cv.common_name = series.common_name
+                    messages.append('Common name for the cultivar \'{0}\' has '
+                                    'been changed to: \'{1}\'.'
+                                    .format(old_cvname, cv.common_name.name))
         if edited:
             db.session.commit()
+            messages.append('Changes to \'{0}\' committed to the database.'
+                            .format(series.name))
+            flash_all(messages)
+
+            if old_cn is not series.common_name or old_name != series.name:
+                try:
+                    warnings = []
+                    for cv in series.cultivars:
+                        warnings.append(redirect_cultivar_warning(
+                            cv,
+                            old_cv_slug=cv.slug,
+                            old_cn_slug=old_cn.slug,
+                            new_cv_slug=cv.generate_slug(),
+                            new_cn_slug=series.common_name.slug
+                        ))
+                    if warnings:
+                        flash_all(warnings)
+                except NotEnabledError:
+                    pass
+
             return redirect(url_for('seeds.manage'))
         else:
-            flash('No changes made to series \'{0}\'.'.
-                  format(series.fullname))
-    form.populate(series)
-    crumbs = make_breadcrumbs(
-        (url_for('seeds.manage'), 'Manage Seeds'),
-        (url_for('seeds.edit_index'), 'Edit Index'),
-        (url_for('seeds.edit_common_name'), 'Edit Common Name'),
-        (url_for('seeds.edit_botanical_name'), 'Edit Botanical Name'),
-        (url_for('seeds.edit_series'), 'Edit Series')
-    )
+            messages.append('No changes to \'{0}\' were made.'
+                            .format(series.name))
+            flash_all(messages)
+            return redirect(url_for('seeds.edit_series', series_id=series_id))
+    crumbs = cblr.crumble_route_group('edit_series', EDIT_ROUTES)
     return render_template('seeds/edit_series.html',
                            crumbs=crumbs,
                            form=form,
@@ -1031,183 +991,177 @@ def edit_series(series_id=None):
 @permission_required(Permission.MANAGE_SEEDS)
 def edit_cultivar(cv_id=None):
     """Edit a cultivar stored in the database."""
-    if cv_id is None:
-        return redirect(url_for('seeds.select_cultivar',
-                                dest='seeds.edit_cultivar'))
-    cv = Cultivar.query.get(cv_id)
+    cv = Cultivar.query.get(cv_id) if cv_id else None
     if cv is None:
         return redirect(url_for('seeds.select_cultivar',
                                 dest='seeds.edit_cultivar'))
-    form = EditCultivarForm()
-    form.set_selects()
-    form.cv_id = cv.id
+    form = EditCultivarForm(obj=cv)
     if form.validate_on_submit():
         edited = False
-        form.name.data = dbify(form.name.data)
-        old_cv_slug = cv.slug
-        old_cn = cv.common_name
-        if cv.series:
-            if form.series.data != cv.series.id:
-                edited = True
-                if form.series.data == 0:
-                    flash('Series for \'{0}\' has been unset.'
-                          .format(cv.fullname))
-                    cv.series = None
-                else:
-                    series = Series.query.get(form.series.data)
-                    cv.series = series
-                    flash('Series for \'{0}\' has been set to: {1}'
-                          .format(cv.fullname, cv.series.name))
-        else:
-            if form.series.data != 0:
-                edited = True
-                series = Series.query.get(form.series.data)
-                cv.series = series
-                flash('Series for \'{0}\' has been set to: {1}'
-                      .format(cv.fullname, cv.series.name))
+        messages = []
+        warnings = []
+        messages.append('Editing cultivar \'{0}\':'.format(cv.fullname))
+        old_slugs = {'cv': cv.slug,
+                     'cn': cv.common_name.slug,
+                     'idx': cv.common_name.index.slug}
+        if form.common_name_id.data != cv.common_name_id:
+            edited = True
+            cv.common_name = CommonName.query.get(form.common_name_id.data)
+            messages.append('Common name changed to: \'{0}\'.'
+                            .format(cv.common_name.name))
+        if not form.botanical_name_id.data:
+            form.botanical_name_id.data = None
+        if form.botanical_name_id.data != cv.botanical_name_id:
+            edited = True
+            if form.botanical_name_id.data:
+                cv.botanical_name = BotanicalName.query.get(
+                    form.botanical_name_id.data
+                )
+                messages.append('Botanical name changed to: \'{0}\'.'
+                                .format(cv.botanical_name.name))
+            else:
+                cv.botanical_name = None
+                messages.append('Botanical name cleared.')
+        if not form.series_id.data:
+            form.series_id.data = None
+        if form.series_id.data != cv.series_id:
+            edited = True
+            if form.series_id.data:
+                cv.series = Series.query.get(form.series_id.data)
+                messages.append('Series changed to: \'{0}\'.'
+                                .format(cv.series.name))
+            else:
+                cv.series = None
+                messages.append('Series cleared.')
         if cv.name != form.name.data:
             edited = True
-            flash('Changed cultivar name from \'{0}\' to \'{1}\''.
-                  format(cv.name, form.name.data))
             cv.name = form.name.data
-        if not cv.common_name or \
-                form.common_name.data != cv.common_name.id:
+            messages.append('(Short) Name changed to: \'{0}\'.'
+                            .format(cv.name))
+        if form.thumbnail.data:
+            thumb_name = secure_filename(form.thumbnail.data.filename)
             edited = True
-            cn = CommonName.query.get(form.common_name.data)
-            flash('Changed common name to \'{0}\' for: {1}'.
-                  format(cn.name, cv.fullname))
-            cv.common_name = CommonName.query.get(form.common_name.data)
-        if form.botanical_name.data:
-            if not cv.botanical_name or\
-                    form.botanical_name.data != cv.botanical_name.id:
-                edited = True
-                cv.botanical_name = BotanicalName.query\
-                    .get(form.botanical_name.data)
-                flash('Changed botanical name for \'{0}\' to \'{1}\''
-                      .format(cv.fullname, cv.botanical_name.name))
-        elif cv.botanical_name:
-            edited = True
-            cv.botanical_name = None
-            flash('Botanical name for \'{0}\' has been removed.'
-                  .format(cv.fullname))
-        if current_app.config.get('SHOW_CULTIVAR_PAGES') and (
-                old_cv_slug != cv.slug or
-                old_cn is not cv.common_name):
-            old_path = url_for('seeds.cultivar',
-                               idx_slug=old_cn.index.slug,
-                               cn_slug=old_cn.slug,
-                               cv_slug=old_cv_slug)
-            new_path = url_for('seeds.cultivar',
-                               idx_slug=cv.common_name.index.slug,
-                               cn_slug=cv.common_name.slug,
-                               cv_slug=cv.slug)
-            flash(redirect_warning(old_path,
-                                   '<a href="{0}" target="_blank">{1}</a>'
-                                   .format(url_for('seeds.add_redirect',
-                                                   old_path=old_path,
-                                                   new_path=new_path,
-                                                   status_code=301),
-                                           new_path)))
+            upload_path = os.path.join(current_app.config.
+                                       get('IMAGES_FOLDER'),
+                                       thumb_name)
+            if cv.thumbnail is not None:
+                # Do not delete or orphan thumbnail, move to images.
+                # Do not directly add cultivar.thumbnail to
+                # cultivar.images, as that will cause a
+                # CircularDependencyError.
+                tb = cv.thumbnail
+                cv.thumbnail = None
+                cv.images.append(tb)
+            img = Image.query.filter_by(filename=thumb_name).one_or_none()
+            if img:
+                # Rename existing image instead of overwriting it.
+                now = datetime.datetime.now().strftime('%m-%d-%Y_%H_%M_%S_%f')
+                postfix = '_moved_' + now
+                img.add_postfix(postfix)
+                warnings.append(
+                    'Warning: An image already exists with the filename '
+                    '\'{0}\', so it has been renamed to \'{1}\' to prevent '
+                    'it from being overwritten by the upload of \'{0}\'.'
+                    .format(thumb_name, img.filename)
+                )
+            cv.thumbnail = Image(filename=thumb_name)
+            form.thumbnail.data.save(upload_path)
+            messages.append('Thumbnail uploaded as: \'{0}\'.'
+                            .format(cv.thumbnail.filename))
         if not form.description.data:
             form.description.data = None
         if form.description.data != cv.description:
             edited = True
             if form.description.data:
                 cv.description = form.description.data
-                flash('Changed description for \'{0}\' to: {1}'.
-                      format(cv.fullname, cv.description))
+                messages.append('Description changed to: <p>{0}</p>'
+                                .format(cv.description))
             else:
                 cv.description = None
-                flash('Description for \'{0}\' has been cleared.'
-                      .format(cv.fullname))
+                messages.append('Description cleared.')
+        if form.synonyms_string.data != cv.synonyms_string:
+            edited = True
+            cv.synonyms_string = form.synonyms_string.data
+            if form.synonyms_string.data:
+                messages.append('Synonyms set to: \'{0}\'.'
+                                .format(cv.synonyms_string))
+            else:
+                messages.append('Synonyms cleared.')
+        if (not form.new_until.data or
+                form.new_until.data <= datetime.date.today()):
+            form.new_until.data = None
+        if form.new_until.data != cv.new_until:
+            edited = True
+            if not form.new_until.data:
+                cv.new_until = None
+                messages.append('No longer marked as new.')
+            else:
+                cv.new_until = form.new_until.data
+                messages.append('Marked as new until {0}.'
+                                .format(cv.new_until.strftime('%m/%d/%Y')))
         if form.in_stock.data:
             if not cv.in_stock:
                 edited = True
-                flash('\'{0}\' is now in stock.'.format(cv.fullname))
                 cv.in_stock = True
+                messages.append('\'{0}\' is now in stock.'.format(cv.fullname))
         else:
             if cv.in_stock:
                 edited = True
-                flash('\'{0}\' is now out of stock.'.format(cv.fullname))
                 cv.in_stock = False
+                messages.append('\'{0}\' is now out of stock.'
+                                .format(cv.fullname))
         if form.active.data:
             if not cv.active:
                 edited = True
-                flash('\'{0}\' is now active.'.format(cv.fullname))
                 cv.active = True
+                messages.append('\'{0}\' is now active.'.format(cv.fullname))
         else:
             if cv.active:
                 edited = True
-                flash('\'{0}\' is no longer active.'.
-                      format(cv.fullname))
                 cv.active = False
-        if form.visible.data:
-            if cv.invisible:
-                edited = True
-                flash('\'{0}\' will now be visible on auto-generated pages.'
-                      .format(cv.fullname))
-                cv.invisible = False
-        else:
+                messages.append('\'{0}\' is no longer active.'
+                                .format(cv.fullname))
+        if form.invisible.data:
             if not cv.invisible:
                 edited = True
-                flash('\'{0}\' will no longer be visible on auto-generated '
-                      'pages.'.format(cv.fullname))
                 cv.invisible = True
-        if not form.synonyms.data and cv.synonyms:
-            edited = True
-            cv.synonyms_string = None
-            flash('Synonyms for \'{0}\' have been cleared.'
-                  .format(cv.fullname))
-        elif form.synonyms.data != cv.synonyms_string:
-            edited = True
-            cv.synonyms_string = form.synonyms.data
-            flash('Synonyms for \'{0}\' set to: {1}'
-                  .format(cv.fullname, cv.synonyms_string))
-        if form.thumbnail.data:
-            thumb_name = secure_filename(form.thumbnail.data.filename)
-            img = Image.query.filter_by(filename=thumb_name).first()
-            if img and img != cv.thumbnail and img not in cv.images:
-                flash('Error: The filename \'{0}\' is already in use by '
-                      'another cultivar. Please rename it and try again.'
-                      .format(thumb_name))
-                db.session.rollback()
-                return redirect(url_for('seeds.edit_cultivar', cv_id=cv.id))
-            else:
+                messages.append('\'{0}\' will no longer be visible on '
+                                'auto-generated pages.'.format(cv.fullname))
+        else:
+            if cv.invisible:
                 edited = True
-                flash('New thumbnail for \'{0}\' uploaded as: \'{1}\''.
-                      format(cv.fullname, thumb_name))
-                upload_path = os.path.join(current_app.config.
-                                           get('IMAGES_FOLDER'),
-                                           thumb_name)
-                if cv.thumbnail is not None:
-                    # Do not delete or orphan thumbnail, move to images.
-                    # Do not directly add cultivar.thumbnail to
-                    # cultivar.images, as that will cause a
-                    # CircularDependencyError.
-                    tb = cv.thumbnail
-                    cv.thumbnail = None
-                    cv.images.append(tb)
-                if img in cv.images:
-                    cv.thumbnail = img
-                    cv.images.remove(img)
-                if not img:
-                    cv.thumbnail = Image(filename=thumb_name)
-                form.thumbnail.data.save(upload_path)
+                cv.invisible = False
+                messages.append('\'{0}\' will now be visible on '
+                                'auto-generated pages.'.format(cv.fullname))
         if edited:
+            messages.append('Changes to \'{0}\' committed to the database.'
+                            .format(cv.fullname))
             db.session.commit()
+            flash_all(messages)
+            if (old_slugs['cv'] != cv.slug or
+                    old_slugs['cn'] != cv.common_name.slug or
+                    old_slugs['idx'] != cv.common_name.index.slug):
+                try:
+                    warnings.append(redirect_cultivar_warning(
+                        cv,
+                        old_idx_slug=old_slugs['idx'],
+                        old_cn_slug=old_slugs['cn'],
+                        old_cv_slug=old_slugs['cv'],
+                        new_idx_slug=cv.common_name.index.slug,
+                        new_cn_slug=cv.common_name.slug,
+                        new_cv_slug=cv.slug
+                    ))
+                except NotEnabledError:
+                    pass
+            if warnings:
+                flash_all(warnings)
             return redirect(url_for('seeds.manage'))
         else:
-            flash('No changes made to \'{0}\'.'.format(cv.fullname))
+            messages.append('No changes to \'{0}\' were made'
+                            .format(cv.fullname))
+            flash_all(messages)
             return redirect(url_for('seeds.edit_cultivar', cv_id=cv_id))
-    form.populate(cv)
-    crumbs = make_breadcrumbs(
-        (url_for('seeds.manage'), 'Manage Seeds'),
-        (url_for('seeds.edit_index'), 'Edit Index'),
-        (url_for('seeds.edit_common_name'), 'Edit Common Name'),
-        (url_for('seeds.edit_botanical_name'), 'Edit Botanical Name'),
-        (url_for('seeds.edit_series'), 'Edit Series'),
-        (url_for('seeds.edit_cultivar'), 'Edit Cultivar')
-    )
+    crumbs = cblr.crumble_route_group('edit_cultivar', EDIT_ROUTES)
     return render_template('seeds/edit_cultivar.html',
                            crumbs=crumbs,
                            form=form,
@@ -1219,29 +1173,29 @@ def edit_cultivar(cv_id=None):
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
 def edit_packet(pkt_id=None):
-    if pkt_id is None:
-        return redirect(url_for('seeds.select_packet',
-                                dest='seeds.edit_packet'))
-    packet = Packet.query.get(pkt_id)
+    packet = Packet.query.get(pkt_id) if pkt_id else None
     if packet is None:
         return redirect(url_for('seeds.select_packet',
                                 dest='seeds.edit_packet'))
-    form = EditPacketForm()
-    form.pkt = packet
+    form = EditPacketForm(obj=packet)
     if form.validate_on_submit():
         edited = False
+        messages = []
+        messages.append('Editing packet \'{0}\'.'.format(packet.info))
         form.sku.data = form.sku.data.strip()
         if form.sku.data != packet.sku:
             edited = True
-            packet.sku = form.sku.data.strip()
+            packet.sku = form.sku.data
+            messages.append('SKU changed to: \'{0}\'.'.format(packet.sku))
         dec_p = USDollar.usd_to_decimal(form.price.data)
         if dec_p != packet.price:
             edited = True
             packet.price = dec_p
-        fq = form.quantity.data
+            messages.append('Price set to: \'${0}\'.'.format(packet.price))
+        fq = form.qty_val.data
         fu = form.units.data.strip()
-        if (str(fq) != str(packet.quantity.value)
-                or fu != packet.quantity.units):
+        if (Quantity(value=fq).value != packet.quantity.value or
+                fu != packet.quantity.units):
             edited = True
             oldqty = packet.quantity
             qty = Quantity.query.filter(
@@ -1252,29 +1206,24 @@ def edit_packet(pkt_id=None):
             if qty:
                 packet.quantity = qty
             else:
-                if fu != packet.quantity.units:
-                    packet.quantity.units = fu
-                if fq != packet.quantity.value:
-                    packet.quantity.value = fq
+                packet.quantity = Quantity(value=fq, units=fu)
             if not oldqty.packets:
                 db.session.delete(oldqty)
+            messages.append('Quantity set to: \'{0} {1}\'.'
+                            .format(packet.quantity.value,
+                                    packet.quantity.units))
         if edited:
             db.session.commit()
-            flash('Packet changed to: {0}'.format(packet.info))
+            messages.append('Changes to \'{0}\' committed to the database.'
+                            .format(packet.info))
+            flash_all(messages)
             return redirect(url_for('seeds.manage'))
         else:
-            flash('No changes made to packet: {0}'.format(packet.info))
+            messages.append('No changes to \'{0}\' were made.'
+                            .format(packet.info))
+            flash_all(messages)
             return redirect(url_for('seeds.edit_packet', pkt_id=pkt_id))
-    form.populate(packet)
-    crumbs = make_breadcrumbs(
-        (url_for('seeds.manage'), 'Manage Seeds'),
-        (url_for('seeds.edit_index'), 'Edit Index'),
-        (url_for('seeds.edit_common_name'), 'Edit Common Name'),
-        (url_for('seeds.edit_botanical_name'), 'Edit Botanical Name'),
-        (url_for('seeds.edit_series'), 'Edit Series'),
-        (url_for('seeds.edit_cultivar'), 'Edit Cultivar'),
-        (url_for('seeds.edit_packet'), 'Edit Packet')
-    )
+    crumbs = cblr.crumble_route_group('edit_packet', EDIT_ROUTES)
     return render_template('seeds/edit_packet.html',
                            crumbs=crumbs,
                            form=form)

@@ -29,7 +29,7 @@
             <form method="POST">
                 {{ form.hidden_tag() }}
                 <ol>
-                    <li><div class="warning">Are you sure you want to remove the common name &apos;{{ cn.name }}&apos;?</div>
+                    <li><div class="warning">Are you sure you want to remove the common name &apos;{{ form.cn.name }}&apos;?</div>
                         {{ form_field(form.verify_removal)|indent(24)|safe }}
                     </li>
                     <li>

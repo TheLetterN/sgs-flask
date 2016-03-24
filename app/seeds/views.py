@@ -22,7 +22,6 @@ from flask import (
     abort,
     current_app,
     flash,
-    Markup,
     redirect,
     render_template,
     request,
@@ -102,6 +101,17 @@ EDIT_ROUTES = (
 )
 
 
+REMOVE_ROUTES = (
+    ('manage', 'Manage Seeds'),
+    'remove_index',
+    'remove_common_name',
+    'remove_botanical_name',
+    'remove_series',
+    'remove_cultivar',
+    'remove_packet'
+)
+
+
 class NotEnabledError(RuntimeError):
     """Exception for trying to run a disabled feature.
 
@@ -110,26 +120,6 @@ class NotEnabledError(RuntimeError):
     """
     def __init__(self, message):
         self.message = message
-
-
-def make_breadcrumbs(*args):
-    """Create a 'trail of breadcrumbs' to include in pages.
-
-    Args:
-        args (tuple): A tuple containing tuples in the format (route, title)
-
-    Returns:
-        list: A list containing
-    """
-    if all(isinstance(arg, tuple) and len(arg) == 2 for arg in args):
-        trail = list()
-        for arg in args:
-            trail.append('<a href="{0}">{1}</a>'.
-                         format(arg[0], arg[1]))
-        return trail
-    else:
-        raise ValueError('Could not parse arguments. Please make sure your '
-                         'arguments are tuples formatted (route, page title)!')
 
 
 def flash_all(messages, category='message'):
@@ -195,6 +185,7 @@ def redirect_index_warnings(index,
     """Generate redirect warnings for a changed `Index`.
 
     Args:
+        index: The `Index` being redirected from.
         old_idx_slug: Optional `Index.slug` to redirect from.
         new_idx_slug: Optional `Index.slug` to redirect to.
 
@@ -213,8 +204,8 @@ def redirect_index_warnings(index,
     if not new_idx_slug:
         new_idx_slug = index.slug
 
-    old_path = url_for('seeds.index_page', idx_slug=old_idx_slug)
-    new_path = url_for('seeds.index_page', idx_slug=new_idx_slug)
+    old_path = url_for('seeds.index', idx_slug=old_idx_slug)
+    new_path = url_for('seeds.index', idx_slug=new_idx_slug)
 
     warnings = []
     if index.common_names:
@@ -251,6 +242,7 @@ def redirect_common_name_warnings(common_name,
     though, otherwise there is no need to make a redirect.
 
     Args:
+        common_name: The `CommonName` being redirected from.
         old_idx_slug: Optional `Index.slug` to redirect from.
         old_cn_slug: Optional `CommonName.slug` to redirect from.
         new_idx_slug: Optional `Index.slug` to redirect to.
@@ -322,6 +314,7 @@ def redirect_cultivar_warning(cultivar,
     otherwise there is no need to make a redirect.
 
     Args:
+        cultivar: The `Cultivar` being redirected from.
         old_idx_slug: Optional `Index.slug` to redirect from.
         old_cn_slug: Optional `CommonName.slug` to redirect from.
         old_cv_slug: Optional `Cultivar.slug` to redirect from.
@@ -1229,46 +1222,98 @@ def edit_packet(pkt_id=None):
                            form=form)
 
 
-@seeds.route('/remove_botanical_name', methods=['GET', 'POST'])
-@seeds.route('/remove_botanical_name/<bn_id>', methods=['GET', 'POST'])
-@login_required
-@permission_required(Permission.MANAGE_SEEDS)
-def remove_botanical_name(bn_id=None):
-    """Remove a botanical name from the database."""
-    if bn_id is None:
-        return redirect(url_for('seeds.select_botanical_name',
-                                dest='seeds.remove_botanical_name'))
-    bn = BotanicalName.query.get(bn_id)
-    if bn is None:
-        return redirect(url_for('seeds.select_botanical_name',
-                                dest='seeds.remove_botanical_name'))
-    form = RemoveBotanicalNameForm()
-    if form.validate_on_submit():
-        if form.verify_removal.data:
-            if bn.synonyms:
-                flash('Synonyms for \'{0}\' cleared and orphaned synonyms '
-                      'have been deleted.'.format(bn.name))
-                bn.synonyms_string = None
-            flash('The botanical name \'{1}\' has been removed from '
-                  'the database.'.format(bn.id, bn.name))
-            db.session.delete(bn)
-            db.session.commit()
-            return redirect(url_for('seeds.manage'))
+def move_cultivars(cn, other):
+    """Move all instances of `Cultivar` from one `CommonName` to another.
+
+    Note:
+        This doesn't actually move them, it just adds them to the other side
+
+    Attributes:
+        cn: The `CommonName` to move `Cultivar` instances from.
+        other: The `CommonName` to move the cultivars to.
+    """
+    warnings = []
+    for cv in list(cn.cultivars):
+        if cv.name_with_series not in [c.name_with_series for c in
+                                       other.cultivars]:
+            other.cultivars.append(cv)
         else:
-            flash('No changes made. Check the box labeled \'Yes\' if '
-                  'you want to remove this botanical name.')
-            return redirect(url_for('seeds.remove_botanical_name',
-                                    bn_id=bn_id))
-    crumbs = make_breadcrumbs(
-        (url_for('seeds.manage'), 'Manage Seeds'),
-        (url_for('seeds.remove_index'), 'Remove Index'),
-        (url_for('seeds.remove_common_name'), 'Remove Common Name'),
-        (url_for('seeds.remove_botanical_name'), 'Remove Botanical Name')
-    )
-    return render_template('seeds/remove_botanical_name.html',
-                           bn=bn,
-                           crumbs=crumbs,
-                           form=form)
+            warnings.append(
+                'Could not move \'{0}\' because a cultivar with the same name '
+                'and series already exists! Click <a href="{1}">here</a> if '
+                'you want to edit it, or <a href="{2}">here</a> if you want '
+                'to remove it.'
+                .format(cv.fullname,
+                        url_for('seeds.edit_cultivar', cv_id=cv.id),
+                        url_for('seeds.remove_cultivar', cv_id=cv.id))
+            )
+    return warnings
+
+
+def move_botanical_names(cn, other):
+    """Move botanical names from one `CommonName` to another.
+
+    Args:
+        cn: The `CommonName` to move `BotanicalName` instances from.
+        other: The `CommonName` to move them to.
+    """
+    for bn in list(cn.botanical_names):
+        if bn not in other.botanical_names:
+            other.botanical_names.append(bn)
+
+
+def move_common_names(idx, other):
+    """Move all instances of `CommonName` from one `Index` to another.
+
+    Attributes:
+        idx: The `Index` to move `CommonName` instances from.
+        other: The `Index` to move the common names to.
+    """
+    warnings = []
+    for cn in list(idx.common_names):
+        other_cns = [c.name for c in other.common_names]
+        if cn.name not in other_cns:
+            other.common_names.append(cn)
+        else:
+            warnings.append(
+                'Could not move \'{0}\' because a common name with the same '
+                'name already belongs to \'{1}\'. Instead of moving it, its '
+                'children (botanical names, series, and cultivars) will be '
+                'moved to the one belonging to \'{1}\' if possible.'
+                .format(cn.name, other.name)
+            )
+            other_cn = next((
+                c for c in other.common_names if c.name == cn.name), None
+            )
+            move_botanical_names(cn, other_cn)
+            warnings += move_series(cn, other_cn)
+            warnings += move_cultivars(cn, other_cn)
+    return warnings
+
+
+def move_series(cn, other):
+    """Move all instances of `Series` from one `CommonName` to another.
+
+    Attributes:
+        cn: The `CommonName` to move `Series` instances from.
+        other: The `CommonName` to move the series to.
+    """
+    warnings = []
+    for sr in cn.series:
+        if sr.name not in [s.name for s in other.series]:
+            other.series.append(sr)
+        else:
+            warnings.append(
+                'Could not move \'{0}\' because a series with the same name '
+                'already belongs to \'{1}\'. Click <a href="{2}">here</a> if '
+                'you would like to edit \'{0}\', or <a href="{3}">here</a> '
+                'if you would like to remove it.'
+                .format(sr.name,
+                        other.name,
+                        url_for('seeds.edit_series', series_id=sr.id),
+                        url_for('seeds.remove_series', series_id=sr.id))
+            )
+    return warnings
 
 
 @seeds.route('/remove_index', methods=['GET', 'POST'])
@@ -1277,112 +1322,50 @@ def remove_botanical_name(bn_id=None):
 @permission_required(Permission.MANAGE_SEEDS)
 def remove_index(idx_id=None):
     """Remove an index from the database."""
-    if idx_id is None:
-        return redirect(url_for('seeds.select_index',
-                                dest='seeds.remove_index'))
-    index = Index.query.get(idx_id)
+    index = Index.query.get(idx_id) if idx_id else None
     if index is None:
         return redirect(url_for('seeds.select_index',
                                 dest='seeds.remove_index'))
-    form = RemoveIndexForm()
-    form.idx = index
-    try:
-        form.set_move_to()
-    except ValueError as e:
-        flash('Error: {0}'.format(e))
+    if Index.query.count() == 1:
+        flash('Error: Cannot remove the index \'{0}\' without another index '
+              'existing to move its children to! Please add an index so you '
+              'can move {0}\'s children to it.'
+              .format(index.name), 'error')
         return redirect(url_for('seeds.add_index'))
+    form = RemoveIndexForm(index=index)
     if form.validate_on_submit():
+        messages = []
+        warnings = []
         if form.verify_removal.data:
-            old_idx_slug = index.slug
-            idx2 = Index.query.get(form.move_to.data)
-            new_idx_slug = idx2.slug
-            flash('Common names and cultivars formerly associated with '
-                  '\'{0}\' are now associated with \'{1}\'.'
-                  .format(index.name, idx2.name))
-            old_path = url_for('seeds.index_page',
-                               idx_slug=old_idx_slug)
-            new_path = url_for('seeds.index_page',
-                               idx_slug=new_idx_slug)
-            flash(redirect_warning(
-                old_path,
-                '<a href="{0}">{1}</a>'
-                .format(url_for('seeds.add_redirect',
-                                old_path=old_path,
-                                new_path=new_path,
-                                status_code=301),
-                        new_path)
-            ))
-            for cn in index.common_names:
-                if cn.name not in [cona.name for cona in idx2.common_names]:
-                    idx2.common_names.append(cn)
-                    old_path = url_for('seeds.common_name',
-                                       idx_slug=old_idx_slug,
-                                       cn_slug=cn.slug)
-                    new_path = url_for('seeds.common_name',
-                                       idx_slug=new_idx_slug,
-                                       cn_slug=cn.slug)
-                    flash(redirect_warning(
-                        old_path,
-                        '<a href="{0}" target="_blank">{1}</a>'
-                        .format(url_for('seeds.add_redirect',
-                                        old_path=old_path,
-                                        new_path=new_path,
-                                        status_code=302),
-                                new_path)
-                    ))
-                else:
-                    flash('Warning: A common name \'{0}\' already exists '
-                          'under the index \'{1}\'. All cultivars belonging '
-                          'to {3} &gt; {0} have been moved to {1} &gt; {0}.'
-                          .format(cn.name, idx2.name, index.name))
-                    for cn2 in idx2.common_names:
-                        if cn2.name == cn.name:
-                            for cv in cn.cultivars:
-                                if cv not in [cv2.fullname for cv2 in
-                                              cn2.cultivars]:
-                                    cn2.cultivars.append(cv)
-                                else:
-                                    # TODO: Handle cultivar conflicts.
-                                    flash('Error: The cultivar \'{0}\' was '
-                                          'not moved because it already '
-                                          'exists under the new common name!')
-                if current_app.config.get('SHOW_CULTIVAR_PAGES'):
-                    for cv in cn.cultivars:
-                        old_path = url_for('seeds.cultivar',
-                                           idx_slug=old_idx_slug,
-                                           cn_slug=cv.common_name.slug,
-                                           cv_slug=cv.slug)
-                        new_path = url_for('seeds.cultivar',
-                                           idx_slug=new_idx_slug,
-                                           cn_slug=cv.common_name.slug,
-                                           cv_slug=cv.slug)
-                        flash(redirect_warning(
-                            old_path,
-                            '<a href="{0}" target="_blank">{1}</a>'
-                            .format(url_for('seeds.add_redirect',
-                                            old_path=old_path,
-                                            new_path=new_path,
-                                            status_code=301),
-                                    new_path)
-                        ))
-            flash('The index \'{1}\' has been removed from the database.'.
-                  format(index.id, index.name))
+            messages.append('Removing index \'{0}\':'.format(index.name))
+            new_index = Index.query.get(form.move_to.data)
+            warnings += redirect_index_warnings(index,
+                                                old_idx_slug=index.slug,
+                                                new_idx_slug=new_index.slug)
+            # This needs to come after redirect warnings because SQLAlchemy
+            # removes `CommonName` instances from the old `Index` when
+            # appending them to the new `Index`.
+            # TODO: See if there are any bugs in this due to things moving
+            # after redirect warnings are given.
+            warnings += move_common_names(index, new_index)
             db.session.delete(index)
             db.session.commit()
+            messages.append('Index removed.')
+            flash_all(messages)
+            if warnings:
+                flash_all(warnings, 'warning')
             return redirect(url_for('seeds.manage'))
         else:
-            flash('No changes made. Check the box labeled \'Yes\''
-                  ' if you want to remove this index.')
+            messages.append('Index was not removed, so no changes were made. '
+                            'If you would like to remove it, please check the '
+                            'box labeled \'Yes\'.')
+            flash_all(messages)
             return redirect(url_for('seeds.remove_index',
                                     idx_id=idx_id))
-    crumbs = make_breadcrumbs(
-        (url_for('seeds.manage'), 'Manage Seeds'),
-        (url_for('seeds.remove_index'), 'Remove Index')
-    )
+    crumbs = cblr.crumble_route_group('remove_index', REMOVE_ROUTES)
     return render_template('seeds/remove_index.html',
                            crumbs=crumbs,
-                           form=form,
-                           index=index)
+                           form=form)
 
 
 @seeds.route('/remove_common_name', methods=['GET', 'POST'])
@@ -1391,237 +1374,85 @@ def remove_index(idx_id=None):
 @permission_required(Permission.MANAGE_SEEDS)
 def remove_common_name(cn_id=None):
     """Remove a common name from the database."""
-    if cn_id is None:
-        return redirect(url_for('seeds.select_common_name',
-                                dest='seeds.remove_common_name'))
-    cn = CommonName.query.get(cn_id)
+    cn = CommonName.query.get(cn_id) if cn_id else None
     if cn is None:
         return redirect(url_for('seeds.select_common_name',
                                 dest='seeds.remove_common_name'))
-    form = RemoveCommonNameForm()
-    form.set_move_to(cn_id)
+    form = RemoveCommonNameForm(cn=cn)
     if form.validate_on_submit():
+        messages = []
         if form.verify_removal.data:
-            old_cn_slug = cn.slug
+            warnings = []
+            messages.append('Removing common name \'{0}\':'.format(cn.name))
+            new_cn = CommonName.query.get(form.move_to.data)
             if cn.synonyms:
                 cn.synonyms_string = None
-                flash('Synonyms for \'{0}\' cleared, and orphaned synonyms '
-                      'have been deleted.'.format(cn.name))
-            cn2 = CommonName.query.get(form.move_to.data)
-            new_cn_slug = cn2.slug
-            old_path = url_for('seeds.common_name',
-                               idx_slug=cn.index.slug,
-                               cn_slug=old_cn_slug)
-            urllist = []
-            new_path = url_for('seeds.common_name',
-                               idx_slug=cn2.index.slug,
-                               cn_slug=new_cn_slug)
-            urllist.append('<a href="{0}" target="_blank">{1}</a>'
-                           .format(url_for('seeds.add_redirect',
-                                           old_path=old_path,
-                                           new_path=new_path,
-                                           status_code=301),
-                                   new_path))
-            flash(redirect_warning(old_path, list_to_or_string(urllist)))
-            flash('Botanical names and cultivars formerly associated with '
-                  '\'{0}\' are now associated with \'{1}\'.'
-                  .format(cn.name, cn2.name))
-            for bn in cn.botanical_names:
-                if bn not in cn2.botanical_names:
-                    cn2.botanical_names.append(bn)
-            for cv in list(cn.cultivars):
-                if cv not in cn2.cultivars:
-                    new_fullname = '{0} {1}'.format(cv.name, cn2.name)
-                    fns = [cv.fullname for cv in cn2.cultivars]
-                    if new_fullname in fns:
-                        ed_url = url_for('seeds.edit_cultivar', cv_id=cv.id)
-                        rem_url = url_for('seeds.remove_cultivar', cv_id=cv.id)
-                        flash(
-                            Markup('Warning: \'{0}\' could not be changed to '
-                                   '\'{1}\' because \'{1}\' already exists! '
-                                   '<a href="{2}">Click here</a> to edit the '
-                                   'orphaned cultivar, or <a href="{3}">click '
-                                   'here</a> to remove it from the database.'
-                                   .format(cv.fullname,
-                                           new_fullname,
-                                           ed_url,
-                                           rem_url)))
-                    else:
-                        cn2.cultivars.append(cv)
-                        for idx in cn.indexes:
-                            old_path = url_for('seeds.cultivar',
-                                               idx_slug=idx.slug,
-                                               cn_slug=old_cn_slug,
-                                               cv_slug=cv.slug)
-                            urllist = []
-                            for idx2 in cn2.indexes:
-                                new_path = url_for('seeds.cultivar',
-                                                   idx_slug=idx2.slug,
-                                                   cn_slug=new_cn_slug,
-                                                   cv_slug=cv.slug)
-                                urllist.append(
-                                    '<a href="{0}" target="_blank">{1}</a>'
-                                    .format(url_for('seeds.add_redirect',
-                                                    old_path=old_path,
-                                                    new_path=new_path,
-                                                    status_code=301),
-                                            new_path)
-                                )
-                            flash(redirect_warning(old_path,
-                                                   list_to_or_string(urllist)))
-            flash('The common name \'{0}\' has been removed from the '
-                  'database.'.format(cn.name))
+                messages.append('Synonyms cleared.')
+            move_botanical_names(cn, new_cn)
+            try:
+                for cv in cn.cultivars:
+                    warnings.append(redirect_cultivar_warning(
+                        cv,
+                        old_cn_slug=cn.slug,
+                        new_cn_slug=new_cn.slug
+                    ))
+            except NotEnabledError:
+                pass
+            warnings += move_cultivars(cn, new_cn)
             db.session.delete(cn)
             db.session.commit()
+            messages.append('Common name removed.')
+            flash_all(messages)
+            if warnings:
+                flash_all(warnings)
             return redirect(url_for('seeds.manage'))
         else:
-            flash('No changes made. Check the box labeled \'Yes\' if '
-                  'you want to remove this common name.')
+            messages.append('Common name was not removed, so no changes '
+                            'were made. If you would like to remove it, '
+                            'please check the box labeled \'Yes\'.')
+            flash_all(messages)
             return redirect(url_for('seeds.remove_common_name', cn_id=cn_id))
-    crumbs = make_breadcrumbs(
-        (url_for('seeds.manage'), 'Manage Seeds'),
-        (url_for('seeds.remove_index'), 'Remove Index'),
-        (url_for('seeds.remove_common_name'), 'Remove Common Name')
-    )
+    crumbs = cblr.crumble_route_group('remove_common_name', REMOVE_ROUTES)
     return render_template('seeds/remove_common_name.html',
                            crumbs=crumbs,
-                           form=form,
-                           cn=cn)
+                           form=form)
 
 
-@seeds.route('/remove_packet', methods=['GET', 'POST'])
-@seeds.route('/remove_packet/<pkt_id>', methods=['GET', 'POST'])
+@seeds.route('/remove_botanical_name', methods=['GET', 'POST'])
+@seeds.route('/remove_botanical_name/<bn_id>', methods=['GET', 'POST'])
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
-def remove_packet(pkt_id=None):
-    """Remove a packet from the database."""
-    if pkt_id is None:
-        return redirect(url_for('seeds.select_packet',
-                                dest='seeds.remove_packet'))
-    packet = Packet.query.get(pkt_id)
-    if packet is None:
-        return redirect(url_for('seeds.select_packet',
-                                dest='seeds.remove_packet'))
-    form = RemovePacketForm()
+def remove_botanical_name(bn_id=None):
+    """Remove a botanical name from the database."""
+    bn = BotanicalName.query.get(bn_id) if bn_id else None
+    if bn is None:
+        return redirect(url_for('seeds.select_botanical_name',
+                                dest='seeds.remove_botanical_name'))
+    form = RemoveBotanicalNameForm()
     if form.validate_on_submit():
+        messages = []
         if form.verify_removal.data:
-            flash('Packet {0} has been removed from the database.'
-                  .format(packet.info))
-            oldqty = packet.quantity
-            db.session.delete(packet)
-            if not oldqty.packets:
-                db.session.delete(oldqty)
+            messages.append('Removing botanical name \'{0}\':'.format(bn.name))
+            if bn.synonyms:
+                bn.synonyms_string = None
+                messages.append('Synonyms have been cleared.')
+            db.session.delete(bn)
             db.session.commit()
+            messages.append('Botanical name removed.')
+            flash_all(messages)
             return redirect(url_for('seeds.manage'))
         else:
-            flash('No changes made. Check the box labeled \'Yes\' if you '
-                  'want to remove this packet.')
-            return redirect(url_for('seeds.remove_packet', pkt_id=pkt_id))
-    crumbs = make_breadcrumbs(
-        (url_for('seeds.manage'), 'Manage Seeds'),
-        (url_for('seeds.remove_index'), 'Remove Index'),
-        (url_for('seeds.remove_common_name'), 'Remove Common Name'),
-        (url_for('seeds.remove_botanical_name'), 'Remove Botanical Name'),
-        (url_for('seeds.remove_series'), 'Remove Series'),
-        (url_for('seeds.remove_cultivar'), 'Remove Cultivar'),
-        (url_for('seeds.remove_packet'), 'Remove Packet')
-    )
-    return render_template('seeds/remove_packet.html',
+            messages.append('Botanical name was not removed, so no changes '
+                            'were made. If you would like to remove it, '
+                            'please check the box labeled \'Yes\'.')
+            flash_all(messages)
+            return redirect(url_for('seeds.remove_botanical_name',
+                                    bn_id=bn_id))
+    crumbs = cblr.crumble_route_group('remove_botanical_name', REMOVE_ROUTES)
+    return render_template('seeds/remove_botanical_name.html',
+                           bn=bn,
                            crumbs=crumbs,
-                           form=form,
-                           packet=packet)
-
-
-@seeds.route('/remove_cultivar', methods=['GET', 'POST'])
-@seeds.route('/remove_cultivar/<cv_id>', methods=['GET', 'POST'])
-@login_required
-@permission_required(Permission.MANAGE_SEEDS)
-def remove_cultivar(cv_id=None):
-    if cv_id is None:
-        return redirect(url_for('seeds.select_cultivar',
-                                dest='seeds.remove_cultivar'))
-    cv = Cultivar.query.get(cv_id)
-    if cv is None:
-        return redirect(url_for('seeds.select_cultivar',
-                                dest='seeds.remove_cultivar'))
-    form = RemoveCultivarForm()
-    if form.validate_on_submit():
-        if not form.verify_removal.data:
-            flash('No changes made. Check the box labeled \'Yes\' if you '
-                  'would like to remove this cultivar.')
-            return redirect(url_for('seeds.remove_cultivar', cv_id=cv_id))
-        if form.delete_images:
-            rollback = False
-            if cv.images:
-                for image in cv.images:
-                    try:
-                        image.delete_file()
-                        flash('Image file \'{0}\' deleted.'.
-                              format(image.filename))
-                        db.session.delete(image)
-                    except OSError as e:
-                        if e.errno == 2:    # No such file or directory
-                            db.session.delete(image)
-                        else:
-                            rollback = True
-                            flash('Error: Attempting to delete image \'{0}\' '
-                                  'raised an exception: {1}'
-                                  .format(image.filename, e))
-            if cv.thumbnail:
-                try:
-                    cv.thumbnail.delete_file()
-                    flash('Thumbnail image \'{0}\' has been deleted.'.
-                          format(cv.thumbnail.filename))
-                    db.session.delete(cv.thumbnail)
-                except OSError as e:
-                    if e.errno == 2:    # No such file or directory
-                        db.session.delete(cv.thumbnail)
-                    else:
-                        rollback = True
-                        flash('Error: Attempting to delete thumbnail \'{0}\' '
-                              'raised an exception: {1}'
-                              .format(cv.thumbnail.filename, e))
-        if rollback:
-            flash('Error: Cultivar could not be deleted due to problems '
-                  'deleting associated images.')
-            db.session.rollback()
-            return redirect(url_for('seeds.remove_cultivar', cv_id=cv_id))
-        else:
-            if cv.synonyms:
-                flash('Synonyms for \'{0}\' cleared, and orphaned synonyms '
-                      'have been deleted.'.format(cv.fullname))
-                cv.synonyms_string = None
-            flash('The cultivar \'{0}\' has been deleted. Forever. I hope '
-                  'you\'re happy with yourself.'.format(cv.fullname))
-            old_path = url_for('seeds.cultivar',
-                               idx_slug=cv.common_name.index.slug,
-                               cn_slug=cv.common_name.slug,
-                               cv_slug=cv.slug)
-            flash(Markup(
-                'Warning: the path \'{0}\' is no longer valid. <a '
-                'href="{1}" target="_blank">Click here</a> if you wish to'
-                'add a redirect for it.'
-                .format(old_path,
-                        url_for('seeds.add_redirect',
-                                old_path=old_path,
-                                status_code=301))
-                ))
-            db.session.delete(cv)
-            db.session.commit()
-            return redirect(url_for('seeds.manage'))
-    form.delete_images.data = True
-    crumbs = make_breadcrumbs(
-        (url_for('seeds.manage'), 'Manage Seeds'),
-        (url_for('seeds.remove_index'), 'Remove Index'),
-        (url_for('seeds.remove_common_name'), 'Remove Common Name'),
-        (url_for('seeds.remove_series'), 'Remove Series'),
-        (url_for('seeds.remove_botanical_name'), 'Remove Botanical Name'),
-        (url_for('seeds.remove_cultivar'), 'Remove Cultivar')
-    )
-    return render_template('seeds/remove_cultivar.html',
-                           crumbs=crumbs,
-                           form=form,
-                           cultivar=cv)
+                           form=form)
 
 
 @seeds.route('/remove_series', methods=['GET', 'POST'])
@@ -1630,64 +1461,155 @@ def remove_cultivar(cv_id=None):
 @permission_required(Permission.MANAGE_SEEDS)
 def remove_series(series_id=None):
     """Display page for removing series from database."""
-    if series_id is None:
-        return redirect(url_for('seeds.select_series',
-                                dest='seeds.remove_series'))
-    series = Series.query.get(series_id)
+    series = Series.query.get(series_id) if series_id else None
     if series is None:
         return redirect(url_for('seeds.select_series',
                                 dest='seed.remove_series'))
     form = RemoveSeriesForm()
     if form.validate_on_submit():
+        messages = []
         if form.verify_removal.data:
-            flash('The series \'{0}\' has been removed from the database.'.
-                  format(series.fullname))
+            warnings = []
+            messages.append('Removing series \'{0}\':'.format(series.name))
+            for cv in list(series.cultivars):
+                cn_cvs = series.common_name.cultivars
+                conflict_cv = next(
+                    (c for c in cn_cvs if c.name == cv.name and
+                     c.series is None),
+                    None
+                )
+                if conflict_cv:
+                    warnings.append(
+                        'Warning: The cultivar \'{0}\' was deleted because '
+                        'removing the series \'{1}\' would cause it to become '
+                        'a duplicate of the existing cultivar \'{2}\'.'
+                        .format(cv.fullname,
+                                series.name,
+                                conflict_cv.fullname)
+                    )
+                    db.session.delete(cv)
             db.session.delete(series)
             db.session.commit()
+            messages.append('Series removed.')
+            flash_all(messages)
+            if warnings:
+                flash_all(warnings, 'warning')
             return redirect(url_for('seeds.manage'))
         else:
-            flash('No changes made. Check the box labled \'Yes\' if you would'
-                  ' like to remove this series.')
+            messages.append('Series was not removed, so no changes were made. '
+                            'If you would like to remove it, please check the '
+                            'box labeled \'Yes\'.')
+            flash_all(messages)
             return redirect(url_for('seeds.remove_series',
                                     series_id=series_id))
-    crumbs = make_breadcrumbs(
-        (url_for('seeds.manage'), 'Manage Seeds'),
-        (url_for('seeds.remove_index'), 'Remove Index'),
-        (url_for('seeds.remove_common_name'), 'Remove Common Name'),
-        (url_for('seeds.remove_botanical_name'), 'Remove Botanical Name'),
-        (url_for('seeds.remove_series'), 'Remove Series')
-    )
+    crumbs = cblr.crumble_route_group('remove_series', REMOVE_ROUTES)
     return render_template('seeds/remove_series.html',
                            crumbs=crumbs,
                            form=form,
                            series=series)
 
 
-@seeds.route('/select_botanical_name', methods=['GET', 'POST'])
+@seeds.route('/remove_cultivar', methods=['GET', 'POST'])
+@seeds.route('/remove_cultivar/<cv_id>', methods=['GET', 'POST'])
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
-def select_botanical_name():
-    """Select a botanical name to load on another page.
-
-    Request Args:
-        dest (str): The route to redirect to once botanical name is selected.
-    """
-    dest = request.args.get('dest')
-    if dest is None:
-        flash('Error: No destination page was specified!')
-        return redirect(url_for('seeds.manage'))
-    form = SelectBotanicalNameForm()
-    form.set_botanical_name()
+def remove_cultivar(cv_id=None):
+    cv = Cultivar.query.get(cv_id) if cv_id else None
+    if cv is None:
+        return redirect(url_for('seeds.select_cultivar',
+                                dest='seeds.remove_cultivar'))
+    form = RemoveCultivarForm()
     if form.validate_on_submit():
-        return redirect(url_for(dest, bn_id=form.botanical_name.data))
-    crumbs = make_breadcrumbs(
-        (url_for('seeds.manage'), 'Manage Seeds'),
-        (url_for('seeds.select_botanical_name', dest=dest),
-         'Select Botanical Name')
-    )
-    return render_template('seeds/select_botanical_name.html',
+        messages = []
+        if form.verify_removal.data:
+            warnings = []
+            messages.append('Removing cultivar \'{0}\':'.format(cv.fullname))
+            if cv.synonyms:
+                cv.synonyms_string = None
+                messages.append('Synonyms cleared.')
+            if form.delete_images.data:
+                if cv.thumbnail:
+                    if (not cv.thumbnail.cultivars or
+                            cv.thumbnail.cultivars == [cv]):
+                        messages.append('Thumbnail image file \'{0}\' deleted.'
+                                        .format(cv.thumbnail.filename))
+                        db.session.delete(cv.thumbnail)
+                    else:
+                        messages.append('Thumbnail image file \'{0}\' was not '
+                                        'deleted because it is in use by '
+                                        'other cultivars.')
+                if cv.images:
+                    for img in cv.images:
+                        if img.cultivars == [cv] and img.cultivar is None:
+                            messages.append('Image file \'{0}\' associated '
+                                            'with \'{1}\' has been deleted. '
+                                            .format(img.filename, cv.fullname))
+                            db.session.delete(img)
+            old_path = url_for('seeds.cultivar',
+                               idx_slug=cv.common_name.index.slug,
+                               cn_slug=cv.common_name.slug,
+                               cv_slug=cv.slug)
+            warnings.append(
+                'Warning: the path \'{0}\' is no longer valid. <a '
+                'href="{1}" target="_blank">Click here</a> if you wish to'
+                'add a redirect for it.'
+                .format(old_path,
+                        url_for('seeds.add_redirect',
+                                old_path=old_path,
+                                status_code=301))
+            )
+            db.session.delete(cv)
+            db.session.commit()
+            messages.append('Cultivar removed.')
+            flash_all(messages)
+            if warnings:
+                flash_all(warnings, 'warning')
+            return redirect(url_for('seeds.manage'))
+        else:
+            messages.append('Cultivar was not removed, so no changes '
+                            'were made. If you would like to remove it, '
+                            'please check the box labeled \'Yes\'.')
+            flash_all(messages)
+            return redirect(url_for('seeds.remove_cultivar', cv_id=cv.id))
+    crumbs = cblr.crumble_route_group('remove_cultivar', REMOVE_ROUTES)
+    return render_template('seeds/remove_cultivar.html',
                            crumbs=crumbs,
-                           form=form)
+                           form=form,
+                           cultivar=cv)
+
+
+@seeds.route('/remove_packet', methods=['GET', 'POST'])
+@seeds.route('/remove_packet/<pkt_id>', methods=['GET', 'POST'])
+@login_required
+@permission_required(Permission.MANAGE_SEEDS)
+def remove_packet(pkt_id=None):
+    """Remove a packet from the database."""
+    packet = Packet.query.get(pkt_id) if pkt_id else None
+    if packet is None:
+        return redirect(url_for('seeds.select_packet',
+                                dest='seeds.remove_packet'))
+    form = RemovePacketForm()
+    if form.validate_on_submit():
+        messages = []
+        if form.verify_removal.data:
+            if len(packet.quantity.packets) == 1:
+                db.session.delete(packet.quantity)
+            db.session.delete(packet)
+            db.session.commit()
+            messages.append('Packet removed.')
+            flash_all(messages)
+            return redirect(url_for('seeds.manage'))
+        else:
+            messages.append('Packet was not removed, so no changes '
+                            'were made. If you would like to remove it, '
+                            'please check the box labeled \'Yes\'.')
+            flash_all(messages)
+            return redirect(url_for('seeds.remove_packet', pkt_id=pkt_id))
+    crumbs = cblr.crumble_route_group('remove_packet', REMOVE_ROUTES)
+    return render_template('seeds/remove_packet.html',
+                           crumbs=crumbs,
+                           form=form,
+                           packet=packet)
 
 
 @seeds.route('/select_index', methods=['GET', 'POST'])
@@ -1697,19 +1619,18 @@ def select_index():
     """Select an index to load on another page.
 
     Request Args:
-        dest (str): The route to redirect to once index is selected.
+        dest: The route to redirect to after `Index` is selected.
     """
     dest = request.args.get('dest')
     if dest is None:
-        flash('Error: No destination page was specified!')
+        flash('Error: No destination page was specified!', 'error')
         return redirect(url_for('seeds.manage'))
     form = SelectIndexForm()
-    form.set_index()
     if form.validate_on_submit():
         return redirect(url_for(dest, idx_id=form.index.data))
-    crumbs = make_breadcrumbs(
-        (url_for('seeds.manage'), 'Manage Seeds'),
-        (url_for('seeds.select_index', dest=dest), 'Select Index')
+    crumbs = (
+        cblr.crumble('manage', 'Manage Seeds'),
+        cblr.crumble('select_index', dest=dest)
     )
     return render_template('seeds/select_index.html',
                            crumbs=crumbs,
@@ -1723,73 +1644,45 @@ def select_common_name():
     """Select a common name to load on another page.
 
     Request Args:
-        dest (str): The route to redirect to once index is selected.
+        dest: The route to redirect to after `Index` is selected.
     """
     dest = request.args.get('dest')
     if dest is None:
         flash('Error: No destination page was specified!')
         return redirect(url_for('seeds.manage'))
     form = SelectCommonNameForm()
-    form.set_common_name()
     if form.validate_on_submit():
         return redirect(url_for(dest, cn_id=form.common_name.data))
-    crumbs = make_breadcrumbs(
-        (url_for('seeds.manage'), 'Manage Seeds'),
-        (url_for('seeds.select_common_name', dest=dest), 'Select Common Name')
+    crumbs = (
+        cblr.crumble('manage', 'Manage Seeds'),
+        cblr.crumble('select_common_name', dest=dest)
     )
     return render_template('seeds/select_common_name.html',
                            crumbs=crumbs,
                            form=form)
 
 
-@seeds.route('/select_packet', methods=['GET', 'POST'])
+@seeds.route('/select_botanical_name', methods=['GET', 'POST'])
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
-def select_packet():
-    """Select a packet to load on another page.
+def select_botanical_name():
+    """Select a botanical name to load on another page.
 
     Request Args:
-        dest (str): The route to redirect to with selected packet id.
+        dest: The route to redirect to after `BotanicalName` is selected.
     """
     dest = request.args.get('dest')
     if dest is None:
         flash('Error: No destination page was specified!')
         return redirect(url_for('seeds.manage'))
-    form = SelectPacketForm()
-    form.set_packet()
+    form = SelectBotanicalNameForm()
     if form.validate_on_submit():
-        return redirect(url_for(dest, pkt_id=form.packet.data))
-    crumbs = make_breadcrumbs(
-        (url_for('seeds.manage'), 'Manage Seeds'),
-        (url_for('seeds.select_packet', dest=dest), 'Select Packet')
+        return redirect(url_for(dest, bn_id=form.botanical_name.data))
+    crumbs = (
+        cblr.crumble('manage', 'Manage Seeds'),
+        cblr.crumble('select_botanical_name', dest=dest)
     )
-    return render_template('seeds/select_packet.html',
-                           crumbs=crumbs,
-                           form=form)
-
-
-@seeds.route('/select_cultivar', methods=['GET', 'POST'])
-@login_required
-@permission_required(Permission.MANAGE_SEEDS)
-def select_cultivar():
-    """Select a cultivar to load on another page.
-
-    Request Args:
-        dest (str): The route to redirect to once cultivar is selected.
-    """
-    dest = request.args.get('dest')
-    if dest is None:
-        flash('Error: No destination page was specified!')
-        return redirect(url_for('seeds.manage'))
-    form = SelectCultivarForm()
-    form.set_cultivar()
-    if form.validate_on_submit():
-        return redirect(url_for(dest, cv_id=form.cultivar.data))
-    crumbs = make_breadcrumbs(
-        (url_for('seeds.manage'), 'Manage Seeds'),
-        (url_for('seeds.select_cultivar', dest=dest), 'Select Cultivar')
-    )
-    return render_template('seeds/select_cultivar.html',
+    return render_template('seeds/select_botanical_name.html',
                            crumbs=crumbs,
                            form=form)
 
@@ -1801,21 +1694,70 @@ def select_series():
     """Select a series to load on another page.
 
     Request Args:
-        dest (str): The route to redirect to once series is selected.
+        dest: The route to redirect to after `Series` is selected.
     """
     dest = request.args.get('dest')
     if dest is None:
         flash('Error: No destination page was specified!')
         return redirect(url_for('seeds.manage'))
     form = SelectSeriesForm()
-    form.set_series()
     if form.validate_on_submit():
         return redirect(url_for(dest, series_id=form.series.data))
-    crumbs = make_breadcrumbs(
-        (url_for('seeds.manage'), 'Manage Seeds'),
-        (url_for('seeds.select_series', dest=dest), 'Select Series')
+    crumbs = (
+        cblr.crumble('manage', 'Manage Seeds'),
+        cblr.crumble('select_series', dest=dest)
     )
     return render_template('seeds/select_series.html',
+                           crumbs=crumbs,
+                           form=form)
+
+
+@seeds.route('/select_cultivar', methods=['GET', 'POST'])
+@login_required
+@permission_required(Permission.MANAGE_SEEDS)
+def select_cultivar():
+    """Select a cultivar to load on another page.
+
+    Request Args:
+        dest: The route to redirect after `Cultivar` is selected.
+    """
+    dest = request.args.get('dest')
+    if dest is None:
+        flash('Error: No destination page was specified!')
+        return redirect(url_for('seeds.manage'))
+    form = SelectCultivarForm()
+    if form.validate_on_submit():
+        return redirect(url_for(dest, cv_id=form.cultivar.data))
+    crumbs = (
+        cblr.crumble('manage', 'Manage Seeds'),
+        cblr.crumble('select_cultivar', dest=dest)
+    )
+    return render_template('seeds/select_cultivar.html',
+                           crumbs=crumbs,
+                           form=form)
+
+
+@seeds.route('/select_packet', methods=['GET', 'POST'])
+@login_required
+@permission_required(Permission.MANAGE_SEEDS)
+def select_packet():
+    """Select a packet to load on another page.
+
+    Request Args:
+        dest: The route to redirect to after `Packet` is selected.
+    """
+    dest = request.args.get('dest')
+    if dest is None:
+        flash('Error: No destination page was specified!')
+        return redirect(url_for('seeds.manage'))
+    form = SelectPacketForm()
+    if form.validate_on_submit():
+        return redirect(url_for(dest, pkt_id=form.packet.data))
+    crumbs = (
+        cblr.crumble('manage', 'Manage Seeds'),
+        cblr.crumble('select_packet', dest=dest)
+    )
+    return render_template('seeds/select_packet.html',
                            crumbs=crumbs,
                            form=form)
 
@@ -1832,23 +1774,22 @@ def manage():
 
 
 @seeds.route('/')
-def index():
-    """Index page for seeds section."""
+def home():
+    """Home page for seeds section."""
     indexes = Index.query.all()
-    return render_template('seeds/index.html', indexes=indexes)
+    return render_template('seeds/home.html', indexes=indexes)
 
 
 @seeds.route('/<idx_slug>')
-def index_page(idx_slug=None):
-    """Display an index."""
-    index = Index.query.filter_by(slug=idx_slug).first()
+def index(idx_slug=None):
+    """Display an `Index`."""
+    index = Index.query.filter_by(slug=idx_slug).one_or_none()
     if index is not None:
-        crumbs = make_breadcrumbs(
-            (url_for('seeds.index'), 'All Seeds'),
-            (url_for('seeds.index_page', idx_slug=index.slug),
-             index.header)
+        crumbs = (
+            cblr.crumble('home', 'Home'),
+            cblr.crumble('index', index.header, idx_slug=index.slug)
         )
-        return render_template('seeds/indexes.html',
+        return render_template('seeds/index.html',
                                crumbs=crumbs,
                                index=index)
     else:
@@ -1866,9 +1807,12 @@ def common_name(idx_slug=None, cn_slug=None):
         individuals = [cv for cv in cn.cultivars if not cv.series and
                        not cv.common_name.parent]
         crumbs = (
-            cblr.crumble('index', 'All seeds'),
-            cblr.crumble('index_page', cn.index.header, idx_slug=idx_slug),
-            cblr.crumble('common_name', idx_slug=idx_slug, cn_slug=cn_slug)
+            cblr.crumble('home', 'Home'),
+            cblr.crumble('index', cn.index.header, idx_slug=idx_slug),
+            cblr.crumble('common_name',
+                         cn.name,
+                         idx_slug=idx_slug,
+                         cn_slug=cn_slug)
         )
 
         return render_template('seeds/common_name.html',
@@ -1891,25 +1835,11 @@ def cultivar(idx_slug=None, cn_slug=None, cv_slug=None):
                     Cultivar.slug == cv_slug)\
             .one_or_none()
         if cv and current_app.config.get('SHOW_CULTIVAR_PAGES'):
-            crumbs = make_breadcrumbs(
-                (url_for('seeds.index'), 'All Seeds'),
-                (url_for('seeds.index_page',
-                         idx_slug=idx_slug),
-                 cv.common_name.index.header),
-                (url_for('seeds.common_name',
-                         idx_slug=idx_slug,
-                         cn_slug=cn_slug),
-                 cv.common_name.name),
-                (url_for('seeds.cultivar',
-                         idx_slug=idx_slug,
-                         cn_slug=cn_slug,
-                         cv_slug=cv_slug),
-                 cv.name)
-            )
+            # TODO: Breadcrumbs
             return render_template('seeds/cultivar.html',
                                    idx_slug=idx_slug,
                                    cn_slug=cn_slug,
-                                   crumbs=crumbs,
+                                   # crumbs=crumbs,
                                    cultivar=cv)
     abort(404)
 

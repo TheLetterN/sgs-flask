@@ -1,7 +1,6 @@
 import io
-import os
 from decimal import Decimal
-from flask import current_app, url_for
+from flask import url_for
 from unittest import mock
 from app.seeds.models import (
     BotanicalName,
@@ -10,9 +9,7 @@ from app.seeds.models import (
     Cultivar,
     Image,
     Packet,
-    Quantity,
-    Series,
-    Synonym
+    Quantity
 )
 
 
@@ -610,8 +607,8 @@ class TestFlipDroppedRouteWithDB:
         with app.test_client() as tc:
             rv = tc.get(url_for('seeds.flip_dropped',
                                 cv_id=cultivar.id,
-                                next=url_for('seeds.index')))
-        assert rv.location == url_for('seeds.index', _external=True)
+                                next=url_for('seeds.home')))
+        assert rv.location == url_for('seeds.home', _external=True)
         assert not cultivar.dropped
         with app.test_client() as tc:
             rv = tc.get(url_for('seeds.flip_dropped', cv_id=cultivar.id),
@@ -651,8 +648,8 @@ class TestFlipInStockRouteWithDB:
         with app.test_client() as tc:
             rv = tc.get(url_for('seeds.flip_in_stock',
                                 cv_id=cultivar.id,
-                                next=url_for('seeds.index')))
-        assert rv.location == url_for('seeds.index', _external=True)
+                                next=url_for('seeds.home')))
+        assert rv.location == url_for('seeds.home', _external=True)
         assert not cultivar.in_stock
         with app.test_client() as tc:
             rv = tc.get(url_for('seeds.flip_in_stock', cv_id=cultivar.id),
@@ -664,12 +661,12 @@ class TestFlipInStockRouteWithDB:
         assert '\\\'Foxy Foxglove\\\' is now out of stock.' in str(rv.data)
 
 
-class TestIndexRouteWithDB:
-    """Test seeds.index."""
-    def test_index_renders_page(self, app, db):
+class TestHomeRouteWithDB:
+    """Test seeds.home."""
+    def test_home_renders_page(self, app, db):
         """seeds.index should render a page with no redirects."""
         with app.test_client() as tc:
-            rv = tc.get(url_for('seeds.index'))
+            rv = tc.get(url_for('seeds.home'))
         assert rv.status_code == 200
         assert rv.location is None
 
@@ -729,7 +726,7 @@ class TestRemoveBotanicalNameRouteWithDB:
             rv = tc.post(url_for('seeds.remove_botanical_name', bn_id=bn.id),
                          data=dict(verify_removal=''),
                          follow_redirects=True)
-        assert 'No changes made' in str(rv.data)
+        assert 'Botanical name was not removed' in str(rv.data)
 
     def test_remove_botanical_name_renders_page(self, app, db):
         """Render seeds/remove_botanical_name.html with valid bn_id."""
@@ -749,11 +746,10 @@ class TestRemoveBotanicalNameRouteWithDB:
         db.session.commit()
         assert BotanicalName.query.count() == 1
         with app.test_client() as tc:
-            rv = tc.post(url_for('seeds.remove_botanical_name', bn_id=bn.id),
-                         data=dict(verify_removal=True),
-                         follow_redirects=True)
+            tc.post(url_for('seeds.remove_botanical_name', bn_id=bn.id),
+                    data=dict(verify_removal=True),
+                    follow_redirects=True)
         assert BotanicalName.query.count() == 0
-        assert 'has been removed from the database' in str(rv.data)
 
 
 class TestRemoveIndexRouteWithDB:
@@ -800,7 +796,7 @@ class TestRemoveIndexRouteWithDB:
             rv = tc.post(url_for('seeds.remove_index', idx_id=idx.id),
                          data=dict(verify_removal='', move_to=idx2.id),
                          follow_redirects=True)
-        assert 'No changes made' in str(rv.data)
+        assert 'Index was not removed' in str(rv.data)
 
     def test_remove_index_renders_page(self, app, db):
         """Render seeds/remove_index.html with valid idx_id."""
@@ -823,11 +819,10 @@ class TestRemoveIndexRouteWithDB:
         db.session.commit()
         assert idx in Index.query.all()
         with app.test_client() as tc:
-            rv = tc.post(url_for('seeds.remove_index', idx_id=idx.id),
-                         data=dict(verify_removal=True, move_to=idx2.id),
-                         follow_redirects=True)
+            tc.post(url_for('seeds.remove_index', idx_id=idx.id),
+                    data=dict(verify_removal=True, move_to=idx2.id),
+                    follow_redirects=True)
         assert idx not in Index.query.all()
-        assert 'has been removed from the database' in str(rv.data)
 
 
 class TestRemoveCommonNameRouteWithDB:
@@ -875,7 +870,7 @@ class TestRemoveCommonNameRouteWithDB:
             rv = tc.post(url_for('seeds.remove_common_name', cn_id=cn.id),
                          data=dict(verify_removal='', move_to=cn2.id),
                          follow_redirects=True)
-        assert 'No changes made' in str(rv.data)
+        assert 'Common name was not removed' in str(rv.data)
         assert cn in CommonName.query.all()
 
     def test_remove_common_name_renders_page(self, app, db):
@@ -902,10 +897,9 @@ class TestRemoveCommonNameRouteWithDB:
         db.session.commit()
         assert cn in CommonName.query.all()
         with app.test_client() as tc:
-            rv = tc.post(url_for('seeds.remove_common_name', cn_id=cn.id),
-                         data=dict(verify_removal=True, move_to=cn2.id),
-                         follow_redirects=True)
-        assert 'has been removed from the database' in str(rv.data)
+            tc.post(url_for('seeds.remove_common_name', cn_id=cn.id),
+                    data=dict(verify_removal=True, move_to=cn2.id),
+                    follow_redirects=True)
         assert cn not in CommonName.query.all()
 
 
@@ -958,7 +952,7 @@ class TestRemovePacketRouteWithDB:
             rv = tc.post(url_for('seeds.remove_packet', pkt_id=packet.id),
                          data=dict(verify_removal=None),
                          follow_redirects=True)
-        assert 'No changes made' in str(rv.data)
+        assert 'Packet was not removed' in str(rv.data)
 
     def test_remove_packet_submission_verified(self, app, db):
         """Delete packet and flash a message if verify_removal is checked."""
@@ -969,11 +963,9 @@ class TestRemovePacketRouteWithDB:
         packet.sku = '8675309'
         db.session.commit()
         with app.test_client() as tc:
-            rv = tc.post(url_for('seeds.remove_packet', pkt_id=packet.id),
-                         data=dict(verify_removal=True),
-                         follow_redirects=True)
-        assert 'Packet SKU #8675309: $1.99 for 100 seeds has'\
-            ' been removed from the database' in str(rv.data)
+            tc.post(url_for('seeds.remove_packet', pkt_id=packet.id),
+                    data=dict(verify_removal=True),
+                    follow_redirects=True)
         assert Packet.query.count() == 0
 
 
@@ -995,11 +987,9 @@ class TestRemoveCultivarRouteWithDB:
         db.session.add_all([cultivar, img, thumb])
         db.session.commit()
         with app.test_client() as tc:
-            rv = tc.post(url_for('seeds.remove_cultivar', cv_id=cultivar.id),
-                         data=dict(verify_removal=True, delete_images=True),
-                         follow_redirects=True)
-        assert 'Image file \\\'foxee.jpg\\\' deleted' in str(rv.data)
-        assert 'Thumbnail image \\\'foxy.jpg\\\' has' in str(rv.data)
+            tc.post(url_for('seeds.remove_cultivar', cv_id=cultivar.id),
+                    data=dict(verify_removal=True, delete_images=True),
+                    follow_redirects=True)
         assert Image.query.count() == 0
         assert mock_delete.called
 
@@ -1009,11 +999,9 @@ class TestRemoveCultivarRouteWithDB:
         db.session.add(cultivar)
         db.session.commit()
         with app.test_client() as tc:
-            rv = tc.post(url_for('seeds.remove_cultivar', cv_id=cultivar.id),
-                         data=dict(verify_removal=True),
-                         follow_redirects=True)
-        assert 'The cultivar \\\'Foxy Foxglove\\\' has been deleted' in\
-            str(rv.data)
+            tc.post(url_for('seeds.remove_cultivar', cv_id=cultivar.id),
+                    data=dict(verify_removal=True),
+                    follow_redirects=True)
         assert Cultivar.query.count() == 0
 
     def test_remove_cultivar_no_id(self, app, db):
@@ -1047,7 +1035,7 @@ class TestRemoveCultivarRouteWithDB:
             rv = tc.post(url_for('seeds.remove_cultivar', cv_id=cultivar.id),
                          data=dict(verify_removal=None),
                          follow_redirects=True)
-        assert 'No changes made' in str(rv.data)
+        assert 'Cultivar was not removed' in str(rv.data)
 
     def test_remove_cultivar_renders_page(self, app, db):
         """Render remove cultivar form page given valid cultivar id."""

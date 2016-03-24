@@ -1,7 +1,6 @@
 from unittest import mock
 
 import pytest
-from decimal import Decimal
 from wtforms import ValidationError
 from app.seeds.forms import (
     AddBotanicalNameForm,
@@ -10,21 +9,16 @@ from app.seeds.forms import (
     AddPacketForm,
     AddCultivarForm,
     AddSeriesForm,
-    EditBotanicalNameForm,
     EditCultivarForm,
     EditPacketForm,
     EditSeriesForm,
-    select_field_choices,
-    SelectBotanicalNameForm,
-    SelectIndexForm,
-    SelectCommonNameForm
+    select_field_choices
 )
 from app.seeds.models import (
     BotanicalName,
     Index,
     CommonName,
     Packet,
-    Quantity,
     Cultivar,
     Series
 )
@@ -219,60 +213,3 @@ class TestEditSeriesFormWithDB:
         assert (cn1.id, cn1.name) in form.common_name_id.choices
         assert (cn2.id, cn2.name) in form.common_name_id.choices
         assert (cn3.id, cn3.name) in form.common_name_id.choices
-
-
-class TestSelectBotanicalFormWithDB:
-    """Test custom methods of SelectBotanicalNameForm."""
-    def test_set_names(self, db):
-        """Set .names.choices with BotanicalNames from db."""
-        bn1 = BotanicalName()
-        bn2 = BotanicalName()
-        bn3 = BotanicalName()
-        db.session.add_all([bn1, bn2, bn3])
-        bn1.name = 'Asclepias incarnata'
-        bn2.name = 'Echinacea purpurea'
-        bn3.name = 'Innagada davida'
-        db.session.commit()
-        form = SelectBotanicalNameForm()
-        form.set_botanical_name()
-        assert (bn1.id, bn1.name) in form.botanical_name.choices
-        assert (bn2.id, bn2.name) in form.botanical_name.choices
-        assert (bn3.id, bn3.name) in form.botanical_name.choices
-
-
-class TestSelectIndexFormWithDB:
-    """Test custom methods of SelectIndexForm."""
-    def test_set_indexes(self, db):
-        """Load all indexes from database into select field."""
-        idx1 = Index()
-        idx2 = Index()
-        idx3 = Index()
-        db.session.add_all([idx1, idx2, idx3])
-        idx1.name = 'Perennial Flowers'
-        idx2.name = 'Annual Flowers'
-        idx3.name = 'Vegetables'
-        db.session.commit()
-        form = SelectIndexForm()
-        form.set_index()
-        assert (idx1.id, idx1.name) in form.index.choices
-        assert (idx2.id, idx2.name) in form.index.choices
-        assert (idx3.id, idx3.name) in form.index.choices
-
-
-class TestSelectCommonNameFormWithDB:
-    """Test custom methods of SelectCommonNameForm."""
-    def test_set_names(self, db):
-        """Load all common names from database into select field."""
-        cn1 = CommonName()
-        cn2 = CommonName()
-        cn3 = CommonName()
-        db.session.add_all([cn1, cn2, cn3])
-        cn1.name = 'Coleus'
-        cn2.name = 'Zinnia'
-        cn3.name = 'Sunflower'
-        db.session.commit()
-        form = SelectCommonNameForm()
-        form.set_common_name()
-        assert (cn1.id, cn1.name) in form.common_name.choices
-        assert (cn2.id, cn2.name) in form.common_name.choices
-        assert (cn3.id, cn3.name) in form.common_name.choices

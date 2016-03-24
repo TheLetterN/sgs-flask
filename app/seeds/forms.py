@@ -1049,133 +1049,119 @@ class EditPacketForm(Form):
             ))
 
 
-class RemoveBotanicalNameForm(Form):
-    """Form for removing a botanical name."""
-    verify_removal = BooleanField('Yes')
-    submit = SubmitField('Remove Botanical Name')
-
-
 class RemoveIndexForm(Form):
-    """Form for removing an index.
+    """Form for removing an `Index` from the database.
 
     Attributes:
-        idx (Index): The Index to remove.
-        move_to (SelectField): Field for selecting Index to move children of
+        move_to: Select field for selecting Index to move children of
             this index to when deleting it.
-        verify_removal (BooleanField): Field to confirm deletion should happen.
-        submit (SubmitField): Submit button.
+        verify_removal: Checkbox to confirm deletion should happen.
+
+        index: The `Index` to remove.
     """
-    idx = None
     move_to = SelectField('Move common names and cultivars in this index '
                           'to', coerce=int)
     verify_removal = BooleanField('Yes')
     submit = SubmitField('Remove Index')
 
-    def set_move_to(self):
-        """Set move_to SelectField with other Indexes.
+    def __init__(self, index, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.index = index
+        self.set_selects()
 
-        Raises: ValueError if no other indexes exist.
-        """
-        idxs = Index.query.filter(Index.id != self.idx.id).all()
-        if idxs:
-            self.move_to.choices = [(idx.id, idx.name) for idx in idxs]
-        else:
-            raise ValueError('Cannot delete index with no other index to move '
-                             'its common names to!')
+    def set_selects(self):
+        """Set move_to SelectField with other Indexes."""
+        idxs = Index.query.filter(Index.id != self.index.id).all()
+        self.move_to.choices = select_field_choices(items=idxs)
 
 
 class RemoveCommonNameForm(Form):
-    """Form for removing a common name.
+    """Form for removing a `CommonName` from the database.
 
     Attributes:
-        move_to (SelectField): Field for selecting CommonName to move orphans
-            to.
-        verify_removal (BooleanField): Field that must be checked for removal
-            of CommonName.
-        submit (SubmitField): Submit button.
+        move_to: Select field for `CommonName` to move children to.
+        verify_removal: Checkbox for whether or not to remove `CommonName`.
+
+        cn: The `CommonName` to remove.
     """
     move_to = SelectField('Move botanical names and cultivars associated with '
                           'this common name to', coerce=int)
     verify_removal = BooleanField('Yes')
     submit = SubmitField('Remove Common Name')
 
-    def set_move_to(self, cn_id):
-        """Set move_to SelectField with other CommonNames.
+    def __init__(self, cn, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.cn = cn
+        self.set_selects()
+
+    def set_selects(self):
+        """Set select fields.
 
         Args:
             cn_id: The id of the CommonName to be removed.
         """
-        cns = CommonName.query.filter(CommonName.id != cn_id,
-                                      ~CommonName.invisible).all()
-        self.move_to.choices = [(cn.id, cn.name) for cn in cns]
+        cns = CommonName.query.filter(CommonName.id != self.cn.id).all()
+        self.move_to.choices = select_field_choices(items=cns)
 
 
-class RemovePacketForm(Form):
-    """Form for removing a packet.
-
-    Attributes:
-        verify_removal (BooleanField): Field that must be checked for removal
-            of packet.
-        submit (SubmitField): Submit button.
-    """
-    verify_removal = BooleanField('Yes')
-    submit = SubmitField('Remove Packet')
-
-
-class RemoveCultivarForm(Form):
-    """Form for removing a cultivar.
+class RemoveBotanicalNameForm(Form):
+    """Form for removing a `BotanicalName` from the database.
 
     Attributes:
-        delete_images (BooleanField): Field for whether or not to delete images
-            associated with cultivar being removed.
-        verify_removal (BooleanField): Field that must be checked for removal
-            of cultivar.
-        submit (SubmitField): Submit button.
+        verify_removal: Checkbox for whether or not to remove `BotanicalName`.
     """
-    delete_images = BooleanField('Also delete all images for this cultivar')
     verify_removal = BooleanField('Yes')
-    submit = SubmitField('Remove Cultivar')
+    submit = SubmitField('Remove Botanical Name')
 
 
 class RemoveSeriesForm(Form):
-    """Form for removing a series.
+    """Form for removing a `Series` from the database.
 
     Attributes:
-        verify_removal (BooleanField): Field that must be checked for removal
-            of series.
-        submit (SubmitField): Submit button.
+        verify_removal: Checkbox for whether or not to remove `Series`.
     """
     verify_removal = BooleanField('Yes')
     submit = SubmitField('Remove Series')
 
 
-class SelectBotanicalNameForm(Form):
-    """Form for selecting a botanical name.
+class RemoveCultivarForm(Form):
+    """Form for removing a `Cultivar` from the database.
 
     Attributes:
-        name (SelectField): Field for selecting a botanical name.
-        submit (SubmitField): Submit button.
+        delete_images: Checkbox for whether or not to delete images associated
+            with `Cultivar` being removed.
+        verify_removal: Checkbox for whether or not to remove `Cultivar`.
     """
-    botanical_name = SelectField('Select Botanical Name', coerce=int)
-    submit = SubmitField('Submit')
+    delete_images = BooleanField('Also delete all images for this cultivar',
+                                 default=True)
+    verify_removal = BooleanField('Yes')
+    submit = SubmitField('Remove Cultivar')
 
-    def set_botanical_name(self):
-        """Populate names with BotanicalNames from the database."""
-        self.botanical_name.choices = select_field_choices(model=BotanicalName,
-                                                           order_by='name')
+
+class RemovePacketForm(Form):
+    """Form for removing a `Packet` from the database.
+
+    Attributes:
+        verify_removal: Checkbox for whether or not to remove `Packet`.
+    """
+    verify_removal = BooleanField('Yes')
+    submit = SubmitField('Remove Packet')
 
 
 class SelectIndexForm(Form):
     """Form for selecting an index.
 
     Attributes:
-        index (SelectField): Field for selecting an index.
-        submit (SubmitField): Submit button.
+        index: Select field for `Index`.
     """
     index = SelectField('Select Index', coerce=int)
     submit = SubmitField('Submit')
 
-    def set_index(self):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.set_select()
+
+    def set_select(self):
         """Populate index with Indexes from the database."""
         self.index.choices = select_field_choices(model=Index)
 
@@ -1184,14 +1170,17 @@ class SelectCommonNameForm(Form):
     """Form for selecting a common name.
 
     Attributes:
-        common_name (SelectField): Field for selecting a common name.
-        submit (SubmitField): Submit button.
+        common_name: Select field for `CommonName`.
     """
     common_name = SelectField('Select Common Name', coerce=int)
     submit = SubmitField('Submit')
 
-    def set_common_name(self):
-        """Populate common_name with CommonNames from the database."""
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.set_select()
+
+    def set_select(self):
+        """Populate `common_name`."""
         self.common_name.choices = select_field_choices(
             model=CommonName,
             title_attribute='select_field_title',
@@ -1199,50 +1188,81 @@ class SelectCommonNameForm(Form):
         )
 
 
-class SelectPacketForm(Form):
-    """Form for selecting a packet.
+class SelectBotanicalNameForm(Form):
+    """Form for selecting a botanical name.
 
     Attributes:
-        packet (SelectField): Field for selecting a packet.
-        submit (SubmitField): Submit button.
+        botanical_name: Select field for `BotanicalName`.
     """
-    packet = SelectField('Select Packet', coerce=int)
+    botanical_name = SelectField('Select Botanical Name', coerce=int)
     submit = SubmitField('Submit')
 
-    def set_packet(self):
-        """Populate packet with Packets from database."""
-        self.packet.choices = select_field_choices(model=Packet,
-                                                   order_by='sku',
-                                                   title_attribute='info')
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.set_select()
 
-
-class SelectCultivarForm(Form):
-    """Form for selecting a cultivar.
-
-    Attributes:
-        cultivar (SelectField): Field for selecting a cultivar.
-        submit (SubmitField): Submit button
-    """
-    cultivar = SelectField('Select Cultivar', coerce=int)
-    submit = SubmitField('Submit')
-
-    def set_cultivar(self):
-        """Populate cultivar with Cultivars from the database."""
-        self.cultivar.choices = select_field_choices(model=Cultivar,
-                                                     order_by='name')
+    def set_select(self):
+        """Populate `botanical_name`."""
+        self.botanical_name.choices = select_field_choices(model=BotanicalName,
+                                                           order_by='name')
 
 
 class SelectSeriesForm(Form):
     """Form for selecting a series.
 
     Attributes:
-        series (SelectField): Field for selecting a series.
-        submit (SubmitField): Submit button.
+        series: Select field for `Series`.
     """
     series = SelectField('Select Series', coerce=int)
     submit = SubmitField('Submit')
 
-    def set_series(self):
-        """Populate series with Series from the database."""
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.set_select()
+
+    def set_select(self):
+        """Populate `series`."""
         self.series.choices = select_field_choices(model=Series,
                                                    order_by='name')
+
+
+class SelectCultivarForm(Form):
+    """Form for selecting a cultivar.
+
+    Attributes:
+        cultivar: Select field for `Cultivar`.
+    """
+    cultivar = SelectField('Select Cultivar', coerce=int)
+    submit = SubmitField('Submit')
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.set_select()
+
+    def set_select(self):
+        """Populate `cultivar`."""
+        self.cultivar.choices = select_field_choices(
+            model=Cultivar,
+            order_by='slug',
+            title_attribute='fullname'
+        )
+
+
+class SelectPacketForm(Form):
+    """Form for selecting a packet.
+
+    Attributes:
+        packet: Select field for `Packet`.
+    """
+    packet = SelectField('Select Packet', coerce=int)
+    submit = SubmitField('Submit')
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.set_select()
+
+    def set_select(self):
+        """Populate packet with Packets from database."""
+        self.packet.choices = select_field_choices(model=Packet,
+                                                   order_by='sku',
+                                                   title_attribute='info')

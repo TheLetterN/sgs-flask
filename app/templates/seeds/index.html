@@ -20,15 +20,27 @@
 {# block head: 2 indentations of 4 spaces each. (8 spaces total.) #}
 {# block main: 3 indentations of 4 spaces each. (12 spaces total.) #}
 {% block head %}
-    <title>Swallowtail Garden Seeds - Seeds</title>
-    <link rel="canonical" href="{{ url_for('seeds.index', _external=True) }}">
+    <title>Swallowtail Garden Seeds - {{ index.header }}</title>
+    <link rel="canonical" href="{{ url_for('seeds.index', idx_slug=index.slug, _external=True) }}">
 {% endblock %}
 {% block main %}
-        <h1>Seeds</h1>
-        {% for index in indexes %}
-        <div class="index">
-            <h2><a href="{{ url_for('seeds.index_page', idx_slug=index.slug) }}">{{ index.plural }}</a></h2>
-            <p class="description">{{ index.description|safe }}</p>
+    <h1>{{ index.header }}</h1>
+        {% if index.description %}
+        <p class="description">{{ index.description|safe }}</p>
+        {% endif %}
+        <div id="common_names">
+            {% if index.common_names %}
+            {% for cn in index.common_names %}
+            {% if not cn.parent and not cn.invisible %}
+            <div class="common_name">
+                <a href="{{ url_for('seeds.common_name', idx_slug=index.slug, cn_slug=cn.slug) }}">{{ cn.name }}</a>
+                {% if cn.description %}
+                <p class="description">{{ cn.description|safe }}</p>
+                {% endif %}
+            </div>
+            {% endif %}
+            {% endfor %}
+            {% endif %}
         </div>
-        {% endfor %}
 {% endblock %}
+

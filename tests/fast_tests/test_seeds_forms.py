@@ -7,7 +7,6 @@ from app.seeds.forms import (
     EditBotanicalNameForm,
     EditCommonNameForm,
     EditCultivarForm,
-    EditSeriesForm,
     IsBotanicalName,
     NotSpace,
     ReplaceMe,
@@ -17,13 +16,6 @@ from app.seeds.forms import (
     USDollar
 )
 from app.redirects import Redirect
-from app.seeds.models import (
-    BotanicalName,
-    Index,
-    CommonName,
-    Cultivar,
-    Series
-)
 from tests.conftest import app  # noqa
 
 

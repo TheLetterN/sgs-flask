@@ -1564,6 +1564,16 @@ class Image(db.Model):
         os.rename(old_path, self.full_path)
 
 
+@event.listens_for(Image, 'before_delete')
+def delete_image_file_before_delete(mapper, connection, target):
+    """Delete image file of `Image` instance before the instance is deleted."""
+    try:
+        target.delete_file()
+    except FileNotFoundError:
+        print(target.full_path)
+        pass  # If the file doesn't exist, there's no need to delete it.
+
+
 if __name__ == '__main__':  # pragma: no cover
     import doctest
     doctest.testmod()

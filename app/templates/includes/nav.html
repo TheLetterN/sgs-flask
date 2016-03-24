@@ -18,12 +18,12 @@
 {# nav needs 2 indents to fit in with page formatting. #}
         <nav>
             <span id="nav_left">
-                <span id="nav_home"><a href="{{ url_for('main.index') }}">Home</a></span>
+                <span id="nav_home"><a href="{{ url_for('main.index') }}">Index</a></span>
                 <ul id="nav_seeds">
-                    <li><a href="{{ url_for('seeds.index') }}">All Seeds</a></li>
+                    <li><a href="{{ url_for('seeds.home') }}">Home</a></li>
                     {% set index_map = get_index_map() %}
                     {% for i in index_map %}
-                    <li><a href="{{ url_for('seeds.index_page', idx_slug=index_map[i][1])}}">{{ index_map[i][0] }}</a></li>
+                    <li><a href="{{ url_for('seeds.index', idx_slug=index_map[i][1])}}">{{ index_map[i][0] }}</a></li>
                     {% endfor %}
                 </ul>
             </span>

@@ -1,19 +1,21 @@
 Flask==0.10.1
 Flask-Login==0.3.2
 Flask-Mail==0.9.1
-Flask-Migrate==1.6.0
+Flask-Migrate==1.7.0
 Flask-SQLAlchemy==2.1
 Flask-Script==2.0.5
 Flask-WTF==0.12
 Jinja2==2.8
-Mako==1.0.2
+Mako==1.0.3
 MarkupSafe==0.23
-SQLAlchemy==1.0.9
+SQLAlchemy==1.0.11
 Unidecode==0.4.18
 WTForms==2.0.2
-Werkzeug==0.10.4
-alembic==0.8.2
+Werkzeug==0.11.3
+alembic==0.8.4
+beautifulsoup4==4.4.1
 blinker==1.4
+bs4==0.0.1
 coverage==4.0
 decorator==4.0.4
 et-xmlfile==1.0.1
@@ -24,18 +26,21 @@ ipython-genutils==0.1.0
 itsdangerous==0.24
 jdcal==1.2
 mccabe==0.3.1
-openpyxl==2.3.2
+openpyxl==2.3.3
 path.py==8.1.2
 pep8==1.5.7
 pexpect==4.0.1
 pickleshare==0.5
-# psycopg2==2.6.1 Needs to be installed by system administrator!
+# psycopg2 is for postgresql, and needs to be installed by system admin.
+# It is not needed for testing until we need to test against postgres.
+#psycopg2==2.6.1
 ptyprocess==0.5
 py==1.4.30
 pyflakes==1.0.0
 pytest==2.8.2
-python-editor==0.4
+python-editor==0.5
 python-slugify==1.1.4
+requests==2.9.1
 simplegeneric==0.8.1
 titlecase==0.8.0
 traitlets==4.0.0

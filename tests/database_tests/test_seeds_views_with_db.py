@@ -523,10 +523,12 @@ class TestEditPacketRouteWithDB:
         packet.price = Decimal('1.99')
         packet.quantity = Quantity(value=100, units='seeds')
         packet.sku = '8675309'
+        packet.cultivar = Cultivar(name='Foxy')
         db.session.commit()
         with app.test_client() as tc:
             tc.post(url_for('seeds.edit_packet', pkt_id=packet.id),
                     data=dict(id=packet.id,
+                              cultivar_id=packet.cultivar.id,
                               price='2.99',
                               qty_val='2.5',
                               units='grams',
@@ -580,45 +582,29 @@ class TestEditPacketRouteWithDB:
 
 
 class TestFlipDroppedRouteWithDB:
-    """Test seeds.flip_dropped."""
-    def test_flip_dropped_no_cultivar(self, app, db):
+    """Test seeds.flip_active."""
+    def test_flip_active_no_cultivar(self, app, db):
         """Return 404 if no cultivar exists with given id."""
         with app.test_client() as tc:
-            rv = tc.get(url_for('seeds.flip_dropped', cv_id=42))
+            rv = tc.get(url_for('seeds.flip_active', cv_id=42))
         assert rv.status_code == 404
 
-    def test_flip_dropped_no_cv_id(self, app, db):
-        """Return 404 if no cv_id given."""
-        db.session.commit()
-        with app.test_client() as tc:
-            rv = tc.get(url_for('seeds.flip_dropped'))
-        assert rv.status_code == 404
-
-    def test_flip_dropped_success(self, app, db):
+    def test_flip_active_success(self, app, db):
         """Set dropped to the opposite of its current value and redirect."""
         cultivar = foxy_cultivar()
-        cultivar.dropped = False
+        cultivar.active = False
         db.session.add(cultivar)
         db.session.commit()
         with app.test_client() as tc:
-            rv = tc.get(url_for('seeds.flip_dropped', cv_id=cultivar.id))
+            rv = tc.get(url_for('seeds.flip_active', cv_id=cultivar.id))
         assert rv.location == url_for('seeds.manage', _external=True)
-        assert cultivar.dropped
+        assert cultivar.active
         with app.test_client() as tc:
-            rv = tc.get(url_for('seeds.flip_dropped',
+            rv = tc.get(url_for('seeds.flip_active',
                                 cv_id=cultivar.id,
                                 next=url_for('seeds.home')))
         assert rv.location == url_for('seeds.home', _external=True)
-        assert not cultivar.dropped
-        with app.test_client() as tc:
-            rv = tc.get(url_for('seeds.flip_dropped', cv_id=cultivar.id),
-                        follow_redirects=True)
-        assert '\\\'Foxy Foxglove\\\' has been dropped.' in str(rv.data)
-        with app.test_client() as tc:
-            rv = tc.get(url_for('seeds.flip_dropped', cv_id=cultivar.id),
-                        follow_redirects=True)
-        assert '\\\'Foxy Foxglove\\\' has been returned to active' in\
-            str(rv.data)
+        assert not cultivar.active
 
 
 class TestFlipInStockRouteWithDB:
@@ -627,12 +613,6 @@ class TestFlipInStockRouteWithDB:
         """Return 404 if no cultivar exists with given id."""
         with app.test_client() as tc:
             rv = tc.get(url_for('seeds.flip_in_stock', cv_id=42))
-        assert rv.status_code == 404
-
-    def test_flip_in_stock_no_cv_id(self, app, db):
-        """Return 404 if no cv_id given."""
-        with app.test_client() as tc:
-            rv = tc.get(url_for('seeds.flip_in_stock'))
         assert rv.status_code == 404
 
     def test_flip_in_stock_success(self, app, db):

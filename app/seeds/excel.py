@@ -488,7 +488,7 @@ class CommonNamesWorksheet(SeedsWorksheet):
                       'Description',
                       'Planting Instructions',
                       'Synonyms',
-                      'Invisible')
+                      'Visible')
             self._setup(titles)
 
     def add_one(self, cn, stream=sys.stdout):
@@ -519,8 +519,8 @@ class CommonNamesWorksheet(SeedsWorksheet):
             syns = cn.synonyms_string
             if syns:
                 self.cell(r, self.cols['Synonyms']).value = syns
-            inv_cell = self.cell(r, self.cols['Invisible'])
-            inv_cell.value = 'True' if cn.invisible else 'False'
+            v_cell = self.cell(r, self.cols['Visible'])
+            v_cell.value = 'True' if cn.visible else 'False'
         else:
             raise TypeError('The object \'{0}\' could not be added because '
                             'it is not of type \'CommonName\'!'.format(cn))
@@ -543,11 +543,11 @@ class CommonNamesWorksheet(SeedsWorksheet):
         synonyms = self.cell(row, self.cols['Synonyms']).value
         if not synonyms:
             synonyms = ''  # Match result of CommonName.synonyms_string
-        invis = self.cell(row, self.cols['Invisible']).value
-        if invis and 'true' in invis.lower():
-            invisible = True
+        vis = self.cell(row, self.cols['Visible']).value
+        if vis and 'true' in vis.lower():
+            visible = True
         else:
-            invisible = False
+            visible = False
 
         print('-- BEGIN editing/creating CommonName \'{0}\' from row #{1}. --'
               .format(name, row), file=stream)
@@ -594,15 +594,15 @@ class CommonNamesWorksheet(SeedsWorksheet):
             else:
                 print('Synonyms for the CommonName \'{0}\' have been cleared.'
                       .format(cn.name), file=stream)
-        if invisible != cn.invisible:
+        if visible != cn.visible:
             edited = True
-            cn.invisible = invisible
-            if cn.invisible:
-                print('The CommonName \'{0}\' is not visible on generated '
+            cn.visible = visible
+            if cn.visible:
+                print('The CommonName \'{0}\' is visible on generated '
                       'pages.'.format(cn.name), file=stream)
             else:
-                print('The CommonName \'{0}\' is visible on generated pages.'
-                      .format(cn.name), file=stream)
+                print('The CommonName \'{0}\' is not visible on generated '
+                      'pages.'.format(cn.name), file=stream)
         if edited:
             db.session.flush()
             print('Changes to the CommonName \'{0}\' have been flushed to the '
@@ -863,7 +863,7 @@ class CultivarsWorksheet(SeedsWorksheet):
                       'New Until',
                       'In Stock',
                       'Active',
-                      'Invisible')
+                      'Visible')
             self._setup(titles)
 
     def add_one(self, cv, stream=sys.stdout):
@@ -903,8 +903,8 @@ class CultivarsWorksheet(SeedsWorksheet):
             is_cell.value = 'True' if cv.in_stock else 'False'
             act_cell = self.cell(r, self.cols['Active'])
             act_cell.value = 'True' if cv.active else 'False'
-            inv_cell = self.cell(r, self.cols['Invisible'])
-            inv_cell.value = 'True' if cv.invisible else 'False'
+            v_cell = self.cell(r, self.cols['Visible'])
+            v_cell.value = 'True' if cv.visible else 'False'
         else:
             raise TypeError('The object \'{0}\' could not be added because '
                             'it is not of type \'Cultivar\'!'.format(cv))
@@ -946,11 +946,11 @@ class CultivarsWorksheet(SeedsWorksheet):
             active = True
         else:
             active = False
-        invis = self.cell(row, self.cols['Invisible']).value
-        if invis and 'true' in invis.lower():
-            invisible = True
+        vis = self.cell(row, self.cols['Visible']).value
+        if vis and 'true' in vis.lower():
+            visible = True
         else:
-            invisible = False
+            visible = False
 
         print('-- BEGIN editing/creating Cultivar \'{0}\' from row #{1}. '
               '--'.format(cultivar + ' ' + common_name, row), file=stream)
@@ -1082,15 +1082,15 @@ class CultivarsWorksheet(SeedsWorksheet):
             else:
                 print('The Cultivar \'{0}\' is inactive.'.format(cv.fullname),
                       file=stream)
-        if invisible != cv.invisible:
+        if visible != cv.visible:
             edited = True
-            cv.invisible = invisible
-            if cv.invisible:
-                print('The Cultivar \'{0}\' will not be shown on '
-                      'auto-generated pages.'.format(cv.fullname), file=stream)
-            else:
+            cv.visible = visible
+            if cv.visible:
                 print('The Cultivar \'{0}\' will be shown on auto-generated '
                       'pages.'.format(cv.fullname), file=stream)
+            else:
+                print('The Cultivar \'{0}\' will not be shown on '
+                      'auto-generated pages.'.format(cv.fullname), file=stream)
         if edited:
             db.session.flush()
             print('Changes to the Cultivar \'{0}\' have been flushed to '

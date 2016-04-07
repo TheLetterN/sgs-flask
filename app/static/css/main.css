@@ -1,3 +1,4 @@
+/* BEGIN reset */
 /* http://meyerweb.com/eric/tools/css/reset/ 
    v2.0 | 20110126
    License: none (public domain)
@@ -46,227 +47,216 @@ table {
         border-collapse: collapse;
         border-spacing: 0;
 }
-/* end reset */
+/* END reset */
 
 /* BEGIN defaults for most page elements */
 html {
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(#eefaff, #446611);
-    background: -moz-linear-gradient(#eefaff, #446611);
-    background: -webkit-linear-gradient(#eefaff, #446611);
-    background: -o-linear-gradient(#eefaff, #446611);
+    background: linear-gradient(#fff, #e8bf68);
+    background: -moz-linear-gradient(#fff, #e8bf68);
+    background: -o-linear-gradient(#fff, #e8bf68);
+    background: -webkit-linear-gradient(#fff, #e8bf68);
     background-attachment: fixed;
-    font-size: 16px;
-    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    height: 100%;
+    width: 100%;
 }
 
 body {
-    margin-left: 3%;
-    margin-right: 3%;
-    margin-top: 1%;
-    margin-bottom: 1%;
+    background-color: #7F9A65;
+    border: .08em solid #222;
+    font-family: 'Droid sans', 'Lucida Sans Unicode', Helvetica ,Arial ,sans-serif;
+    font-size: 16px;
+    margin: 1% auto;
+    max-width: 980px;
 }
 
 main {
-    clear: both;
-    background-color: #feffdd;
-    padding-top: 0.5em;
-    padding-bottom: 0.5em;
-    padding-left: 1.5em;
-    padding-right: 1.5em;
+    background-color: #f7f7f7;
+    border-top: .08em solid #222;
+    border-bottom: .08em solid #222;
+    font-family: 'Droid serif', Georgia, 'Times New Roman', serif;
+    padding: .5em 1.5em;
 }
 
 h1 {
-    color: #060;
-    border-bottom: 0.3em solid #4f4;
-    padding-bottom: 0.2em;
-    font-size: 1.6em;
+    font-size: 2em;
+    font-weight: 700;
 }
 
 h2 {
-    color: #060;
-    text-decoration: underline;
-    text-decoration-color: #4f4;
-    padding-bottom: 0.2em;
-    font-size: 1.4em;
+    font-size: 1.375em;
+    font-weight: 700;
+}
+
+h3 {
+    font-size: 1.2em;
+    font-weight: 600;
+}
+
+h4 {
+    font-size: 1.1em;
+    font-weight: 600;
 }
 
 p {
-    text-align: justify;
+    padding: .5em 0;
     text-indent: 2em;
-    padding-top: 0.5em;
-    padding-bottom: 0.5em;
+    text-align: justify;
 }
 
-p + p {
-    padding-top: 0;
+a {
+    text-decoration: none;
 }
 
-b, strong {
+a:link {
+    color: #487289;
+}
+
+a:visited {
+    color: #48895f;
+}
+
+a:hover {
+    color: #b34141;
+}
+
+b,
+strong {
     font-weight: bold;
 }
 
 i, em {
     font-style: italic;
 }
-
-p.description {
-    padding: 0.4em;
-}
 /* END defaults for most page elements */
 
-/* BEGIN horizontal nav */
-nav {
-    float: left;
+/* BEGIN masthead */
+#masthead {
     box-sizing: border-box;
-    width: 100%;
-    display: block;
-    background-color: #44aa44;
-    padding-top: 0.5em;
-    padding-bottom: 0.5em;
-    padding-left: 1.5em;
-    padding-right: 1.5em;
+}
+
+#masthead .contact {
+    border-bottom: .08em solid #222;
+    color: #f6f6f6;
+    font-size: 1.1em;
+    font-weight: 700;
+    padding: .3em;
+}
+
+#masthead .contact a:link {
+    color: #f6f6f6;
+}
+
+#masthead .contact a:hover {
+    color: #222;
+}
+
+#masthead .email {
+    float: right;
+}
+
+#banner {
+    border-bottom: .08em solid #222;
+    max-width: 100%;
+}
+
+/* BEGIN nav-main */
+#nav-main {
+    padding: .25em 0 .3em 0;
+    text-align: center;
+}
+
+#nav-main ul {
+    margin: 0 auto;
+}
+
+#nav-main li, 
+#nav-main a {
+    color: #222;
+ }
+
+#nav-main a {
+    font-family: 'droid serif', 'Didot LT STD', 'Garamond', serif;
     position: relative;
 }
 
-nav ul {
+/* BEGIN nav-seeds */
+#nav-seeds li {
+    background-color: #e0e5ea;
+    border-radius: .25em;
     display: inline-block;
+    line-height: 2;
+    margin: .5em .1em 0 .1em;
+    padding: .25em 0 .15em 0;
+    text-align: center;
+    width: 31%;
 }
 
-nav a, nav li {
-    padding-left: 0.4em;
-    padding-right: 0.4em; 
-    color: #ffffff;
-    text-decoration: none;
-    text-shadow: 1px 1px 1px #001100;
+#nav-seeds li:hover {
+    background-color: #eff2f4;
 }
 
-nav a:hover {
-    color: #ffffaa;
-    text-decoration: underline;
+#nav-seeds a {
+    font-size: 1.25em;
+    font-weight: 700;
 }
 
-nav a:active {
-    color: #aaaaff;
+/* BEGIN mobile-menu */
+.mobile-menu {
+    display: None;
 }
+/* END mobile-menu */
 
-nav span#nav_left {
-    float: left;
-    display: inline-block;
-}
+/* END nav-seeds */
 
-nav span#nav_right {
-    float: right;
-    display: inline-block;
-}
-
-nav div.nav_under {
+/* BEGIN nav-user */
+#nav-user {
     display: block;
+    text-align: right;
 }
 
-nav span#nav_home {
-    display: inline-block;
+#nav-user li {
+    display: inline;
+}
+/* END nav-user */
+
+/* BEGIN nav-admin */
+#nav-admin {
+    display: block;
+    text-align: right;
 }
 
-nav ul#nav_auth, nav ul#nav_manage, nav ul#nav_seeds, nav span#nav_home {
-    padding-top: 0.3em;
-    padding-bottom: 0.3em;
-    padding-left: 0.4em;
-    padding-right: 0.4em;
-    border-radius: 1em;
-    background-color: #66cc66;
+#nav-admin li {
+    display: inline;
 }
-
-nav ul li {
-    display: inline-block;
-}
-
-nav ul#nav_auth li+li, nav ul#nav_seeds li+li {
-    border-left: 1px solid #afa;
-}
-nav ul#nav_manage {
-    display: none;
-    clear: both;
-    margin-top: 0.4em;
-}
-
-nav ul#nav_manage li+li {
-    border-left: 1px solid #ffa;
-}
-
-nav ul#nav_manage:target {
-    display: inline-block;
-}
-
-/* END horizontal nav */
+/* END nav-admin */
+/* END nav-main */
+/* END header */
 
 /* BEGIN breadcrumbs */
 #breadcrumbs {
-    clear: both;
-    background-color: #44aa44;
-    list-style: none;
-    overflow: hidden;
+    display: block;
+    font-size: .8em;
+    color: #833;
 }
 
 #breadcrumbs li {
-    float: left;
+    display: inline;
 }
 
-#breadcrumbs li a {
-    color: #fff;
-    text-decoration: none;
-    padding: 6px 0 6px 65px;
-    background: #66cc66;
-    position: relative;
-    display: block;
-    float: left;
-    text-shadow: 1px 1px 1px #001100;
-}
-
-#breadcrumbs li a:after {
-    content: " ";
-    display: block;
-    width: 0;
-    height: 0;
-    border-top: 50px solid transparent;
-    border-bottom: 50px solid transparent;
-    border-left: 30px solid #66cc66;
-    position: absolute;
-    top: 50%;
-    margin-top: -50px;
-    left: 100%;
-    z-index: 2;
-}
-
-#breadcrumbs li a:before {
-    content: " ";
-    display: block;
-    width: 0;
-    height: 0;
-    border-top: 50px solid transparent;
-    border-bottom: 50px solid transparent;
-    border-left: 30px solid #44aa44;
-    position: absolute;
-    top: 50%;
-    margin-top: -50px;
-    margin-left: 3px;
-    left: 100%;
-    z-index: 1;
-}
-
-#breadcrumbs li:first-child a {
-    padding-left: 10px;
-}
-
-#breadcrumbs li a:hover {
-    background: #aaeeee;
-    color: #ffffaa;
+#breadcrumbs a {
     text-decoration: underline;
 }
 
-#breadcrumbs li a:hover:after {
-    border-left-color: #aaeeee;
+#breadcrumbs a:link {
+    color: #7f9a65;
+}
+
+#breadcrumbs a:visited {
+    color: #657f9a;
+}
+
+#breadcrumbs li+li:before {
+    content: '> ';
 }
 /* END breadcrumbs */
 
@@ -447,55 +437,175 @@ input[type=radio] + label:after {
 }
 /* END forms */
 
-/* BEGIN cultivar_box */
-div.cultivar_box {
+/* BEGIN common name page formatting */
+.cn-header {
     display: block;
-    border-style: solid;
-    border-width: 1px;
-    border-color: #99ff99;
-    margin-bottom: 0.5em;
+}
+
+.cn-header a {
+    display: inline-block;
+    margin: .2em 0;
+}
+
+.cn-group-header {
+    border: 1px solid #222;
+    display: block;
+    margin: .5em 0;
+    padding: .5em 0;
+    text-align: center;
+}
+
+.cn-group-header p,
+.cn-group-header a {
+    border-top: 1px solid #222;
+}
+
+.cn-individuals-header h2 {
+    display: block;
+    margin: .5em 0;
+    padding-bottom: .5em;
+    border-bottom: 1px solid #222;
+}
+
+.botanical-names {
+    font-size: .9em;
+    font-weight: 500;
+    font-style: italic;
+}
+
+.to-planting-instructions {
+    background: #fff;
+    border: 1px solid #333;
+    border-radius: 3px;
+    padding: .2em;
+    margin: 2em;
+}
+
+/* BEGIN cultivar groups */
+.cultivar-group {
+    border: 1px solid #DDD;
+}
+
+/* END cultivar groups */
+
+/* BEGIN planting instructions */
+.planting-instructions {
+    display: block;
+    border: 1px solid #222;
+    text-align: center;
+    margin-top: 2em;
+}
+
+.planting-instructions h2 {
+    border-bottom: 1px solid #222;
+}
+
+.planting-instructions h2,
+.planting-instructions p {
+    padding: .5em;
+}
+
+/* END planting instructions */
+/* END common name page formatting */
+
+/* BEGIN cultivar */
+.cultivar {
+    box-sizing: border-box;
+    display: block;
     padding: 0.5em;
     vertical-align: top;
-    overflow: auto;
 }
 
-div.cultivar_box img {
+.cultivar+.cultivar {
+    border-top: 1px solid #DDD;
+}
+
+.cultivar:nth-child(odd) {
+    background: #EEE;
+}
+
+.cultivar .thumbnail {
     float: right;
     margin-left: 1em;
+    max-width: 300px;
+    max-height: 300px;
 }
 
-div.cultivar_box h3 {
+.cultivar h3 {
     display: block;
     font-weight: bold;
     font-size: 1.2em;
     vertical-align: top;
 }
 
-div.cultivar_box em {
-    font-style: italic;
-}
-
-div.cultivar_box i {
-    font-style: italic;
-}
-
-div.cultivar_box p {
+.cultivar p {
     margin-right: 1em;
 }
 
-div.cultivar_box div.cultivar_info {
+.common-name,
+.botanical-name {
     display: block;
 }
 
-div.cultivar_box div.cultivar_info i {
-    display: block;
-    font-size: 0.8em;
+.botanical-name {
+    font-size: .8em;
 }
 
-div.cultivar_box div.packet_info {
+.packet-info {
     clear: both;
 }
-/* END cultivar_box */
+
+/* END cultivar */
+
+/* BEGIN cultivar admin */
+.cultivar-admin {
+    background: #fff;
+    border: 1px solid #aaa;
+    margin-top: .5em;
+    padding: .5em;
+}
+
+.cultivar-admin li {
+    margin: .5em .2em;
+}
+
+.cultivar-admin a+a:before {
+    content: ' | ';
+}
+
+.packet-admin {
+    border-top: 1px solid #aaa;
+    margin-top: .5em;
+    padding-top: .5em;
+}
+/* END cultivar admin */
+
+/* BEGIN status */
+.status-true {
+    background: #afa;
+}
+
+.status-false {
+    background: #faa;
+}
+/* END status */
+
+/* BEGIN toggles */
+.toggle-false,
+.toggle-true {
+    border: 1px solid #999;
+    border-radius: 4px;
+    padding: 0 .5em;
+}
+
+.toggle-false {
+    background: #faa;
+}
+
+.toggle-true {
+    background: #afa;
+}
+/* END toggles */
 
 /* BEGIN fractions */
 span.fraction sup {
@@ -513,3 +623,15 @@ div.last_commit {
     text-align: center;
 }   
 /* END last commit */
+
+/* BEGIN footer */
+footer {
+    margin: 0 auto;
+    width: 70%;
+}
+
+footer p {
+    text-align: center;
+    text-indent: none;
+}
+/* END footer */

@@ -263,6 +263,7 @@ class AddCommonNameForm(Form):
                                  validators=[NotSpace()])
     synonyms = StringField('Synonyms',
                            validators=[NotSpace(), SynonymLength(0, 64)])
+    visible = BooleanField('Show on auto-generated pages', default='checked')
     next_page = RadioField(
         'After submission, go to',
         choices=[('add_botanical_name', 'Add Botanical Name (optional)'),
@@ -903,7 +904,7 @@ class EditCultivarForm(Form):
                           default=datetime.date.today(),
                           validators=[Optional()])
     active = BooleanField('Actively replenished')
-    invisible = BooleanField('Not visible on auto-generated pages')
+    visible = BooleanField('Visible on auto-generated pages')
     in_stock = BooleanField('In Stock')
     submit = SubmitField('Edit Cultivar')
 
@@ -1003,6 +1004,7 @@ class EditPacketForm(Form):
         units: String field for unit of measure for quantity of seeds.
     """
     id = HiddenField()
+    cultivar_id = SelectField('Cultivar', coerce=int)
     sku = StringField('SKU', validators=[Length(1, 32), NotSpace()])
     price = StringField('Price in US dollars',
                         validators=[DataRequired(), NotSpace(), USDollar()])
@@ -1013,10 +1015,20 @@ class EditPacketForm(Form):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.set_selects()
         if not self.qty_val.data:
             self.qty_val.data = str(kwargs['obj'].quantity.value)
         if not self.units.data:
             self.units.data = kwargs['obj'].quantity.units
+
+    def set_selects(self):
+        """Set select fields."""
+        self.cultivar_id.choices = select_field_choices(
+            model=Cultivar,
+            title_attribute='fullname',
+            order_by='slug'
+        )
+        print(self.cultivar_id.data)
 
     def validate_qty_val(self, field):
         """Raise ValidationError if quantity cannot be parsed as valid.
@@ -1101,7 +1113,11 @@ class RemoveCommonNameForm(Form):
             cn_id: The id of the CommonName to be removed.
         """
         cns = CommonName.query.filter(CommonName.id != self.cn.id).all()
-        self.move_to.choices = select_field_choices(items=cns)
+        self.move_to.choices = select_field_choices(
+            items=cns,
+            title_attribute='select_field_title',
+            order_by='name'
+        )
 
 
 class RemoveBotanicalNameForm(Form):

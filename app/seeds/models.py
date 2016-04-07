@@ -167,7 +167,7 @@ def dbify(string):
     """Format a string to be stored in the database.
 
     Args:
-        string (str): The string to be converted.
+        string: The string to be converted.
 
     Returns:
         str: A string formatted for database usage.
@@ -191,6 +191,21 @@ def dbify(string):
         return titlecase(string.lower().strip(), callback=cb)
     else:
         return None
+
+
+def paragraphize(text):
+    """Put the `text` in <p> tags if it isn't already.
+
+    Args:
+        text: A string to wrap in <p> tags.
+
+    Returns:
+        str: `text` wrapped in <p> tags if needed.
+    """
+    if text[:2] != '<p':
+        return '<p>' + text + '</p>'
+    else:
+        return text
 
 
 # Helper Classes
@@ -426,6 +441,13 @@ def before_index_insert_or_update(mapper, connection, target):
     target.slug = target.generate_slug()
 
 
+@event.listens_for(Index.description, 'set', retval=True)
+def index_set_description(target, value, oldvalue, initiator):
+    """Run tasks when `Index.description` is set."""
+    if value:
+        return paragraphize(value)
+
+
 @event.listens_for(SignallingSession, 'before_commit')
 def save_indexes_json_before_commit(session):
     """Save Indexes if any have been added, edited, or deleted."""
@@ -459,9 +481,9 @@ class CommonName(SynonymsMixin, db.Model):
             if this `CommonName` is 'Dwarf Coleus', it would have 'Coleus' as
             its parent.
             Backref: `CommonName.children`
-        invisible: True if the specified `CommonName` is to be shown on auto-
+        visible: True if the specified `CommonName` is to be shown on auto-
             generated pages, False if it should only be shown on custom pages
-            that explicitly include it. Default value: False.
+            that explicitly include it. Default value: True.
 
         children: Backref from `CommonName.parent`.
         botanical_names: Backref from `BotanicalName.common_names`.
@@ -490,7 +512,7 @@ class CommonName(SynonymsMixin, db.Model):
                              backref='children',
                              foreign_keys=parent_id,
                              remote_side=[id])
-    invisible = db.Column(db.Boolean, default=False)
+    visible = db.Column(db.Boolean, default=False)
 
     def __init__(self,
                  name=None,
@@ -531,6 +553,29 @@ class CommonName(SynonymsMixin, db.Model):
             'Common Name': self.name,
             'Index': self.index.name if self.index else None
         }
+
+    @property
+    def html_botanical_names(self):
+        """str: A list of botanical names formatted in HTML."""
+        if not self.botanical_names:
+            return ''
+        else:
+            names = []
+            genuses = []
+            for bn in self.botanical_names:
+                parts = bn.name.split(' ', 1)
+                if parts[0] in genuses:
+                    name = ('<abbr title="{0}">{1}.</abbr> {2}'
+                            .format(parts[0], parts[0][0], parts[1]))
+                    names.append(name)
+                else:
+                    genuses.append(parts[0])
+                    names.append(bn.name)
+            return ', '.join(names)
+    @property
+    def has_public_cultivars(self):
+        """bool: Whether or not `CommonName` has any public cultivars."""
+        return self.cultivars and any(cv.public for cv in self.cultivars)
 
     @classmethod
     def from_queryable_values(cls, name, index):
@@ -765,6 +810,11 @@ class Series(db.Model):
         else:
             return None
 
+    @property
+    def has_public_cultivars(self):
+        """bool: Whether or not `Series` has any public cultivars."""
+        return self.cultivars and any(cv.public for cv in self.cultivars)
+
 
 @event.listens_for(Series, 'before_insert')
 @event.listens_for(Series, 'before_update')
@@ -817,8 +867,8 @@ class Cultivar(SynonymsMixin, db.Model):
         active: True if the cultivar's stock is being actively replenished,
             False if not.
         in_stock: True if a cultivar is in stock, False if not.
-        invisible: Whether or not this cultivar should be shown on
-            automatically generated pages. Cultivars set to invisible can still
+        visible: Whether or not this cultivar should be shown on automatically
+            generated pages. Cultivars with `visible` set to `False` can still
             be shown on custom pages.
         thumbnail: OtO relationship with `Image`; thumbnail data for this
             cultivar.
@@ -855,7 +905,7 @@ class Cultivar(SynonymsMixin, db.Model):
     new_until = db.Column(db.Date)
     active = db.Column(db.Boolean)
     in_stock = db.Column(db.Boolean)
-    invisible = db.Column(db.Boolean, default=False)
+    visible = db.Column(db.Boolean, default=True)
     thumbnail_id = db.Column(db.Integer, db.ForeignKey('images.id'))
     thumbnail = db.relationship('Image',
                                 foreign_keys=thumbnail_id,
@@ -1007,6 +1057,11 @@ class Cultivar(SynonymsMixin, db.Model):
                                          index=d['Index'],
                                          series=d['Series'])
 
+    @property
+    def public(self):
+        """bool: Whether or not `Cultivar` is visible to non-admin users."""
+        return self.active and self.visible
+
     def generate_slug(self):
         """Generate a string for use in URLs for pages that use `Cultivar`."""
         # Use `name_with_series` instead of `fullname` because the slug for
@@ -1048,7 +1103,10 @@ class Packet(db.Model):
     quantity_id = db.Column(db.Integer, db.ForeignKey('quantities.id'))
     quantity = db.relationship('Quantity', backref='packets')
     cultivar_id = db.Column(db.Integer, db.ForeignKey('cultivars.id'))
-    cultivar = db.relationship('Cultivar', backref='packets')
+    cultivar = db.relationship(
+        'Cultivar',
+        backref=db.backref('packets', cascade='all, delete-orphan')
+    )
 
     def __repr__(self):
         return '<{0} SKU #{1}>'.format(self.__class__.__name__, self.sku)
@@ -1562,6 +1620,16 @@ class Image(db.Model):
         parts = os.path.splitext(self.filename)
         self.filename = parts[0] + postfix + parts[1]
         os.rename(old_path, self.full_path)
+
+@event.listens_for(Index.description, 'set', retval=True)
+@event.listens_for(CommonName.description, 'set', retval=True)
+@event.listens_for(CommonName.instructions, 'set', retval=True)
+@event.listens_for(Series.description, 'set', retval=True)
+@event.listens_for(Cultivar.description, 'set', retval=True)
+def paragraphize_blocks(target, value, oldvalue, initiator):
+    """Run `paragraphize` for attributes expected to contain HTML."""
+    if value:
+        return paragraphize(value)
 
 
 @event.listens_for(Image, 'before_delete')

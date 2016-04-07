@@ -75,6 +75,7 @@ class Anonymous(AnonymousUserMixin):
     """Anonymous user for flask-login that mocks some attributes of User."""
     def __init__(self):
         self.name = 'Guest'
+        self.permissions = 0
 
     def can(self, permission=None):
         """Anonymous users can't do squat, always return False!"""

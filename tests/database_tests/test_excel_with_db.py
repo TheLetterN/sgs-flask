@@ -272,10 +272,10 @@ class TestIndexesWorksheetWithDB:
         iws.add_one(idx)
         assert iws.save_row_to_db(row=2, stream=messages)
         idxq = Index.query.filter(Index.name == 'Perennial').one_or_none()
-        assert idxq.description == 'Built to last.'
+        assert idxq.description == '<p>Built to last.</p>'
         messages.seek(0)
         msgs = messages.read()
-        assert 'Description for the Index \'Perennial\' set to: Built' in msgs
+        assert 'Description for the Index \'Perennial\' set to:' in msgs
 
     def test_save_row_to_db_existing_new_desc(self, db):
         """Load an Index from db and change description."""
@@ -291,10 +291,10 @@ class TestIndexesWorksheetWithDB:
         assert iws.save_row_to_db(row=2, stream=messages)
         idxq = Index.query.filter(Index.name == 'Perennial').one_or_none()
         assert idxq is idx
-        assert idx.description == 'Live long time.'
+        assert idx.description == '<p>Live long time.</p>'
         messages.seek(0)
         msgs = messages.read()
-        assert 'Description for the Index \'Perennial\' set to: Live' in msgs
+        assert 'Description for the Index \'Perennial\' set to:' in msgs
 
     def test_save_row_to_db_existing_clears_desc(self, db):
         """Clear description for loaded Index if desc empty in row."""
@@ -419,7 +419,7 @@ class TestCommonNamesWorksheet:
         cnq = CommonName.query\
             .filter(CommonName.name == 'Foxglove')\
             .one_or_none()
-        assert cnq.description == 'A bit spotty.'
+        assert cnq.description == '<p>A bit spotty.</p>'
         messages.seek(0)
         msgs = messages.read()
         assert 'Description for the CommonName \'Foxglove\' set to' in msgs
@@ -443,11 +443,11 @@ class TestCommonNamesWorksheet:
             .filter(CommonName.name == 'Foxglove')\
             .one_or_none()
         assert cnq is cn
-        assert cn.description == 'More dots!'
+        assert cn.description == '<p>More dots!</p>'
         messages.seek(0)
         msgs = messages.read()
         assert ('Description for the CommonName \'Foxglove\' set to: '
-                'More dots!') in msgs
+                '<p>More dots!</p>') in msgs
 
     def test_save_row_to_db_existing_clears_desc(self, db):
         """Clear description of existing CommonName if row has none."""
@@ -488,11 +488,11 @@ class TestCommonNamesWorksheet:
         cnq = CommonName.query\
             .filter(CommonName.name == 'Foxglove')\
             .one_or_none()
-        assert cnq.instructions == 'Just add water!'
+        assert cnq.instructions == '<p>Just add water!</p>'
         messages.seek(0)
         msgs = messages.read()
         assert ('Planting instructions for the CommonName \'Foxglove\' set '
-                'to: Just add water!') in msgs
+                'to: <p>Just add water!</p>') in msgs
 
     def test_save_row_to_db_existing_with_new_instructions(self, db):
         """Change instructions of existing CommonName in db."""
@@ -513,11 +513,11 @@ class TestCommonNamesWorksheet:
             .filter(CommonName.name == 'Foxglove')\
             .one_or_none()
         assert cnq is cn
-        assert cn.instructions == 'Put them in soil.'
+        assert cn.instructions == '<p>Put them in soil.</p>'
         messages.seek(0)
         msgs = messages.read()
         assert ('Planting instructions for the CommonName \'Foxglove\' set '
-                'to: Put them in soil.') in msgs
+                'to: <p>Put them in soil.</p>') in msgs
 
     def test_save_row_to_db_existing_clears_instructions(self, db):
         """Clear instructions from CommonName with blank inst. in row."""
@@ -619,7 +619,7 @@ class TestCommonNamesWorksheet:
                 'cleared.') in msgs
 
     def test_save_row_to_db_new_visible(self, db):
-        """Set invisible to False if false in row."""
+        """Set visible to False if false in row."""
         messages = StringIO()
         wb = Workbook()
         ws = wb.active
@@ -627,20 +627,20 @@ class TestCommonNamesWorksheet:
         cnws.setup()
         cn = CommonName(name='Foxglove')
         cn.index = Index(name='Perennial')
-        cn.invisible = False
+        cn.visible = False
         cnws.add_one(cn)
         assert cnws.save_row_to_db(row=2, stream=messages)
         cnq = CommonName.query\
             .filter(CommonName.name == 'Foxglove')\
             .one_or_none()
-        assert not cnq.invisible
+        assert not cnq.visible
         messages.seek(0)
         msgs = messages.read()
         assert ('The CommonName \'Foxglove\' is visible on generated '
                 'pages.') in msgs
 
-    def test_save_row_to_db_new_invisible(self, db):
-        """Set invisible to True if true in row."""
+    def test_save_row_to_db_new_visible(self, db):
+        """Set visible to True if true in row."""
         messages = StringIO()
         wb = Workbook()
         ws = wb.active
@@ -648,37 +648,37 @@ class TestCommonNamesWorksheet:
         cnws.setup()
         cn = CommonName(name='Foxglove')
         cn.index = Index(name='Perennial')
-        cn.invisible = True
+        cn.visible = True
         cnws.add_one(cn)
         assert cnws.save_row_to_db(row=2, stream=messages)
         cnq = CommonName.query\
             .filter(CommonName.name == 'Foxglove')\
             .one_or_none()
-        assert cnq.invisible
+        assert cnq.visible
+        messages.seek(0)
+        msgs = messages.read()
+        assert ('The CommonName \'Foxglove\' is visible on generated '
+                'pages.') in msgs
+
+    def test_save_row_to_db_new_null_visible(self, db):
+        """Treat null value for visible as False."""
+        messages = StringIO()
+        wb = Workbook()
+        ws = wb.active
+        cnws = CommonNamesWorksheet(ws)
+        cnws.setup()
+        cn = CommonName(name='Foxglove')
+        cn.index = Index(name='Perennial')
+        cn.visible = None
+        cnws.add_one(cn)
+        assert cnws.save_row_to_db(row=2, stream=messages)
+        cnq = CommonName.query\
+            .filter(CommonName.name == 'Foxglove')\
+            .one_or_none()
+        assert not cnq.visible
         messages.seek(0)
         msgs = messages.read()
         assert ('The CommonName \'Foxglove\' is not visible on generated '
-                'pages.') in msgs
-
-    def test_save_row_to_db_new_null_invisible(self, db):
-        """Treat null value for invisible as False."""
-        messages = StringIO()
-        wb = Workbook()
-        ws = wb.active
-        cnws = CommonNamesWorksheet(ws)
-        cnws.setup()
-        cn = CommonName(name='Foxglove')
-        cn.index = Index(name='Perennial')
-        cn.invisible = None
-        cnws.add_one(cn)
-        assert cnws.save_row_to_db(row=2, stream=messages)
-        cnq = CommonName.query\
-            .filter(CommonName.name == 'Foxglove')\
-            .one_or_none()
-        assert not cnq.invisible
-        messages.seek(0)
-        msgs = messages.read()
-        assert ('The CommonName \'Foxglove\' is visible on generated '
                 'pages.') in msgs
 
 
@@ -969,11 +969,11 @@ class TestSeriesWorksheetWithDB:
         srws.add_one(sr)
         assert srws.save_row_to_db(2, stream=messages)
         srq = Series.query.filter(Series.name == 'Polkadot').one_or_none()
-        assert srq.description == 'A bit spotty.'
+        assert srq.description == '<p>A bit spotty.</p>'
         messages.seek(0)
         msgs = messages.read()
-        assert ('Description for the Series \'Polkadot\' set to: A bit '
-                'spotty.') in msgs
+        assert ('Description for the Series \'Polkadot\' set to: <p>A bit '
+                'spotty.</p>') in msgs
 
     def test_save_row_to_db_existing_change_desc(self, db):
         """Change the description of an existing Series."""
@@ -996,11 +996,11 @@ class TestSeriesWorksheetWithDB:
         assert srws.save_row_to_db(2, stream=messages)
         srq = Series.query.filter(Series.name == 'Polkadot').one_or_none()
         assert srq is sr
-        assert sr.description == 'More dots!'
+        assert sr.description == '<p>More dots!</p>'
         messages.seek(0)
         msgs = messages.read()
-        assert ('Description for the Series \'Polkadot\' set to: More '
-                'dots!') in msgs
+        assert ('Description for the Series \'Polkadot\' set to: <p>More '
+                'dots!</p>') in msgs
 
     def test_save_row_to_db_existing_clears_desc(self, db):
         """Clear description of existing Series if row has no desc."""
@@ -1072,7 +1072,7 @@ class TestCultivarsWorksheetWithDB:
         cv.common_name.index = Index(name='Perennial')
         cv.in_stock = True
         cv.active = True
-        cv.invisible = False
+        cv.visible = False
         db.session.add(cv)
         db.session.commit()
         cv2 = Cultivar(name='Foxy')
@@ -1080,7 +1080,7 @@ class TestCultivarsWorksheetWithDB:
         cv2.common_name.index = Index(name='Perennial')
         cv2.in_stock = True
         cv2.active = True
-        cv2.invisible = False
+        cv2.visible = False
         cvws.add_one(cv2)
         assert not cvws.save_row_to_db(2, stream=messages)
         messages.seek(0)
@@ -1103,7 +1103,7 @@ class TestCultivarsWorksheetWithDB:
         cv.series.common_name = cv.common_name
         cv.in_stock = True
         cv.active = True
-        cv.invisible = False
+        cv.visible = False
         db.session.add(cv)
         db.session.commit()
         cv2 = Cultivar(name='Petra')
@@ -1113,7 +1113,7 @@ class TestCultivarsWorksheetWithDB:
         cv2.series.common_name = cv2.common_name
         cv2.in_stock = True
         cv2.active = True
-        cv2.invisible = False
+        cv2.visible = False
         cvws.add_one(cv2)
         assert not cvws.save_row_to_db(2, stream=messages)
         messages.seek(0)
@@ -1133,7 +1133,7 @@ class TestCultivarsWorksheetWithDB:
         cv.common_name.index = Index(name='Perennial')
         cv.in_stock = True
         cv.active = True
-        cv.invisible = False
+        cv.visible = False
         cvws.add_one(cv)
         assert cvws.save_row_to_db(row=2, stream=messages)
         cvq = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
@@ -1142,7 +1142,7 @@ class TestCultivarsWorksheetWithDB:
         assert cvq.common_name.index.name == 'Perennial'
         assert cvq.in_stock
         assert cvq.active
-        assert not cvq.invisible
+        assert not cvq.visible
         messages.seek(0)
         msgs = messages.read()
         assert ('Changes to the Cultivar \'Foxy Foxglove\' have been flushed '
@@ -1162,7 +1162,7 @@ class TestCultivarsWorksheetWithDB:
         cv.series.common_name = cv.common_name
         cv.in_stock = True
         cv.active = True
-        cv.invisible = False
+        cv.visible = False
         cvws.add_one(cv)
         assert cvws.save_row_to_db(row=2, stream=messages)
         cv = Cultivar.query.filter(Cultivar.name == 'Petra').one_or_none()
@@ -1192,7 +1192,7 @@ class TestCultivarsWorksheetWithDB:
         cv.series.common_name = cv.common_name
         cv.in_stock = True
         cv.active = True
-        cv.invisible = False
+        cv.visible = False
         cvws.add_one(cv)
         assert cvws.save_row_to_db(row=2, stream=messages)
         cv = Cultivar.query.filter(Cultivar.name == 'Petra').one_or_none()
@@ -1215,7 +1215,7 @@ class TestCultivarsWorksheetWithDB:
         cv.botanical_name.common_names.append(cv.common_name)
         cv.in_stock = True
         cv.active = True
-        cv.invisible = False
+        cv.visible = False
         cvws.add_one(cv)
         assert cvws.save_row_to_db(row=2, stream=messages)
         cv = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
@@ -1241,7 +1241,7 @@ class TestCultivarsWorksheetWithDB:
         cv.botanical_name.common_names.append(cv.common_name)
         cv.in_stock = True
         cv.active = True
-        cv.invisible = False
+        cv.visible = False
         cvws.add_one(cv)
         assert cvws.save_row_to_db(row=2, stream=messages)
         cv = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
@@ -1271,7 +1271,7 @@ class TestCultivarsWorksheetWithDB:
         cv.botanical_name.common_names.append(cv.common_name)
         cv.in_stock = True
         cv.active = True
-        cv.invisible = False
+        cv.visible = False
         cvws.add_one(cv)
         assert cvws.save_row_to_db(row=2, stream=messages)
         cv = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
@@ -1292,7 +1292,7 @@ class TestCultivarsWorksheetWithDB:
         cv.common_name.index = Index(name='Perennial')
         cv.in_stock = True
         cv.active = True
-        cv.invisible = False
+        cv.visible = False
         db.session.add(cv)
         db.session.commit()
         cv2 = Cultivar(name='Foxy')
@@ -1302,7 +1302,7 @@ class TestCultivarsWorksheetWithDB:
         cv2.botanical_name.common_names.append(cv2.common_name)
         cv2.in_stock = True
         cv2.active = True
-        cv2.invisible = False
+        cv2.visible = False
         cvws.add_one(cv2)
         assert cvws.save_row_to_db(row=2, stream=messages)
         messages.seek(0)
@@ -1328,7 +1328,7 @@ class TestCultivarsWorksheetWithDB:
         cv.thumbnail = Image(filename='foxy.jpg')
         cv.in_stock = True
         cv.active = True
-        cv.invisible = False
+        cv.visible = False
         cvws.add_one(cv)
         assert cvws.save_row_to_db(row=2, stream=messages)
         cvq = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
@@ -1352,7 +1352,7 @@ class TestCultivarsWorksheetWithDB:
         cv.thumbnail = Image(filename='foxy.jpg')
         cv.in_stock = True
         cv.active = True
-        cv.invisible = False
+        cv.visible = False
         cvws.add_one(cv)
         assert cvws.save_row_to_db(row=2, stream=messages)
         cvq = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
@@ -1378,7 +1378,7 @@ class TestCultivarsWorksheetWithDB:
         cv.thumbnail = Image(filename='foxy.jpg')
         cv.in_stock = True
         cv.active = True
-        cv.invisible = False
+        cv.visible = False
         cvws.add_one(cv)
         assert cvws.save_row_to_db(row=2, stream=messages)
         cvq = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
@@ -1399,7 +1399,7 @@ class TestCultivarsWorksheetWithDB:
         cv.common_name.index = Index(name='Perennial')
         cv.in_stock = True
         cv.active = True
-        cv.invisible = False
+        cv.visible = False
         db.session.add(cv)
         db.session.commit()
         cv2 = Cultivar(name='Foxy')
@@ -1408,7 +1408,7 @@ class TestCultivarsWorksheetWithDB:
         cv2.thumbnail = Image(filename='foxy.jpg')
         cv2.in_stock = True
         cv2.active = True
-        cv2.invisible = False
+        cv2.visible = False
         cvws.add_one(cv2)
         assert cvws.save_row_to_db(row=2, stream=messages)
         cvq = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
@@ -1431,15 +1431,14 @@ class TestCultivarsWorksheetWithDB:
         cv.common_name.index = Index(name='Perennial')
         cv.in_stock = True
         cv.active = True
-        cv.invisible = False
+        cv.visible = False
         cvws.add_one(cv)
         assert cvws.save_row_to_db(row=2, stream=messages)
         cvq = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
         messages.seek(0)
         msgs = messages.read()
-        assert cvq.description == 'Like a lady.'
-        assert ('Description for the Cultivar \'Foxy Foxglove\' set to: Like '
-                'a lady.') in msgs
+        assert cvq.description == '<p>Like a lady.</p>'
+        assert ('Description for the Cultivar \'Foxy Foxglove\' set to: <p>Like a lady.</p>') in msgs
 
     def test_save_row_to_db_existing_changes_description(self, db):
         """Set a new description for an existing Cultivar."""
@@ -1453,7 +1452,7 @@ class TestCultivarsWorksheetWithDB:
         cv.common_name.index = Index(name='Perennial')
         cv.in_stock = True
         cv.active = True
-        cv.invisible = False
+        cv.visible = False
         db.session.add(cv)
         db.session.commit()
         cv2 = Cultivar(name='Foxy', description='Like a Hendrix song.')
@@ -1461,16 +1460,16 @@ class TestCultivarsWorksheetWithDB:
         cv2.common_name.index = Index(name='Perennial')
         cv2.in_stock = True
         cv2.active = True
-        cv2.invisible = False
+        cv2.visible = False
         cvws.add_one(cv2)
         assert cvws.save_row_to_db(row=2, stream=messages)
         cvq = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
         messages.seek(0)
         msgs = messages.read()
         assert cvq is cv
-        assert cv.description == 'Like a Hendrix song.'
-        assert ('Description for the Cultivar \'Foxy Foxglove\' set to: Like '
-                'a Hendrix song.') in msgs
+        assert cv.description == '<p>Like a Hendrix song.</p>'
+        assert ('Description for the Cultivar \'Foxy Foxglove\' set to: '
+                '<p>Like a Hendrix song.</p>') in msgs
 
     def test_save_row_to_db_existing_clears_description(self, db):
         """Clear the description for an existing Cultivar."""
@@ -1484,7 +1483,7 @@ class TestCultivarsWorksheetWithDB:
         cv.common_name.index = Index(name='Perennial')
         cv.in_stock = True
         cv.active = True
-        cv.invisible = False
+        cv.visible = False
         db.session.add(cv)
         db.session.commit()
         cv2 = Cultivar(name='Foxy')
@@ -1492,7 +1491,7 @@ class TestCultivarsWorksheetWithDB:
         cv2.common_name.index = Index(name='Perennial')
         cv2.in_stock = True
         cv2.active = True
-        cv2.invisible = False
+        cv2.visible = False
         cvws.add_one(cv2)
         assert cvws.save_row_to_db(row=2, stream=messages)
         cvq = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
@@ -1516,7 +1515,7 @@ class TestCultivarsWorksheetWithDB:
         cv.synonyms_string = 'Vulpine'
         cv.in_stock = True
         cv.active = True
-        cv.invisible = False
+        cv.visible = False
         cvws.add_one(cv)
         assert cvws.save_row_to_db(row=2, stream=messages)
         cvq = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
@@ -1539,7 +1538,7 @@ class TestCultivarsWorksheetWithDB:
         cv.synonyms_string = 'Vulpine'
         cv.in_stock = True
         cv.active = True
-        cv.invisible = False
+        cv.visible = False
         db.session.add(cv)
         db.session.commit()
         cv2 = Cultivar(name='Foxy')
@@ -1548,7 +1547,7 @@ class TestCultivarsWorksheetWithDB:
         cv2.synonyms_string = 'Fauxy'
         cv2.in_stock = True
         cv2.active = True
-        cv2.invisible = False
+        cv2.visible = False
         cvws.add_one(cv2)
         assert cvws.save_row_to_db(row=2, stream=messages)
         cvq = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
@@ -1572,7 +1571,7 @@ class TestCultivarsWorksheetWithDB:
         cv.synonyms_string = 'Vulpine'
         cv.in_stock = True
         cv.active = True
-        cv.invisible = False
+        cv.visible = False
         db.session.add(cv)
         db.session.commit()
         cv2 = Cultivar(name='Foxy')
@@ -1580,7 +1579,7 @@ class TestCultivarsWorksheetWithDB:
         cv2.common_name.index = Index(name='Perennial')
         cv2.in_stock = True
         cv2.active = True
-        cv2.invisible = False
+        cv2.visible = False
         cvws.add_one(cv2)
         assert cvws.save_row_to_db(row=2, stream=messages)
         cvq = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
@@ -1604,7 +1603,7 @@ class TestCultivarsWorksheetWithDB:
         cv.new_until = datetime.date(2012, 12, 21)
         cv.in_stock = True
         cv.active = True
-        cv.invisible = False
+        cv.visible = False
         cvws.add_one(cv)
         assert cvws.save_row_to_db(row=2, stream=messages)
         cvq = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
@@ -1626,7 +1625,7 @@ class TestCultivarsWorksheetWithDB:
         cv.common_name.index = Index(name='Perennial')
         cv.in_stock = True
         cv.active = True
-        cv.invisible = False
+        cv.visible = False
         db.session.add(cv)
         db.session.commit()
         cv2 = Cultivar(name='Foxy')
@@ -1635,7 +1634,7 @@ class TestCultivarsWorksheetWithDB:
         cv2.new_until = datetime.date(2012, 12, 21)
         cv2.in_stock = True
         cv2.active = True
-        cv2.invisible = False
+        cv2.visible = False
         cvws.add_one(cv2)
         assert cvws.save_row_to_db(row=2, stream=messages)
         cvq = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
@@ -1655,7 +1654,7 @@ class TestCultivarsWorksheetWithDB:
         cv.new_until = datetime.date(2012, 12, 21)
         cv.in_stock = True
         cv.active = True
-        cv.invisible = False
+        cv.visible = False
         db.session.add(cv)
         db.session.commit()
         cv2 = Cultivar(name='Foxy')
@@ -1664,7 +1663,7 @@ class TestCultivarsWorksheetWithDB:
         cv2.new_until = datetime.date(2012, 12, 12)
         cv2.in_stock = True
         cv2.active = True
-        cv2.invisible = False
+        cv2.visible = False
         cvws.add_one(cv2)
         assert cvws.save_row_to_db(row=2, stream=messages)
         cvq = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
@@ -1684,7 +1683,7 @@ class TestCultivarsWorksheetWithDB:
         cv.new_until = datetime.date(2012, 12, 21)
         cv.in_stock = True
         cv.active = True
-        cv.invisible = False
+        cv.visible = False
         db.session.add(cv)
         db.session.commit()
         cv2 = Cultivar(name='Foxy')
@@ -1692,7 +1691,7 @@ class TestCultivarsWorksheetWithDB:
         cv2.common_name.index = Index(name='Perennial')
         cv2.in_stock = True
         cv2.active = True
-        cv2.invisible = False
+        cv2.visible = False
         cvws.add_one(cv2)
         assert cvws.save_row_to_db(row=2, stream=messages)
         cvq = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
@@ -1703,7 +1702,7 @@ class TestCultivarsWorksheetWithDB:
         assert 'The Cultivar \'Foxy Foxglove\' is no longer set as new' in msgs
 
     def test_save_row_to_db_new_default_bools(self, db):
-        """Create new Cultivar w/ defaults for in_stock, active, invisible."""
+        """Create new Cultivar w/ defaults for in_stock, active, visible."""
         messages = StringIO()
         wb = Workbook()
         ws = wb.active
@@ -1714,7 +1713,7 @@ class TestCultivarsWorksheetWithDB:
         cv.common_name.index = Index(name='Perennial')
         cv.in_stock = True
         cv.active = True
-        cv.invisible = False
+        cv.visible = False
         cvws.add_one(cv)
         assert cvws.save_row_to_db(row=2, stream=messages)
         cvq = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
@@ -1722,13 +1721,13 @@ class TestCultivarsWorksheetWithDB:
         msgs = messages.read()
         assert cvq.in_stock
         assert cvq.active
-        assert not cvq.invisible
+        assert not cvq.visible
         assert 'The Cultivar \'Foxy Foxglove\' is in stock' in msgs
         assert 'The Cultivar \'Foxy Foxglove\' is active' in msgs
-        assert 'The Cultivar \'Foxy Foxglove\' will be shown on auto' in msgs
+        assert 'The Cultivar \'Foxy Foxglove\' will not be shown' in msgs
 
     def test_save_row_to_db_new_opposite_bools(self, db):
-        """Create new Cultivar w/ opposites for in_stock, active, invisible."""
+        """Create new Cultivar w/ opposites for in_stock, active, visible."""
         messages = StringIO()
         wb = Workbook()
         ws = wb.active
@@ -1739,7 +1738,7 @@ class TestCultivarsWorksheetWithDB:
         cv.common_name.index = Index(name='Perennial')
         cv.in_stock = False
         cv.active = False
-        cv.invisible = True
+        cv.visible = True
         cvws.add_one(cv)
         assert cvws.save_row_to_db(row=2, stream=messages)
         cvq = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
@@ -1747,10 +1746,10 @@ class TestCultivarsWorksheetWithDB:
         msgs = messages.read()
         assert not cvq.in_stock
         assert not cvq.active
-        assert cvq.invisible
+        assert cvq.visible
         assert 'The Cultivar \'Foxy Foxglove\' is out of stock' in msgs
         assert 'The Cultivar \'Foxy Foxglove\' is inactive' in msgs
-        assert 'The Cultivar \'Foxy Foxglove\' will not be shown on' in msgs
+        assert 'The Cultivar \'Foxy Foxglove\' will be shown on' in msgs
 
     def test_save_row_to_db_existing_flip_bools(self, db):
         """Change values of bools."""
@@ -1764,7 +1763,7 @@ class TestCultivarsWorksheetWithDB:
         cv.common_name.index = Index(name='Perennial')
         cv.in_stock = True
         cv.active = True
-        cv.invisible = False
+        cv.visible = False
         db.session.add(cv)
         db.session.commit()
         cv2 = Cultivar(name='Foxy')
@@ -1772,7 +1771,7 @@ class TestCultivarsWorksheetWithDB:
         cv2.common_name.index = Index(name='Perennial')
         cv2.in_stock = False
         cv2.active = False
-        cv2.invisible = True
+        cv2.visible = True
         cvws.add_one(cv2)
         assert cvws.save_row_to_db(row=2, stream=messages)
         cvq = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
@@ -1781,27 +1780,27 @@ class TestCultivarsWorksheetWithDB:
         assert cvq is cv
         assert not cv.in_stock
         assert not cv.active
-        assert cv.invisible
+        assert cv.visible
         assert 'The Cultivar \'Foxy Foxglove\' is out of stock' in msgs
         assert 'The Cultivar \'Foxy Foxglove\' is inactive' in msgs
-        assert 'The Cultivar \'Foxy Foxglove\' will not be shown on' in msgs
+        assert 'The Cultivar \'Foxy Foxglove\' will be shown on' in msgs
         messages = StringIO()
         cv3 = Cultivar(name='Foxy')
         cv3.common_name = CommonName(name='Foxglove')
         cv3.common_name.index = Index(name='Perennial')
         cv3.in_stock = True
         cv3.active = True
-        cv3.invisible = False
+        cv3.visible = False
         cvws.add_one(cv3)
         assert cvws.save_row_to_db(row=3, stream=messages)
         messages.seek(0)
         msgs = messages.read()
         assert cv.in_stock
         assert cv.active
-        assert not cv.invisible
+        assert not cv.visible
         assert 'The Cultivar \'Foxy Foxglove\' is in stock' in msgs
         assert 'The Cultivar \'Foxy Foxglove\' is active' in msgs
-        assert 'The Cultivar \'Foxy Foxglove\' will be shown on auto' in msgs
+        assert 'The Cultivar \'Foxy Foxglove\' will not be shown' in msgs
 
     def test_save_row_to_db_new_null_bools(self, db):
         """Treat null booleans as False."""
@@ -1815,7 +1814,7 @@ class TestCultivarsWorksheetWithDB:
         cv.common_name.index = Index(name='Perennial')
         cv.in_stock = None
         cv.active = None
-        cv.invisible = None
+        cv.visible = None
         cvws.add_one(cv)
         assert cvws.save_row_to_db(row=2, stream=messages)
         cvq = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
@@ -1823,10 +1822,10 @@ class TestCultivarsWorksheetWithDB:
         msgs = messages.read()
         assert not cvq.in_stock
         assert not cvq.active
-        assert not cvq.invisible
+        assert not cvq.visible
         assert 'The Cultivar \'Foxy Foxglove\' is out of stock' in msgs
         assert 'The Cultivar \'Foxy Foxglove\' is inactive' in msgs
-        assert 'The Cultivar \'Foxy Foxglove\' will be shown on auto' in msgs
+        assert 'The Cultivar \'Foxy Foxglove\' will not be' in msgs
 
 
 class TestPacketsWorksheetWithDB:

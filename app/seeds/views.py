@@ -383,7 +383,7 @@ def add_index():
                         .format(index.name))
         if form.description.data:
             index.description = form.description.data
-            messages.append('Description set to: \'{0}\''
+            messages.append('Description set to: <p>{0}</p>'
                             .format(index.description))
         db.session.commit()
         messages.append('New index \'{0}\' added to the database.'
@@ -418,16 +418,24 @@ def add_common_name(idx_id=None):
                             .format(cn.name, cn.parent.name))
         if form.description.data:
             cn.description = form.description.data
-            messages.append('Description set to: \'{0}\''
+            messages.append('Description set to: <p>{0}</p>'
                             .format(cn.description))
         if form.instructions.data:
             cn.instructions = form.instructions.data
-            messages.append('Planting instructions set to: \'{0}\''
+            messages.append('Planting instructions set to: <p>{0}</p>'
                             .format(cn.instructions))
         if form.synonyms.data:
             cn.synonyms_string = form.synonyms.data
             messages.append('Synonyms set to: \'{0}\'.'
                             .format(cn.synonyms_string))
+        if form.visible.data:
+            cn.visible = True
+            messages.append('\'{0}\' is visible on auto-generated pages.'
+                            .format(cn.name))
+        else:
+            cn.visible = False
+            messages.append('\'{0}\' is not visible on auto-generated pages.'
+                            .format(cn.name))
         db.session.commit()
         messages.append('New common name \'{0}\' added to the database.'
                         .format(cn.name))
@@ -496,7 +504,7 @@ def add_series(cn_id=None):
                         .format(series.name, cn.name))
         if form.description.data:
             series.description = form.description.data
-            messages.append('Description set to: \'{0}\'.'
+            messages.append('Description set to: <p>{0}</p>.'
                             .format(series.description))
         if form.position.data == Series.AFTER_CULTIVAR:
             messages.append('\'{0}\' will be used after the cultivar\'s '
@@ -553,7 +561,7 @@ def add_cultivar(cn_id=None):
             messages.append('Thumbnail uploaded as: {0}'.format(thumb_name))
         if form.description.data:
             cv.description = form.description.data
-            messages.append('Description set to: {0}'.format(cv.description))
+            messages.append('Description set to: <p>{0}</p>'.format(cv.description))
         if form.synonyms.data:
             cv.synonyms_string = form.synonyms.data
             messages.append('Synonyms set to: \'{0}\'.'
@@ -577,11 +585,11 @@ def add_cultivar(cn_id=None):
             messages.append('\'{0}\' is currently inactive.'
                             .format(cv.fullname))
         if form.visible.data:
-            cv.invisible = False
+            cv.visible = True
             messages.append('\'{0}\' will be visible in auto-generated pages.'
                             .format(cv.fullname))
         else:
-            cv.invisible = True
+            cv.visible = False
             messages.append('\'{0}\' will not be visible in auto-generated '
                             'pages, but it can still be used in custom pages.'
                             .format(cv.fullname))
@@ -697,7 +705,7 @@ def edit_index(idx_id=None):
             edited = True
             if form.description.data:
                 index.description = form.description.data
-                messages.append('Description set to: \'{0}\'.'
+                messages.append('Description set to: <p>{0}</p>.'
                                 .format(index.description))
             else:
                 index.description = None
@@ -919,7 +927,7 @@ def edit_series(series_id=None):
             edited = True
             if form.description.data:
                 series.description = form.description.data
-                messages.append('Description set to: <p>{0}</p>'
+                messages.append('Description changed to: <p>{0}</p>'
                                 .format(series.description))
             else:
                 series.description = None
@@ -1114,17 +1122,17 @@ def edit_cultivar(cv_id=None):
                 cv.active = False
                 messages.append('\'{0}\' is no longer active.'
                                 .format(cv.fullname))
-        if form.invisible.data:
-            if not cv.invisible:
+        if form.visible.data:
+            if not cv.visible:
                 edited = True
-                cv.invisible = True
-                messages.append('\'{0}\' will no longer be visible on '
+                cv.visible = True
+                messages.append('\'{0}\' will now be visible on '
                                 'auto-generated pages.'.format(cv.fullname))
         else:
-            if cv.invisible:
+            if cv.visible:
                 edited = True
-                cv.invisible = False
-                messages.append('\'{0}\' will now be visible on '
+                cv.visible = False
+                messages.append('\'{0}\' will no longer be visible on '
                                 'auto-generated pages.'.format(cv.fullname))
         if edited:
             messages.append('Changes to \'{0}\' committed to the database.'
@@ -1175,6 +1183,11 @@ def edit_packet(pkt_id=None):
         edited = False
         messages = []
         messages.append('Editing packet \'{0}\'.'.format(packet.info))
+        if form.cultivar_id.data != packet.cultivar_id:
+            edited = True
+            packet.cultivar = Cultivar.query.get(form.cultivar_id.data)
+            messages.append('Cultivar changed to: \'{0}\'.'
+                            .format(packet.cultivar.fullname))
         form.sku.data = form.sku.data.strip()
         if form.sku.data != packet.sku:
             edited = True
@@ -1464,7 +1477,7 @@ def remove_series(series_id=None):
     series = Series.query.get(series_id) if series_id else None
     if series is None:
         return redirect(url_for('seeds.select_series',
-                                dest='seed.remove_series'))
+                                dest='seeds.remove_series'))
     form = RemoveSeriesForm()
     if form.validate_on_submit():
         messages = []
@@ -1804,18 +1817,24 @@ def common_name(idx_slug=None, cn_slug=None):
         .filter(CommonName.slug == cn_slug, Index.slug == idx_slug)\
         .one_or_none()
     if cn is not None:
+        # Note: This redirect will likely be removed in the future.
+        if cn.parent:
+            abort(404)
+#            return redirect(url_for('seeds.common_name',
+#                                    idx_slug=cn.index.slug,
+#                                    cn_slug=cn.parent.slug,
+#                                    _anchor='subtype-' + cn.parent.slug))
         individuals = [cv for cv in cn.cultivars if not cv.series and
                        not cv.common_name.parent]
         crumbs = (
             cblr.crumble('home', 'Home'),
             cblr.crumble('index', cn.index.header, idx_slug=idx_slug),
-            cblr.crumble('common_name',
-                         cn.name,
-                         idx_slug=idx_slug,
-                         cn_slug=cn_slug)
+            cn.name
         )
 
         return render_template('seeds/common_name.html',
+                               subtypes=cn.children,
+                               series=cn.series,
                                individuals=individuals,
                                cn=cn,
                                crumbs=crumbs)
@@ -1844,36 +1863,10 @@ def cultivar(idx_slug=None, cn_slug=None, cv_slug=None):
     abort(404)
 
 
-@seeds.route('/flip_dropped/<cv_id>')
-@seeds.route('/flip_dropped')
-@login_required
-@permission_required(Permission.MANAGE_SEEDS)
-def flip_dropped(cv_id=None):
-    """Reverse dropped status of given cultivar."""
-    if cv_id is None:
-        abort(404)
-    cv = Cultivar.query.get(cv_id)
-    if cv is None:
-        abort(404)
-    if cv.dropped:
-        flash('\'{0}\' has been returned to active status.'.
-              format(cv.fullname))
-        cv.dropped = False
-    else:
-        flash('\'{0}\' has been dropped.'.
-              format(cv.fullname))
-        cv.dropped = True
-    db.session.commit()
-    return redirect(request.args.get('next') or url_for('seeds.manage'))
-
-
 @seeds.route('/flip_in_stock/<cv_id>')
-@seeds.route('/flip_in_stock')
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
-def flip_in_stock(cv_id=None):
-    if cv_id is None:
-        abort(404)
+def flip_in_stock(cv_id):
     cv = Cultivar.query.get(cv_id)
     if cv is None:
         abort(404)
@@ -1883,5 +1876,42 @@ def flip_in_stock(cv_id=None):
     else:
         flash('\'{0}\' is now in stock.'.format(cv.fullname))
         cv.in_stock = True
+    db.session.commit()
+    return redirect(request.args.get('next') or url_for('seeds.manage'))
+
+
+@seeds.route('/flip_active/<cv_id>')
+@login_required
+@permission_required(Permission.MANAGE_SEEDS)
+def flip_active(cv_id):
+    """Reverse active status of given cultivar."""
+    cv = Cultivar.query.get(cv_id)
+    if cv is None:
+        abort(404)
+    if cv.active:
+        flash('\'{0}\' has been set as inactive.'.
+              format(cv.fullname))
+        cv.active = False
+    else:
+        flash('\'{0}\' has been set as active.'.
+              format(cv.fullname))
+        cv.active = True
+    db.session.commit()
+    return redirect(request.args.get('next') or url_for('seeds.manage'))
+
+@seeds.route('/flip_visible/<cv_id>')
+def flip_visible(cv_id):
+    """Reverse visible status of given cultivar."""
+    cv = Cultivar.query.get(cv_id)
+    if cv is None:
+        abort(404)
+    if cv.visible:
+        cv.visible = False
+        flash('\'{0}\' is no longer visible on auto-generated pages.'
+              .format(cv.fullname))
+    else:
+        cv.visible = True
+        flash('\'{0}\' is now visible on auto-generated pages.'
+              .format(cv.fullname))
     db.session.commit()
     return redirect(request.args.get('next') or url_for('seeds.manage'))

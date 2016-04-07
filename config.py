@@ -31,6 +31,8 @@ class Config(object):
 
     Attributes:
         ADMINISTRATORS (list): A list of email addresses of site admins.
+        ALLOW_CRAWLING: Whether or not to allow pages to be crawled. This
+            should be false outside of production mode.
         EMAIL_SUBJECT_PREFIX (str): A prefix to use in generated email
                                     subjects.
         ERFP_DAYS_TO_TRACK (int): How many days to keep track of email
@@ -56,6 +58,7 @@ class Config(object):
         ADMINISTRATORS = os.environ.get('SGS_ADMINISTRATORS').split(', ')
     except AttributeError:
         ADMINISTRATORS = []
+    ALLOW_CRAWLING = os.environ.get('SGS_ALLOW_CRAWLING') or False
     ERFP_DAYS_TO_TRACK = os.environ.get('SGS_ERFP_DAYS_TO_TRACK') or 14
     ERFP_DAYS_TO_TRACK = int(ERFP_DAYS_TO_TRACK)
     ERFP_MAX_REQUESTS = os.environ.get('SGS_ERFP_MAX_REQUESTS') or 12
@@ -131,6 +134,7 @@ class ProductionConfig(Config):
     """
     SQLALCHEMY_DATABASE_URI = os.environ.get('SGS_DATABASE_URI') or \
         'sqlite:///' + os.path.join(BASEDIR, 'sgs.db')
+    ALLOW_CRAWLING = os.environ.get('SGS_ALLOW_CRAWLING') or True
 
 
 CONFIG = {

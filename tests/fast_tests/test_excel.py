@@ -329,7 +329,9 @@ class TestIndexesWorksheet:
         idx = Index(name='Perennial', description='Built to last.')
         iws.add_one(idx, stream=messages)
         assert iws.cell(2, iws.cols['Index']).value == 'Perennial'
-        assert iws.cell(2, iws.cols['Description']).value == 'Built to last.'
+        assert iws.cell(
+            2, iws.cols['Description']
+        ).value == '<p>Built to last.</p>'
         messages.seek(0)
         msgs = messages.read()
         assert ('Adding data from <Index \'Perennial\'> to row #2 of indexes '
@@ -360,7 +362,7 @@ class TestCommonNamesWorksheet:
                   'Description',
                   'Planting Instructions',
                   'Synonyms',
-                  'Invisible')
+                  'Visible')
         m_s.assert_called_with(titles)
 
     @mock.patch('app.seeds.excel.CommonNamesWorksheet._setup')
@@ -390,7 +392,6 @@ class TestCommonNamesWorksheet:
         assert cnws.cell(2, cnws.cols['Description']).value is None
         assert cnws.cell(2, cnws.cols['Planting Instructions']).value is None
         assert cnws.cell(2, cnws.cols['Synonyms']).value is None
-        assert cnws.cell(2, cnws.cols['Invisible']).value == 'False'
         messages.seek(0)
         msgs = messages.read()
         assert ('Adding data from <CommonName \'Foxglove\'> to row #2 of '
@@ -407,16 +408,14 @@ class TestCommonNamesWorksheet:
                         instructions='Just add water!')
         cn.index = Index(name='Perennial')
         cn.parent = CommonName(name='Fauxglove')
-        cn.invisible = True
         cn.synonyms_string = 'Digitalis'
         cnws.add_one(cn)
         assert cnws.cell(2, cnws.cols['Subcategory of']).value == 'Fauxglove'
-        assert cnws.cell(2, cnws.cols['Description']).value == 'Spotty.'
+        assert cnws.cell(2, cnws.cols['Description']).value == '<p>Spotty.</p>'
         assert cnws.cell(
             2, cnws.cols['Planting Instructions']
-        ).value == 'Just add water!'
+        ).value == '<p>Just add water!</p>'
         assert cnws.cell(2, cnws.cols['Synonyms']).value == 'Digitalis'
-        assert cnws.cell(2, cnws.cols['Invisible']).value == 'True'
 
     def test_add_one_not_common_name(self):
         """Raise a TypeError given data that isn't a CommonName."""
@@ -579,7 +578,9 @@ class TestSeriesWorksheet:
         sr.common_name = CommonName(name='Foxglove')
         sr.common_name.index = Index(name='Perennial')
         srws.add_one(sr)
-        assert srws.cell(2, srws.cols['Description']).value == 'A bit spotty.'
+        assert srws.cell(
+            2, srws.cols['Description']
+        ).value == '<p>A bit spotty.</p>'
 
     def test_add_one_not_series(self):
         """Raise a TypeError if passed argument is not a Series object."""
@@ -613,7 +614,7 @@ class TestCultivarsWorksheet:
                   'New Until',
                   'In Stock',
                   'Active',
-                  'Invisible')
+                  'Visible')
         m_s.assert_called_with(titles)
 
     @mock.patch('app.seeds.excel.CultivarsWorksheet._setup')
@@ -649,7 +650,6 @@ class TestCultivarsWorksheet:
         assert cvws.cell(2, cvws.cols['New Until']).value is None
         assert cvws.cell(2, cvws.cols['In Stock']).value == 'False'
         assert cvws.cell(2, cvws.cols['Active']).value == 'False'
-        assert cvws.cell(2, cvws.cols['Invisible']).value == 'False'
         messages.seek(0)
         msgs = messages.read()
         assert ('Adding data from <Cultivar \'Foxy Foxglove\'> to row #2 of '
@@ -707,7 +707,9 @@ class TestCultivarsWorksheet:
         cv.common_name.index = Index(name='Perennial')
         cv.description = 'Like a lady!'
         cvws.add_one(cv)
-        assert cvws.cell(2, cvws.cols['Description']).value == 'Like a lady!'
+        assert cvws.cell(
+            2, cvws.cols['Description']
+        ).value == '<p>Like a lady!</p>'
 
     def test_add_one_with_synonyms(self):
         """Add a Cultivar with synonyms to worksheet."""
@@ -778,25 +780,6 @@ class TestCultivarsWorksheet:
         cv2.active = False
         cvws.add_one(cv2)
         assert cvws.cell(3, cvws.cols['Active']).value == 'False'
-
-    def test_add_one_invisible(self):
-        """Add an invisible Cultivar to worksheet."""
-        wb = Workbook()
-        ws = wb.active
-        cvws = CultivarsWorksheet(ws)
-        cvws.setup()
-        cv = Cultivar(name='Foxy')
-        cv.common_name = CommonName(name='Foxglove')
-        cv.common_name.index = Index(name='Perennial')
-        cv.invisible = True
-        cvws.add_one(cv)
-        assert cvws.cell(2, cvws.cols['Invisible']).value == 'True'
-        cv2 = Cultivar(name='Soulmate')
-        cv2.common_name = CommonName(name='Butterfly Weed')
-        cv2.common_name.index = Index(name='Perennial')
-        cv2.invisible = False
-        cvws.add_one(cv2)
-        assert cvws.cell(3, cvws.cols['Invisible']).value == 'False'
 
     def test_add_one_not_cultivar(self):
         """Raise a TypeError given non-Cultivar data."""

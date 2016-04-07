@@ -15,8 +15,9 @@
  
    Copyright Swallowtail Garden Seeds, Inc 
 #}
-            <ol id="breadcrumbs">
-                {% for crumb in crumbs %}
-                <li>{{ crumb|safe }}</li>
-                {% endfor %}
-            </ol>
+{# Breadcrumbs need to be indented 6 spaces to fit page formatting. #}
+      <ol id="breadcrumbs">
+        {% for crumb in crumbs %}
+        <li>{{ crumb|safe }}</li>
+        {% endfor %}
+      </ol>

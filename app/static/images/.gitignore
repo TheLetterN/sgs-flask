@@ -4,3 +4,6 @@
 
 # We don't want to ignore the default thumbnail image, either.
 !default_thumb.jpg
+
+# The banner would be nice to have, too.
+!sgs-banner.jpg

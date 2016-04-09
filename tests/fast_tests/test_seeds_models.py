@@ -253,12 +253,9 @@ class TestCultivar:
         cv = Cultivar()
         assert cv.__repr__() == '<Cultivar \'Full Cultivar Name\'>'
 
-    @mock.patch('app.seeds.models.Cultivar.name_with_series',
-                new_callable=mock.PropertyMock)
-    def test_fullname_getter(self, m_nws):
+    def test_fullname_getter(self):
         """Return string with all existing: series, name, and common_name."""
-        m_nws.return_value = 'Polkadot Petra'
-        cv = Cultivar()
+        cv = Cultivar(name='Polkadot Petra')
         cv.common_name = CommonName(name='Foxglove')
         assert cv.fullname == 'Polkadot Petra Foxglove'
 

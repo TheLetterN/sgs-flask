@@ -25,7 +25,7 @@
     <link rel="canonical" href="{{ url_for('seeds.common_name', idx_slug=cn.index.slug, cn_slug=cn.slug, _external=True) }}">
 {% endblock %}
 {% block main %}
-      <header class="cn-header">
+      <div class="header cn-header">
         <h1>{{ cn.header }}</h1>
         {% if cn.synonyms %}
         <h2 class="synomyms">{{ cn.synonyms_string }}</h2>
@@ -39,9 +39,9 @@
         {% if cn.instructions %}
         <a class="to-planting-instructions" href="#{{ cn.slug }}-instructions">How to plant {{ cn.name }} seeds</a>
         {% endif %}
-      </header>
+      </div>
       {% if subtypes or series %}
-      <nav class="nav-cn-page">
+      <div class="onpage-nav">
         {% if subtypes %}
         <ul class="cn-subtypes">
           {% for st in subtypes %}
@@ -67,11 +67,12 @@
         {% if individuals %}
         <a class="to-indv-varieties" href="#individual-varieties">Individual {{ cn.name }} Varieties</a>
         {% endif %}
+      </div>
       {% endif %}
       {% if subtypes %}
         {% for st in subtypes %}
           {% if st.has_public_cultivars or current_user.can(Permission.MANAGE_SEEDS) %}
-      <header class="cn-group-header cn-subtype-header">
+      <div class="cn-group-header cn-subtype-header">
         <h2 id="subtype-{{ st.slug }}">{{ st.name }}</h2>
             {% if st.description %}
         <div class="description">{{ st.description|safe }}</div>
@@ -79,7 +80,7 @@
             {% if st.instructions %}
         <a class="instructions-link" href="#{{ st.slug }}-instructions">Planting Instructions for {{ st.name }}</a>
             {% endif %}
-      </header>
+      </div>
       <div class="cultivar-group cn-subtype-cultivars">
             {% for cv in st.cultivars %}
         {{ cultivar_box(cv)|indent(8)|safe }}
@@ -94,13 +95,13 @@
       {% if series %}
         {% for sr in series %}
           {% if sr.has_public_cultivars or current_user.can(Permission.MANAGE_SEEDS) %}
-      <header class="cn-group-header cn-series-header">
+      <div class="cn-group-header cn-series-header">
         <h2 id="series-{{ sr.name.replace(' ', '-') }}">{{ sr.name }} Series</h2>
         <em>{{ cn.header }}</em>
             {% if sr.description %}
         <div class="description">{{ sr.description|safe }}</div>
             {% endif %}
-      </header>)
+      </div>
       <div class="cultivar-group cn-series-cultivars">
             {% for cv in sr.cultivars %}
         {{ cultivar_box(cv)|indent(8)|safe }}
@@ -111,10 +112,10 @@
       {% endif %}
       {% if individuals %}
         {% if subcategories or series %}
-      <header class="cn-group-header cn-individuals-header">
+      <div class="cn-group-header cn-individuals-header">
         <h2 id="individual-varieties">Individual {{ cn.name }} Varieties</h2>
         <a class="to-planting-instructions" href="#{{ cn.slug }}-instructions">How to plant {{ cn.name }} seeds</a>
-      </header>
+      </div>
         {% endif %}
       <div class="cultivar-group cn-individual-cultivars">
         {% for cv in individuals %}

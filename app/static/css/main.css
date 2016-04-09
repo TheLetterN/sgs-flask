@@ -69,14 +69,6 @@ body {
     max-width: 980px;
 }
 
-main {
-    background-color: #f7f7f7;
-    border-top: .08em solid #222;
-    border-bottom: .08em solid #222;
-    font-family: 'Droid serif', Georgia, 'Times New Roman', serif;
-    padding: .5em 1.5em;
-}
-
 h1 {
     font-size: 2em;
     font-weight: 700;
@@ -232,6 +224,17 @@ i, em {
 /* END nav-main */
 /* END header */
 
+/* BEGIN main */
+#main {
+    background-color: #f7f7f7;
+    border-top: .08em solid #222;
+    border-bottom: .08em solid #222;
+    display: block;
+    font-family: 'Droid serif', Georgia, 'Times New Roman', serif;
+    padding: .5em 1.5em;
+}
+/* END main */
+
 /* BEGIN breadcrumbs */
 #breadcrumbs {
     display: block;
@@ -261,7 +264,7 @@ i, em {
 /* END breadcrumbs */
 
 /* BEGIN categories */
-div.category {
+.category {
     border: 1px solid #afa;
     margin-top: 0.2em;
     margin-bottom: 0.2em;
@@ -608,12 +611,12 @@ input[type=radio] + label:after {
 /* END toggles */
 
 /* BEGIN fractions */
-span.fraction sup {
+.fraction sup {
     vertical-align: super;
     font-size: 0.6em;
 }
 
-span.fraction sub {
+.fraction sub {
     font-size: 0.6em;
 }
 /* END fractions */
@@ -625,12 +628,12 @@ div.last_commit {
 /* END last commit */
 
 /* BEGIN footer */
-footer {
+.footer {
     margin: 0 auto;
     width: 70%;
 }
 
-footer p {
+.footer p {
     text-align: center;
     text-indent: none;
 }

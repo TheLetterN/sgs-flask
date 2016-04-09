@@ -32,23 +32,23 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
   </head>
   <body>
-    <header id="masthead">
+    <div id="masthead">
       <div class="contact"><span class="phone">Toll Free: 1-877-489-7333</span><a class="email" href="mailto:info@swallowtailgardenseeds.com">info@swallowtailgardenseeds.com</a></div>
       <a href="{{ url_for('seeds.home') }}"><img id="banner" src="{{ url_for('static', filename='images/sgs-banner.jpg') }}" alt="Swallowtail Garden Seeds"></a>
       {% include "includes/nav.html" %}
 
-    </header>
-    <main>
+    </div>
+    <div id="main">
       {% if crumbs %}
       {% include "includes/breadcrumbs.html" %}
       {% endif %}
       {% include "includes/flashed.html" %}
       {% block main %}
       {% endblock %}
-    </main>
-    <footer>
+    </div>
+    <div class="footer">
       <p class="copyright"><b>Copyright&nbsp;&#169;&nbsp;2016 Swallowtail&nbsp;Garden&nbsp;Seeds - All&nbsp;Rights&nbsp;Reserved</b></p>
       <p class="copyright">Copyright pertains to all images, none of which may be reproduced in any form without<br> the expressed written consent of Swallowtail Garden Seeds.</p>
-    </footer>
+    </div>
   </body>
 </html>

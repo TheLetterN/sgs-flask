@@ -73,6 +73,8 @@ Notes:
 
 import json
 import os
+import shutil
+import sys
 from decimal import Decimal, ROUND_DOWN
 
 from flask import current_app
@@ -206,6 +208,20 @@ def paragraphize(text):
         return '<p>' + text + '</p>'
     else:
         return text
+
+
+def row_exists(row, value):
+    """Check to see if a given row exists in a table.
+
+    Args:
+        row: The row to check, in the form of a db Model attribute, e.g.
+            `Index.name` or `Packet.sku`.
+        value: The value of the row to check for.
+
+    Returns:
+        bool: True if row exists, False if not.
+    """
+    return db.session.query(db.exists().where(row == value)).scalar()
 
 
 # Helper Classes
@@ -394,6 +410,35 @@ class Index(db.Model):
         return '<{0} \'{1}\'>'.format(self.__class__.__name__,
                                       self.name)
 
+    @classmethod
+    def get_or_create(cls, name, stream=sys.stdout):
+        """Load an `Index` if it exists, create it if not.
+
+        Note:
+            The boolean attribute 'created' is attached to the `Index`
+                instance so we know whether the returned Index was created or
+                loaded.
+
+        Args:
+            name: The name of the `Index` to query or create.
+            stream: Optional IO stream to write messages to.
+
+        Returns:
+            Index: The `Index` loaded/created.
+        """
+        name = dbify(name)
+        idx = cls.query.filter(cls.name == name).one_or_none()
+        if idx:
+            print('The Index \'{0}\' has been loaded from the database.'
+                  .format(idx.name), file=stream)
+            idx.created = False
+        else:
+            idx = cls(name=name)
+            print('The Index \'{0}\' does not yet exist in the database, so '
+                  'it has been created.'.format(idx.name), file=stream)
+            idx.created = True
+        return idx
+
     @property
     def header(self):
         """str: contents of `name` in a str for headers, titles, etc."""
@@ -533,6 +578,69 @@ class CommonName(SynonymsMixin, db.Model):
     def __repr__(self):
         return '<{0} \'{1}\'>'.format(self.__class__.__name__, self.name)
 
+    @classmethod
+    def from_queryable_values(cls, name, index):
+        """Return a `CommonName` instance filtered by `name` and `index`.
+
+        Args:
+            name: The name of the `CommonName` instance to query for.
+            index: The name of the `Index` the `CommonName` instance being
+                queried for belongs to.
+
+        Returns:
+            CommonName: A discrete instance of `CommonName`.
+        """
+        return cls.query\
+            .join(Index, Index.id == cls.index_id)\
+            .filter(cls.name == name, Index.name == index)\
+            .one_or_none()
+
+    @classmethod
+    def from_queryable_dict(cls, d):
+        """Return a `CommonName` instance with information from a dict.
+
+        Args:
+            d: A dict containing the name and index name of a `CommonName`.
+
+        Returns:
+            CommonName: A discrete instance of `CommonName`.
+        """
+        return cls.from_queryable_values(name=d['Common Name'],
+                                         index=d['Index'])
+
+    @classmethod
+    def get_or_create(cls, name, index, stream=sys.stdout):
+        """Load a `CommonName` if it exists, create it if not.
+
+        Note:
+            The boolean attribute 'created' is attached to the `CommonName`
+            instance so we know whether the returned `CommonName` was created
+            or loaded.
+
+        Args:
+            name: Name of the `CommonName`. Corresponds to `CommonName.name`.
+            index: Name of the `Index` the `CommonName` belongs to.
+                Corresponds to `CommonName.index.name`.
+            stream: Optional IO stream to write messages to.
+
+        Returns:
+            CommonName: The `CommonName` loaded or created.
+        """
+        name = dbify(name)
+        index = dbify(index)
+        cn = cls.from_queryable_values(name=name, index=index)
+        if cn:
+            print('The CommonName \'{0}\' has been loaded from the database.'
+                  .format(cn.name), file=stream)
+            cn.created = False
+        else:
+            cn = cls(name=name)
+            print('The CommonName \'{0}\' does not yet exist in the database, '
+                  'so it has been created.'.format(cn.name), file=stream)
+            cn.index = Index.get_or_create(name=index, stream=stream)
+            cn.created = True
+        return cn
+
     @property
     def header(self):
         """str: `name` formatted for headers and titles."""
@@ -572,40 +680,11 @@ class CommonName(SynonymsMixin, db.Model):
                     genuses.append(parts[0])
                     names.append(bn.name)
             return ', '.join(names)
+
     @property
     def has_public_cultivars(self):
         """bool: Whether or not `CommonName` has any public cultivars."""
         return self.cultivars and any(cv.public for cv in self.cultivars)
-
-    @classmethod
-    def from_queryable_values(cls, name, index):
-        """Return a `CommonName` instance filtered by `name` and `index`.
-
-        Args:
-            name: The name of the `CommonName` instance to query for.
-            index: The name of the `Index` the `CommonName` instance being
-                queried for belongs to.
-
-        Returns:
-            CommonName: A discrete instance of `CommonName`.
-        """
-        return cls.query\
-            .join(Index, Index.id == cls.index_id)\
-            .filter(cls.name == name, Index.name == index)\
-            .one_or_none()
-
-    @classmethod
-    def from_queryable_dict(cls, d):
-        """Return a `CommonName` instance with information from a dict.
-
-        Args:
-            d: A dict containing the name and index name of a `CommonName`.
-
-        Returns:
-            CommonName: A discrete instance of `CommonName`.
-        """
-        return cls.from_queryable_values(name=d['Common Name'],
-                                         index=d['Index'])
 
     def generate_slug(self):
         """Generate the string to use in URLs for this `CommonName`."""
@@ -673,6 +752,42 @@ class BotanicalName(SynonymsMixin, db.Model):
         """
         return '<{0} \'{1}\'>'.format(self.__class__.__name__,
                                       self.name)
+
+    @classmethod
+    def get_or_create(cls, name, stream=sys.stdout, fix_bad=False):
+        """Load a `BotanicalName` from db, or create it if it doesn't exist.
+
+        Args:
+            name: Name of the `BotanicalName`.
+            stream: The buffer to print messages to.
+            fix_bad: Whether or not to 'fix' invalid botanical names. Defaults
+                to `False`.
+
+        Returns:
+            BotanicalName: The loaded or created `BotanicalName`.
+
+        Raises:
+            ValueError: If `name` is not valid, and `fix_bad` is not true.
+        """
+        if not cls.validate(name):
+            if fix_bad:
+                parts = name.split(' ')
+                name = ' '.join([parts[0].title()] + parts[1:])
+            else:
+                raise ValueError('\'{0}\' is not a valid botanical name!'
+                                 .format(name))
+        bn = cls.query.filter(cls.name == name).one_or_none()
+        if bn:
+            bn.created = False
+            print('The BotanicalName \'{0}\' has been loaded from the '
+                  'database.'.format(bn.name))
+        else:
+            bn = BotanicalName(name=name)
+            bn.created = True
+            print('The BotanicalName \'{0}\' does not yet exist in the '
+                  'database, so it has been created.'
+                  .format(bn.name))
+        return bn
 
     @staticmethod
     def validate(botanical_name):
@@ -796,6 +911,41 @@ class Series(db.Model):
     def __repr__(self):
         """Return a string representing a `Series` instance."""
         return '<{0} \'{1}\'>'.format(self.__class__.__name__, self.fullname)
+
+    @classmethod
+    def get_or_create(cls, name, common_name, index, stream=sys.stdout):
+        """Load a `Series` from the db, or create it if it doesn't exist.
+
+        Args:
+            name: The name of the `Series`.
+            common_name: The name of the `CommonName` it belongs to.
+            index: The name of the `Index` it belongs to.
+            stream: Buffer to output messages to.
+
+        Returns:
+            Series: The loaded or created `Series`.
+        """
+        name = dbify(name)
+        common_name = dbify(common_name)
+        index = dbify(index)
+        sr = cls.query\
+            .join(CommonName, CommonName.id == Series.common_name_id)\
+            .join(Index, Index.id == CommonName.index_id)\
+            .filter(Series.name == name,
+                    CommonName.name == common_name,
+                    Index.name == index)\
+            .one_or_none()
+        if sr:
+            sr.created = False
+            print('The Series \'{0}\' has been loaded from the database.'
+                  .format(sr.fullname), file=stream)
+        else:
+            cn = CommonName.get_or_create(common_name, index, stream=stream)
+            sr = Series(name=name, common_name=cn)
+            sr.created = True
+            print('The Series \'{0}\' does not yet exist in the database, so '
+                  'it has been created'.format(sr.fullname), file=stream)
+        return sr
 
     @property
     def fullname(self):
@@ -948,59 +1098,6 @@ class Cultivar(SynonymsMixin, db.Model):
         return '<{0} \'{1}\'>'.format(self.__class__.__name__,
                                       self.fullname)
 
-    @property
-    def name_with_series(self):
-        """str: contents of _name with series.name included in its position."""
-        if self.series:
-            #  While some seed names list the series after the name of the
-            #  cultivar, such as 'Violet Queen Cleome' and 'Rose Queen Cleome',
-            #  mixes in these series list the series name before 'Mix', so
-            #  the mix of the Queen series is 'Queen Mix Cleome' rather than
-            #  'Mix Queen Cleome'.
-            if (self.series.position != Series.AFTER_CULTIVAR or
-                    self.name.lower() == 'mix'):
-                return '{0} {1}'.format(self.series.name, self.name)
-            else:
-                return '{0} {1}'.format(self.name, self.series.name)
-        else:
-            return self.name
-
-    @property
-    def fullname(self):
-        """str: Full name of cultivar including common name and series."""
-        fn = []
-        if self.name_with_series:
-            fn.append(self.name_with_series)
-        if self.common_name and self.common_name.name != self.name:
-            fn.append(self.common_name.name)
-        if fn:
-            return ' '.join(fn)
-        else:
-            return None
-
-    @property
-    def queryable_dict(self):
-        """dict: A dict with name, common_name, series, and index of `self`.
-
-        Note:
-            Any or all values can be `None`, as passing <obj.attribute> == None
-            to db.Model.query.filter() will return `None` if no objects in the
-            database have the attribute in question set to `None`. A `dict`
-            with all values set to `None` won't raise an exception when used
-            for a query, it will just yield no results.
-        """
-        name = self.name
-        common_name = self.common_name.name if self.common_name else None
-        index = (self.common_name.index.name if self.common_name
-                 and self.common_name.index else None)
-        series = self.series.name if self.series else None
-        return {
-            'Cultivar Name': name,
-            'Common Name': common_name,
-            'Index': index,
-            'Series': series
-        }
-
     @classmethod
     def from_queryable_values(cls, name, common_name, index, series=None):
         """Query a `Cultivar` from the database given its core values.
@@ -1056,6 +1153,115 @@ class Cultivar(SynonymsMixin, db.Model):
                                          common_name=d['Common Name'],
                                          index=d['Index'],
                                          series=d['Series'])
+
+    @classmethod
+    def get_or_create(cls,
+                      name,
+                      common_name,
+                      index,
+                      series=None,
+                      stream=sys.stdout):
+        """Load a cultivar if it exists, create it if not.
+
+        Notes:
+            The boolean attribute 'created' is attached to the `CommonName`
+            instance so we know whether the returned `CommonName` was created
+            or loaded.
+
+            Also, if a `Series` is created by this function, its position will
+            be set to the default `Series.BEFORE_CULTIVAR`, as it can easily
+            be edited later, and it's not necessary information for the
+            creation of a`Cultivar`. Ideally, the `Series` for a `Cultivar`
+            should exist in the database before creation of the `Cultivar`.
+
+        Args:
+            name: Name of the `Cultivar`.
+            common_name: Name of the `CommonName` this `Cultivar` belongs to.
+            index: `Index` the `CommonName` belongs to.
+            series: The (optional) `Series` this `Cultivar` is in, if
+                applicable.
+            stream: Optional IO stream to write messages to.
+        """
+        cv = cls.from_queryable_values(name=name,
+                                       common_name=common_name,
+                                       index=index,
+                                       series=series)
+        if cv:
+            cv.created = False
+            print('The Cultivar \'{0}\' has been loaded from the database.'
+                  .format(cv.fullname), file=stream)
+        else:
+            cv = cls(name=name)
+            cv.created = True
+            cv.common_name = CommonName.get_or_create(name=common_name,
+                                                      index=index,
+                                                      stream=stream)
+            if series:
+                sr = Series.query.filter(Series.name == series).one_or_none()
+                if sr:
+                    print('The Series \'{0}\' has been loaded from the '
+                          'database.'.format(sr.name), file=stream)
+                else:
+                    sr = Series(name=series)
+                    sr.common_name = cv.common_name
+                    sr.position = Series.BEFORE_CULTIVAR
+                    print('The Series \'{0}\' does not yet exist, so it has '
+                          'been created.'.format(sr.name), file=stream)
+                cv.series = sr
+            print('The Cultivar \'{0}\' does not yet exist in the database, '
+                  'so it has been created.'.format(cv.fullname), file=stream)
+        return cv
+
+    @property
+    def name_with_series(self):
+        """str: contents of _name with series.name included in its position."""
+        if self.series:
+            #  While some seed names list the series after the name of the
+            #  cultivar, such as 'Violet Queen Cleome' and 'Rose Queen Cleome',
+            #  mixes in these series list the series name before 'Mix', so
+            #  the mix of the Queen series is 'Queen Mix Cleome' rather than
+            #  'Mix Queen Cleome'.
+            if (self.series.position != Series.AFTER_CULTIVAR or
+                    self.name.lower() == 'mix'):
+                return '{0} {1}'.format(self.series.name, self.name)
+            else:
+                return '{0} {1}'.format(self.name, self.series.name)
+        else:
+            return self.name
+
+    @property
+    def fullname(self):
+        """str: Full name of cultivar including common name."""
+        fn = [self.name]
+        if self.common_name and self.common_name.name != self.name:
+            fn.append(self.common_name.name)
+        if fn:
+            return ' '.join(fn)
+        else:
+            return None
+
+    @property
+    def queryable_dict(self):
+        """dict: A dict with name, common_name, series, and index of `self`.
+
+        Note:
+            Any or all values can be `None`, as passing <obj.attribute> == None
+            to db.Model.query.filter() will return `None` if no objects in the
+            database have the attribute in question set to `None`. A `dict`
+            with all values set to `None` won't raise an exception when used
+            for a query, it will just yield no results.
+        """
+        name = self.name
+        common_name = self.common_name.name if self.common_name else None
+        index = (self.common_name.index.name if self.common_name
+                 and self.common_name.index else None)
+        series = self.series.name if self.series else None
+        return {
+            'Cultivar Name': name,
+            'Common Name': common_name,
+            'Index': index,
+            'Series': series
+        }
 
     @property
     def public(self):
@@ -1120,6 +1326,32 @@ class Packet(db.Model):
             self.quantity = quantity
         if cultivar:
             self.cultivar = cultivar
+
+    @classmethod
+    def from_values(cls, sku, price, quantity, units):
+        """Create a `Packet` given a series of values.
+
+        Args:
+            sku: Product SKU #.
+            price: Price of packet.
+            quantity: Amount of seeds in packet.
+            units: Units of measurement for quantity of seeds in packet.
+
+        Returns:
+            Packet: A new `Packet` instance.
+
+        Raises:
+            ValueError: If given `sku` already exists.
+        """
+        if row_exists(cls.sku, sku):
+            raise ValueError('A packet already exists with the SKU \'{0}\'!'
+                             .format(sku))
+        qty = Quantity.query\
+            .filter(Quantity.value == quantity, Quantity.units == units)\
+            .one_or_none()
+        if not qty:
+            qty = Quantity(value=quantity, units=units)
+        return cls(sku=sku, price=price, quantity=qty)
 
     @property
     def info(self):
@@ -1619,7 +1851,18 @@ class Image(db.Model):
         old_path = self.full_path
         parts = os.path.splitext(self.filename)
         self.filename = parts[0] + postfix + parts[1]
-        os.rename(old_path, self.full_path)
+        shutil.move(old_path, self.full_path)
+
+    def rename(self, new_name):
+        """Rename an image with new name.
+
+        Args:
+            new_name: The new filename to use.
+        """
+        old_path = self.full_path
+        self.filename = new_name
+        shutil.move(old_path, self.full_path)
+
 
 @event.listens_for(Index.description, 'set', retval=True)
 @event.listens_for(CommonName.description, 'set', retval=True)

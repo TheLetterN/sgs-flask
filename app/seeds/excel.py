@@ -65,120 +65,6 @@ def queryable_dicts_to_json(objects):
                         '\'queryable_dict\'!')
 
 
-def get_or_create_index(name, stream=sys.stdout):
-    """Load an index if it exists, create it if not.
-
-    Note:
-        The boolean attribute 'created' is attached to the `Index` instance so
-        we know whether the returned Index was created or loaded.
-
-    Args:
-        name: The name of the `Index` to query or create.
-        stream: Optional IO stream to write messages to.
-
-    Returns:
-        Index: The `Index` loaded/created.
-    """
-    idx = Index.query.filter(Index.name == name).one_or_none()
-    if idx:
-        print('The Index \'{0}\' has been loaded from the database.'
-              .format(idx.name), file=stream)
-        idx.created = False
-    else:
-        idx = Index(name=name)
-        print('The Index \'{0}\' does not yet exist in the database, so it '
-              'has been created.'.format(idx.name), file=stream)
-        idx.created = True
-    return idx
-
-
-def get_or_create_common_name(name, index, stream=sys.stdout):
-    """Load a `CommonName` if it exists, create it if not.
-
-    Note:
-        The boolean attribute 'created' is attached to the `CommonName`
-        instance so we know whether the returned `CommonName` was created or
-        loaded.
-
-    Args:
-        name: Name of the `CommonName`. Corresponds to `CommonName.name`.
-        index: Name of the `Index` the `CommonName` belongs to. Corresponds to
-        `CommonName.index.name`.
-        stream: Optional IO stream to write messages to.
-
-    Returns:
-        CommonName: The `CommonName` loaded or created.
-    """
-    cn = CommonName.from_queryable_values(name=name, index=index)
-    if cn:
-        print('The CommonName \'{0}\' has been loaded from the database.'
-              .format(cn.name), file=stream)
-        cn.created = False
-    else:
-        cn = CommonName(name=name)
-        print('The CommonName \'{0}\' does not yet exist in the database, so '
-              'it has been created.'.format(cn.name), file=stream)
-        cn.index = get_or_create_index(name=index, stream=stream)
-        cn.created = True
-    return cn
-
-
-def get_or_create_cultivar(name,
-                           common_name,
-                           index,
-                           series=None,
-                           stream=sys.stdout):
-    """Load a cultivar if it exists, create it if not.
-
-    Notes:
-        The boolean attribute 'created' is attached to the `CommonName`
-        instance so we know whether the returned `CommonName` was created or
-        loaded.
-
-        Also, if a `Series` is created by this function, its position will be
-        set to the default `Series.BEFORE_CULTIVAR`, as it can easily be edited
-        later, and it's not necessary information for the creation of a
-        `Cultivar`. Ideally, the `Series` for a `Cultivar` should exist in the
-        database before creation of the `Cultivar`.
-
-    Args:
-        name: Name of the `Cultivar`.
-        common_name: Name of the `CommonName` this `Cultivar` belongs to.
-        index: `Index` the `CommonName` belongs to.
-        series: The (optional) `Series` this `Cultivar` is in, if applicable.
-        stream: Optional IO stream to write messages to.
-    """
-    cv = Cultivar.from_queryable_values(name=name,
-                                        common_name=common_name,
-                                        index=index,
-                                        series=series)
-    if cv:
-        cv.created = False
-        print('The Cultivar \'{0}\' has been loaded from the database.'
-              .format(cv.fullname), file=stream)
-    else:
-        cv = Cultivar(name=name)
-        cv.created = True
-        cv.common_name = get_or_create_common_name(name=common_name,
-                                                   index=index,
-                                                   stream=stream)
-        if series:
-            sr = Series.query.filter(Series.name == series).one_or_none()
-            if sr:
-                print('The Series \'{0}\' has been loaded from the database.'
-                      .format(sr.name), file=stream)
-            else:
-                sr = Series(name=series)
-                sr.common_name = cv.common_name
-                sr.position = Series.BEFORE_CULTIVAR
-                print('The Series \'{0}\' does not yet exist, so it has been '
-                      'created.'.format(sr.name), file=stream)
-            cv.series = sr
-        print('The Cultivar \'{0}\' does not yet exist in the database, so it '
-              'has been created.'.format(cv.fullname), file=stream)
-    return cv
-
-
 class SeedsWorksheet(object):
     """A container for an `openpyxl` worksheet.
 
@@ -449,7 +335,7 @@ class IndexesWorksheet(SeedsWorksheet):
         print('-- BEGIN editing/creating Index \'{0}\' from row #{1}. --'
               .format(name, row), file=stream)
         edited = False
-        idx = get_or_create_index(name=name, stream=stream)
+        idx = Index.get_or_create(name=name, stream=stream)
         if idx.created:
             edited = True
             db.session.add(idx)
@@ -552,14 +438,14 @@ class CommonNamesWorksheet(SeedsWorksheet):
         print('-- BEGIN editing/creating CommonName \'{0}\' from row #{1}. --'
               .format(name, row), file=stream)
         edited = False
-        cn = get_or_create_common_name(name=name, index=index, stream=stream)
+        cn = CommonName.get_or_create(name=name, index=index, stream=stream)
         if cn.created:
             edited = True
             db.session.add(cn)
         if parent:
-            pcn = get_or_create_common_name(name=parent,
-                                            index=index,
-                                            stream=stream)
+            pcn = CommonName.get_or_create(name=parent,
+                                           index=index,
+                                           stream=stream)
             if cn.parent != pcn:
                 edited = True
                 cn.parent = pcn
@@ -688,7 +574,7 @@ class BotanicalNamesWorksheet(SeedsWorksheet):
             print('The BotanicalName \'{0}\' does not yet exist in the '
                   'database, so it has been created.'.format(bn.name),
                   file=stream)
-        cns = tuple(get_or_create_common_name(
+        cns = tuple(CommonName.get_or_create(
             name=dbify(d['Common Name']),
             index=dbify(d['Index']),
             stream=stream
@@ -790,9 +676,9 @@ class SeriesWorksheet(SeedsWorksheet):
         print('-- BEGIN editing/creating Series \'{0}\' from row #{1}. '
               '--'.format(series, row), file=stream)
         edited = False
-        cn = get_or_create_common_name(name=dbify(cn_dict['Common Name']),
-                                       index=dbify(cn_dict['Index']),
-                                       stream=stream)
+        cn = CommonName.get_or_create(name=dbify(cn_dict['Common Name']),
+                                      index=dbify(cn_dict['Index']),
+                                      stream=stream)
         sr = None
         if not cn.created:
             sr = Series.query\
@@ -955,7 +841,7 @@ class CultivarsWorksheet(SeedsWorksheet):
         print('-- BEGIN editing/creating Cultivar \'{0}\' from row #{1}. '
               '--'.format(cultivar + ' ' + common_name, row), file=stream)
         edited = False
-        cv = get_or_create_cultivar(name=cultivar,
+        cv = Cultivar.get_or_create(name=cultivar,
                                     index=index,
                                     common_name=common_name,
                                     series=series,
@@ -1170,7 +1056,7 @@ class PacketsWorksheet(SeedsWorksheet):
                 qty = Quantity(value=quantity, units=units)
             pkt = Packet(sku=sku, price=price, quantity=qty)
             db.session.add(pkt)
-            pkt.cultivar = get_or_create_cultivar(
+            pkt.cultivar = Cultivar.get_or_create(
                 name=dbify(cv_dict['Cultivar Name']),
                 common_name=dbify(cv_dict['Common Name']),
                 index=dbify(cv_dict['Index']),

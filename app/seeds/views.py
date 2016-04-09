@@ -561,7 +561,8 @@ def add_cultivar(cn_id=None):
             messages.append('Thumbnail uploaded as: {0}'.format(thumb_name))
         if form.description.data:
             cv.description = form.description.data
-            messages.append('Description set to: <p>{0}</p>'.format(cv.description))
+            messages.append('Description set to: <p>{0}</p>'
+                            .format(cv.description))
         if form.synonyms.data:
             cv.synonyms_string = form.synonyms.data
             messages.append('Synonyms set to: \'{0}\'.'
@@ -1898,6 +1899,7 @@ def flip_active(cv_id):
         cv.active = True
     db.session.commit()
     return redirect(request.args.get('next') or url_for('seeds.manage'))
+
 
 @seeds.route('/flip_visible/<cv_id>')
 def flip_visible(cv_id):

@@ -7,9 +7,6 @@ from app.seeds.excel import (
     BotanicalNamesWorksheet,
     CommonNamesWorksheet,
     CultivarsWorksheet,
-    get_or_create_common_name,
-    get_or_create_cultivar,
-    get_or_create_index,
     IndexesWorksheet,
     PacketsWorksheet,
     SeedsWorksheet,
@@ -27,153 +24,154 @@ from app.seeds.models import (
 )
 
 
-class TestExcel2WithDB:
+class TestExcelWithDB:
     """Test module-level functions of excel which utilize the database."""
-    def test_get_or_create_index_create(self, db):
-        """Create a new Index if no Index exists with given name."""
-        messages = StringIO()
-        idx = get_or_create_index(name='Perennial', stream=messages)
-        assert idx not in Index.query.all()
-        assert idx.created
-        messages.seek(0)
-        assert 'does not yet exist' in messages.read()
-
-    def test_get_or_create_index_get(self, db):
-        """Return an Index loaded from db if it exists."""
-        messages = StringIO()
-        idx = Index(name='Perennial')
-        db.session.add(idx)
-        db.session.commit()
-        idx2 = get_or_create_index(name='Perennial', stream=messages)
-        assert idx2 is idx
-        assert not idx.created
-        messages.seek(0)
-        assert 'loaded from the database' in messages.read()
-
-    def test_get_or_create_common_name_create_cn_and_index(self, db):
-        """Create a new CommonName and Index if not in db."""
-        messages = StringIO()
-        cn = get_or_create_common_name(name='Foxglove',
-                                       index='Perennial',
-                                       stream=messages)
-        assert cn not in CommonName.query.all()
-        assert cn.created
-        assert cn.index not in Index.query.all()
-        assert cn.index.created
-        messages.seek(0)
-        msgs = messages.read()
-        assert 'The CommonName \'Foxglove\' does not yet exist' in msgs
-        assert 'The Index \'Perennial\' does not yet exist' in msgs
-
-    def test_get_or_create_common_name_create_cn(self, db):
-        """Create new CommonName but use existing Index."""
-        messages = StringIO()
-        idx = Index(name='Perennial')
-        db.session.add(idx)
-        db.session.commit()
-        cn = get_or_create_common_name(name='Foxglove',
-                                       index='Perennial',
-                                       stream=messages)
-        assert cn.created
-        assert cn.index is idx
-        assert not cn.index.created
-        messages.seek(0)
-        msgs = messages.read()
-        assert 'The CommonName \'Foxglove\' does not yet exist' in msgs
-        assert 'The Index \'Perennial\' has been loaded' in msgs
-
-    @mock.patch('app.seeds.excel.get_or_create_index')
-    def test_get_or_create_common_name_get(self, m_goci, db):
-        """Load CommonName from db if it exists with given Index."""
-        messages = StringIO()
-        cn = CommonName(name='Foxglove')
-        cn.index = Index(name='Perennial')
-        db.session.add(cn)
-        db.session.commit()
-        cng = get_or_create_common_name(name='Foxglove',
-                                        index='Perennial',
-                                        stream=messages)
-        assert cng is cn
-        assert not cng.created
-        messages.seek(0)
-        msgs = messages.read()
-        assert 'The CommonName \'Foxglove\' has been loaded' in msgs
-        assert not m_goci.called
-
-    @mock.patch('app.seeds.excel.get_or_create_common_name')
-    def test_get_or_create_cultivar_create_all_no_series(self, m_goccn, db):
-        """Create all needed parts of Cultivar."""
-        messages = StringIO()
-        cn = CommonName(name='Foxglove')
-        cn.index = Index(name='Perennial')
-        m_goccn.return_value = cn
-        cv = get_or_create_cultivar(name='Foxy',
-                                    common_name='Foxglove',
-                                    index='Perennial',
-                                    stream=messages)
-        m_goccn.assert_called_with(name='Foxglove',
-                                   index='Perennial',
-                                   stream=messages)
-        assert cv.created
-        assert cv.name == 'Foxy'
-        assert cv.common_name.name == 'Foxglove'
-        assert cv.common_name.index.name == 'Perennial'
-        messages.seek(0)
-        msgs = messages.read()
-        assert 'The Cultivar \'Foxy Foxglove\' does not yet exist' in msgs
-
-    def test_get_or_create_cultivar_create_all(self, db):
-        """Create all needed parts of Cultivar."""
-        messages = StringIO()
-        cn = CommonName(name='Foxglove')
-        cn.index = Index(name='Perennial')
-        cv = get_or_create_cultivar(name='Petra',
-                                    common_name='Foxglove',
-                                    index='Perennial',
-                                    series='Polkadot',
-                                    stream=messages)
-        assert cv.series.name == 'Polkadot'
-        assert cv.series.common_name is cv.common_name
-        messages.seek(0)
-        msgs = messages.read()
-        assert 'The Series \'Polkadot\' does not yet exist' in msgs
-
-    def test_get_or_create_cultivar_exists_no_series(self, db):
-        """Return existing Cultivar instead of new one."""
-        messages = StringIO()
-        cv = Cultivar(name='Foxy')
-        cv.common_name = CommonName(name='Foxglove')
-        cv.common_name.index = Index(name='Perennial')
-        db.session.add(cv)
-        db.session.commit()
-        cvq = get_or_create_cultivar(name='Foxy',
-                                     common_name='Foxglove',
-                                     index='Perennial',
-                                     stream=messages)
-        assert cvq is cv
-        messages.seek(0)
-        msgs = messages.read()
-        assert 'The Cultivar \'Foxy Foxglove\' has been loaded' in msgs
-
-    def test_get_or_create_cultivar_exists_with_series(self, db):
-        """Return existing Cultivar instead of new one."""
-        messages = StringIO()
-        cv = Cultivar(name='Petra')
-        cv.common_name = CommonName(name='Foxglove')
-        cv.common_name.index = Index(name='Perennial')
-        cv.series = Series(name='Polkadot')
-        cv.series.common_name = cv.common_name
-        db.session.add(cv)
-        db.session.commit()
-        cvq = get_or_create_cultivar(name='Petra',
-                                     common_name='Foxglove',
-                                     index='Perennial',
-                                     series='Polkadot',
-                                     stream=messages)
-        assert cvq is cv
-        messages.seek(0)
-        msgs = messages.read()
-        assert 'The Cultivar \'Polkadot Petra Foxglove\' has been load' in msgs
+# TODO: Move these tests to models tests.
+#    def test_get_or_create_index_create(self, db):
+#        """Create a new Index if no Index exists with given name."""
+#        messages = StringIO()
+#        idx = get_or_create_index(name='Perennial', stream=messages)
+#        assert idx not in Index.query.all()
+#        assert idx.created
+#        messages.seek(0)
+#        assert 'does not yet exist' in messages.read()
+#
+#    def test_get_or_create_index_get(self, db):
+#        """Return an Index loaded from db if it exists."""
+#        messages = StringIO()
+#        idx = Index(name='Perennial')
+#        db.session.add(idx)
+#        db.session.commit()
+#        idx2 = get_or_create_index(name='Perennial', stream=messages)
+#        assert idx2 is idx
+#        assert not idx.created
+#        messages.seek(0)
+#        assert 'loaded from the database' in messages.read()
+#
+#    def test_get_or_create_common_name_create_cn_and_index(self, db):
+#        """Create a new CommonName and Index if not in db."""
+#        messages = StringIO()
+#        cn = get_or_create_common_name(name='Foxglove',
+#                                       index='Perennial',
+#                                       stream=messages)
+#        assert cn not in CommonName.query.all()
+#        assert cn.created
+#        assert cn.index not in Index.query.all()
+#        assert cn.index.created
+#        messages.seek(0)
+#        msgs = messages.read()
+#        assert 'The CommonName \'Foxglove\' does not yet exist' in msgs
+#        assert 'The Index \'Perennial\' does not yet exist' in msgs
+#
+#    def test_get_or_create_common_name_create_cn(self, db):
+#        """Create new CommonName but use existing Index."""
+#        messages = StringIO()
+#        idx = Index(name='Perennial')
+#        db.session.add(idx)
+#        db.session.commit()
+#        cn = get_or_create_common_name(name='Foxglove',
+#                                       index='Perennial',
+#                                       stream=messages)
+#        assert cn.created
+#        assert cn.index is idx
+#        assert not cn.index.created
+#        messages.seek(0)
+#        msgs = messages.read()
+#        assert 'The CommonName \'Foxglove\' does not yet exist' in msgs
+#        assert 'The Index \'Perennial\' has been loaded' in msgs
+#
+#    @mock.patch('app.seeds.excel.get_or_create_index')
+#    def test_get_or_create_common_name_get(self, m_goci, db):
+#        """Load CommonName from db if it exists with given Index."""
+#        messages = StringIO()
+#        cn = CommonName(name='Foxglove')
+#        cn.index = Index(name='Perennial')
+#        db.session.add(cn)
+#        db.session.commit()
+#        cng = get_or_create_common_name(name='Foxglove',
+#                                        index='Perennial',
+#                                        stream=messages)
+#        assert cng is cn
+#        assert not cng.created
+#        messages.seek(0)
+#        msgs = messages.read()
+#        assert 'The CommonName \'Foxglove\' has been loaded' in msgs
+#        assert not m_goci.called
+#
+#    @mock.patch('app.seeds.excel.get_or_create_common_name')
+#    def test_get_or_create_cultivar_create_all_no_series(self, m_goccn, db):
+#        """Create all needed parts of Cultivar."""
+#        messages = StringIO()
+#        cn = CommonName(name='Foxglove')
+#        cn.index = Index(name='Perennial')
+#        m_goccn.return_value = cn
+#        cv = get_or_create_cultivar(name='Foxy',
+#                                    common_name='Foxglove',
+#                                    index='Perennial',
+#                                    stream=messages)
+#        m_goccn.assert_called_with(name='Foxglove',
+#                                   index='Perennial',
+#                                   stream=messages)
+#        assert cv.created
+#        assert cv.name == 'Foxy'
+#        assert cv.common_name.name == 'Foxglove'
+#        assert cv.common_name.index.name == 'Perennial'
+#        messages.seek(0)
+#        msgs = messages.read()
+#        assert 'The Cultivar \'Foxy Foxglove\' does not yet exist' in msgs
+#
+#    def test_get_or_create_cultivar_create_all(self, db):
+#        """Create all needed parts of Cultivar."""
+#        messages = StringIO()
+#        cn = CommonName(name='Foxglove')
+#        cn.index = Index(name='Perennial')
+#        cv = get_or_create_cultivar(name='Petra',
+#                                    common_name='Foxglove',
+#                                    index='Perennial',
+#                                    series='Polkadot',
+#                                    stream=messages)
+#        assert cv.series.name == 'Polkadot'
+#        assert cv.series.common_name is cv.common_name
+#        messages.seek(0)
+#        msgs = messages.read()
+#        assert 'The Series \'Polkadot\' does not yet exist' in msgs
+#
+#    def test_get_or_create_cultivar_exists_no_series(self, db):
+#        """Return existing Cultivar instead of new one."""
+#        messages = StringIO()
+#        cv = Cultivar(name='Foxy')
+#        cv.common_name = CommonName(name='Foxglove')
+#        cv.common_name.index = Index(name='Perennial')
+#        db.session.add(cv)
+#        db.session.commit()
+#        cvq = get_or_create_cultivar(name='Foxy',
+#                                     common_name='Foxglove',
+#                                     index='Perennial',
+#                                     stream=messages)
+#        assert cvq is cv
+#        messages.seek(0)
+#        msgs = messages.read()
+#        assert 'The Cultivar \'Foxy Foxglove\' has been loaded' in msgs
+#
+#    def test_get_or_create_cultivar_exists_with_series(self, db):
+#        """Return existing Cultivar instead of new one."""
+#        messages = StringIO()
+#        cv = Cultivar(name='Petra')
+#        cv.common_name = CommonName(name='Foxglove')
+#        cv.common_name.index = Index(name='Perennial')
+#        cv.series = Series(name='Polkadot')
+#        cv.series.common_name = cv.common_name
+#        db.session.add(cv)
+#        db.session.commit()
+#        cvq = get_or_create_cultivar(name='Petra',
+#                                     common_name='Foxglove',
+#                                     index='Perennial',
+#                                     series='Polkadot',
+#                                     stream=messages)
+#        assert cvq is cv
+#        messages.seek(0)
+#        msgs = messages.read()
+#        assert 'The Cultivar \'Polkadot Petra Foxglove\' has been loa' in msgs
 
 
 class TestSeedsWorksheetWithDB:
@@ -242,7 +240,7 @@ class TestIndexesWorksheetWithDB:
         msgs = messages.read()
         assert 'No changes were made' in msgs
 
-    @mock.patch('app.seeds.excel.get_or_create_index')
+    @mock.patch('app.seeds.models.Index.get_or_create')
     def test_save_row_to_db_new_no_opts(self, m_goci, db):
         """Create an Index with no optional data and flush it to the db."""
         messages = StringIO()
@@ -336,7 +334,7 @@ class TestCommonNamesWorksheet:
         msgs = messages.read()
         assert 'No changes were made to the CommonName \'Foxglove\'' in msgs
 
-    @mock.patch('app.seeds.excel.get_or_create_common_name')
+    @mock.patch('app.seeds.models.CommonName.get_or_create')
     def test_save_row_to_db_new_no_optionals(self, m_goccn, db):
         """Create a new CommonName and flush to db."""
         messages = StringIO()
@@ -1155,7 +1153,7 @@ class TestCultivarsWorksheetWithDB:
         ws = wb.active
         cvws = CultivarsWorksheet(ws)
         cvws.setup()
-        cv = Cultivar(name='Petra')
+        cv = Cultivar(name='Polkadot Petra')
         cv.common_name = CommonName(name='Foxglove')
         cv.common_name.index = Index(name='Perennial')
         cv.series = Series(name='Polkadot')
@@ -1165,7 +1163,8 @@ class TestCultivarsWorksheetWithDB:
         cv.visible = False
         cvws.add_one(cv)
         assert cvws.save_row_to_db(row=2, stream=messages)
-        cv = Cultivar.query.filter(Cultivar.name == 'Petra').one_or_none()
+        cv = Cultivar.query\
+            .filter(Cultivar.name == 'Polkadot Petra').one_or_none()
         messages.seek(0)
         msgs = messages.read()
         assert cv.series.name == 'Polkadot'
@@ -1438,7 +1437,8 @@ class TestCultivarsWorksheetWithDB:
         messages.seek(0)
         msgs = messages.read()
         assert cvq.description == '<p>Like a lady.</p>'
-        assert ('Description for the Cultivar \'Foxy Foxglove\' set to: <p>Like a lady.</p>') in msgs
+        assert ('Description for the Cultivar \'Foxy Foxglove\' set to: '
+                '<p>Like a lady.</p>') in msgs
 
     def test_save_row_to_db_existing_changes_description(self, db):
         """Set a new description for an existing Cultivar."""

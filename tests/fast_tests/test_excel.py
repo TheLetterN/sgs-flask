@@ -513,7 +513,7 @@ class TestSeriesWorksheet:
         ws = wb.active
         srws = SeriesWorksheet(ws)
         srws.setup()
-        titles = ('Common Name (JSON)', 'Series', 'Position', 'Description')
+        titles = ('Common Name (JSON)', 'Series', 'Description')
         m_s.assert_called_with(titles)
 
     @mock.patch('app.seeds.excel.SeriesWorksheet._setup')
@@ -542,31 +542,11 @@ class TestSeriesWorksheet:
             2, srws.cols['Common Name (JSON)']
         ).value == json.dumps(sr.common_name.queryable_dict)
         assert srws.cell(2, srws.cols['Series']).value == 'Polkadot'
-        assert srws.cell(2, srws.cols['Position']).value == 'before cultivar'
         assert srws.cell(2, srws.cols['Description']).value is None
         messages.seek(0)
         msgs = messages.read()
         assert ('Adding data from <Series \'Polkadot Foxglove\'> to row #2 of '
                 'series worksheet') in msgs
-
-    def test_add_one_with_position(self):
-        """Set Position column's cell with relevant position description."""
-        wb = Workbook()
-        ws = wb.active
-        srws = SeriesWorksheet(ws)
-        srws.setup()
-        sr = Series(name='Polkadot')
-        sr.common_name = CommonName(name='Foxglove')
-        sr.common_name.index = Index(name='Perennial')
-        sr.position = Series.BEFORE_CULTIVAR
-        srws.add_one(sr)
-        assert srws.cell(2, srws.cols['Position']).value == 'before cultivar'
-        sr2 = Series(name='Queen')
-        sr2.common_name = CommonName(name='Cleome')
-        sr2.common_name.index = Index(name='Annual')
-        sr2.position = Series.AFTER_CULTIVAR
-        srws.add_one(sr2)
-        assert srws.cell(3, srws.cols['Position']).value == 'after cultivar'
 
     def test_add_one_with_description(self):
         """Set Description column's cell with Series desc."""

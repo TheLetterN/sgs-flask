@@ -506,15 +506,6 @@ def add_series(cn_id=None):
             series.description = form.description.data
             messages.append('Description set to: <p>{0}</p>.'
                             .format(series.description))
-        if form.position.data == Series.AFTER_CULTIVAR:
-            messages.append('\'{0}\' will be used after the cultivar\'s '
-                            'individual name in the full names of any '
-                            'cultivars in the series.'.format(series.name))
-        else:
-            messages.append('\'{0}\' will be used before the cultivar\'s '
-                            'individual name in the full names of any '
-                            'cultivars in the series.'.format(series.name))
-        series.position = form.position.data
         db.session.commit()
         messages.append('New series \'{0}\' added to the database.'
                         .format(series.fullname))
@@ -933,17 +924,6 @@ def edit_series(series_id=None):
             else:
                 series.description = None
                 messages.append('Description cleared.')
-        if form.position.data != series.position:
-            edited = True
-            series.position = form.position.data
-            if form.position.data == Series.BEFORE_CULTIVAR:
-                messages.append('\'{0}\' will now be placed before cultivar '
-                                'name in cultivars belonging to the series.'
-                                .format(series.name))
-            elif form.position.data == Series.AFTER_CULTIVAR:
-                messages.append('\'{0}\' will now be placed after cultivar '
-                                'name in cultivars belonging to the series.'
-                                .format(series.name))
         if old_cn is not series.common_name:
             for cv in series.cultivars:
                 if cv.common_name is not series.common_name:

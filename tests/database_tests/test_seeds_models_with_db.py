@@ -126,37 +126,17 @@ class TestBotanicalNameRelatedEventHandlers:
             db.session.flush()
 
 
-class TestSeriesRelatedEventHandlers:
-    """Test event listener functions that involve Series instances."""
-    @mock.patch('app.seeds.models.dbify')
-    def test_before_series_insert_or_update_dbify(self, m_d, db):
-        """dbify Series.name before flush."""
-        m_d.return_value = 'dbified-name'
-        sr = Series(name='dirty name')
-        db.session.add(sr)
-        db.session.flush()
-        m_d.assert_called_with('dirty name')
-        assert sr.name == 'dbified-name'
-
-
 class TestCultivarWithDB:
     """Test Cultivar model methods that require database access."""
     def test_from_queryable_values(self, db):
         """Return the correct Cultivar based on values given."""
         cn = CommonName(name='Foxglove', index=Index(name='Perennial'))
-        cv1 = Cultivar(name='Petra', common_name=cn)
-        cv2 = Cultivar(name='Petra',
-                       common_name=cn,
-                       series=Series(name='Polkadot'))
-        db.session.add_all([cv1, cv2])
+        cv = Cultivar(name='Polkadot Petra', common_name=cn)
+        db.session.add(cv)
         db.session.commit()
-        assert Cultivar.from_queryable_values(name='Petra',
+        assert Cultivar.from_queryable_values(name='Polkadot Petra',
                                               common_name='Foxglove',
-                                              index='Perennial') is cv1
-        assert Cultivar.from_queryable_values(name='Petra',
-                                              common_name='Foxglove',
-                                              index='Perennial',
-                                              series='Polkadot') is cv2
+                                              index='Perennial') is cv
 
 
 class TestCultivarRelatedEventHandlers:

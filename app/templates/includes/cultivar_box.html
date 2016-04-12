@@ -18,7 +18,7 @@
 {% macro cultivar_box(cultivar) %}
 {% if cultivar.active and cultivar.visible or current_user.can(Permission.MANAGE_SEEDS) %}
 <div class="cultivar">
-  <img alt="{{ cultivar.fullname }}" class="thumbnail" src="{{ url_for('static', filename=cultivar.thumbnail.path) }}">
+  <img alt="{{ cultivar.fullname }}" class="thumbnail" src="{% if cultivar.thumbnail %}{{ url_for('static', filename=cultivar.thumbnail.path) }}{% else %}{{ url_for('static', filename='images/assets/default_thumb.jpg') }}{% endif %}">
   {% if not idx_slug %}{% set idx_slug = cultivar.common_name.index.slug %}{% endif %}
   {% if not cn_slug %}{% set cn_slug = cultivar.common_name.slug %}{% endif %}
   <h3 id="{{ cultivar.slug }}">{% if config.SHOW_CULTIVAR_PAGES %}<a href="{{ url_for('seeds.cultivar', idx_slug=idx_slug, cn_slug=cn_slug, cv_slug=cultivar.slug)}}">{{ cultivar.fullname }}</a>{% else %}{{ cultivar.name }}{% endif %}</h3>

@@ -259,55 +259,23 @@ class TestCultivar:
         cv.common_name = CommonName(name='Foxglove')
         assert cv.fullname == 'Polkadot Petra Foxglove'
 
-    def test_name_with_series_no_series(self):
-        """Return Cultivar.name if no series present."""
-        cv = Cultivar(name='Foxy')
-        assert cv.name_with_series == 'Foxy'
-
-    def test_name_with_series_before_cultivar(self):
-        """Return string with series before name."""
-        cv = Cultivar(
-            name='Petra',
-            series=Series(name='Polkadot', position=Series.BEFORE_CULTIVAR)
-        )
-        assert cv.name_with_series == 'Polkadot Petra'
-
-    def test_name_with_series_after_cultivar(self):
-        """Return string with series after name."""
-        cv = Cultivar(
-            name='Violet',
-            series=Series(name='Queen', position=Series.AFTER_CULTIVAR)
-        )
-        assert cv.name_with_series == 'Violet Queen'
-
-    def test_name_with_series_after_cultivar_mix(self):
-        """Put the series name before cultivars named 'Mix'."""
-        cv = Cultivar(
-            name='Mix',
-            series=Series(name='Queen', position=Series.AFTER_CULTIVAR)
-        )
-        assert cv.name_with_series == 'Queen Mix'
-
     def test_queryable_dict(self):
         """Return a dict with queryable parameters for Cultivar."""
         cv = Cultivar()
         assert cv.queryable_dict == {'Cultivar Name': None,
                                      'Common Name': None,
-                                     'Index': None,
-                                     'Series': None}
+                                     'Index': None}
 
     @mock.patch('app.seeds.models.Cultivar.from_queryable_values')
     def test_from_queryable_dict(self, m_fqv):
         """Call Cultivar.from_queryable_values without a Series."""
         d = {'Cultivar Name': 'Petra',
              'Common Name': 'Foxglove',
-             'Index': 'Perennial',
-             'Series': 'Polkadot'}
+             'Index': 'Perennial'}
         Cultivar.from_queryable_dict(d)
         m_fqv.assert_called_with(name='Petra',
                                  common_name='Foxglove',
-                                 index='Perennial',
-                                 series='Polkadot')
+                                 index='Perennial')
 
 
 class TestPacket:

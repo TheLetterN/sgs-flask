@@ -377,20 +377,12 @@ class AddSeriesForm(Form):
     Attributes:
         name: DBified string field for `Series` name.
         description: Text field for optional series description.
-        position: Select field for where to put series name in relation
-            to cultivar name.
 
         cn: The `CommonName` this `Series` will belong to.
     """
     name = DBifiedStringField('Series Name',
                               validators=[Length(1, 64), NotSpace()])
     description = TextAreaField('Description', validators=[NotSpace()])
-    position = SelectField('Position',
-                           coerce=int,
-                           choices=[(Series.BEFORE_CULTIVAR,
-                                     'before'),
-                                    (Series.AFTER_CULTIVAR,
-                                     'after')])
     submit = SubmitField('Add Series')
 
     def __init__(self, cn, *args, **kwargs):
@@ -441,7 +433,7 @@ class AddCultivarForm(Form):
 
         cn: The `CommonName` added `Cultivar` belongs to.
     """
-    name = DBifiedStringField('Cultivar Name',
+    name = DBifiedStringField('Cultivar Name (including series if applicable)',
                               validators=[Length(1, 64), NotSpace()])
     botanical_name = SelectField('Botanical Name', coerce=int)
     series = SelectField('Series', coerce=int)
@@ -822,19 +814,11 @@ class EditSeriesForm(Form):
         name: DBified string field for `Series` name.
         common_name_id: Select field for `CommonName` edited series belongs to.
         description: Text field for `Series` description.
-        position: Select field for where the `Series` goes in the names of
-            cultivars in the series.
     """
     id = HiddenField()
     common_name_id = SelectField('Select Common Name', coerce=int)
     name = DBifiedStringField('Series Name',
                               validators=[Length(1, 64), NotSpace()])
-    position = SelectField('Position',
-                           coerce=int,
-                           choices=[(Series.BEFORE_CULTIVAR,
-                                     'before'),
-                                    (Series.AFTER_CULTIVAR,
-                                     'after')])
     description = TextAreaField('Description', validators=[NotSpace()])
     submit = SubmitField('Edit Series')
 

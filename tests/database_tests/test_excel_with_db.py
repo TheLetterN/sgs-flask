@@ -914,13 +914,11 @@ class TestSeriesWorksheetWithDB:
         sr = Series(name='Polkadot')
         sr.common_name = CommonName(name='Foxglove')
         sr.common_name.index = Index(name='Perennial')
-        sr.position = Series.BEFORE_CULTIVAR
         db.session.add(sr)
         db.session.commit()
         sr2 = Series(name='Polkadot')
         sr2.common_name = CommonName(name='Foxglove')
         sr2.common_name.index = Index(name='Perennial')
-        sr2.position = Series.BEFORE_CULTIVAR
         srws.add_one(sr2)
         assert not srws.save_row_to_db(2, stream=messages)
         assert not m_f.called
@@ -938,7 +936,6 @@ class TestSeriesWorksheetWithDB:
         sr = Series(name='Polkadot')
         sr.common_name = CommonName(name='Foxglove')
         sr.common_name.index = Index(name='Perennial')
-        sr.position = Series.BEFORE_CULTIVAR
         srws.add_one(sr)
         assert srws.save_row_to_db(2, stream=messages)
         srq = Series.query.filter(Series.name == 'Polkadot').one_or_none()
@@ -950,8 +947,6 @@ class TestSeriesWorksheetWithDB:
         print(msgs)
         assert ('The Series \'Polkadot\' does not yet exist in the database, '
                 'so it has been created.') in msgs
-        assert ('The Series name \'Polkadot\' will be placed before the '
-                'Cultivar name for each Cultivar in the Series.') in msgs
 
     def test_save_row_to_db_new_with_desc(self, db):
         """Save a new Series with a description to database."""
@@ -963,7 +958,6 @@ class TestSeriesWorksheetWithDB:
         sr = Series(name='Polkadot', description='A bit spotty.')
         sr.common_name = CommonName(name='Foxglove')
         sr.common_name.index = Index(name='Perennial')
-        sr.position = Series.BEFORE_CULTIVAR
         srws.add_one(sr)
         assert srws.save_row_to_db(2, stream=messages)
         srq = Series.query.filter(Series.name == 'Polkadot').one_or_none()
@@ -983,13 +977,11 @@ class TestSeriesWorksheetWithDB:
         sr = Series(name='Polkadot', description='A bit spotty.')
         sr.common_name = CommonName(name='Foxglove')
         sr.common_name.index = Index(name='Perennial')
-        sr.position = Series.BEFORE_CULTIVAR
         db.session.add(sr)
         db.session.commit()
         sr2 = Series(name='Polkadot', description='More dots!')
         sr2.common_name = CommonName(name='Foxglove')
         sr2.common_name.index = Index(name='Perennial')
-        sr2.position = Series.BEFORE_CULTIVAR
         srws.add_one(sr2)
         assert srws.save_row_to_db(2, stream=messages)
         srq = Series.query.filter(Series.name == 'Polkadot').one_or_none()
@@ -1010,13 +1002,11 @@ class TestSeriesWorksheetWithDB:
         sr = Series(name='Polkadot', description='A bit spotty.')
         sr.common_name = CommonName(name='Foxglove')
         sr.common_name.index = Index(name='Perennial')
-        sr.position = Series.BEFORE_CULTIVAR
         db.session.add(sr)
         db.session.commit()
         sr2 = Series(name='Polkadot')
         sr2.common_name = CommonName(name='Foxglove')
         sr2.common_name.index = Index(name='Perennial')
-        sr2.position = Series.BEFORE_CULTIVAR
         srws.add_one(sr2)
         assert srws.save_row_to_db(2, stream=messages)
         srq = Series.query.filter(Series.name == 'Polkadot').one_or_none()
@@ -1026,33 +1016,6 @@ class TestSeriesWorksheetWithDB:
         msgs = messages.read()
         assert ('Description for the Series \'Polkadot\' has been '
                 'cleared') in msgs
-
-    def test_save_row_to_db_existing_change_position(self, db):
-        """Change the position of an existing Series."""
-        messages = StringIO()
-        wb = Workbook()
-        ws = wb.active
-        srws = SeriesWorksheet(ws)
-        srws.setup()
-        sr = Series(name='Polkadot')
-        sr.common_name = CommonName(name='Foxglove')
-        sr.common_name.index = Index(name='Perennial')
-        sr.position = Series.BEFORE_CULTIVAR
-        db.session.add(sr)
-        db.session.commit()
-        sr2 = Series(name='Polkadot')
-        sr2.common_name = CommonName(name='Foxglove')
-        sr2.common_name.index = Index(name='Perennial')
-        sr2.position = Series.AFTER_CULTIVAR
-        srws.add_one(sr2)
-        assert srws.save_row_to_db(2, stream=messages)
-        srq = Series.query.filter(Series.name == 'Polkadot').one_or_none()
-        assert srq is sr
-        assert sr.position == Series.AFTER_CULTIVAR
-        messages.seek(0)
-        msgs = messages.read()
-        assert ('The Series name \'Polkadot\' will be placed after the '
-                'Cultivar name for each Cultivar in the Series.') in msgs
 
 
 class TestCultivarsWorksheetWithDB:

@@ -860,20 +860,12 @@ class Series(db.Model):
     Elite Mambo (petunias).
 
     Attributes:
-        BEFORE_CULTIVAR: A constant integer representing that series name
-            should come before the cultivar name when displayed together.
-        AFTER_CULTIVAR: A constant integer representing that series name should
-            come after the cultivar when displayed together.
-
         name: The name of the series.
         common_name: MtO relationship with `CommonName`; the common name a
             Series belongs to.
             Backref: `CommonName.series`
 
         description: An HTML description of the series.
-        position: An integer representing whether the series name belongs
-            before or after the cultivar name when displayed together. Default
-            value is `BEFORE_CULTIVAR`.
 
         cultivars: Backref from `Cultivar.series`.
     """
@@ -883,10 +875,6 @@ class Series(db.Model):
                                           name='_series_name_cn_uc'),)
     id = db.Column(db.Integer, primary_key=True)
 
-    # Constants
-    BEFORE_CULTIVAR = 0
-    AFTER_CULTIVAR = 1
-
     # Data Required
     name = db.Column(db.String(64))
     common_name_id = db.Column(db.Integer, db.ForeignKey('common_names.id'))
@@ -894,7 +882,6 @@ class Series(db.Model):
 
     # Data Optional
     description = db.Column(db.Text)
-    position = db.Column(db.Integer, default=BEFORE_CULTIVAR)
 
     def __init__(self,
                  name=None,
@@ -966,16 +953,6 @@ class Series(db.Model):
         return self.cultivars and any(cv.public for cv in self.cultivars)
 
 
-@event.listens_for(Series, 'before_insert')
-@event.listens_for(Series, 'before_update')
-def before_series_insert_or_update(mapper, connection, target):
-    """Run tasks on `Series` that should be done before flush."""
-    target.name = dbify(target.name)
-    if target.cultivars:
-        for cv in target.cultivars:
-            cv.slug = cv.generate_slug()
-
-
 class Cultivar(SynonymsMixin, db.Model):
     """Table for cultivar data.
 
@@ -984,19 +961,20 @@ class Cultivar(SynonymsMixin, db.Model):
     products (packets) are attached to.
 
     Note:
-        A cultivar must have a unique combination of name, common name, and
-        series, otherwise it could result in multiple results from a query
-        intended to fetch only one cultivar. Series can be None, as long as
-        the cultivar is still a unique combination. For example, Polkadot
-        Petra Foxglove and Petra Foxglove (if it existed) would qualify as
-        unique due to one having a series and the other not, even though they
-        have the same _name and common name.
+        A cultivar must have a unique combination of name (including series if
+        applicable) and common name, otherwise it could result in multiple
+        results from a query intended to fetch only one cultivar.
 
     Attributes:
         name: The part of the cultivar's name that is specific to the cultivar
             itself, e.g. if a cultivar is called "Foxy Foxglove", name will be
-            "Foxy".
-        slug: A URL-friendly version of _name.
+            "Foxy". If it is part of a series, the series name is also
+            included, such as with "Polkadot Petra Foxglove" in the Polkadot
+            series.
+        slug: A URL-friendly version of _name. The slug for a `Cultivar` is
+            not necessarily unique, as it is always used in conjunction with
+            a `CommonName` slug, so the unique constraint between `name` and
+            `common_name_id` prevents clashes.
         common_name: MtO relationship with `CommonName`; the common name a
             cultivar falls under.
             Backref: `CommonName.cultivars`
@@ -1035,8 +1013,7 @@ class Cultivar(SynonymsMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     __table_args__ = (db.UniqueConstraint('name',
                                           'common_name_id',
-                                          'series_id',
-                                          name='_cultivar_name_cn_series_uc'),)
+                                          name='_cultivar_name_cn_uc'),)
 
     # Data Required
     name = db.Column(db.String(64))
@@ -1099,11 +1076,11 @@ class Cultivar(SynonymsMixin, db.Model):
                                       self.fullname)
 
     @classmethod
-    def from_queryable_values(cls, name, common_name, index, series=None):
+    def from_queryable_values(cls, name, common_name, index):
         """Query a `Cultivar` from the database given its core values.
 
         The core values of a `Cultivar` are its name, its common name, the
-        index it belongs to, and optionally the series it is in.
+        index it belongs to.
 
         Args:
             name: The name of the cultivar, not including series or common
@@ -1111,31 +1088,18 @@ class Cultivar(SynonymsMixin, db.Model):
             common_name: The common name of the cultivar.
             index: The index the cultivar's common name (and thus the cultivar
                 itself) falls under.
-            series: The (optional) series a cultivar is in, if applicable.
 
         Returns:
             Cultivar: A discrete instance of `Cultivar`.
             None: If no cultivar exists with the given parameters.
         """
-        if series:
-            return cls.query\
-                .join(CommonName, CommonName.id == cls.common_name_id)\
-                .join(Index, Index.id == CommonName.index_id)\
-                .join(Series, Series.id == Cultivar.series_id)\
-                .filter(cls.name == name,
-                        CommonName.name == common_name,
-                        Index.name == index,
-                        Series.name == series)\
-                .one_or_none()
-        else:
-            return cls.query\
-                .join(CommonName, CommonName.id == cls.common_name_id)\
-                .join(Index, Index.id == CommonName.index_id)\
-                .filter(cls.name == name,
-                        cls.series_id == None,  # noqa
-                        CommonName.name == common_name,
-                        Index.name == index)\
-                .one_or_none()
+        return cls.query\
+            .join(CommonName, CommonName.id == cls.common_name_id)\
+            .join(Index, Index.id == CommonName.index_id)\
+            .filter(cls.name == name,
+                    CommonName.name == common_name,
+                    Index.name == index)\
+            .one_or_none()
 
     @classmethod
     def from_queryable_dict(cls, d):
@@ -1151,15 +1115,13 @@ class Cultivar(SynonymsMixin, db.Model):
         """
         return cls.from_queryable_values(name=d['Cultivar Name'],
                                          common_name=d['Common Name'],
-                                         index=d['Index'],
-                                         series=d['Series'])
+                                         index=d['Index'])
 
     @classmethod
     def get_or_create(cls,
                       name,
                       common_name,
                       index,
-                      series=None,
                       stream=sys.stdout):
         """Load a cultivar if it exists, create it if not.
 
@@ -1184,8 +1146,7 @@ class Cultivar(SynonymsMixin, db.Model):
         """
         cv = cls.from_queryable_values(name=name,
                                        common_name=common_name,
-                                       index=index,
-                                       series=series)
+                                       index=index)
         if cv:
             cv.created = False
             print('The Cultivar \'{0}\' has been loaded from the database.'
@@ -1196,38 +1157,9 @@ class Cultivar(SynonymsMixin, db.Model):
             cv.common_name = CommonName.get_or_create(name=common_name,
                                                       index=index,
                                                       stream=stream)
-            if series:
-                sr = Series.query.filter(Series.name == series).one_or_none()
-                if sr:
-                    print('The Series \'{0}\' has been loaded from the '
-                          'database.'.format(sr.name), file=stream)
-                else:
-                    sr = Series(name=series)
-                    sr.common_name = cv.common_name
-                    sr.position = Series.BEFORE_CULTIVAR
-                    print('The Series \'{0}\' does not yet exist, so it has '
-                          'been created.'.format(sr.name), file=stream)
-                cv.series = sr
             print('The Cultivar \'{0}\' does not yet exist in the database, '
                   'so it has been created.'.format(cv.fullname), file=stream)
         return cv
-
-    @property
-    def name_with_series(self):
-        """str: contents of _name with series.name included in its position."""
-        if self.series:
-            #  While some seed names list the series after the name of the
-            #  cultivar, such as 'Violet Queen Cleome' and 'Rose Queen Cleome',
-            #  mixes in these series list the series name before 'Mix', so
-            #  the mix of the Queen series is 'Queen Mix Cleome' rather than
-            #  'Mix Queen Cleome'.
-            if (self.series.position != Series.AFTER_CULTIVAR or
-                    self.name.lower() == 'mix'):
-                return '{0} {1}'.format(self.series.name, self.name)
-            else:
-                return '{0} {1}'.format(self.name, self.series.name)
-        else:
-            return self.name
 
     @property
     def fullname(self):
@@ -1255,12 +1187,10 @@ class Cultivar(SynonymsMixin, db.Model):
         common_name = self.common_name.name if self.common_name else None
         index = (self.common_name.index.name if self.common_name
                  and self.common_name.index else None)
-        series = self.series.name if self.series else None
         return {
             'Cultivar Name': name,
             'Common Name': common_name,
-            'Index': index,
-            'Series': series
+            'Index': index
         }
 
     @property
@@ -1270,10 +1200,7 @@ class Cultivar(SynonymsMixin, db.Model):
 
     def generate_slug(self):
         """Generate a string for use in URLs for pages that use `Cultivar`."""
-        # Use `name_with_series` instead of `fullname` because the slug for
-        # a `Cultivar` is only needed on pages where the slug for `CommonName`
-        # has been passed to the view function.
-        return slugify(self.name_with_series)
+        return slugify(self.name)
 
 
 @event.listens_for(Cultivar, 'before_insert')

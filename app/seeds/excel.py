@@ -623,7 +623,6 @@ class SeriesWorksheet(SeedsWorksheet):
         else:
             titles = ('Common Name (JSON)',
                       'Series',
-                      'Position',
                       'Description')
             self._setup(titles)
 
@@ -642,11 +641,6 @@ class SeriesWorksheet(SeedsWorksheet):
                 r, self.cols['Common Name (JSON)']
             ).value = json.dumps(sr.common_name.queryable_dict)
             self.cell(r, self.cols['Series']).value = sr.name
-            pos_cell = self.cell(r, self.cols['Position'])
-            if sr.position == Series.AFTER_CULTIVAR:
-                pos_cell.value = 'after cultivar'
-            else:
-                pos_cell.value = 'before cultivar'
             if sr.description:
                 self.cell(r, self.cols['Description']).value = sr.description
         else:
@@ -666,11 +660,6 @@ class SeriesWorksheet(SeedsWorksheet):
         cn_json = self.cell(row, self.cols['Common Name (JSON)']).value
         cn_dict = json.loads(cn_json)
         series = dbify(self.cell(row, self.cols['Series']).value)
-        position_text = self.cell(row, self.cols['Position']).value
-        if 'after' in position_text.lower():
-            position = Series.AFTER_CULTIVAR
-        else:
-            position = Series.BEFORE_CULTIVAR
         description = self.cell(row, self.cols['Description']).value
 
         print('-- BEGIN editing/creating Series \'{0}\' from row #{1}. '
@@ -698,17 +687,6 @@ class SeriesWorksheet(SeedsWorksheet):
             db.session.add(sr)
             print('The Series \'{0}\' does not yet exist in the database, so '
                   'it has been created.'.format(sr.name), file=stream)
-        if position != sr.position or sr_created:
-            edited = True
-            sr.position = position
-            if sr.position == Series.AFTER_CULTIVAR:
-                print('The Series name \'{0}\' will be placed after the '
-                      'Cultivar name for each Cultivar in the Series.'
-                      .format(sr.name), file=stream)
-            else:
-                print('The Series name \'{0}\' will be placed before the '
-                      'Cultivar name for each Cultivar in the Series.'
-                      .format(sr.name), file=stream)
         if description != sr.description:
             edited = True
             if description:
@@ -844,7 +822,6 @@ class CultivarsWorksheet(SeedsWorksheet):
         cv = Cultivar.get_or_create(name=cultivar,
                                     index=index,
                                     common_name=common_name,
-                                    series=series,
                                     stream=stream)
         if cv.created:
             edited = True
@@ -1060,7 +1037,6 @@ class PacketsWorksheet(SeedsWorksheet):
                 name=dbify(cv_dict['Cultivar Name']),
                 common_name=dbify(cv_dict['Common Name']),
                 index=dbify(cv_dict['Index']),
-                series=dbify(cv_dict['Series']),
                 stream=stream
             )
             print('The Packet with SKU \'{0}\' does not yet exist, so it has '

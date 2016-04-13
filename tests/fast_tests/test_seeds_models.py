@@ -505,4 +505,5 @@ class TestImage:
         image.filename = 'hello.jpg'
         assert image.full_path ==\
             os.path.join(current_app.config.get('IMAGES_FOLDER'),
+                         'plants',
                          image.filename)

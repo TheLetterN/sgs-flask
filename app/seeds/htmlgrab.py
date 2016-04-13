@@ -41,9 +41,12 @@ from app.seeds.models import (
     CommonName,
     Cultivar,
     Image,
+    Index,
     Packet,
+    Quantity,
     Series,
-    row_exists
+    row_exists,
+    VegetableData
 )
 
 
@@ -53,11 +56,18 @@ def clean(text, unwanted=None):
     Returns:
         str: Cleaned up version of `text`.
     """
+    FRACTIONS = {
+        '&frac14;': '1/4',
+        '&frac12;': '1/2',
+        '&frac34;': '3/4'
+    }
     if not unwanted:
         unwanted = ['\r', '\t']
     for u in unwanted:
         text = text.replace(u, '')
     text = text.replace('\xa0', ' ')
+    for f in FRACTIONS:
+        text = text.replace(f, FRACTIONS[f])
     return text.strip()
 
 
@@ -66,30 +76,74 @@ def merge_p(p_tags):
     return '\n'.join(str(p) for p in p_tags)
 
 
+def expand_botanical_name(bn, abbreviations):
+    """Expand an abbreviated botanical name to its full name.
+
+    Example:
+
+        'D. purpurea' -> 'Digitalis purpurea'
+
+    Args:
+        bn: The name to expand into a full botanical name.
+        abbreviations: A `dict` containing abbreviations of genuses.
+
+    Returns:
+        str: The expanded botanical name.
+    """
+    parts = bn.split(' ')
+    genus = parts[0]
+    if len(genus) > 2:
+        abbr = genus[0] + '.'
+        if abbr not in abbreviations:
+            abbreviations[abbr] = genus
+    elif genus in abbreviations:
+        bn = ' '.join([abbreviations[genus]] + parts[1:])
+    return bn
+
+
 class Page(object):
     """Class for page to draw data from.
 
+    Args:
+        url: The URL to get page data from.
+        parser: The HTML parser to use with `BeautifulSoup`.
+
     Attributes:
+        url: The URL the page was grabbed from.
         soup: A `BeautifulSoup` object generated from text HTML.
     """
-    def __init__(self, text, parser=None):
+    def __init__(self, url, parser=None):
+        self.url = url
+        text = requests.get(url).text
         if not parser:
             parser = 'html.parser'
         text = clean(text)
         self.soup = BeautifulSoup(text, parser)
 
-    @classmethod
-    def from_url(cls, url):
-        """Scrape a URL to get text for constructing a new `Page`."""
-        text = requests.get(url).text
-        return cls(text)
-
     @property
     def common_name(self):
         """OrderedDict: `CommonName` data from page header."""
-        header = self.soup.header
+        if self.soup.header:
+            header = self.soup.header
+        else:
+            header = self.soup
         cn = OrderedDict()
-        cn['common name'] = dbify(header.h1.text.lower().replace('seeds', ''))
+        cn_name = header.h1.text.lower().replace('seeds', '')
+        MULTIPLES = ('bean', 'corn', 'lettuce', 'pepper', 'squash', 'tomato')
+        for m in MULTIPLES:
+            if m in cn_name:
+                cn_name = m + ', ' + cn_name.replace(m, '').strip()
+        cn['common name'] = dbify(cn_name)
+        if '/annuals/' in self.url:
+            cn['index'] = 'Annual Flower'
+        elif '/perennials/' in self.url:
+            cn['index'] = 'Perennial Flower'
+        elif '/vines/' in self.url:
+            cn['index'] = 'Flowering Vine'
+        elif '/veggies/' in self.url:
+            cn['index'] = 'Vegetable'
+        elif '/herbs/' in self.url:
+            cn['index'] = 'Herb'
         if header.h2:
             cn['synonyms'] = header.h2.text.strip()
         botanical_names = []
@@ -101,21 +155,22 @@ class Page(object):
                 bns = bns_str.split(', ')
                 abbreviations = dict()
                 for bn in bns:
-                    parts = bn.split(' ')
-                    genus = parts[0]
-                    if len(genus) > 2:
-                        abbr = genus[0] + '.'
-                        if abbr not in abbreviations:
-                            abbreviations[abbr] == genus
-                    elif genus in abbreviations:
-                        bn = ' '.join([abbreviations[genus]] + parts[1:])
+                    bn = expand_botanical_name(bn, abbreviations)
+                    if ' syn. ' in bn:
+                        # Un-abbreviate synonyms so we don't have to later.
+                        for key in abbreviations:
+                            bn = bn.replace(key, abbreviations[key])
                     botanical_names.append(bn)
             cn['botanical names'] = botanical_names
         desc_divs = self.soup.find_all(class_='intro')
         if desc_divs:
             desc_div = desc_divs[0]
             ps = desc_div.find_all('p')
+        else:
+            ps = header.h1.find_next_siblings('p')
+        if ps:
             cn['description'] = merge_p(ps)
+
         inst_divs = self.soup.find_all(class_='growing')
         if inst_divs:
             inst_div = inst_divs[0]
@@ -143,8 +198,7 @@ class Page(object):
     @property
     def cultivars(self):
         """list: A list of `OrderedDict` objects with `Cultivar` data."""
-        cv_strainer = SoupStrainer(name='div', class_='cultivar')
-        cv_divs = self.soup.find_all(cv_strainer)
+        cv_divs = self.soup.find_all(name='div', class_='cultivar')
         cultivars = []
         for cv_div in cv_divs:
             cv = OrderedDict()
@@ -157,8 +211,33 @@ class Page(object):
                 thumb = 'http://www.swallowtailgardenseeds.com/' + thumb
             cv['thumbnail'] = thumb
             ems = cv_div.h3.find_all('em')
-            if len(ems) == 2:
-                cv['botanical name'] = ems[1].text.strip()
+            botanical_name = None
+            veg_data = None
+            ems.pop(0)  # First em = common name, which isn't needed here.
+            for em in ems:
+                emt = em.text.strip()
+                if 'days' in emt or '(OP)' in emt:
+                    veg_data = em.text.strip()
+                else:
+                    botanical_name = em.text.strip()
+            if botanical_name:
+                syn = None
+                if 'syn.' in botanical_name:
+                    # Remove synonym(s) if present because it could otherwise
+                    # Cause weird duplicates in db. Hopefully the bn and its
+                    # synonym are in `self.common_name`, otherwise the synonym
+                    # will have to be manually added later.
+                    bn_parts = botanical_name.split(' syn. ')
+                    bn = bn_parts[0].replace(',', '').strip()
+                else:
+                    bn = botanical_name
+                cv['botanical name'] = bn
+            if veg_data:
+                if '(OP)' in veg_data:
+                    cv['open pollinated'] = True
+                dtm = veg_data.replace('(OP)', '').replace('days', '').strip()
+                if dtm:
+                    cv['days to maturity'] = dtm
             ps = cv_div.h3.find_next_siblings('p')
             if ps:
                 desc = merge_p(ps)
@@ -180,8 +259,9 @@ class Page(object):
         cn['series'] = self.series
         cvs = self.cultivars
         for sr in cn['series']:
+            sr_name = sr['series name'].lower().replace('hybrid', '').strip()
             for cv in list(cvs):
-                if sr['series name'].lower() in cv['cultivar name'].lower():
+                if sr_name in cv['cultivar name'].lower():
                     if 'cultivars' not in sr:
                         sr['cultivars'] = [cvs.pop(cvs.index(cv))]
                     else:
@@ -249,9 +329,12 @@ class PageAdder(object):
             common name as the outermost dictionary.
         index: The `Index` to add the `tree` data to.
     """
-    def __init__(self, tree, index):
+    def __init__(self, tree, index=None):
         self.tree = tree
-        self.index = index
+        if index:
+            self.index = index
+        else:
+            self.index = Index.get_or_create(tree['index'])
 
     @classmethod
     def from_json(cls, json_data, **kwargs):
@@ -290,9 +373,15 @@ class PageAdder(object):
             else:
                 cv_thumb = None
             if 'botanical name' in cvd:
-                cv_bn = cvd['botanical_name']
+                cv_bn = cvd['botanical name']
             else:
                 cv_bn = None
+            if 'open pollinated' in cvd:
+                cv_op = cvd['open pollinated']
+            else:
+                cv_op = None
+            if 'days to maturity' in cvd:
+                cv_dtm = cvd['days to maturity']
             if 'description' in cvd:
                 cv_desc = cvd['description']
             else:
@@ -321,6 +410,21 @@ class PageAdder(object):
                     print('Added BotanicalName \'{0}\' to \'{1}\'.'
                           .format(bn.name, cn.name), file=stream)
                 cv.botanical_name = bn
+            if cv_op is not None or cv_dtm:
+                if not cv.vegetable_data:
+                    cv.vegetable_data = VegetableData()
+                if cv_op:
+                    cv.vegetable_data.open_pollinated = True
+                    print('\'{0}\' is open pollinated.'
+                          .format(cv.fullname), file=stream)
+                else:
+                    cv.vegetable_data.open_pollinated = False
+                    print('\'{0}\' is not open pollinated.'
+                          .format(cv.fullname), file=stream)
+                if cv_dtm:
+                    cv.vegetable_data.days_to_maturity = cv_dtm
+                    print('\'{0}\' is expected to mature in {1} days.'
+                          .format(cv.fullname, cv_dtm), file=stream)
             if cv_desc and cv.description != cv_desc:
                 cv.description = cv_desc
                 print('Description for \'{0}\' set to: {1}'
@@ -332,21 +436,36 @@ class PageAdder(object):
                     qty = cv_pkt['quantity']
                     units = cv_pkt['units']
                     pkt = Packet.query.filter(Packet.sku == sku).one_or_none()
-                    if pkt and pkt.cultivar and pkt.cultivar is not cv:
-                        print('WARNING: The packet for \'{0}\' with the '
-                              'SKU \'{1}\' was not added because another '
-                              'packet already exists with the same SKU!'
-                              .format(cv.fullname, pkt.sku), file=stream)
-                        pkt = None
-                    else:
-                        pkt = Packet.from_values(sku=sku,
-                                                 price=price,
-                                                 quantity=qty,
-                                                 units=units)
                     if pkt:
-                        cv.packets.append(pkt)
+                        if pkt.cultivar and pkt.cultivar is not cv:
+                            print('WARNING: The packet for \'{0}\' with the '
+                                  'SKU \'{1}\' was not added because another '
+                                  'packet already exists with the same SKU!'
+                                  .format(cv.fullname, pkt.sku), file=stream)
+                            pkt = None
+                        else:
+                            if not pkt.cultivar:
+                                pkt.cultivar = cv
+                    else:
+                        pkt = Packet(sku=sku)
+                    if pkt:
+                        pkt.price = price
+                        if not pkt.quantity:
+                            pkt.quantity = Quantity.query\
+                                .filter(Quantity.value == qty,
+                                        Quantity.units == units)\
+                                .one_or_none()
+                            if not pkt.quantity:
+                                pkt.quantity = Quantity()
+                        pkt.quantity.value = qty
+                        pkt.quantity.units = units
+                        if pkt not in cv.packets:
+                            cv.packets.append(pkt)
                         print('Packet \'{0}\' added to \'{1}\'.'
                               .format(pkt.info, cv.fullname), file=stream)
+            cv.in_stock = True
+            cv.active = True
+            cv.visible = False
             yield cv
 
     def save(self, stream=sys.stdout):
@@ -384,10 +503,19 @@ class PageAdder(object):
 
         if 'botanical names' in self.tree:
             bn_names = self.tree['botanical names']
+            abbreviations = dict()
             for bn_name in bn_names:
+                bn_and_syn = None
+                if 'syn.' in bn_name:
+                    bn_and_syn = bn_name.split(' syn. ')
+                    bn_name = bn_and_syn.pop(0)
                 bn = BotanicalName.get_or_create(bn_name,
                                                  stream=stream,
                                                  fix_bad=True)
+                if bn_and_syn:  # Empty if no synonyms.
+                    print(bn_and_syn)
+                    # TODO: Make this expand abbreviated genus in synonym.
+                    bn.synonyms_string = ', '.join(bn_and_syn)
                 if bn not in cn.botanical_names:
                     cn.botanical_names.append(bn)
                     print('Botanical name \'{0}\' added to \'{1}\'.'
@@ -435,12 +563,9 @@ class Thumbnail(object):
     """Class for handling thumbnail images."""
     def __init__(self, url):
         self.url = url
-        self.directory = current_app.config.get('IMAGES_FOLDER')
-
-    @property
-    def filename(self):
-        """str: The filename of the thumbnail image."""
-        return secure_filename(os.path.split(self.url)[-1])
+        self.filename = secure_filename(os.path.split(self.url)[-1])
+        self.directory = os.path.join(current_app.config.get('IMAGES_FOLDER'),
+                                      'plants')
 
     @property
     def savepath(self):
@@ -470,7 +595,7 @@ class Thumbnail(object):
             now = datetime.datetime.now().strftime('%m-%d-%Y_at_%H-%M-%S')
             parts = os.path.splitext(self.filename)
             self.filename = parts[0] + now + parts[1]
-            if row_exists(Image.name, self.filename):
+            if row_exists(Image.filename, self.filename):
                 raise RuntimeError('Attempt to rename thumbnail failed, as an '
                                    'image named \'{0}\' already exists!'
                                    .format(self.filename))

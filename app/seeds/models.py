@@ -540,7 +540,10 @@ class CommonName(SynonymsMixin, db.Model):
     __tablename__ = 'common_names'
     __table_args__ = (db.UniqueConstraint('name',
                                           'index_id',
-                                          name='cn_index_uc'),)
+                                          name='cn_name_index_uc'),
+                      db.UniqueConstraint('slug',
+                                          'index_id',
+                                          name='cn_slug_index_uc'))
     id = db.Column(db.Integer, primary_key=True)
 
     # Data Required
@@ -642,9 +645,29 @@ class CommonName(SynonymsMixin, db.Model):
         return cn
 
     @property
+    def arranged_name(self):
+        """str: `self.name` as-is or rearranged if a comma is in it.
+
+        Example:
+            Bean, Pole = Pole Bean
+        """
+        if self.name:
+            if ', ' in self.name:
+                parts = self.name.split(', ')
+                parts.append(parts.pop(0))
+                return ' '.join(parts)
+            else:
+                return self.name
+        else:
+            return None
+
+    @property
     def header(self):
         """str: `name` formatted for headers and titles."""
-        return '{0} Seeds'.format(self.name)
+        if self.name:
+            return '{0} Seeds'.format(self.arranged_name)
+        else:
+            return ''
 
     @property
     def select_field_title(self):
@@ -671,7 +694,7 @@ class CommonName(SynonymsMixin, db.Model):
             names = []
             genuses = []
             for bn in self.botanical_names:
-                parts = bn.name.split(' ', 1)
+                parts = bn.fullname.split(' ', 1)
                 if parts[0] in genuses:
                     name = ('<abbr title="{0}">{1}.</abbr> {2}'
                             .format(parts[0], parts[0][0], parts[1]))
@@ -686,10 +709,10 @@ class CommonName(SynonymsMixin, db.Model):
         """bool: Whether or not `CommonName` has any public cultivars."""
         return self.cultivars and any(cv.public for cv in self.cultivars)
 
+
     def generate_slug(self):
         """Generate the string to use in URLs for this `CommonName`."""
-        return slugify(self.name) if self.name is not None else None
-
+        return slugify(self.arranged_name) if self.name else None
 
 @event.listens_for(CommonName, 'before_insert')
 @event.listens_for(CommonName, 'before_update')
@@ -788,6 +811,22 @@ class BotanicalName(SynonymsMixin, db.Model):
                   'database, so it has been created.'
                   .format(bn.name))
         return bn
+
+    @property
+    def genus(self):
+        """str: The genus of the botanical name."""
+        return self.name.split(' ')[0]
+
+    @property
+    def fullname(self):
+        """str: Name with synonyms."""
+        if self.synonyms_string:
+            abbr = ('<abbr title="{0}">{1}.</abbr>'.format(self.genus,
+                                                           self.genus[0]))
+            syns = self.synonyms_string
+            return self.name + ' syn. ' + syns.replace(self.genus, abbr)
+        else:
+            return self.name
 
     @staticmethod
     def validate(botanical_name):
@@ -1040,6 +1079,11 @@ class Cultivar(SynonymsMixin, db.Model):
     images = db.relationship('Image',
                              secondary=cultivars_to_images,
                              backref='cultivars')
+    vegetable_data_id = db.Column(db.Integer,
+                                  db.ForeignKey('vegetable_data.id'))
+    vegetable_data = db.relationship('VegetableData',
+                                     backref=db.backref('cultivar',
+                                                        uselist=False))
 
     def __init__(self,
                  name=None,
@@ -1753,12 +1797,13 @@ class Image(db.Model):
     @property
     def path(self):
         """str: The path to the image file relative to the static folder."""
-        return os.path.join('images', self.filename)
+        return os.path.join('images', 'plants',  self.filename)
 
     @property
     def full_path(self):
         """str: The full path to the file this image entry represents."""
         return os.path.join(current_app.config.get('IMAGES_FOLDER'),
+                            'plants',
                             self.filename)
 
     def delete_file(self):
@@ -1789,6 +1834,30 @@ class Image(db.Model):
         old_path = self.full_path
         self.filename = new_name
         shutil.move(old_path, self.full_path)
+
+
+class VegetableData(db.Model):
+    """Table for vegetable-specific data.
+
+    In addition to the usual information, vegetables often have an estimate
+    for number of days it takes to reach the first harvest, and whether or not
+    the plants are open pollinated.
+    
+    Attributes:
+        open_pollinated: Whether or not the vegetable is open pollinated.
+        days_to_maturity: A string containing the number of days (or a range
+            of the number of days) it is estimated to take for the plant to be
+            ready to harvest.
+    """
+    __tablename__ = 'vegetable_data'
+    id = db.Column(db.Integer, primary_key=True)
+    open_pollinated = db.Column(db.Boolean)
+    # TODO: Make custom comparator for days_to_maturity.
+    days_to_maturity = db.Column(db.String(16))
+
+    def __init__(self, open_pollinated=False, days_to_maturity=None):
+        self.open_pollinated = open_pollinated
+        self.days_to_maturity = days_to_maturity
 
 
 @event.listens_for(Index.description, 'set', retval=True)

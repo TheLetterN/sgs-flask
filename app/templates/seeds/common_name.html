@@ -21,7 +21,7 @@
 {# block main: 3 indentations of 2 spaces each. (6 spaces total.) #}
 {% from 'includes/cultivar_box.html' import cultivar_box with context %}
 {% block head %}
-    <title>{{ cn.header }}</title>
+  <title>{{ cn.header }} | {{ count }} varieties</title>
     <link rel="canonical" href="{{ url_for('seeds.common_name', idx_slug=cn.index.slug, cn_slug=cn.slug, _external=True) }}">
 {% endblock %}
 {% block main %}

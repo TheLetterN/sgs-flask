@@ -1807,6 +1807,7 @@ def common_name(idx_slug=None, cn_slug=None):
 #                                    _anchor='subtype-' + cn.parent.slug))
         individuals = [cv for cv in cn.cultivars if not cv.series and
                        not cv.common_name.parent]
+        count = len([cv for cv in cn.cultivars if cv.public])
         crumbs = (
             cblr.crumble('home', 'Home'),
             cblr.crumble('index', cn.index.header, idx_slug=idx_slug),
@@ -1818,6 +1819,7 @@ def common_name(idx_slug=None, cn_slug=None):
                                series=cn.series,
                                individuals=individuals,
                                cn=cn,
+                               count=count,
                                crumbs=crumbs)
     else:
         abort(404)

@@ -23,7 +23,12 @@
   {% if not cn_slug %}{% set cn_slug = cultivar.common_name.slug %}{% endif %}
   <h3 id="{{ cultivar.slug }}">{% if config.SHOW_CULTIVAR_PAGES %}<a href="{{ url_for('seeds.cultivar', idx_slug=idx_slug, cn_slug=cn_slug, cv_slug=cultivar.slug)}}">{{ cultivar.fullname }}</a>{% else %}{{ cultivar.name }}{% endif %}</h3>
   <em class="common-name">{{ cultivar.common_name.header }}</em>
-  <i class="botanical-name">{{ cultivar.botanical_name.name }}</i>
+  {% if cultivar.botanical_name %}
+  <i class="botanical-name">{{ cultivar.botanical_name.fullname|safe }}</i>
+  {% endif %}
+  {% if cultivar.vegetable_data %}
+  <em class="vegetable-data">{% if cultivar.vegetable_data.open_pollinated %}<abbr title="Open Pollinated">(OP)</abbr> {% endif %}{% if cultivar.vegetable_data.days_to_maturity %}{{ cultivar.vegetable_data.days_to_maturity }} days{% endif %}</em>
+  {% endif %}
   {{ cultivar.description|safe }}
   {% if cultivar.packets %}
   <div class="packet-info">

@@ -38,13 +38,13 @@ from . import seeds
 from ..lastcommit import LastCommit
 from .models import (
     BotanicalName,
-    Index,
+    Category,
     CommonName,
     Cultivar,
     Image,
+    Index,
     Packet,
     Quantity,
-    Series,
     USDollar
 )
 from .forms import (
@@ -54,25 +54,25 @@ from .forms import (
     AddPacketForm,
     AddRedirectForm,
     AddCultivarForm,
-    AddSeriesForm,
+    AddCategoryForm,
     EditBotanicalNameForm,
     EditIndexForm,
     EditCommonNameForm,
     EditPacketForm,
     EditCultivarForm,
-    EditSeriesForm,
+    EditCategoryForm,
     RemoveBotanicalNameForm,
     RemoveIndexForm,
     RemoveCommonNameForm,
     RemovePacketForm,
-    RemoveSeriesForm,
+    RemoveCategoryForm,
     RemoveCultivarForm,
     SelectBotanicalNameForm,
     SelectIndexForm,
     SelectCommonNameForm,
     SelectPacketForm,
     SelectCultivarForm,
-    SelectSeriesForm
+    SelectCategoryForm
 )
 
 
@@ -84,7 +84,7 @@ ADD_ROUTES = (
     'add_index',
     'add_common_name',
     'add_botanical_name',
-    'add_series',
+    'add_category',
     'add_cultivar',
     'add_packet'
 )
@@ -95,7 +95,7 @@ EDIT_ROUTES = (
     'edit_index',
     'edit_common_name',
     'edit_botanical_name',
-    'edit_series',
+    'edit_category',
     'edit_cultivar',
     'edit_packet'
 )
@@ -106,7 +106,7 @@ REMOVE_ROUTES = (
     'remove_index',
     'remove_common_name',
     'remove_botanical_name',
-    'remove_series',
+    'remove_category',
     'remove_cultivar',
     'remove_packet'
 )
@@ -484,35 +484,35 @@ def add_botanical_name(cn_id=None):
                            form=form)
 
 
-@seeds.route('/add_series', methods=['GET', 'POST'])
-@seeds.route('/add_series/<cn_id>', methods=['GET', 'POST'])
+@seeds.route('/add_category', methods=['GET', 'POST'])
+@seeds.route('/add_category/<cn_id>', methods=['GET', 'POST'])
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
-def add_series(cn_id=None):
-    """Add a series to the database."""
+def add_category(cn_id=None):
+    """Add a category to the database."""
     cn = CommonName.query.get(cn_id) if cn_id else None
     if not cn:
         return redirect(url_for('seeds.select_common_name',
-                                dest='seeds.add_series'))
+                                dest='seeds.add_category'))
 
-    form = AddSeriesForm(cn=cn)
+    form = AddCategoryForm(cn=cn)
     if form.validate_on_submit():
         messages = []
-        series = Series(name=form.name.data, common_name=cn)
-        db.session.add(series)
-        messages.append('Creating series \'{0}\' for common name \'{1}\':'
-                        .format(series.name, cn.name))
+        category = Category(name=form.name.data, common_name=cn)
+        db.session.add(category)
+        messages.append('Creating category \'{0}\' for common name \'{1}\':'
+                        .format(category.name, cn.name))
         if form.description.data:
-            series.description = form.description.data
+            category.description = form.description.data
             messages.append('Description set to: <p>{0}</p>.'
-                            .format(series.description))
+                            .format(category.description))
         db.session.commit()
-        messages.append('New series \'{0}\' added to the database.'
-                        .format(series.fullname))
+        messages.append('New category \'{0}\' added to the database.'
+                        .format(category.fullname))
         flash_all(messages)
         return redirect(url_for('seeds.add_cultivar', cn_id=cn.id))
-    crumbs = cblr.crumble_route_group('add_series', ADD_ROUTES)
-    return render_template('seeds/add_series.html',
+    crumbs = cblr.crumble_route_group('add_category', ADD_ROUTES)
+    return render_template('seeds/add_category.html',
                            crumbs=crumbs,
                            form=form)
 
@@ -540,9 +540,10 @@ def add_cultivar(cn_id=None):
                 .get(form.botanical_name.data)
             messages.append('Botanical name set to: \'{0}\'.'
                             .format(cv.botanical_name.name))
-        if form.series.data:
-            cv.series = Series.query.get(form.series.data)
-            messages.append('Series set to: \'{0}\'.'.format(cv.series.name))
+        if form.category.data:
+            cv.category = Category.query.get(form.category.data)
+            messages.append('Category set to: \'{0}\'.'
+                            .format(cv.category.name))
         if form.thumbnail.data:
             thumb_name = secure_filename(form.thumbnail.data.filename)
             upload_path = os.path.join(current_app.config.get('IMAGES_FOLDER'),
@@ -887,67 +888,69 @@ def edit_botanical_name(bn_id=None):
                            form=form)
 
 
-@seeds.route('/edit_series', methods=['GET', 'POST'])
-@seeds.route('/edit_series/<series_id>', methods=['GET', 'POST'])
+@seeds.route('/edit_category', methods=['GET', 'POST'])
+@seeds.route('/edit_category/<category_id>', methods=['GET', 'POST'])
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
-def edit_series(series_id=None):
-    """Display page for editing a Series from the database."""
-    series = Series.query.get(series_id) if series_id else None
-    if series is None:
-        return redirect(url_for('seeds.select_series',
-                                dest='seeds.edit_series'))
-    form = EditSeriesForm(obj=series)
+def edit_category(category_id=None):
+    """Display page for editing a Category from the database."""
+    category = Category.query.get(category_id) if category_id else None
+    if category is None:
+        return redirect(url_for('seeds.select_category',
+                                dest='seeds.edit_category'))
+    form = EditCategoryForm(obj=category)
     if form.validate_on_submit():
         edited = False
         messages = []
-        messages.append('Editing series \'{0}\':'.format(series.name))
-        old_cn = series.common_name
-        if form.common_name_id.data != series.common_name.id:
+        messages.append('Editing category \'{0}\':'.format(category.name))
+        old_cn = category.common_name
+        if form.common_name_id.data != category.common_name.id:
             edited = True
-            series.common_name = CommonName.query.get(form.common_name_id.data)
+            category.common_name = CommonName.query.get(
+                form.common_name_id.data
+            )
             messages.append('Common name changed to: \'{0}\'.'
-                            .format(series.common_name.name))
-        old_name = series.name
-        if form.name.data != series.name:
+                            .format(category.common_name.name))
+        old_name = category.name
+        if form.name.data != category.name:
             edited = True
-            series.name = form.name.data
-            messages.append('Name changed to: {0}'.format(series.name))
+            category.name = form.name.data
+            messages.append('Name changed to: {0}'.format(category.name))
         if not form.description.data:
             form.description.data = None
-        if form.description.data != series.description:
+        if form.description.data != category.description:
             edited = True
             if form.description.data:
-                series.description = form.description.data
+                category.description = form.description.data
                 messages.append('Description changed to: <p>{0}</p>'
-                                .format(series.description))
+                                .format(category.description))
             else:
-                series.description = None
+                category.description = None
                 messages.append('Description cleared.')
-        if old_cn is not series.common_name:
-            for cv in series.cultivars:
-                if cv.common_name is not series.common_name:
+        if old_cn is not category.common_name:
+            for cv in category.cultivars:
+                if cv.common_name is not category.common_name:
                     old_cvname = cv.fullname
-                    cv.common_name = series.common_name
+                    cv.common_name = category.common_name
                     messages.append('Common name for the cultivar \'{0}\' has '
                                     'been changed to: \'{1}\'.'
                                     .format(old_cvname, cv.common_name.name))
         if edited:
             db.session.commit()
             messages.append('Changes to \'{0}\' committed to the database.'
-                            .format(series.name))
+                            .format(category.name))
             flash_all(messages)
 
-            if old_cn is not series.common_name or old_name != series.name:
+            if old_cn is not category.common_name or old_name != category.name:
                 try:
                     warnings = []
-                    for cv in series.cultivars:
+                    for cv in category.cultivars:
                         warnings.append(redirect_cultivar_warning(
                             cv,
                             old_cv_slug=cv.slug,
                             old_cn_slug=old_cn.slug,
                             new_cv_slug=cv.generate_slug(),
-                            new_cn_slug=series.common_name.slug
+                            new_cn_slug=category.common_name.slug
                         ))
                     if warnings:
                         flash_all(warnings)
@@ -957,14 +960,15 @@ def edit_series(series_id=None):
             return redirect(url_for('seeds.manage'))
         else:
             messages.append('No changes to \'{0}\' were made.'
-                            .format(series.name))
+                            .format(category.name))
             flash_all(messages)
-            return redirect(url_for('seeds.edit_series', series_id=series_id))
-    crumbs = cblr.crumble_route_group('edit_series', EDIT_ROUTES)
-    return render_template('seeds/edit_series.html',
+            return redirect(url_for('seeds.edit_category',
+                                    category_id=category_id))
+    crumbs = cblr.crumble_route_group('edit_category', EDIT_ROUTES)
+    return render_template('seeds/edit_category.html',
                            crumbs=crumbs,
                            form=form,
-                           series=series)
+                           category=category)
 
 
 @seeds.route('/edit_cultivar', methods=['GET', 'POST'])
@@ -1004,17 +1008,17 @@ def edit_cultivar(cv_id=None):
             else:
                 cv.botanical_name = None
                 messages.append('Botanical name cleared.')
-        if not form.series_id.data:
-            form.series_id.data = None
-        if form.series_id.data != cv.series_id:
+        if not form.category_id.data:
+            form.category_id.data = None
+        if form.category_id.data != cv.category_id:
             edited = True
-            if form.series_id.data:
-                cv.series = Series.query.get(form.series_id.data)
-                messages.append('Series changed to: \'{0}\'.'
-                                .format(cv.series.name))
+            if form.category_id.data:
+                cv.category = Category.query.get(form.category_id.data)
+                messages.append('Category changed to: \'{0}\'.'
+                                .format(cv.category.name))
             else:
-                cv.series = None
-                messages.append('Series cleared.')
+                cv.category = None
+                messages.append('Category cleared.')
         if cv.name != form.name.data:
             edited = True
             cv.name = form.name.data
@@ -1228,13 +1232,13 @@ def move_cultivars(cn, other):
     """
     warnings = []
     for cv in list(cn.cultivars):
-        if cv.name_with_series not in [c.name_with_series for c in
-                                       other.cultivars]:
+        if cv.name_with_category not in [c.name_with_category for c in
+                                         other.cultivars]:
             other.cultivars.append(cv)
         else:
             warnings.append(
                 'Could not move \'{0}\' because a cultivar with the same name '
-                'and series already exists! Click <a href="{1}">here</a> if '
+                'and category already exists! Click <a href="{1}">here</a> if '
                 'you want to edit it, or <a href="{2}">here</a> if you want '
                 'to remove it.'
                 .format(cv.fullname,
@@ -1272,7 +1276,7 @@ def move_common_names(idx, other):
             warnings.append(
                 'Could not move \'{0}\' because a common name with the same '
                 'name already belongs to \'{1}\'. Instead of moving it, its '
-                'children (botanical names, series, and cultivars) will be '
+                'children (botanical names, category, and cultivars) will be '
                 'moved to the one belonging to \'{1}\' if possible.'
                 .format(cn.name, other.name)
             )
@@ -1280,32 +1284,32 @@ def move_common_names(idx, other):
                 c for c in other.common_names if c.name == cn.name), None
             )
             move_botanical_names(cn, other_cn)
-            warnings += move_series(cn, other_cn)
+            warnings += move_category(cn, other_cn)
             warnings += move_cultivars(cn, other_cn)
     return warnings
 
 
-def move_series(cn, other):
-    """Move all instances of `Series` from one `CommonName` to another.
+def move_category(cn, other):
+    """Move all instances of `Category` from one `CommonName` to another.
 
     Attributes:
-        cn: The `CommonName` to move `Series` instances from.
-        other: The `CommonName` to move the series to.
+        cn: The `CommonName` to move `Category` instances from.
+        other: The `CommonName` to move the category to.
     """
     warnings = []
-    for sr in cn.series:
-        if sr.name not in [s.name for s in other.series]:
-            other.series.append(sr)
+    for cat in cn.categories:
+        if cat.name not in [s.name for s in other.category]:
+            other.category.append(cat)
         else:
             warnings.append(
-                'Could not move \'{0}\' because a series with the same name '
+                'Could not move \'{0}\' because a category with the same name '
                 'already belongs to \'{1}\'. Click <a href="{2}">here</a> if '
                 'you would like to edit \'{0}\', or <a href="{3}">here</a> '
                 'if you would like to remove it.'
-                .format(sr.name,
+                .format(cat.name,
                         other.name,
-                        url_for('seeds.edit_series', series_id=sr.id),
-                        url_for('seeds.remove_series', series_id=sr.id))
+                        url_for('seeds.edit_category', category_id=cat.id),
+                        url_for('seeds.remove_category', category_id=cat.id))
             )
     return warnings
 
@@ -1449,58 +1453,41 @@ def remove_botanical_name(bn_id=None):
                            form=form)
 
 
-@seeds.route('/remove_series', methods=['GET', 'POST'])
-@seeds.route('/remove_series/<series_id>', methods=['GET', 'POST'])
+@seeds.route('/remove_category', methods=['GET', 'POST'])
+@seeds.route('/remove_category/<category_id>', methods=['GET', 'POST'])
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
-def remove_series(series_id=None):
-    """Display page for removing series from database."""
-    series = Series.query.get(series_id) if series_id else None
-    if series is None:
-        return redirect(url_for('seeds.select_series',
-                                dest='seeds.remove_series'))
-    form = RemoveSeriesForm()
+def remove_category(category_id=None):
+    """Display page for removing category from database."""
+    category = Category.query.get(category_id) if category_id else None
+    if category is None:
+        return redirect(url_for('seeds.select_category',
+                                dest='seeds.remove_category'))
+    form = RemoveCategoryForm()
     if form.validate_on_submit():
         messages = []
         if form.verify_removal.data:
             warnings = []
-            messages.append('Removing series \'{0}\':'.format(series.name))
-            for cv in list(series.cultivars):
-                cn_cvs = series.common_name.cultivars
-                conflict_cv = next(
-                    (c for c in cn_cvs if c.name == cv.name and
-                     c.series is None),
-                    None
-                )
-                if conflict_cv:
-                    warnings.append(
-                        'Warning: The cultivar \'{0}\' was deleted because '
-                        'removing the series \'{1}\' would cause it to become '
-                        'a duplicate of the existing cultivar \'{2}\'.'
-                        .format(cv.fullname,
-                                series.name,
-                                conflict_cv.fullname)
-                    )
-                    db.session.delete(cv)
-            db.session.delete(series)
+            messages.append('Removing category \'{0}\':'.format(category.name))
+            db.session.delete(category)
             db.session.commit()
-            messages.append('Series removed.')
+            messages.append('Category removed.')
             flash_all(messages)
             if warnings:
                 flash_all(warnings, 'warning')
             return redirect(url_for('seeds.manage'))
         else:
-            messages.append('Series was not removed, so no changes were made. '
-                            'If you would like to remove it, please check the '
-                            'box labeled \'Yes\'.')
+            messages.append('Category was not removed, so no changes were '
+                            'made. If you would like to remove it, please '
+                            'check the box labeled \'Yes\'.')
             flash_all(messages)
-            return redirect(url_for('seeds.remove_series',
-                                    series_id=series_id))
-    crumbs = cblr.crumble_route_group('remove_series', REMOVE_ROUTES)
-    return render_template('seeds/remove_series.html',
+            return redirect(url_for('seeds.remove_category',
+                                    category_id=category_id))
+    crumbs = cblr.crumble_route_group('remove_category', REMOVE_ROUTES)
+    return render_template('seeds/remove_category.html',
                            crumbs=crumbs,
                            form=form,
-                           series=series)
+                           category=category)
 
 
 @seeds.route('/remove_cultivar', methods=['GET', 'POST'])
@@ -1681,27 +1668,27 @@ def select_botanical_name():
                            form=form)
 
 
-@seeds.route('/select_series', methods=['GET', 'POST'])
+@seeds.route('/select_category', methods=['GET', 'POST'])
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
-def select_series():
-    """Select a series to load on another page.
+def select_category():
+    """Select a category to load on another page.
 
     Request Args:
-        dest: The route to redirect to after `Series` is selected.
+        dest: The route to redirect to after `Category` is selected.
     """
     dest = request.args.get('dest')
     if dest is None:
         flash('Error: No destination page was specified!')
         return redirect(url_for('seeds.manage'))
-    form = SelectSeriesForm()
+    form = SelectCategoryForm()
     if form.validate_on_submit():
-        return redirect(url_for(dest, series_id=form.series.data))
+        return redirect(url_for(dest, category_id=form.category.data))
     crumbs = (
         cblr.crumble('manage', 'Manage Seeds'),
-        cblr.crumble('select_series', dest=dest)
+        cblr.crumble('select_category', dest=dest)
     )
-    return render_template('seeds/select_series.html',
+    return render_template('seeds/select_category.html',
                            crumbs=crumbs,
                            form=form)
 
@@ -1805,18 +1792,16 @@ def common_name(idx_slug=None, cn_slug=None):
 #                                    idx_slug=cn.index.slug,
 #                                    cn_slug=cn.parent.slug,
 #                                    _anchor='subtype-' + cn.parent.slug))
-        individuals = [cv for cv in cn.cultivars if not cv.series and
-                       not cv.common_name.parent]
+        individuals = [cv for cv in cn.cultivars if not cv.category]
         count = len([cv for cv in cn.cultivars if cv.public])
         crumbs = (
             cblr.crumble('home', 'Home'),
             cblr.crumble('index', cn.index.header, idx_slug=idx_slug),
             cn.name
         )
-
+        print(individuals)
         return render_template('seeds/common_name.html',
-                               subtypes=cn.children,
-                               series=cn.series,
+                               categories=cn.categories,
                                individuals=individuals,
                                cn=cn,
                                count=count,

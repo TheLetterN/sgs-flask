@@ -21,17 +21,16 @@
 {# block head: 2 indentations of 4 spaces each. (8 spaces total.) #}
 {# block main: 3 indentations of 4 spaces each. (12 spaces total.) #}
 {% block head %}
-        <title>Remove Series</title>
+        <title>Select Category</title>
         <meta name="robots" content="noindex, nofollow">
 {% endblock %}
 {% block main %}
-            <h1>Remove Series: {{ series.fullname }}</h1>
+            <h1>Select a Category</h1>
             <form method="POST">
                 {{ form.hidden_tag() }}
                 <ol>
                     <li>
-                        <div class="warning">Are you sure you want to remove series: {{ series.name }}?</div>
-                        {{ form_field(form.verify_removal)|indent(24)|safe }}
+                        {{ form_field(form.category)|indent(24)|safe }}
                     </li>
                     <li>
                         {{ form.submit }}

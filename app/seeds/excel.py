@@ -36,13 +36,13 @@ from app import db
 from app.seeds.models import (
     BotanicalName,
     dbify,
+    Category,
     CommonName,
     Cultivar,
     Image,
     Index,
     Packet,
-    Quantity,
-    Series
+    Quantity
 )
 
 
@@ -614,38 +614,38 @@ class BotanicalNamesWorksheet(SeedsWorksheet):
         return edited
 
 
-class SeriesWorksheet(SeedsWorksheet):
-    """Class extending SeedsWorksheet with Series-specific methods."""
+class CategoriesWorksheet(SeedsWorksheet):
+    """Class extending SeedsWorksheet with Category-specific methods."""
     def setup(self):
-        """Set up the Series worksheet."""
+        """Set up the Category worksheet."""
         if self.has_data():
             self._setup()
         else:
             titles = ('Common Name (JSON)',
-                      'Series',
+                      'Category',
                       'Description')
             self._setup(titles)
 
-    def add_one(self, sr, stream=sys.stdout):
-        """Add a single Series to the Series worksheet.
+    def add_one(self, cat, stream=sys.stdout):
+        """Add a single Category to the Category worksheet.
 
         Args:
-            sr: The `Series` to add.
+            cat: The `Category` to add.
             stream: Optional IO stream to print messages to.
         """
-        if isinstance(sr, Series):
+        if isinstance(cat, Category):
             r = self.active_row
-            print('Adding data from {0} to row #{1} of series worksheet.'
-                  .format(sr, r), file=stream)
+            print('Adding data from {0} to row #{1} of categories worksheet.'
+                  .format(cat, r), file=stream)
             self.cell(
                 r, self.cols['Common Name (JSON)']
-            ).value = json.dumps(sr.common_name.queryable_dict)
-            self.cell(r, self.cols['Series']).value = sr.name
-            if sr.description:
-                self.cell(r, self.cols['Description']).value = sr.description
+            ).value = json.dumps(cat.common_name.queryable_dict)
+            self.cell(r, self.cols['Category']).value = cat.name
+            if cat.description:
+                self.cell(r, self.cols['Description']).value = cat.description
         else:
             raise TypeError('The object \'{0}\' could not be added because '
-                            'it is not of type \'Series\'!'.format(sr))
+                            'it is not of type \'Category\'!'.format(cat))
 
     def save_row_to_db(self, row, stream=sys.stdout):
         """Save a row from the Common Names sheet to the database.
@@ -659,53 +659,51 @@ class SeriesWorksheet(SeedsWorksheet):
         """
         cn_json = self.cell(row, self.cols['Common Name (JSON)']).value
         cn_dict = json.loads(cn_json)
-        series = dbify(self.cell(row, self.cols['Series']).value)
+        category = dbify(self.cell(row, self.cols['Category']).value)
         description = self.cell(row, self.cols['Description']).value
 
-        print('-- BEGIN editing/creating Series \'{0}\' from row #{1}. '
-              '--'.format(series, row), file=stream)
+        print('-- BEGIN editing/creating Category \'{0}\' from row #{1}. '
+              '--'.format(category, row), file=stream)
         edited = False
         cn = CommonName.get_or_create(name=dbify(cn_dict['Common Name']),
                                       index=dbify(cn_dict['Index']),
                                       stream=stream)
-        sr = None
+        cat = None
         if not cn.created:
-            sr = Series.query\
-                .filter(Series.name == series, Series.common_name_id == cn.id)\
+            cat = Category.query\
+                .filter(Category.name == category, Category.common_name_id == cn.id)\
                 .one_or_none()
-        if sr:
-            print('The Series \'{0}\' has been loaded from the database.'
-                  .format(sr.name), file=stream)
-            sr_created = False
+        if cat:
+            print('The Category \'{0}\' has been loaded from the database.'
+                  .format(cat.name), file=stream)
         else:
             edited = True
-            sr_created = True
-            sr = Series(name=series)
-            sr.common_name = cn
-            print('CommonName for the Series \'{0}\' set to: {1}'
-                  .format(sr.name, cn.name), file=stream)
-            db.session.add(sr)
-            print('The Series \'{0}\' does not yet exist in the database, so '
-                  'it has been created.'.format(sr.name), file=stream)
-        if description != sr.description:
+            cat = Category(name=category)
+            cat.common_name = cn
+            print('CommonName for the Category \'{0}\' set to: {1}'
+                  .format(cat.name, cn.name), file=stream)
+            db.session.add(cat)
+            print('The Category \'{0}\' does not yet exist in the database, '
+                  'so it has been created.'.format(cat.name), file=stream)
+        if description != cat.description:
             edited = True
             if description:
-                sr.description = description
-                print('Description for the Series \'{0}\' set to: {1}'
-                      .format(sr.name, sr.description), file=stream)
+                cat.description = description
+                print('Description for the Category \'{0}\' set to: {1}'
+                      .format(cat.name, cat.description), file=stream)
             else:
-                sr.description = None
-                print('Description for the Series \'{0}\' has been cleared.'
-                      .format(sr.name), file=stream)
+                cat.description = None
+                print('Description for the Category \'{0}\' has been cleared.'
+                      .format(cat.name), file=stream)
         if edited:
             db.session.flush()
-            print('Changes to the Series \'{0}\' have been flushed to '
-                  'the database.'.format(sr.name), file=stream)
+            print('Changes to the Category \'{0}\' have been flushed to '
+                  'the database.'.format(cat.name), file=stream)
         else:
-            print('No changes were made to the Series \'{0}\'.'
-                  .format(sr.name), file=stream)
-        print('-- END editing/creating Series \'{0}\' from row #{1}. '
-              '--'.format(sr.name, row), file=stream)
+            print('No changes were made to the Category \'{0}\'.'
+                  .format(cat.name), file=stream)
+        print('-- END editing/creating Category \'{0}\' from row #{1}. '
+              '--'.format(cat.name, row), file=stream)
         return edited
 
 
@@ -719,7 +717,7 @@ class CultivarsWorksheet(SeedsWorksheet):
             titles = ('Index',
                       'Common Name',
                       'Cultivar Name',
-                      'Series',
+                      'Category',
                       'Botanical Name',
                       'Thumbnail Filename',
                       'Description',
@@ -744,8 +742,8 @@ class CultivarsWorksheet(SeedsWorksheet):
             self.cell(r, self.cols['Index']).value = cv.common_name.index.name
             self.cell(r, self.cols['Common Name']).value = cv.common_name.name
             self.cell(r, self.cols['Cultivar Name']).value = cv.name
-            if cv.series:
-                self.cell(r, self.cols['Series']).value = cv.series.name
+            if cv.category:
+                self.cell(r, self.cols['Category']).value = cv.category.name
             if cv.botanical_name:
                 self.cell(
                     r, self.cols['Botanical Name']
@@ -786,9 +784,9 @@ class CultivarsWorksheet(SeedsWorksheet):
         index = dbify(self.cell(row, self.cols['Index']).value)
         common_name = dbify(self.cell(row, self.cols['Common Name']).value)
         cultivar = dbify(self.cell(row, self.cols['Cultivar Name']).value)
-        series = dbify(self.cell(row, self.cols['Series']).value)
-        if not series:
-            series = None
+        category = dbify(self.cell(row, self.cols['Category']).value)
+        if not category:
+            category = None
         botanical_name = self.cell(row, self.cols['Botanical Name']).value
         thumbnail = self.cell(row, self.cols['Thumbnail Filename']).value
         description = self.cell(row, self.cols['Description']).value
@@ -826,25 +824,25 @@ class CultivarsWorksheet(SeedsWorksheet):
         if cv.created:
             edited = True
             db.session.add(cv)
-            if series:  # Series already exists if cv was not created.
-                sr = Series.query\
-                    .join(CommonName, CommonName.id == Series.common_name_id)\
+            if category:  # Category already exists if cv was not created.
+                cat = Category.query\
+                    .join(CommonName, CommonName.id == Category.common_name_id)\
                     .join(Index, Index.id == CommonName.index_id)\
-                    .filter(Series.name == series,
+                    .filter(Category.name == category,
                             CommonName.name == common_name,
                             Index.name == index)\
                     .one_or_none()
-                if sr:
-                    print('The Series \'{0}\' has been loaded from the '
-                          'database.'.format(sr.name), file=stream)
+                if cat:
+                    print('The Category \'{0}\' has been loaded from the '
+                          'database.'.format(cat.name), file=stream)
                 else:
-                    sr = Series(name=series)
-                    sr.common_name = cv.common_name
-                    print('The Series \'{0}\' does not yet exist, so it has '
-                          'been created.'.format(sr.name), file=stream)
-                cv.series = sr
-                print('Series for the Cultivar \'{0}\' set to: {1}'
-                      .format(cv.fullname, sr.name), file=stream)
+                    cat = Category(name=category)
+                    cat.common_name = cv.common_name
+                    print('The Category \'{0}\' does not yet exist, so it has '
+                          'been created.'.format(cat.name), file=stream)
+                cv.category = cat
+                print('Category for the Cultivar \'{0}\' set to: {1}'
+                      .format(cv.fullname, cat.name), file=stream)
         if botanical_name:
             if not BotanicalName.validate(botanical_name):
                 obn = botanical_name
@@ -1097,8 +1095,10 @@ class SeedsWorkbook(object):
             self._wb.create_sheet(title='Botanical Names')
         )
         self.botanical_names.setup()
-        self.series = SeriesWorksheet(self._wb.create_sheet(title='Series'))
-        self.series.setup()
+        self.category = CategoriesWorksheet(
+            self._wb.create_sheet(title='Category')
+        )
+        self.category.setup()
         self.cultivars = CultivarsWorksheet(
             self._wb.create_sheet(title='Cultivars')
         )
@@ -1116,8 +1116,8 @@ class SeedsWorkbook(object):
             self._wb['Botanical Names']
         )
         self.botanical_names.setup()
-        self.series = SeriesWorksheet(self._wb['Series'])
-        self.series.setup()
+        self.category = CategoriesWorksheet(self._wb['Category'])
+        self.category.setup()
         self.cultivars = CultivarsWorksheet(self._wb['Cultivars'])
         self.cultivars.setup()
         self.packets = PacketsWorksheet(self._wb['Packets'])
@@ -1132,7 +1132,7 @@ class SeedsWorkbook(object):
         self.indexes.add(Index.query.all(), stream=stream)
         self.common_names.add(CommonName.query.all(), stream=stream)
         self.botanical_names.add(BotanicalName.query.all(), stream=stream)
-        self.series.add(Series.query.all(), stream=stream)
+        self.category.add(Category.query.all(), stream=stream)
         self.cultivars.add(Cultivar.query.all(), stream=stream)
         self.packets.add(Packet.query.all(), stream=stream)
 
@@ -1146,7 +1146,7 @@ class SeedsWorkbook(object):
         self.indexes.save_to_db(stream=stream)
         self.common_names.save_to_db(stream=stream)
         self.botanical_names.save_to_db(stream=stream)
-        self.series.save_to_db(stream=stream)
+        self.category.save_to_db(stream=stream)
         self.cultivars.save_to_db(stream=stream)
         self.packets.save_to_db(stream=stream)
         print('-- END saving all worksheets to database. --', file=stream)
@@ -1161,7 +1161,7 @@ class SeedsWorkbook(object):
         self.indexes.beautify(width=width, height=height)
         self.common_names.beautify(width=width, height=height)
         self.botanical_names.beautify(width=width, height=height)
-        self.series.beautify(width=width, height=height)
+        self.category.beautify(width=width, height=height)
         self.cultivars.beautify(width=width, height=height)
         self.packets.beautify(width=width, height=height)
 

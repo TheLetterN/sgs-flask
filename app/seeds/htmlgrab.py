@@ -30,7 +30,7 @@ import os
 import sys
 from collections import OrderedDict
 import requests
-from bs4 import BeautifulSoup, SoupStrainer
+from bs4 import BeautifulSoup
 from flask import current_app
 from werkzeug import secure_filename
 
@@ -38,13 +38,13 @@ from app import db
 from app.seeds.models import (
     dbify,
     BotanicalName,
+    Category,
     CommonName,
     Cultivar,
     Image,
     Index,
     Packet,
     Quantity,
-    Series,
     row_exists,
     VegetableData
 )
@@ -178,22 +178,24 @@ class Page(object):
         return cn
 
     @property
-    def series(self):
-        """list: A list of `OrderedDict` objects with `Series` data."""
-        srs_raw = self.soup.find_all(id=lambda x: x and 'series' in x.lower())
+    def categories(self):
+        """list: A list of `OrderedDict` objects with `Category` data."""
+        # TODO: Make this inclusive, not just series.
+        cats_raw = self.soup.find_all(id=lambda x: x and 'series' in x.lower())
         # Some series headers are in divs, some just have h2s, but the
         # pattern <h2>series</h2><p>description</p> holds in both cases.
-        srs = [sr.h2 if sr.h2 else sr for sr in srs_raw]
-        series = []
-        for sr in srs:
-            srd = OrderedDict()
-            srd['series name'] = dbify(sr.find(text=True, recursive=False)
-                                       .lower().replace(' series', ''))
-            ps = sr.find_next_siblings('p')
+        cats = [cat.h2 if cat.h2 else cat for cat in cats_raw]
+        category = []
+        for cat in cats:
+            catd = OrderedDict()
+            catd['category name'] = dbify(
+                cat.find(text=True, recursive=False).lower()
+            )
+            ps = cat.find_next_siblings('p')
             if ps:
-                srd['description'] = merge_p(ps)
-            series.append(srd)
-        return series
+                catd['description'] = merge_p(ps)
+            category.append(catd)
+        return category
 
     @property
     def cultivars(self):
@@ -221,7 +223,6 @@ class Page(object):
                 else:
                     botanical_name = em.text.strip()
             if botanical_name:
-                syn = None
                 if 'syn.' in botanical_name:
                     # Remove synonym(s) if present because it could otherwise
                     # Cause weird duplicates in db. Hopefully the bn and its
@@ -256,16 +257,17 @@ class Page(object):
     def tree(self):
         """OrderedDict: A tree of all data with `common_name` as the root."""
         cn = self.common_name
-        cn['series'] = self.series
+        cn['categories'] = self.categories
         cvs = self.cultivars
-        for sr in cn['series']:
-            sr_name = sr['series name'].lower().replace('hybrid', '').strip()
+        for cat in cn['categories']:
+            cat_name = cat['category name'].lower().replace('hybrid', '')
+            cat_name = cat_name.replace('series', '').strip()
             for cv in list(cvs):
-                if sr_name in cv['cultivar name'].lower():
-                    if 'cultivars' not in sr:
-                        sr['cultivars'] = [cvs.pop(cvs.index(cv))]
+                if cat_name in cv['cultivar name'].lower():
+                    if 'cultivars' not in cat:
+                        cat['cultivars'] = [cvs.pop(cvs.index(cv))]
                     else:
-                        sr['cultivars'].append(cvs.pop(cvs.index(cv)))
+                        cat['cultivars'].append(cvs.pop(cvs.index(cv)))
         cn['cultivars'] = cvs
         return cn
 
@@ -382,6 +384,8 @@ class PageAdder(object):
                 cv_op = None
             if 'days to maturity' in cvd:
                 cv_dtm = cvd['days to maturity']
+            else:
+                cv_dtm = None
             if 'description' in cvd:
                 cv_desc = cvd['description']
             else:
@@ -503,7 +507,6 @@ class PageAdder(object):
 
         if 'botanical names' in self.tree:
             bn_names = self.tree['botanical names']
-            abbreviations = dict()
             for bn_name in bn_names:
                 bn_and_syn = None
                 if 'syn.' in bn_name:
@@ -520,35 +523,35 @@ class PageAdder(object):
                     cn.botanical_names.append(bn)
                     print('Botanical name \'{0}\' added to \'{1}\'.'
                           .format(bn.name, cn.name), file=stream)
-        if 'series' in self.tree:
-            srds = self.tree['series']
-            for srd in srds:
-                sr_name = srd['series name']
-                if 'description' in srd:
-                    sr_desc = srd['description']
+        if 'categories' in self.tree:
+            catds = self.tree['categories']
+            for catd in catds:
+                cat_name = catd['category name']
+                if 'description' in catd:
+                    cat_desc = catd['description']
                 else:
-                    sr_desc = None
-                sr = Series.get_or_create(name=sr_name,
-                                          common_name=cn.name,
-                                          index=self.index.name)
-                if sr_desc and sr.description != sr_desc:
-                    sr.description = sr_desc
+                    cat_desc = None
+                cat = Category.get_or_create(name=cat_name,
+                                             common_name=cn.name,
+                                             index=self.index.name)
+                if cat_desc and cat.description != cat_desc:
+                    cat.description = cat_desc
                     print('Description for \'{0}\' set to: {1}'
-                          .format(sr.name, sr.description), file=stream)
-                if sr.common_name is not cn:
-                    sr.common_name = cn
-                    print('The Series \'{0}\' has been added to \'{1}\'.'
-                          .format(sr.name, cn.name), file=stream)
+                          .format(cat.name, cat.description), file=stream)
+                if cat.common_name is not cn:
+                    cat.common_name = cn
+                    print('The Category \'{0}\' has been added to \'{1}\'.'
+                          .format(cat.name, cn.name), file=stream)
 
-                if 'cultivars' in srd:
-                    sr_cvds = srd['cultivars']
+                if 'cultivars' in catd:
+                    cat_cvds = catd['cultivars']
                     for cv in self._generate_cultivars(cn=cn,
-                                                       cv_dicts=sr_cvds,
+                                                       cv_dicts=cat_cvds,
                                                        stream=stream):
-                        if cv not in sr.cultivars:
-                            sr.cultivars.append(cv)
-                            print('Cultivar \'{0}\' added to Series \'{1}\'.'
-                                  .format(cv.fullname, sr.fullname),
+                        if cv not in cat.cultivars:
+                            cat.cultivars.append(cv)
+                            print('Cultivar \'{0}\' added to Category \'{1}\'.'
+                                  .format(cv.fullname, cat.fullname),
                                   file=stream)
         if 'cultivars' in self.tree:
             for cv in self._generate_cultivars(cn=cn,

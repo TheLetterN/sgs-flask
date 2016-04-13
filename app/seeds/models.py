@@ -44,7 +44,7 @@ Notes:
         idx - Index
         cn - CommonName
         bn - BotanicalName
-        sr - Series
+        cat - Category
         cv - Cultivar
         pkt - Packet
         qty - Quantity
@@ -532,8 +532,7 @@ class CommonName(SynonymsMixin, db.Model):
 
         children: Backref from `CommonName.parent`.
         botanical_names: Backref from `BotanicalName.common_names`.
-        series: Backref from `Series.common_name`. Note: series is plural here,
-            as this is the many side of the relationship.
+        categories: Backref from `Category.common_name`.
         cultivars: Backref from `Cultivar.common_name`.
         synonyms: Backref from `Synonym.common_name`.
     """
@@ -709,10 +708,10 @@ class CommonName(SynonymsMixin, db.Model):
         """bool: Whether or not `CommonName` has any public cultivars."""
         return self.cultivars and any(cv.public for cv in self.cultivars)
 
-
     def generate_slug(self):
         """Generate the string to use in URLs for this `CommonName`."""
         return slugify(self.arranged_name) if self.name else None
+
 
 @event.listens_for(CommonName, 'before_insert')
 @event.listens_for(CommonName, 'before_update')
@@ -890,34 +889,36 @@ def before_botanical_name_insert_or_update(mapper, connection, target):
                          'whether or not a name is valid.')
 
 
-class Series(db.Model):
-    """Table for seed series.
+class Category(db.Model):
+    """Table for categories cultivars may fall under.
 
-    A series is an optional subclass of a given cultivar type, usually created
-    by the company that created the cultivars within the series. Examples
-    include Benary's Giant (zinnias), Superfine Rainbow (coleus), and Heat
-    Elite Mambo (petunias).
+    Categories are subdivisions of a common name which contain cultivars, such
+    as the series a cultivar belongs to (e.g. the 'Sparkler' series contains
+    the cultivars 'Sparkler White Cleome' and 'Sparkler Lavender Cleome') or
+    some characteristic that is useful to know, such as whether cultivars are
+    dwarf varieties, or for cut flowers.
+
 
     Attributes:
-        name: The name of the series.
+        name: The name of the category.
         common_name: MtO relationship with `CommonName`; the common name a
-            Series belongs to.
-            Backref: `CommonName.series`
+            `Category` belongs to.
+            Backref: `CommonName.categories`
 
-        description: An HTML description of the series.
+        description: An HTML description of the `Category`.
 
-        cultivars: Backref from `Cultivar.series`.
+        cultivars: Backref from `Cultivar.category`.
     """
-    __tablename__ = 'series'
+    __tablename__ = 'categories'
     __table_args__ = (db.UniqueConstraint('name',
                                           'common_name_id',
-                                          name='_series_name_cn_uc'),)
+                                          name='_category_name_cn_uc'),)
     id = db.Column(db.Integer, primary_key=True)
 
     # Data Required
     name = db.Column(db.String(64))
     common_name_id = db.Column(db.Integer, db.ForeignKey('common_names.id'))
-    common_name = db.relationship('CommonName', backref='series')
+    common_name = db.relationship('CommonName', backref='categories')
 
     # Data Optional
     description = db.Column(db.Text)
@@ -927,7 +928,7 @@ class Series(db.Model):
                  common_name=None,
                  description=None,
                  position=None):
-        """Create an instance of a Series."""
+        """Create an instance of a Category."""
         self.name = name
         self.common_name = common_name
         self.description = description
@@ -935,47 +936,47 @@ class Series(db.Model):
             self.position = position
 
     def __repr__(self):
-        """Return a string representing a `Series` instance."""
+        """Return a string representing a `Category` instance."""
         return '<{0} \'{1}\'>'.format(self.__class__.__name__, self.fullname)
 
     @classmethod
     def get_or_create(cls, name, common_name, index, stream=sys.stdout):
-        """Load a `Series` from the db, or create it if it doesn't exist.
+        """Load a `Category` from the db, or create it if it doesn't exist.
 
         Args:
-            name: The name of the `Series`.
+            name: The name of the `Category`.
             common_name: The name of the `CommonName` it belongs to.
             index: The name of the `Index` it belongs to.
             stream: Buffer to output messages to.
 
         Returns:
-            Series: The loaded or created `Series`.
+            Category: The loaded or created `Category`.
         """
         name = dbify(name)
         common_name = dbify(common_name)
         index = dbify(index)
-        sr = cls.query\
-            .join(CommonName, CommonName.id == Series.common_name_id)\
+        cat = cls.query\
+            .join(CommonName, CommonName.id == Category.common_name_id)\
             .join(Index, Index.id == CommonName.index_id)\
-            .filter(Series.name == name,
+            .filter(Category.name == name,
                     CommonName.name == common_name,
                     Index.name == index)\
             .one_or_none()
-        if sr:
-            sr.created = False
-            print('The Series \'{0}\' has been loaded from the database.'
-                  .format(sr.fullname), file=stream)
+        if cat:
+            cat.created = False
+            print('The Category \'{0}\' has been loaded from the database.'
+                  .format(cat.fullname), file=stream)
         else:
             cn = CommonName.get_or_create(common_name, index, stream=stream)
-            sr = Series(name=name, common_name=cn)
-            sr.created = True
-            print('The Series \'{0}\' does not yet exist in the database, so '
-                  'it has been created'.format(sr.fullname), file=stream)
-        return sr
+            cat = Category(name=name, common_name=cn)
+            cat.created = True
+            print('The Category \'{0}\' does not yet exist in the database, '
+                  'so it has been created'.format(cat.fullname), file=stream)
+        return cat
 
     @property
     def fullname(self):
-        """str: Name of `Series` with name of `CommonName`."""
+        """str: Name of `Category` with name of `CommonName`."""
         fn = []
         if self.name:
             fn.append(self.name)
@@ -988,7 +989,7 @@ class Series(db.Model):
 
     @property
     def has_public_cultivars(self):
-        """bool: Whether or not `Series` has any public cultivars."""
+        """bool: Whether or not `Category` has any public cultivars."""
         return self.cultivars and any(cv.public for cv in self.cultivars)
 
 
@@ -1000,16 +1001,13 @@ class Cultivar(SynonymsMixin, db.Model):
     products (packets) are attached to.
 
     Note:
-        A cultivar must have a unique combination of name (including series if
-        applicable) and common name, otherwise it could result in multiple
-        results from a query intended to fetch only one cultivar.
+        A cultivar must have a unique combination of name and common name,
+        otherwise it could result in multiple results from a query intended to
+        fetch only one cultivar.
 
     Attributes:
-        name: The part of the cultivar's name that is specific to the cultivar
-            itself, e.g. if a cultivar is called "Foxy Foxglove", name will be
-            "Foxy". If it is part of a series, the series name is also
-            included, such as with "Polkadot Petra Foxglove" in the Polkadot
-            series.
+        name: The name of the cultivar, without common name. e.g. 'Sparkler
+            White' for Sparkler White Cleome.
         slug: A URL-friendly version of _name. The slug for a `Cultivar` is
             not necessarily unique, as it is always used in conjunction with
             a `CommonName` slug, so the unique constraint between `name` and
@@ -1018,14 +1016,9 @@ class Cultivar(SynonymsMixin, db.Model):
             cultivar falls under.
             Backref: `CommonName.cultivars`
 
-        series: MtO relationship with `Series`; the (optional) series a
-            cultivar belongs to. While it is optional, it must be used in
-            queries for cultivars to ensure a unique result. Queries for
-            cultivars that are not in a series should include
-            Cultivar.series == None in the filter.
-            Note: '==' is used instead of 'is' due to sqlalchemy treating
-            'x == None' as 'x is None' in filters.
-            Backref: `Series.cultivars`
+        category: MtO relationship with `Category`; the (optional) category a
+            cultivar belongs to.
+            Backref: `Category.cultivars`
         botanical_name: MtO relationship with `BotanicalName`; the botanical
             name of this cultivar.
             Backref: `BotanicalName.cultivars`
@@ -1061,8 +1054,8 @@ class Cultivar(SynonymsMixin, db.Model):
     common_name = db.relationship('CommonName', backref='cultivars')
 
     # Data Optional
-    series_id = db.Column(db.Integer, db.ForeignKey('series.id'))
-    series = db.relationship('Series', backref='cultivars')
+    category_id = db.Column(db.Integer, db.ForeignKey('categories.id'))
+    category = db.relationship('Category', backref='cultivars')
     botanical_name_id = db.Column(db.Integer,
                                   db.ForeignKey('botanical_names.id'))
     botanical_name = db.relationship('BotanicalName',
@@ -1088,7 +1081,7 @@ class Cultivar(SynonymsMixin, db.Model):
     def __init__(self,
                  name=None,
                  common_name=None,
-                 series=None,
+                 category=None,
                  botanical_name=None,
                  description=None,
                  new_for=None,
@@ -1103,7 +1096,7 @@ class Cultivar(SynonymsMixin, db.Model):
         """
         self.name = name
         self.common_name = common_name
-        self.series = series
+        self.category = category
         self.botanical_name = botanical_name
         self.description = description
         self.new_for = new_for
@@ -1127,8 +1120,7 @@ class Cultivar(SynonymsMixin, db.Model):
         index it belongs to.
 
         Args:
-            name: The name of the cultivar, not including series or common
-                name.
+            name: The name of the cultivar.
             common_name: The common name of the cultivar.
             index: The index the cultivar's common name (and thus the cultivar
                 itself) falls under.
@@ -1174,18 +1166,10 @@ class Cultivar(SynonymsMixin, db.Model):
             instance so we know whether the returned `CommonName` was created
             or loaded.
 
-            Also, if a `Series` is created by this function, its position will
-            be set to the default `Series.BEFORE_CULTIVAR`, as it can easily
-            be edited later, and it's not necessary information for the
-            creation of a`Cultivar`. Ideally, the `Series` for a `Cultivar`
-            should exist in the database before creation of the `Cultivar`.
-
         Args:
             name: Name of the `Cultivar`.
             common_name: Name of the `CommonName` this `Cultivar` belongs to.
             index: `Index` the `CommonName` belongs to.
-            series: The (optional) `Series` this `Cultivar` is in, if
-                applicable.
             stream: Optional IO stream to write messages to.
         """
         cv = cls.from_queryable_values(name=name,
@@ -1218,7 +1202,7 @@ class Cultivar(SynonymsMixin, db.Model):
 
     @property
     def queryable_dict(self):
-        """dict: A dict with name, common_name, series, and index of `self`.
+        """dict: A dict with name, common_name, and index of `self`.
 
         Note:
             Any or all values can be `None`, as passing <obj.attribute> == None
@@ -1842,7 +1826,7 @@ class VegetableData(db.Model):
     In addition to the usual information, vegetables often have an estimate
     for number of days it takes to reach the first harvest, and whether or not
     the plants are open pollinated.
-    
+
     Attributes:
         open_pollinated: Whether or not the vegetable is open pollinated.
         days_to_maturity: A string containing the number of days (or a range
@@ -1863,7 +1847,7 @@ class VegetableData(db.Model):
 @event.listens_for(Index.description, 'set', retval=True)
 @event.listens_for(CommonName.description, 'set', retval=True)
 @event.listens_for(CommonName.instructions, 'set', retval=True)
-@event.listens_for(Series.description, 'set', retval=True)
+@event.listens_for(Category.description, 'set', retval=True)
 @event.listens_for(Cultivar.description, 'set', retval=True)
 def paragraphize_blocks(target, value, oldvalue, initiator):
     """Run `paragraphize` for attributes expected to contain HTML."""

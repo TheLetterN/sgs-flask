@@ -4,23 +4,23 @@ import pytest
 from wtforms import ValidationError
 from app.seeds.forms import (
     AddBotanicalNameForm,
-    AddIndexForm,
+    AddCategoryForm,
     AddCommonNameForm,
+    AddIndexForm,
     AddPacketForm,
     AddCultivarForm,
-    AddSeriesForm,
+    EditCategoryForm,
     EditCultivarForm,
     EditPacketForm,
-    EditSeriesForm,
     select_field_choices
 )
 from app.seeds.models import (
     BotanicalName,
-    Index,
+    Category,
     CommonName,
+    Index,
     Packet,
-    Cultivar,
-    Series
+    Cultivar
 )
 
 
@@ -104,14 +104,14 @@ class TestAddBotanicalNameFormWithDB:
             form.validate_name(form.name)
 
 
-class TestAddSeriesForm:
-    """Test custom methods of AddSeriesForm."""
+class TestAddCategoryForm:
+    """Test custom methods of AddCategoryForm."""
     def test_validate_name(self, db):
-        series = Series(name='Polkadot',
-                        common_name=CommonName(name='Foxglove'))
-        db.session.add(series)
+        category = Category(name='Polkadot',
+                            common_name=CommonName(name='Foxglove'))
+        db.session.add(category)
         db.session.commit()
-        form = AddSeriesForm(cn=series.common_name)
+        form = AddCategoryForm(cn=category.common_name)
         form.name.data = 'Dalmatian'
         form.validate_name(form.name)
         form.name.data = 'Polkadot'
@@ -142,12 +142,12 @@ class TestAddCultivarFormWithDB:
         """Raise error if cultivar already exists.
 
         Cultivars are constrained to have a unique combination of name, common
-            name, and series.
+            name, and category.
         """
-        cv1 = Cultivar(name='Petra')
+        cv1 = Cultivar(name='Polkadot Petra')
         cv1.common_name = CommonName(name='Foxglove')
         cv1.common_name.index = Index(name='Perennial')
-        cv1.series = Series(name='Polkadot')
+        cv1.category = Category(name='Polkadot')
         cv2 = Cultivar(name='Silky Gold')
         cv2.common_name = CommonName(name='Butterfly Weed')
         cv2.common_name.index = Index(name='Annual')
@@ -158,9 +158,6 @@ class TestAddCultivarFormWithDB:
         form1 = AddCultivarForm(cn=cv1.common_name)
         form1.name.data = 'Petra'
         form1.validate_name(form1.name)
-        form1.series.data = cv1.series.id
-        with pytest.raises(ValidationError):
-            form1.validate_name(form1.name)
         form2 = AddCultivarForm(cn=cv2.common_name)
         form2.name.data = 'Silky Gold'
         with pytest.raises(ValidationError):
@@ -199,8 +196,8 @@ class TestEditPacketFormWithDB:
             EditPacketForm.validate_qty_val(None, field)
 
 
-class TestEditSeriesFormWithDB:
-    """Test custom methods of EditSeriesForm."""
+class TestEditCategoryFormWithDB:
+    """Test custom methods of EditCategoryForm."""
     def test_set_selects(self, db):
         """Populate common_name select with ids from database."""
         cn1 = CommonName(name='Foxglove')
@@ -208,7 +205,7 @@ class TestEditSeriesFormWithDB:
         cn3 = CommonName(name='Tomato')
         db.session.add_all([cn1, cn2, cn3])
         db.session.commit()
-        form = EditSeriesForm()
+        form = EditCategoryForm()
         form.set_selects()
         assert (cn1.id, cn1.name) in form.common_name_id.choices
         assert (cn2.id, cn2.name) in form.common_name_id.choices

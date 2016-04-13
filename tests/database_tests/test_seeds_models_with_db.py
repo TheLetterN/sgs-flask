@@ -3,11 +3,10 @@ import pytest
 from app.seeds.models import (
     BotanicalName,
     CommonName,
-    Index,
     Cultivar,
+    Index,
     Packet,
-    Quantity,
-    Series
+    Quantity
 )
 
 

@@ -26,14 +26,6 @@ from flask.ext.script import Manager, Shell
 from app import create_app, db, mail, Permission
 from app.auth.models import User
 from app.seeds.excel import SeedsWorkbook
-from app.seeds.models import (
-    BotanicalName,
-    CommonName,
-    Cultivar,
-    Index,
-    Packet,
-    Series
-)
 
 app = create_app(os.getenv('SGS_CONFIG') or 'default')
 manager = Manager(app)

@@ -88,32 +88,32 @@ class TestAddBotanicalNameRouteWithDB:
                                       _external=True)
 
 
-class TestAddSeriesRouteWithDB:
-    """Test add_series route."""
-    def test_add_series_renders_page(self, app, db):
+class TestAddCategoryRouteWithDB:
+    """Test add_category route."""
+    def test_add_category_renders_page(self, app, db):
         """Load form page given a valid cn_id."""
         cn = CommonName(name='Foxglove')
         db.session.add(cn)
         db.session.commit()
         with app.test_client() as tc:
-            rv = tc.get(url_for('seeds.add_series', cn_id=cn.id))
-            assert 'Add Series' in str(rv.data)
+            rv = tc.get(url_for('seeds.add_category', cn_id=cn.id))
+            assert 'Add Category' in str(rv.data)
 
-    def test_add_series_bad_cn_id(self, app, db):
+    def test_add_category_bad_cn_id(self, app, db):
         """Redirect to select_common_name if cn_id is invalid."""
         with app.test_client() as tc:
-            rv = tc.get(url_for('seeds.add_series'))
+            rv = tc.get(url_for('seeds.add_category'))
         assert rv.location == url_for('seeds.select_common_name',
-                                      dest='seeds.add_series',
+                                      dest='seeds.add_category',
                                       _external=True)
         cn = CommonName(name='Foxglove')
         cn.id = 1
         db.session.add(cn)
         db.session.commit()
         with app.test_client() as tc:
-            rv = tc.get(url_for('seeds.add_series', cn_id=42))
+            rv = tc.get(url_for('seeds.add_category', cn_id=42))
         assert rv.location == url_for('seeds.select_common_name',
-                                      dest='seeds.add_series',
+                                      dest='seeds.add_category',
                                       _external=True)
 
 
@@ -168,7 +168,7 @@ class TestAddCultivarRouteWithDB:
                                    active='',
                                    in_stock='',
                                    name='Foxy',
-                                   series='0',
+                                   category='0',
                                    thumbnail=(io.BytesIO(b'fawks'),
                                               'foxy.jpg')),
                          follow_redirects=True)

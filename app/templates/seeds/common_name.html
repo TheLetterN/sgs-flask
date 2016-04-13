@@ -37,73 +37,35 @@
         <div class="description">{{ cn.description|safe }}</div>
         {% endif %}
         {% if cn.instructions %}
-        <a class="to-planting-instructions" href="#{{ cn.slug }}-instructions">How to plant {{ cn.name }} seeds</a>
+        <a class="to-planting-instructions" href="#{{ cn.slug }}-instructions">How to plant {{ cn.arranged_name }} seeds</a>
         {% endif %}
       </div>
-      {% if subtypes or series %}
-      <div class="onpage-nav">
-        {% if subtypes %}
-        <ul class="cn-subtypes">
-          {% for st in subtypes %}
-            {% if st.has_public_cultivars or current_user.can(Permission.MANAGE_SEEDS) %}
-          <li>
-            <a href="#subtype-{{ st.slug }}">{{ st.name }}</a>
-          </li>
-            {% endif %}
-          {% endfor %}
-        </ul>
-        {% endif %}
-        {% if series %}
-        <ul class="cn-series">
-          {% for sr in series %}
-            {% if sr.has_public_cultivars or current_user.can(Permission.MANAGE_SEEDS) %}
-          <li>
-            <a href="#series-{{ sr.name.replace(' ', '-') }}">{{ sr.name }}</a>
-          </li>
-            {% endif %}
-          {% endfor %}
-        </ul>
-        {% endif %}
-        {% if individuals %}
-        <a class="to-indv-varieties" href="#individual-varieties">Individual {{ cn.name }} Varieties</a>
-        {% endif %}
-      </div>
-      {% endif %}
-      {% if subtypes %}
-        {% for st in subtypes %}
-          {% if st.has_public_cultivars or current_user.can(Permission.MANAGE_SEEDS) %}
-      <div class="cn-group-header cn-subtype-header">
-        <h2 id="subtype-{{ st.slug }}">{{ st.name }}</h2>
-            {% if st.description %}
-        <div class="description">{{ st.description|safe }}</div>
-            {% endif %}
-            {% if st.instructions %}
-        <a class="instructions-link" href="#{{ st.slug }}-instructions">Planting Instructions for {{ st.name }}</a>
-            {% endif %}
-      </div>
-      <div class="cultivar-group cn-subtype-cultivars">
-            {% for cv in st.cultivars %}
-        {{ cultivar_box(cv)|indent(8)|safe }}
-            {% endfor %}
-      </div>
-            {% if st.instructions %}
-      <div class="instructions" id="{{ st.slug }}-instructions">{{ st.instructions|safe }}</div>
-            {% endif %}
+      {% if categories %}
+      <ul class="onpage-nav categories">
+        {% for cat in categories %}
+          {% if cat.has_public_cultivars or current_user.can(Permission.MANAGE_SEEDS) %}
+        <li>
+          <a href="#category-{{ cat.name.replace(' ', '-') }}">{{ cat.name }}</a>
+        </li>
           {% endif %}
         {% endfor %}
+      </ul>
+      {% if individuals %}
+      <a class="to-indv-varieties" href="#individual-varieties">Individual {{ cn.arranged_name }} Varieties</a>
       {% endif %}
-      {% if series %}
-        {% for sr in series %}
-          {% if sr.has_public_cultivars or current_user.can(Permission.MANAGE_SEEDS) %}
-      <div class="cn-group-header cn-series-header">
-        <h2 id="series-{{ sr.name.replace(' ', '-') }}">{{ sr.name }} Series</h2>
+      {% endif %}
+      {% if categories %}
+        {% for cat in categories %}
+          {% if cat.has_public_cultivars or current_user.can(Permission.MANAGE_SEEDS) %}
+      <div class="category">
+        <h2 id="category-{{ cat.name.replace(' ', '-') }}">{{ cat.name }}</h2>
         <em>{{ cn.header }}</em>
-            {% if sr.description %}
-        <div class="description">{{ sr.description|safe }}</div>
+            {% if cat.description %}
+        <div class="description">{{ cat.description|safe }}</div>
             {% endif %}
       </div>
-      <div class="cultivar-group cn-series-cultivars">
-            {% for cv in sr.cultivars %}
+      <div class="category-cultivars">
+            {% for cv in cat.cultivars %}
         {{ cultivar_box(cv)|indent(8)|safe }}
             {% endfor %}
       </div>
@@ -111,10 +73,10 @@
         {% endfor %}
       {% endif %}
       {% if individuals %}
-        {% if subcategories or series %}
+        {% if categories %}
       <div class="cn-group-header cn-individuals-header">
-        <h2 id="individual-varieties">Individual {{ cn.name }} Varieties</h2>
-        <a class="to-planting-instructions" href="#{{ cn.slug }}-instructions">How to plant {{ cn.name }} seeds</a>
+        <h2 id="individual-varieties">Individual {{ cn.arranged_name }} Varieties</h2>
+        <a class="to-planting-instructions" href="#{{ cn.slug }}-instructions">How to plant {{ cn.arranged_name }} seeds</a>
       </div>
         {% endif %}
       <div class="cultivar-group cn-individual-cultivars">
@@ -125,7 +87,7 @@
       {% endif %}
       {% if cn.instructions %}
       <div id="{{ cn.slug }}-instructions" class="planting-instructions">
-        <h2>How to Plant {{ cn.name }} Seeds</h2>
+        <h2>How to Plant {{ cn.arranged_name }} Seeds</h2>
         {{ cn.instructions|indent(6)|safe }}
       </div>
       {% endif %}

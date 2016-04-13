@@ -21,20 +21,26 @@
 {# block head: 2 indentations of 4 spaces each. (8 spaces total.) #}
 {# block main: 3 indentations of 4 spaces each. (12 spaces total.) #}
 {% block head %}
-        <title>Add Series</title>
+        <title>Edit Category</title>
         <meta name="robots" content="noindex, nofollow">
 {% endblock %}
 {% block main %}
-            <h1>Add a Series to {{ form.cn.name }}:</h1>
+            <h1>Edit Category: {{ category.name }}</h1>
             <form method="POST">
                 {{ form.hidden_tag() }}
                 <ol>
-                    <li>
-                        {{ form_field(form.name)|indent(28)|safe }}
-                    </li>
-                    <li>
-                        {{ form_field(form.description)|indent(28)|safe }}
-                    </li>
+                    <fieldset>
+                        <legend>Edit Category</legend>
+                        <li>
+                            {{ form_field(form.common_name_id)|indent(28)|safe }}
+                        </li>
+                        <li>
+                            {{ form_field(form.name)|indent(28)|safe }}
+                        </li>
+                        <li>
+                            {{ form_field(form.description)|indent(28)|safe }}
+                        </li>
+                    </fieldset>
                     <li>
                         {{ form.submit }}
                     </li>

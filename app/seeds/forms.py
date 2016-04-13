@@ -38,13 +38,13 @@ from app.redirects import RedirectsFile
 from .models import (
     BotanicalName,
     dbify,
-    Index,
+    Category,
     CommonName,
     Image,
+    Index,
     Packet,
     Quantity,
-    Cultivar,
-    Series,
+    Cultivar
 )
 from .models import USDollar as USDollar_
 
@@ -267,7 +267,7 @@ class AddCommonNameForm(Form):
     next_page = RadioField(
         'After submission, go to',
         choices=[('add_botanical_name', 'Add Botanical Name (optional)'),
-                 ('add_series', 'Add Series (optional)'),
+                 ('add_category', 'Add Category (optional)'),
                  ('add_cultivar', 'Add Cultivar')],
         default='add_cultivar'
     )
@@ -332,10 +332,12 @@ class AddBotanicalNameForm(Form):
                                    NotSpace()])
     synonyms = StringField('Synonyms', validators=[SynonymLength(1, 64),
                                                    NotSpace()])
-    next_page = RadioField('After submission, go to',
-                           choices=[('add_series', 'Add Series (optional)'),
-                                    ('add_cultivar', 'Add Cultivar')],
-                           default='add_cultivar')
+    next_page = RadioField(
+        'After submission, go to',
+        choices=[('add_category', 'Add Category (optional)'),
+                 ('add_cultivar', 'Add Cultivar')],
+        default='add_cultivar'
+    )
     submit = SubmitField('Add Botanical Name')
 
     def __init__(self, cn, *args, **kwargs):
@@ -371,25 +373,25 @@ class AddBotanicalNameForm(Form):
             ))
 
 
-class AddSeriesForm(Form):
-    """Form for adding a `Series` to the database.
+class AddCategoryForm(Form):
+    """Form for adding a `Category` to the database.
 
     Attributes:
-        name: DBified string field for `Series` name.
-        description: Text field for optional series description.
+        name: DBified string field for `Category` name.
+        description: Text field for optional category description.
 
-        cn: The `CommonName` this `Series` will belong to.
+        cn: The `CommonName` this `Category` will belong to.
     """
-    name = DBifiedStringField('Series Name',
+    name = DBifiedStringField('Category Name',
                               validators=[Length(1, 64), NotSpace()])
     description = TextAreaField('Description', validators=[NotSpace()])
-    submit = SubmitField('Add Series')
+    submit = SubmitField('Add Category')
 
     def __init__(self, cn, *args, **kwargs):
-        """Initialize `AddSeriesForm`.
+        """Initialize `AddCategoryForm`.
 
         Args:
-            cn: The `CommonName` added `Series` belongs to.
+            cn: The `CommonName` added `Category` belongs to.
         """
         super().__init__(*args, **kwargs)
         self.cn = cn
@@ -398,17 +400,18 @@ class AddSeriesForm(Form):
         """Raise `ValidationError` if name  + common name already exists in db.
 
         Raises:
-            ValidationError: If the same series already exists in the database.
+            ValidationError: If the category already exists in the database.
         """
-        for series in self.cn.series:
-            if series.name == dbify(field.data):
+        for category in self.cn.categories:
+            if category.name == dbify(field.data):
                 raise ValidationError(Markup(
-                    'The common name \'{0}\' already has a series named '
+                    'The common name \'{0}\' already has a category named '
                     '\'{1}\'! Click <a href="{2}">here</a> if you wish to '
-                    'edit that series.'
+                    'edit that category.'
                     .format(self.cn.name,
-                            series.name,
-                            url_for('seeds.edit_series', series_id=series.id))
+                            category.name,
+                            url_for('seeds.edit_category',
+                                    category_id=category.id))
                 ))
 
 
@@ -419,7 +422,7 @@ class AddCultivarForm(Form):
         name: DBified string field for the name of added `Cultivar`.
         botanical_name: Select field for the optional `BotanicalName` for the
             added `Cultivar`.
-        series: Select field for optional `Series` added `Cultivar` belongs to.
+        category: Select field for optional `Category` for added `Cultivar`.
         thumbnail: File field for uploading thumbnail image.
         description: Text field for optional `Cultivar` HTML description.
         synonyms: String field for optional synonyms of this cultivar.
@@ -433,10 +436,10 @@ class AddCultivarForm(Form):
 
         cn: The `CommonName` added `Cultivar` belongs to.
     """
-    name = DBifiedStringField('Cultivar Name (including series if applicable)',
+    name = DBifiedStringField('Cultivar Name',
                               validators=[Length(1, 64), NotSpace()])
     botanical_name = SelectField('Botanical Name', coerce=int)
-    series = SelectField('Series', coerce=int)
+    category = SelectField('Category', coerce=int)
     thumbnail = FileField('Thumbnail Image',
                           validators=[FileAllowed(IMAGE_EXTENSIONS,
                                                   'Images only!')])
@@ -462,13 +465,13 @@ class AddCultivarForm(Form):
 
         Raises:
             ValidationError: If a `Cultivar` with the same name, `CommonName`,
-            and (optional) `Series` already exists.
+            and (optional) `Category` already exists.
         """
-        sr_id = self.series.data if self.series.data else None
+        sr_id = self.category.data if self.category.data else None
         cv = Cultivar.query.filter(
             Cultivar.name == field.data,
             Cultivar.common_name_id == self.cn.id,
-            Cultivar.series_id == sr_id
+            Cultivar.category_id == sr_id
         ).one_or_none()
         if cv:
             raise ValidationError(Markup(
@@ -501,9 +504,9 @@ class AddCultivarForm(Form):
             order_by='name'
         )
         self.botanical_name.choices.insert(0, (0, 'None'))
-        self.series.choices = select_field_choices(items=self.cn.series,
-                                                   order_by='name')
-        self.series.choices.insert(0, (0, 'None'))
+        self.category.choices = select_field_choices(items=self.cn.categories,
+                                                     order_by='name')
+        self.category.choices.insert(0, (0, 'None'))
 
 
 class AddPacketForm(Form):
@@ -806,21 +809,21 @@ class EditBotanicalNameForm(Form):
                                           'name.'.format(synonym))
 
 
-class EditSeriesForm(Form):
-    """Form for editing a Series to the database.
+class EditCategoryForm(Form):
+    """Form for editing a Category to the database.
 
     Attributes:
-        id: The unique id of edited `Series`.
-        name: DBified string field for `Series` name.
-        common_name_id: Select field for `CommonName` edited series belongs to.
-        description: Text field for `Series` description.
+        id: The unique id of edited `Category`.
+        name: DBified string field for `Category` name.
+        common_name_id: Select field for `CommonName` category belongs to.
+        description: Text field for `Category` description.
     """
     id = HiddenField()
     common_name_id = SelectField('Select Common Name', coerce=int)
-    name = DBifiedStringField('Series Name',
+    name = DBifiedStringField('Category Name',
                               validators=[Length(1, 64), NotSpace()])
     description = TextAreaField('Description', validators=[NotSpace()])
-    submit = SubmitField('Edit Series')
+    submit = SubmitField('Edit Category')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -835,20 +838,20 @@ class EditSeriesForm(Form):
         )
 
     def validate_name(self, field):
-        """Raise ValidationError if other Series exists with same name + CN."""
-        sr = Series.query.filter(
-            Series.name == field.data,
-            Series.common_name_id == int(self.common_name_id.data),
-            Series.id != self.id.data
+        """Raise if another `Category` exists with same name and CN."""
+        sr = Category.query.filter(
+            Category.name == field.data,
+            Category.common_name_id == int(self.common_name_id.data),
+            Category.id != self.id.data
         ).one_or_none()
         if sr:
             raise ValidationError(Markup(
-                'A series named \'{0}\' already belongs to the common name '
+                'A category named \'{0}\' already belongs to the common name '
                 '\{1}\'. <a href="{2}" target="_blank">Click here</a> if you '
                 'wish to edit it.'
                 .format(sr.name,
                         sr.common_name.name,
-                        url_for('seeds.edit_series', series_id=sr.id))
+                        url_for('seeds.edit_category', category_id=sr.id))
             ))
 
 
@@ -859,8 +862,8 @@ class EditCultivarForm(Form):
         id: Unique ID for `Cultivar` to be edited.
         common_name_id: Select field for `CommonName` of edited `Cultivar`.
         botanical_name_id: Select field for `BotanicalName` of `Cultivar`.
-        series_id: Select field for `Series` `Cultivar` is in, if applicable.
-        name: DBified string field for `Cultivar` name, excluding series and
+        category_id: Select field for `Category` `Cultivar` is in, if any.
+        name: DBified string field for `Cultivar` name, excluding category and
             common name.
         description: Text field for HTML description of `Cultivar`.
         thumbnail: File field for thumbnail upload.
@@ -875,7 +878,7 @@ class EditCultivarForm(Form):
                                  coerce=int,
                                  validators=[DataRequired()])
     botanical_name_id = SelectField('Botanical Name', coerce=int)
-    series_id = SelectField('Select Series', coerce=int)
+    category_id = SelectField('Select Category', coerce=int)
     name = DBifiedStringField('Cultivar Name',
                               validators=[Length(1, 64), NotSpace()])
     description = TextAreaField('Description', validators=[NotSpace()])
@@ -908,18 +911,18 @@ class EditCultivarForm(Form):
             title_attribute='select_field_title',
             order_by='name'
         )
-        self.series_id.choices = select_field_choices(model=Series,
-                                                      order_by='name')
-        self.series_id.choices.insert(0, (0, 'N/A'))
+        self.category_id.choices = select_field_choices(model=Category,
+                                                        order_by='name')
+        self.category_id.choices.insert(0, (0, 'N/A'))
 
     def validate_name(self, field):
         """Raise ValidationError if changes would create duplicate cultivar."""
         cn_id = self.common_name_id.data
-        sr_id = self.series_id.data if self.series_id.data else None
+        sr_id = self.category_id.data if self.category_id.data else None
         cv = Cultivar.query.filter(
             Cultivar.name == dbify(field.data),
             Cultivar.common_name_id == cn_id,
-            Cultivar.series_id == sr_id,
+            Cultivar.category_id == sr_id,
             Cultivar.id != self.id.data
         ).one_or_none()
         if cv:
@@ -945,21 +948,21 @@ class EditCultivarForm(Form):
                     .format(bn_url, bn.name)
                 ))
 
-    def validate_series_id(self, field):
-        """Raise ValidationError if `Series` does not belong to `CommonName`.
+    def validate_category_id(self, field):
+        """Raise ValidationError if `Category` does not belong to `CommonName`.
 
         Raises:
-            ValidationError: If selected series does not belong to selected
+            ValidationError: If selected category does not belong to selected
                 common name.
         """
         if field.data:
-            sr = Series.query.get(field.data)
+            sr = Category.query.get(field.data)
             if self.common_name_id.data != sr.common_name_id:
-                sr_url = url_for('seeds.edit_series', series_id=sr.id)
+                sr_url = url_for('seeds.edit_category', category_id=sr.id)
                 raise ValidationError(Markup(
-                    'The selected series does not belong to the selected '
+                    'The selected category does not belong to the selected '
                     'common name. <a href="{0}">Click here</a> if you would '
-                    'like to edit the series \'{1}\'.'
+                    'like to edit the category \'{1}\'.'
                     .format(sr_url, sr.name)
                 ))
 
@@ -1114,14 +1117,14 @@ class RemoveBotanicalNameForm(Form):
     submit = SubmitField('Remove Botanical Name')
 
 
-class RemoveSeriesForm(Form):
-    """Form for removing a `Series` from the database.
+class RemoveCategoryForm(Form):
+    """Form for removing a `Category` from the database.
 
     Attributes:
-        verify_removal: Checkbox for whether or not to remove `Series`.
+        verify_removal: Checkbox for whether or not to remove `Category`.
     """
     verify_removal = BooleanField('Yes')
-    submit = SubmitField('Remove Series')
+    submit = SubmitField('Remove Category')
 
 
 class RemoveCultivarForm(Form):
@@ -1207,13 +1210,13 @@ class SelectBotanicalNameForm(Form):
                                                            order_by='name')
 
 
-class SelectSeriesForm(Form):
-    """Form for selecting a series.
+class SelectCategoryForm(Form):
+    """Form for selecting a category.
 
     Attributes:
-        series: Select field for `Series`.
+        category: Select field for `Category`.
     """
-    series = SelectField('Select Series', coerce=int)
+    category = SelectField('Select Category', coerce=int)
     submit = SubmitField('Submit')
 
     def __init__(self, *args, **kwargs):
@@ -1221,9 +1224,9 @@ class SelectSeriesForm(Form):
         self.set_select()
 
     def set_select(self):
-        """Populate `series`."""
-        self.series.choices = select_field_choices(model=Series,
-                                                   order_by='name')
+        """Populate `category`."""
+        self.category.choices = select_field_choices(model=Category,
+                                                     order_by='name')
 
 
 class SelectCultivarForm(Form):

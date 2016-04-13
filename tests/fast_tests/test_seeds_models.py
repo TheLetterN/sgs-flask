@@ -8,13 +8,13 @@ from unittest import mock
 from app.seeds.models import (
     BotanicalName,
     dbify,
-    Index,
+    Category,
     CommonName,
     Image,
+    Index,
     Cultivar,
     Packet,
     Quantity,
-    Series,
     Synonym,
     SynonymsMixin,
     USDollar
@@ -226,16 +226,17 @@ class TestBotanicalName:
         assert BotanicalName.validate('Hydrangea Lacecap Group')
 
 
-class TestSeries:
-    """Test methods of the Series class in seeds.models."""
+class TestCategory:
+    """Test methods of the Category class in seeds.models."""
     def test_repr(self):
         """Return formatted string with full name."""
-        sr = Series(name='Polkadot', common_name=CommonName(name='Foxglove'))
-        assert sr.__repr__() == '<Series \'Polkadot Foxglove\'>'
+        cat = Category(name='Polkadot',
+                       common_name=CommonName(name='Foxglove'))
+        assert cat.__repr__() == '<Category \'Polkadot Foxglove\'>'
 
     def test_fullname(self):
-        """Returns name of series along with common name."""
-        ser = Series()
+        """Returns name of category along with common name."""
+        ser = Category()
         assert ser.fullname is None
         ser.name = 'Dalmatian'
         assert ser.fullname == 'Dalmatian'
@@ -254,7 +255,7 @@ class TestCultivar:
         assert cv.__repr__() == '<Cultivar \'Full Cultivar Name\'>'
 
     def test_fullname_getter(self):
-        """Return string with all existing: series, name, and common_name."""
+        """Return string with name and common_name."""
         cv = Cultivar(name='Polkadot Petra')
         cv.common_name = CommonName(name='Foxglove')
         assert cv.fullname == 'Polkadot Petra Foxglove'
@@ -268,12 +269,12 @@ class TestCultivar:
 
     @mock.patch('app.seeds.models.Cultivar.from_queryable_values')
     def test_from_queryable_dict(self, m_fqv):
-        """Call Cultivar.from_queryable_values without a Series."""
-        d = {'Cultivar Name': 'Petra',
+        """Call Cultivar.from_queryable_values with dict values."""
+        d = {'Cultivar Name': 'Foxy',
              'Common Name': 'Foxglove',
              'Index': 'Perennial'}
         Cultivar.from_queryable_dict(d)
-        m_fqv.assert_called_with(name='Petra',
+        m_fqv.assert_called_with(name='Foxy',
                                  common_name='Foxglove',
                                  index='Perennial')
 

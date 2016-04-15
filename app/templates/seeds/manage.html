@@ -16,43 +16,45 @@
    Copyright Swallowtail Garden Seeds, Inc 
 #}
 {% extends "includes/base.html" %}
-{# HTML within blocks should be indented as follows for consistency: #}
-{# block head: 2 indentations of 4 spaces each. (8 spaces total.) #}
-{# block main: 3 indentations of 4 spaces each. (12 spaces total.) #}
+{# Indent block head content 4 spaces, and block main content 6 spaces. #}
 {% block head %}
-        <title>Manage Seeds</title>
-        <meta name="robots" content="noindex, nofollow">
-        <link rel="canonical" href="{{ url_for('seeds.manage', _external=True) }}">
+    <title>Manage Seeds</title>
+    {% if ALLOW_CRAWLING %}
+    {# If ALLOW_CRAWLING is False, this tag is already generated. #}
+    {# If ALLOW_CRAWLING is True, we still don't want admin pages like this crawled. #}
+    <meta name="robots" content="noindex, nofollow">
+    {% endif %}
+    <link rel="canonical" href="{{ url_for('seeds.manage', _external=True) }}">
 {% endblock %}
 {% block main %}
-            <h1>Manage Seeds</h1>
-            <h2>Add:</h2>
-            <a href="{{ url_for('seeds.add_index') }}">Index</a>
-            <a href="{{ url_for('seeds.add_common_name') }}">Common Name</a>
-            <a href="{{ url_for('seeds.add_botanical_name') }}">Botanical Name</a>
-            <a href="{{ url_for('seeds.add_category') }}">Category</a>
-            <a href="{{ url_for('seeds.add_cultivar') }}">Cultivar</a>
-            <a href="{{ url_for('seeds.add_packet') }}">Packet</a>
-            <a href="{{ url_for('seeds.add_redirect') }}">Redirect</a>
-            <h2>Edit:</h2>
-            <a href="{{ url_for('seeds.edit_index') }}">Index</a>
-            <a href="{{ url_for('seeds.edit_common_name') }}">Common Name</a>
-            <a href="{{ url_for('seeds.edit_botanical_name') }}">Botanical Name</a>
-            <a href="{{ url_for('seeds.edit_category') }}">Category</a>
-            <a href="{{ url_for('seeds.edit_cultivar') }}">Cultivar</a>
-            <a href="{{ url_for('seeds.edit_packet') }}">Packet</a>
-            <h2>Remove:</h2>
-            <a href="{{ url_for('seeds.remove_index') }}">Index</a>
-            <a href="{{ url_for('seeds.remove_common_name') }}">Common Name</a>
-            <a href="{{ url_for('seeds.remove_botanical_name') }}">Botanical Name</a>
-            <a href="{{ url_for('seeds.remove_category') }}">Category</a>
-            <a href="{{ url_for('seeds.remove_cultivar') }}">Cultivar</a>
-            <a href="{{ url_for('seeds.remove_packet') }}">Packet</a>
-            {% if pending.changes %}
-            <h2>Changes Pending Restart of Application:</h2>
-            <div class="pending_changes">{{ pending.changes|safe }}</div>
-            {% endif %}
-            {% if lc %}
-            <div class="last_commit">Last git commit made: {{ lc.timestamp }}</div>
-            {% endif %}
+      <h1>Manage Seeds</h1>
+      <h2>Add:</h2>
+      <a href="{{ url_for('seeds.add_index') }}">Index</a>
+      <a href="{{ url_for('seeds.add_common_name') }}">Common Name</a>
+      <a href="{{ url_for('seeds.add_botanical_name') }}">Botanical Name</a>
+      <a href="{{ url_for('seeds.add_category') }}">Category</a>
+      <a href="{{ url_for('seeds.add_cultivar') }}">Cultivar</a>
+      <a href="{{ url_for('seeds.add_packet') }}">Packet</a>
+      <a href="{{ url_for('seeds.add_redirect') }}">Redirect</a>
+      <h2>Edit:</h2>
+      <a href="{{ url_for('seeds.edit_index') }}">Index</a>
+      <a href="{{ url_for('seeds.edit_common_name') }}">Common Name</a>
+      <a href="{{ url_for('seeds.edit_botanical_name') }}">Botanical Name</a>
+      <a href="{{ url_for('seeds.edit_category') }}">Category</a>
+      <a href="{{ url_for('seeds.edit_cultivar') }}">Cultivar</a>
+      <a href="{{ url_for('seeds.edit_packet') }}">Packet</a>
+      <h2>Remove:</h2>
+      <a href="{{ url_for('seeds.remove_index') }}">Index</a>
+      <a href="{{ url_for('seeds.remove_common_name') }}">Common Name</a>
+      <a href="{{ url_for('seeds.remove_botanical_name') }}">Botanical Name</a>
+      <a href="{{ url_for('seeds.remove_category') }}">Category</a>
+      <a href="{{ url_for('seeds.remove_cultivar') }}">Cultivar</a>
+      <a href="{{ url_for('seeds.remove_packet') }}">Packet</a>
+      {% if pending.changes %}
+      <h2>Changes Pending Restart of Application:</h2>
+      <div class="pending_changes">{{ pending.changes|safe }}</div>
+      {% endif %}
+      {% if lc %}
+      <div class="last_commit">Last git commit made: {{ lc.timestamp }}</div>
+      {% endif %}
 {% endblock %}

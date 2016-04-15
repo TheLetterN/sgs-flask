@@ -17,24 +17,26 @@
 #}
 {% extends "includes/base.html" %}
 {% from "includes/form_field.html" import form_field %}
-{# HTML within blocks should be indented as follows for consistency: #}
-{# block head: 2 indentations of 4 spaces each. (8 spaces total.) #}
-{# block main: 3 indentations of 4 spaces each. (12 spaces total.) #}
+{# Indent block head content 4 spaces, and block main content 6 spaces. #}
 {% block head %}
-        <title>Remove Packet</title>
-        <meta name="robots" content="noindex, nofollow">
+    <title>Remove Packet</title>
+    {% if ALLOW_CRAWLING %}
+    {# If ALLOW_CRAWLING is False, this tag is already generated. #}
+    {# If ALLOW_CRAWLING is True, we still don't want admin pages like this crawled. #}
+    <meta name="robots" content="noindex, nofollow">
+    {% endif %}
 {% endblock %}
 {% block main %}
-            <h1>Remove Packet</h1>
-            <form method="POST">
-                {{ form.hidden_tag() }}
-                <ol>
-                    <li><div class="warning">You are about to remove the packet: &apos;{{ packet.info }}&apos;, which cannot be undone. Check 'Yes' if you wish to proceed.</div>
-                        {{ form_field(form.verify_removal)|indent(24)|safe }}
-                    </li>
-                    <li>
-                        {{ form.submit }}
-                    </li>
-                </ol>
-            </form>
+      <h1>Remove Packet</h1>
+      <form method="POST">
+        {{ form.hidden_tag() }}
+        <ol>
+          <li><div class="warning">You are about to remove the packet: &apos;{{ packet.info }}&apos;, which cannot be undone. Check 'Yes' if you wish to proceed.</div>
+            {{ form_field(form.verify_removal)|indent(12)|safe }}
+          </li>
+          <li>
+            {{ form.submit }}
+          </li>
+        </ol>
+      </form>
 {% endblock %}

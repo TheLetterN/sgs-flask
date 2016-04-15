@@ -367,8 +367,8 @@ form li {
     margin-bottom: 1em;
 }
 
-form fieldset {
-    display: inline-block;
+fieldset {
+    display: block;
     border-style: solid;
     border-width: 1px;
     border-color: #99ff99;

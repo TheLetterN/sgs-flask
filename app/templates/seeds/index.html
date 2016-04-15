@@ -16,31 +16,28 @@
    Copyright Swallowtail Garden Seeds, Inc 
 #}
 {% extends "includes/base.html" %}
-{# HTML within blocks should be indented as follows for consistency: #}
-{# block head: 2 indentations of 4 spaces each. (8 spaces total.) #}
-{# block main: 3 indentations of 4 spaces each. (12 spaces total.) #}
+{# Indent block head content 4 spaces, and block main content 6 spaces. #}
 {% block head %}
     <title>Swallowtail Garden Seeds - {{ index.header }}</title>
     <link rel="canonical" href="{{ url_for('seeds.index', idx_slug=index.slug, _external=True) }}">
 {% endblock %}
 {% block main %}
-    <h1>{{ index.header }}</h1>
-        {% if index.description %}
-        <div class="description">{{ index.description|safe }}</div>
-        {% endif %}
-        <div id="common_names">
-            {% if index.common_names %}
-            {% for cn in index.common_names %}
-            {% if not cn.parent and not cn.invisible %}
-            <div class="common_name">
-                <a href="{{ url_for('seeds.common_name', idx_slug=index.slug, cn_slug=cn.slug) }}">{{ cn.name }}</a>
-                {% if cn.description %}
-                <p class="description">{{ cn.description|safe }}</p>
-                {% endif %}
-            </div>
-            {% endif %}
-            {% endfor %}
-            {% endif %}
+      <h1>{{ index.header }}</h1>
+      {% if index.description %}
+      <div class="description">{{ index.description|safe }}</div>
+      {% endif %}
+      <div id="common_names">
+        {% if index.common_names %}
+        {% for cn in index.common_names %}
+        {% if not cn.parent and not cn.invisible %}
+        <div class="common_name">
+          <a href="{{ url_for('seeds.common_name', idx_slug=index.slug, cn_slug=cn.slug) }}">{{ cn.name }}</a>
+          {% if cn.description %}
+          <p class="description">{{ cn.description|safe }}</p>
+          {% endif %}
         </div>
+        {% endif %}
+        {% endfor %}
+        {% endif %}
+      </div>
 {% endblock %}
-

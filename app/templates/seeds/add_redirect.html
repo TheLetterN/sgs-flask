@@ -17,33 +17,35 @@
 #}
 {% extends "includes/base.html" %}
 {% from "includes/form_field.html" import form_field %}
-{# HTML within blocks should be indented as follows for consistency: #}
-{# block head: 2 indentations of 4 spaces each. (8 spaces total.) #}
-{# block main: 3 indentations of 4 spaces each. (12 spaces total.) #}
+{# Indent block head content 4 spaces, and block main content 6 spaces. #}
 {% block head %}
-        <title>Add Redirect</title>
-        <meta name="robots" content="noindex, nofollow">
+    <title>Add Redirect</title>
+    {% if ALLOW_CRAWLING %}
+    {# If ALLOW_CRAWLING is False, this tag is already generated. #}
+    {# If ALLOW_CRAWLING is True, we still don't want admin pages like this crawled. #}
+    <meta name="robots" content="noindex, nofollow">
+    {% endif %}
 {% endblock %}
 {% block main %}
-            <h1>Add Redirect</h1>
-            <p>Note: Redirects will not take effect until restart of the Flask application.</p>
-            <p> Also, do not include domain in redirect paths, use only root-relative paths.</p>
-            <p> Finally, be careful creating 301 redirects, they should never point to another redirect!</p>
-            <form method="POST">
-                {{ form.hidden_tag() }}
-                <ol>
-                    <li>
-                        {{ form_field(form.old_path)|indent(24)|safe }}
-                    </li>
-                    <li>
-                        {{ form_field(form.new_path)|indent(24)|safe }}
-                    </li>
-                    <li>
-                        {{ form_field(form.status_code)|indent(24)|safe }}
-                    </li>
-                    <li>
-                        {{ form.submit }}
-                    </li>
-                </ol>
-            </form>
+      <h1>Add Redirect</h1>
+      <p>Note: Redirects will not take effect until restart of the Flask application.</p>
+      <p> Also, do not include domain in redirect paths, use only root-relative paths.</p>
+      <p> Finally, be careful creating 301 redirects, they should never point to another redirect!</p>
+      <form method="POST">
+        {{ form.hidden_tag() }}
+        <ol>
+          <li>
+            {{ form_field(form.old_path)|indent(12)|safe }}
+          </li>
+          <li>
+            {{ form_field(form.new_path)|indent(12)|safe }}
+          </li>
+          <li>
+            {{ form_field(form.status_code)|indent(12)|safe }}
+          </li>
+          <li>
+            {{ form.submit }}
+          </li>
+        </ol>
+      </form>
 {% endblock %}

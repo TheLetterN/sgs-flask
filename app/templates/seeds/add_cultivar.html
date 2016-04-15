@@ -17,58 +17,60 @@
 #}
 {% extends "includes/base.html" %}
 {% from "includes/form_field.html" import form_field %}
-{# HTML within blocks should be indented as follows for consistency: #}
-{# block head: 2 indentations of 4 spaces each. (8 spaces total.) #}
-{# block main: 3 indentations of 4 spaces each. (12 spaces total.) #}
+{# Indent block head content 4 spaces, and block main content 6 spaces. #}
 {% block head %}
-        <title>Add Cultivar</title>
-        <meta name="robots" content="noindex, nofollow">
-        <link rel="canonical" href="{{ url_for('seeds.add_cultivar', _external=True) }}">
+    <title>Add Cultivar</title>
+    {% if ALLOW_CRAWLING %}
+    {# If ALLOW_CRAWLING is False, this tag is already generated. #}
+    {# If ALLOW_CRAWLING is True, we still don't want admin pages like this crawled. #}
+    <meta name="robots" content="noindex, nofollow">
+    {% endif %}
+    <link rel="canonical" href="{{ url_for('seeds.add_cultivar', _external=True) }}">
 {% endblock %}
 {% block main %}
-            <h1>Add a Cultivar to {{ form.cn.index.plural }} - {{ form.cn.name }}:</h1>
-            <form method="POST" enctype="multipart/form-data">
-                {{ form.hidden_tag() }}
-                <ol>
-                    <fieldset>
-                        <legend>Data:</legend>
-                        <li>
-                            {{ form_field(form.name)|indent(28)|safe }}
-                        </li>
-                        <li>
-                            {{ form_field(form.botanical_name)|indent(28)|safe }}
-                        </li>
-                        <li>
-                            {{ form_field(form.category)|indent(28)|safe }}
-                        </li>
-                        <li>
-                            {{ form_field(form.thumbnail)|indent(28)|safe }}
-                        </li>
-                        <li>
-                            {{ form_field(form.description)|indent(28)|safe }}
-                        </li>
-                        <li>
-                            {{ form_field(form.synonyms)|indent(28)|safe }}
-                        </li>
-                    </fieldset>
-                    <fieldset>
-                        <legend>Status:</legend>
-                        <li>
-                            {{ form_field(form.new_until)|indent(28)|safe }}
-                        </li>
-                        <li>
-                            {{ form_field(form.in_stock)|indent(28)|safe }}
-                        </li>
-                        <li>
-                            {{ form_field(form.active)|indent(28)|safe }}
-                        </li>
-                        <li>
-                            {{ form_field(form.visible)|indent(28)|safe }}
-                        </li>
-                    </fieldset>
-                    <li>
-                        {{ form.submit }}
-                    </li>
-                </ol>
-            </form>
+      <h1>Add a Cultivar to {{ form.cn.index.plural }} - {{ form.cn.name }}:</h1>
+      <form method="POST" enctype="multipart/form-data">
+        {{ form.hidden_tag() }}
+        <ol>
+          <fieldset>
+            <legend>Data:</legend>
+            <li>
+              {{ form_field(form.name)|indent(14)|safe }}
+            </li>
+            <li>
+              {{ form_field(form.botanical_name)|indent(14)|safe }}
+            </li>
+            <li>
+              {{ form_field(form.category)|indent(14)|safe }}
+            </li>
+            <li>
+              {{ form_field(form.thumbnail)|indent(14)|safe }}
+            </li>
+            <li>
+              {{ form_field(form.description)|indent(14)|safe }}
+            </li>
+            <li>
+              {{ form_field(form.synonyms)|indent(14)|safe }}
+            </li>
+          </fieldset>
+          <fieldset>
+            <legend>Status:</legend>
+            <li>
+              {{ form_field(form.new_until)|indent(14)|safe }}
+            </li>
+            <li>
+              {{ form_field(form.in_stock)|indent(14)|safe }}
+            </li>
+            <li>
+              {{ form_field(form.active)|indent(14)|safe }}
+            </li>
+            <li>
+              {{ form_field(form.visible)|indent(14)|safe }}
+            </li>
+          </fieldset>
+          <li>
+            {{ form.submit }}
+          </li>
+        </ol>
+      </form>
 {% endblock %}

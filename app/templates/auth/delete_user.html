@@ -16,36 +16,30 @@
    Copyright Swallowtail Garden Seeds, Inc 
 #}
 {% extends "includes/base.html" %}
-{% from "includes/form_errors.html" import form_errors %}
-{# HTML within blocks should be indented as follows for consistency: #}
-{# block head: 2 indentations of 4 spaces each. (8 spaces total.) #}
-{# block main: 3 indentations of 4 spaces each. (12 spaces total.) #}
+{% from "includes/form_field.html" import form_field %}
+{# Indent block head content 4 spaces, and block main content 6 spaces. #}
 {% block head %}
-        <title>Delete User</title>
-        <meta name="robots" content="noindex, nofollow">
+    <title>Delete User</title>
+    {% if ALLOW_CRAWLING %}
+    {# If ALLOW_CRAWLING is False, this tag is already generated. #}
+    {# If ALLOW_CRAWLING is True, we still don't want admin pages like this crawled. #}
+    <meta name="robots" content="noindex, nofollow">
+    {% endif %}
 {% endblock %}
 {% block main %}
-            <h1>Delete User: {{ user.name }}</h1>
-            <form method="POST">
-                {{ form.hidden_tag() }}
-                <ol>
-                    <li>
-                        {{ form.confirmation.label }}
-                        {{ form.confirmation }}
-                        {% if form.confirmation.errors|count > 0 %}
-                        {{ form_errors(form.confirmation) }}
-                        {% endif %}
-                    </li>
-                    <li>
-                        {{ form.password.label }}
-                        {{ form.password }}
-                        {% if form.password.errors|count > 0 %}
-                        {{ form_errors(form.password) }}
-                        {% endif %}
-                    </li>
-                    <li>
-                        {{ form.submit }}
-                    </li>
-                </ol>
-            </form>
+      <h1>Delete User: {{ user.name }}</h1>
+      <form method="POST">
+        {{ form.hidden_tag() }}
+        <ol>
+          <li>
+            {{ form_field(form.confirmation)|indent(12)|safe }}
+          </li>
+          <li>
+            {{ form_field(form.password)|indent(12)|safe }}
+          </li>
+          <li>
+            {{ form.submit }}
+          </li>
+        </ol>
+      </form>
 {% endblock %}

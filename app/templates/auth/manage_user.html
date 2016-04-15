@@ -16,101 +16,68 @@
    Copyright Swallowtail Garden Seeds, Inc 
 #}
 {% extends "includes/base.html" %}
-{% from "includes/form_errors.html" import form_errors %}
-{# HTML within blocks should be indented as follows for consistency: #}
-{# block head: 2 indentations of 4 spaces each. (8 spaces total.) #}
-{# block main: 3 indentations of 4 spaces each. (12 spaces total.) #}
+{% from "includes/form_field.html" import form_field %}
+{# Indent block head content 4 spaces, and block main content 6 spaces. #}
 {% block head %}
-        <title>Manage User</title>
-        <meta name="robots" content="noindex, nofollow">
-        <link rel="canonical" href="{{ url_for('auth.manage_user', _external=True) }}">
+    <title>Manage User</title>
+    {% if ALLOW_CRAWLING %}
+    {# If ALLOW_CRAWLING is False, this tag is already generated. #}
+    {# If ALLOW_CRAWLING is True, we still don't want admin pages like this crawled. #}
+    <meta name="robots" content="noindex, nofollow">
+    {% endif %}
+    <link rel="canonical" href="{{ url_for('auth.manage_user', _external=True) }}">
 {% endblock %}
 {% block main %}
-            <h1>Manage User: {{ user.name }}</h1>
-            <a class="button" id="delete_user" href="{{ url_for('auth.delete_user', uid=user.id) }}">Delete {{ user.name }}'s Account</a>
-            <form method="POST">
-                {{ form.hidden_tag() }}
-                <ol>
-                    <fieldset>
-                        <legend>Change {{ user.name }}'s Account Status:</legend>
-                        <li>
-                            {{ form.confirmed.label }}
-                            {{ form.confirmed }}
-                            {% if form.confirmed.errors|count > 0 %}
-                            {{ form_errors(form.confirmed) }}
-                            {% endif %}
-                    </fieldset>
-                    <fieldset>
-                        <legend>Change {{ user.name }}'s Email Address:</legend>
-                        <li>
-                            {{ form.email1.label }}
-                            {{ form.email1 }}
-                            {% if form.email1.errors|count > 0 %}
-                            {{ form_errors(form.email1) }}
-                            {% endif %}
-                        </li>
-                        <li>
-                            {{form.email2.label }}
-                            {{ form.email2 }}
-                            {% if form.email2.errors|count > 0 %}
-                            {{ form_errors(form.email2) }}
-                            {% endif %}
-                        </li>
-                    </fieldset>
-                    <fieldset>
-                        <legend>Change {{ user.name }}'s Password:</legend>
-                        <li>
-                            {{ form.password1.label }}
-                            {{ form.password1 }}
-                            {% if form.password1.errors|count > 0 %}
-                            {{ form_errors(form.password1) }}
-                            {% endif %}
-                        </li>
-                        <li>
-                            {{ form.password2.label }}
-                            {{ form.password2 }}
-                            {% if form.password2.errors|count > 0 %}
-                            {{ form_errors(form.password2) }}
-                            {% endif %}
-                        </li>
-                    </fieldset>
-                    <fieldset>
-                        <legend>Change {{ user.name }}'s Username:</legend>
-                        <li>
-                            {{ form.username1.label }}
-                            {{ form.username1 }}
-                            {% if form.username1.errors|count > 0 %}
-                            {{ form_errors(form.username1) }}
-                            {% endif %}
-                        </li>
-                        <li>
-                            {{ form.username2.label }}
-                            {{ form.username2 }}
-                            {% if form.username2.errors|count > 0 %}
-                            {{ form_errors(form.username2) }}
-                            {% endif %}
-                        </li>
-                    </fieldset>
-                    <fieldset>
-                        <legend>Change {{ user.name }}'s Permissions</legend>
-                        <li>
-                            {{ form.manage_users.label }}
-                            {{ form.manage_users }}
-                            {% if form.manage_users.errors|count > 0 %}
-                            {{ form_errors(form.manage_users) }}
-                            {% endif %}
-                        </li>
-                        <li>
-                            {{ form.manage_seeds.label }}
-                            {{ form.manage_seeds }}
-                            {% if form.manage_seeds.errors|count > 0 %}
-                            {{ form_errors(form.manage_seeds) }}
-                            {% endif %}
-                        </li>
-                    </fieldset>
-                    <li>
-                        {{ form.submit }}
-                    </li>
-                </ol>
-            </form>
+      <h1>Manage User: {{ user.name }}</h1>
+      <a class="button" id="delete_user" href="{{ url_for('auth.delete_user', uid=user.id) }}">Delete {{ user.name }}'s Account</a>
+      <form method="POST">
+        {{ form.hidden_tag() }}
+        <ol>
+          <fieldset>
+            <legend>Change {{ user.name }}'s Account Status:</legend>
+            <li>
+              {{ form_field(form.confirmed)|indent(14)|safe }}
+            </li>
+          </fieldset>
+          <fieldset>
+            <legend>Change {{ user.name }}'s Email Address:</legend>
+            <li>
+              {{ form_field(form.email1)|indent(14)|safe }}
+            </li>
+            <li>
+              {{ form_field(form.email2)|indent(14)|safe }}
+            </li>
+          </fieldset>
+          <fieldset>
+            <legend>Change {{ user.name }}'s Password:</legend>
+            <li>
+              {{ form_field(form.password1)|indent(14)|safe }}
+            </li>
+            <li>
+              {{ form_field(form.password2)|indent(14)|safe }}
+            </li>
+          </fieldset>
+          <fieldset>
+            <legend>Change {{ user.name }}'s Username:</legend>
+            <li>
+              {{ form_field(form.username1)|indent(14)|safe }}
+            </li>
+            <li>
+              {{ form_field(form.username2)|indent(14)|safe }}
+            </li>
+          </fieldset>
+          <fieldset>
+            <legend>Change {{ user.name }}'s Permissions</legend>
+            <li>
+              {{ form_field(form.manage_users)|indent(14)|safe }}
+            </li>
+            <li>
+              {{ form_field(form.manage_seeds)|indent(14)|safe }}
+            </li>
+          </fieldset>
+          <li>
+            {{ form.submit }}
+          </li>
+        </ol>
+      </form>
 {% endblock %}

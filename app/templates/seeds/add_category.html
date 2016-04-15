@@ -17,27 +17,29 @@
 #}
 {% extends "includes/base.html" %}
 {% from "includes/form_field.html" import form_field %}
-{# HTML within blocks should be indented as follows for consistency: #}
-{# block head: 2 indentations of 4 spaces each. (8 spaces total.) #}
-{# block main: 3 indentations of 4 spaces each. (12 spaces total.) #}
+{# Indent block head content 4 spaces, and block main content 6 spaces. #}
 {% block head %}
-        <title>Add Category</title>
-        <meta name="robots" content="noindex, nofollow">
+    <title>Add Category</title>
+    {% if ALLOW_CRAWLING %}
+    {# If ALLOW_CRAWLING is False, this tag is already generated. #}
+    {# If ALLOW_CRAWLING is True, we still don't want admin pages like this crawled. #}
+    <meta name="robots" content="noindex, nofollow">
+    {% endif %}
 {% endblock %}
 {% block main %}
-            <h1>Add a Category to {{ form.cn.name }}:</h1>
-            <form method="POST">
-                {{ form.hidden_tag() }}
-                <ol>
-                    <li>
-                        {{ form_field(form.name)|indent(28)|safe }}
-                    </li>
-                    <li>
-                        {{ form_field(form.description)|indent(28)|safe }}
-                    </li>
-                    <li>
-                        {{ form.submit }}
-                    </li>
-                </ol>
-            </form>
+      <h1>Add a Category to {{ form.cn.name }}:</h1>
+      <form method="POST">
+        {{ form.hidden_tag() }}
+        <ol>
+          <li>
+            {{ form_field(form.name)|indent(10)|safe }}
+          </li>
+          <li>
+            {{ form_field(form.description)|indent(10)|safe }}
+          </li>
+          <li>
+            {{ form.submit }}
+          </li>
+        </ol>
+      </form>
 {% endblock %}

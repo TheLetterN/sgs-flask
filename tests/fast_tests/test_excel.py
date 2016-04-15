@@ -358,7 +358,6 @@ class TestCommonNamesWorksheet:
         cnws.setup()
         titles = ('Index',
                   'Common Name',
-                  'Subcategory of',
                   'Description',
                   'Planting Instructions',
                   'Synonyms',
@@ -388,7 +387,6 @@ class TestCommonNamesWorksheet:
         cnws.add_one(cn, stream=messages)
         assert cnws.cell(2, cnws.cols['Index']).value == 'Perennial'
         assert cnws.cell(2, cnws.cols['Common Name']).value == 'Foxglove'
-        assert cnws.cell(2, cnws.cols['Subcategory of']).value is None
         assert cnws.cell(2, cnws.cols['Description']).value is None
         assert cnws.cell(2, cnws.cols['Planting Instructions']).value is None
         assert cnws.cell(2, cnws.cols['Synonyms']).value is None
@@ -407,10 +405,8 @@ class TestCommonNamesWorksheet:
                         description='Spotty.',
                         instructions='Just add water!')
         cn.index = Index(name='Perennial')
-        cn.parent = CommonName(name='Fauxglove')
         cn.synonyms_string = 'Digitalis'
         cnws.add_one(cn)
-        assert cnws.cell(2, cnws.cols['Subcategory of']).value == 'Fauxglove'
         assert cnws.cell(2, cnws.cols['Description']).value == '<p>Spotty.</p>'
         assert cnws.cell(
             2, cnws.cols['Planting Instructions']

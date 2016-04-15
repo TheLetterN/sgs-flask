@@ -245,8 +245,6 @@ class AddCommonNameForm(Form):
 
     Attributes:
         name: DBified string field for the name of a `CommonName`.
-        parent_cn: Select field for an optional `CommonName` that the added
-            `CommonName` is a subcategory of.
         description: Text field for the optional description of a `CommonName`.
         instructions: Text field for optional planting instructions.
         synonyms: Text field for optional synonyms of added `CommonName`.
@@ -257,7 +255,6 @@ class AddCommonNameForm(Form):
     """
     name = DBifiedStringField('Common Name',
                               validators=[Length(1, 64), NotSpace()])
-    parent_cn = SelectField('Subcategory of', coerce=int)
     description = TextAreaField('Description', validators=[NotSpace()])
     instructions = TextAreaField('Planting Instructions',
                                  validators=[NotSpace()])
@@ -281,7 +278,6 @@ class AddCommonNameForm(Form):
         """
         super().__init__(*args, **kwargs)
         self.index = index
-        self.set_selects()
 
     def validate_name(self, field):
         """Raise `ValidationError` if `CommonName` instance already exists.
@@ -305,15 +301,6 @@ class AddCommonNameForm(Form):
                         cn.index.name,
                         url_for('seeds.edit_common_name', cn_id=cn.id))
                 ))
-
-    def set_selects(self):
-        """Populate choices for select (and select multiple) fields."""
-        self.parent_cn.choices = select_field_choices(
-            items=self.index.common_names,
-            title_attribute='name',
-            order_by='name'
-        )
-        self.parent_cn.choices.insert(0, (0, 'N/A'))
 
 
 class AddBotanicalNameForm(Form):
@@ -678,8 +665,6 @@ class EditCommonNameForm(Form):
     Attributes:
         index_id: Select field for `Index` edited `CommonName` belongs to.
         name: DBified string field for name of `CommonName`.
-        parent_id: Select field for `CommonName` edited `CommonName` is a
-            subcategory of.
         description: Text field for `CommonName` description.
         instructions Text field for planting instructions.
         synonyms_string: String field for synonyms of edited `CommonName`.
@@ -690,7 +675,6 @@ class EditCommonNameForm(Form):
                            validators=[DataRequired()])
     name = DBifiedStringField('Common Name',
                               validators=[Length(1, 64), NotSpace()])
-    parent_id = SelectField('Subcategory of', coerce=int)
     description = TextAreaField('Description', validators=[NotSpace()])
     instructions = TextAreaField('Planting Instructions',
                                  validators=[NotSpace()])
@@ -704,12 +688,6 @@ class EditCommonNameForm(Form):
     def set_selects(self):
         """Populate indexes with Indexes from the database."""
         self.index_id.choices = select_field_choices(model=Index)
-        self.parent_id.choices = select_field_choices(
-            model=CommonName,
-            title_attribute='select_field_title',
-            order_by='name'
-        )
-        self.parent_id.choices.insert(0, (0, 'N/A'))
 
     def validate_name(self, field):
         """Raise ValidationError if conflict would be created."""

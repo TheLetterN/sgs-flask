@@ -412,10 +412,6 @@ def add_common_name(idx_id=None):
         db.session.add(cn)
         messages.append('Creating new common name \'{0}\' and adding it to '
                         'index \'{1}\':'.format(cn.name, idx.name))
-        if form.parent_cn.data:
-            cn.parent = CommonName.query.get(form.parent_cn.data)
-            messages.append('\'{0}\' is a subcategory of \'{1}\''
-                            .format(cn.name, cn.parent.name))
         if form.description.data:
             cn.description = form.description.data
             messages.append('Description set to: <p>{0}</p>'
@@ -759,19 +755,6 @@ def edit_common_name(cn_id=None):
             edited = True
             cn.name = form.name.data
             messages.append('Name changed to: \'{0}\'.'.format(cn.name))
-        if form.parent_id.data == 0:
-            form.parent_id.data = None
-        if (cn.parent and form.parent_id.data != cn.parent.id or
-                form.parent_id.data and not cn.parent):
-            edited = True
-            if form.parent_id.data:
-                cn.parent = CommonName.query.get(form.parent_id.data)
-                messages.append('\'{0}\' is now a subcategory of \'{1}\'.'
-                                .format(cn.name, cn.parent.name))
-            else:
-                cn.parent = None
-                messages.append('\'{0}\' is no longer a subcategory.'
-                                .format(cn.name))
         if not form.description.data:
             form.description.data = None
         if form.description.data != cn.description:
@@ -1785,13 +1768,6 @@ def common_name(idx_slug=None, cn_slug=None):
         .filter(CommonName.slug == cn_slug, Index.slug == idx_slug)\
         .one_or_none()
     if cn is not None:
-        # Note: This redirect will likely be removed in the future.
-        if cn.parent:
-            abort(404)
-#            return redirect(url_for('seeds.common_name',
-#                                    idx_slug=cn.index.slug,
-#                                    cn_slug=cn.parent.slug,
-#                                    _anchor='subtype-' + cn.parent.slug))
         individuals = [cv for cv in cn.cultivars if not cv.category]
         count = len([cv for cv in cn.cultivars if cv.public])
         crumbs = (

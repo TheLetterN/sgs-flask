@@ -522,15 +522,10 @@ class CommonName(SynonymsMixin, db.Model):
         description: An optional HTML description for this CommonName.
         instructions: Optional planting instructions for seeds with the
             specified CommonName.
-        parent: An optional `CommonName` this is a subcategory of. For example,
-            if this `CommonName` is 'Dwarf Coleus', it would have 'Coleus' as
-            its parent.
-            Backref: `CommonName.children`
         visible: True if the specified `CommonName` is to be shown on auto-
             generated pages, False if it should only be shown on custom pages
             that explicitly include it. Default value: True.
 
-        children: Backref from `CommonName.parent`.
         botanical_names: Backref from `BotanicalName.common_names`.
         categories: Backref from `Category.common_name`.
         cultivars: Backref from `Cultivar.common_name`.
@@ -554,11 +549,6 @@ class CommonName(SynonymsMixin, db.Model):
     # Data Optional
     description = db.Column(db.Text)
     instructions = db.Column(db.Text)
-    parent_id = db.Column(db.Integer, db.ForeignKey('common_names.id'))
-    parent = db.relationship('CommonName',
-                             backref='children',
-                             foreign_keys=parent_id,
-                             remote_side=[id])
     visible = db.Column(db.Boolean, default=False)
 
     def __init__(self,
@@ -822,7 +812,7 @@ class BotanicalName(SynonymsMixin, db.Model):
         if self.synonyms:
             abbr = ('<abbr title="{0}">{1}.</abbr>'.format(self.genus,
                                                            self.genus[0]))
-            syns = [s.name for s in self.synonyms]
+            syns = [s.name.replace(self.genus, abbr) for s in self.synonyms]
             return self.name + ' syn. ' + ', syn. '.join(syns)
         else:
             return self.name

@@ -100,6 +100,7 @@ def expand_botanical_name(bn, abbreviations):
         bn = bn.replace(first, abbreviations[first])
     return bn
 
+
 def cultivar_div_to_dict(cv_div):
     cv = OrderedDict()
     cv['cultivar name'] = dbify(cv_div.h3.text.strip().split('\n')[0])
@@ -297,7 +298,7 @@ class Page(object):
                         yield div
                     else:
                         break
-            
+
         cats = self.soup.find_all(
             name='div', class_=lambda x: x and ('categor' in x.lower() or
                                                 'series' in x.lower())

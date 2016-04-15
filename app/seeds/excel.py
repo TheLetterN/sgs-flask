@@ -370,7 +370,6 @@ class CommonNamesWorksheet(SeedsWorksheet):
         else:
             titles = ('Index',
                       'Common Name',
-                      'Subcategory of',
                       'Description',
                       'Planting Instructions',
                       'Synonyms',
@@ -390,10 +389,6 @@ class CommonNamesWorksheet(SeedsWorksheet):
                   .format(cn, r), file=stream)
             self.cell(r, self.cols['Index']).value = cn.index.name
             self.cell(r, self.cols['Common Name']).value = cn.name
-            if cn.parent:
-                self.cell(
-                    r, self.cols['Subcategory of']
-                ).value = cn.parent.name
             if cn.description:
                 self.cell(
                     r, self.cols['Description']
@@ -423,7 +418,6 @@ class CommonNamesWorksheet(SeedsWorksheet):
         """
         index = dbify(self.cell(row, self.cols['Index']).value)
         name = dbify(self.cell(row, self.cols['Common Name']).value)
-        parent = dbify(self.cell(row, self.cols['Subcategory of']).value)
         description = self.cell(row, self.cols['Description']).value
         instructions = self.cell(row, self.cols['Planting Instructions']).value
         synonyms = self.cell(row, self.cols['Synonyms']).value
@@ -442,15 +436,6 @@ class CommonNamesWorksheet(SeedsWorksheet):
         if cn.created:
             edited = True
             db.session.add(cn)
-        if parent:
-            pcn = CommonName.get_or_create(name=parent,
-                                           index=index,
-                                           stream=stream)
-            if cn.parent != pcn:
-                edited = True
-                cn.parent = pcn
-                print('The CommonName \'{0}\' has been set as a subcategory '
-                      'of \'{1}\'.'.format(cn.name, pcn.name), file=stream)
         if description != cn.description:
             edited = True
             if description:

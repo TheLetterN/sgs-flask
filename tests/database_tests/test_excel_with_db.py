@@ -358,51 +358,6 @@ class TestCommonNamesWorksheet:
         msgs = messages.read()
         assert 'Changes to the CommonName \'Foxglove\' have been flush' in msgs
 
-    def test_save_row_to_db_new_with_parent_new(self, db):
-        """Create a new CommonName with a new parent CN."""
-        messages = StringIO()
-        wb = Workbook()
-        ws = wb.active
-        cnws = CommonNamesWorksheet(ws)
-        cnws.setup()
-        cn = CommonName(name='Sauce Tomato')
-        cn.index = Index(name='Vegetable')
-        cn.parent = CommonName(name='Tomato')
-        cn.parent.index = Index(name='Vegetable')
-        cnws.add_one(cn)
-        assert cnws.save_row_to_db(row=2, stream=messages)
-        cnq = CommonName.query\
-            .filter(CommonName.name == 'Sauce Tomato')\
-            .one_or_none()
-        assert cnq.parent.name == 'Tomato'
-        assert cnq.parent.index.name == 'Vegetable'
-        messages.seek(0)
-        msgs = messages.read()
-        assert ('The CommonName \'Sauce Tomato\' has been set as a '
-                'subcategory of \'Tomato\'.') in msgs
-
-    def test_save_row_to_db_new_with_existing_parent(self, db):
-        """Create a new CommonName with an existing parent from the db."""
-        messages = StringIO()
-        wb = Workbook()
-        ws = wb.active
-        cnws = CommonNamesWorksheet(ws)
-        cnws.setup()
-        cnp = CommonName(name='Tomato')
-        cnp.index = Index(name='Vegetable')
-        db.session.add(cnp)
-        db.session.commit()
-        cn = CommonName(name='Sauce Tomato')
-        cn.index = Index(name='Vegetable')
-        cn.parent = CommonName(name='Tomato')
-        cn.parent.index = Index(name='Vegetable')
-        cnws.add_one(cn)
-        assert cnws.save_row_to_db(row=2, stream=messages)
-        cnq = CommonName.query\
-            .filter(CommonName.name == 'Sauce Tomato')\
-            .one_or_none()
-        assert cnq.parent is cnp
-
     def test_save_row_to_db_new_with_desc(self, db):
         """Create a new CommonName with a description."""
         messages = StringIO()

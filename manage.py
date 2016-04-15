@@ -26,6 +26,7 @@ from flask.ext.script import Manager, Shell
 from app import create_app, db, mail, Permission
 from app.auth.models import User
 from app.seeds.excel import SeedsWorkbook
+from app.seeds.htmlgrab import Page, PageAdder
 
 app = create_app(os.getenv('SGS_CONFIG') or 'default')
 manager = Manager(app)
@@ -51,6 +52,21 @@ def create():
     admin.grant_permission(Permission.MANAGE_USERS)
     admin.confirmed = True
     db.session.commit()
+
+
+@manager.command
+def grab(url, filename):
+    """Grab a webpage and save it to a JSON file."""
+    p = Page(url)
+    p.save_json(filename)
+    print('Contents of \'{0}\' saved to: {1}'.format(url, filename))
+
+
+@manager.command
+def load_json(filename):
+    """Load a JSON file into the database."""
+    pa = PageAdder.from_json_file(filename)
+    pa.save()
 
 
 @manager.option(

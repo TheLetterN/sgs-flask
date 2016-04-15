@@ -531,7 +531,6 @@ input[type=radio] + label:after {
     float: right;
     margin-left: 1em;
     max-width: 300px;
-    max-height: 300px;
 }
 
 .cultivar h3 {

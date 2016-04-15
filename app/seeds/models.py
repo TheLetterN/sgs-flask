@@ -700,7 +700,7 @@ class CommonName(SynonymsMixin, db.Model):
                     names.append(name)
                 else:
                     genuses.append(parts[0])
-                    names.append(bn.name)
+                    names.append(bn.fullname)
             return ', '.join(names)
 
     @property
@@ -819,11 +819,11 @@ class BotanicalName(SynonymsMixin, db.Model):
     @property
     def fullname(self):
         """str: Name with synonyms."""
-        if self.synonyms_string:
+        if self.synonyms:
             abbr = ('<abbr title="{0}">{1}.</abbr>'.format(self.genus,
                                                            self.genus[0]))
-            syns = self.synonyms_string
-            return self.name + ' syn. ' + syns.replace(self.genus, abbr)
+            syns = [s.name for s in self.synonyms]
+            return self.name + ' syn. ' + ', syn. '.join(syns)
         else:
             return self.name
 
@@ -1228,7 +1228,7 @@ class Cultivar(SynonymsMixin, db.Model):
 
     def generate_slug(self):
         """Generate a string for use in URLs for pages that use `Cultivar`."""
-        return slugify(self.name)
+        return slugify(self.name) if self.name else None
 
 
 @event.listens_for(Cultivar, 'before_insert')

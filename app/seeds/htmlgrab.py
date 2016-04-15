@@ -90,15 +90,107 @@ def expand_botanical_name(bn, abbreviations):
     Returns:
         str: The expanded botanical name.
     """
-    parts = bn.split(' ')
-    genus = parts[0]
-    if len(genus) > 2:
-        abbr = genus[0] + '.'
+    parts = bn.replace('syn. ', '').split(' ')
+    first = parts[0]
+    if len(first) > 2:
+        abbr = first[0] + '.'
         if abbr not in abbreviations:
-            abbreviations[abbr] = genus
-    elif genus in abbreviations:
-        bn = ' '.join([abbreviations[genus]] + parts[1:])
+            abbreviations[abbr] = first
+    elif first in abbreviations:
+        bn = bn.replace(first, abbreviations[first])
     return bn
+
+def cultivar_div_to_dict(cv_div):
+    cv = OrderedDict()
+    cv['cultivar name'] = dbify(cv_div.h3.text.strip().split('\n')[0])
+    thumb = cv_div.img['src']
+    if thumb[0] == '/':  # Damn you, relative paths!
+        thumb = 'http://www.swallowtailgardenseeds.com' + thumb
+    elif 'http' not in thumb:
+        thumb = 'http://www.swallowtailgardenseeds.com/' + thumb
+    cv['thumbnail'] = thumb
+    ems = cv_div.h3.find_all('em')
+    botanical_name = None
+    veg_data = None
+    ems.pop(0)  # First em = common name, which isn't needed here.
+    for em in ems:
+        emt = em.text.strip()
+        if 'days' in emt or '(OP)' in emt:
+            veg_data = em.text.strip()
+        else:
+            botanical_name = em.text.strip()
+    if botanical_name:
+        if 'syn.' in botanical_name:
+            # Remove synonym(s) if present because it could otherwise
+            # Cause weird duplicates in db. Hopefully the bn and its
+            # synonym are in `self.common_name`, otherwise the synonym
+            # will have to be manually added later.
+            bn_parts = botanical_name.split(' syn. ')
+            bn = bn_parts[0].replace(',', '').strip()
+        else:
+            bn = botanical_name
+        cv['botanical name'] = bn
+    if veg_data:
+        if '(OP)' in veg_data:
+            cv['open pollinated'] = True
+        dtm = veg_data.replace('(OP)', '').replace('days', '').strip()
+        if dtm:
+            cv['days to maturity'] = dtm
+    ps = cv_div.h3.find_next_siblings('p')
+    if ps:
+        desc = merge_p(ps)
+        cv['description'] = desc.strip()
+    pkt_tds = cv_div.find_all('td')
+    pkt_str = pkt_tds[0].text
+    cv['packet'] = str_to_packet(pkt_str)
+    cv['packet']['sku'] = cv_div.small.text.strip()
+    cv['packet'].move_to_end('sku', last=False)
+    if len(pkt_tds) == 2:  # Should indicate presence of jumbo packet.
+        cv['jumbo'] = str_to_packet(pkt_tds[1].text)
+        cv['jumbo']['sku'] = cv_div.small.text + 'J'
+    return cv
+
+
+def str_to_packet(pkt_str):
+    """Split a string of packet data into price, quantity, and units.
+
+    Note:
+        Packet strings are in the format:
+
+        '<quantity> <units> - <price>'
+
+        e.g.:
+
+        '100 seeds - $1.99'
+
+    Returns:
+        dict: The price, quantity, and units of the packet.
+    """
+    if '-' in pkt_str:
+        parts = pkt_str.strip().split(' - ')
+    else:
+        bits = pkt_str.strip().split(' ')
+        pr = bits.pop()
+        parts = [' '.join(bits), pr]
+    qty_and_units = parts[0]
+    raw_price = parts[1]
+    price = raw_price.strip('$')
+    qau_parts = qty_and_units.split(' ')
+    qty_parts = []
+    units_parts = []
+    for part in qau_parts:
+        # Replace '-' to handle hyphenated units like 'multi-pelleted seeds'
+        if part.replace('-', '').isalpha():
+            units_parts.append(part)
+        else:
+            qty_parts.append(part)
+    qty = ' '.join(qty_parts).replace(',', '')
+    units = ' '.join(units_parts).lower()
+    pkt = OrderedDict()
+    pkt['price'] = price
+    pkt['quantity'] = qty
+    pkt['units'] = units
+    return pkt
 
 
 class Page(object):
@@ -156,11 +248,15 @@ class Page(object):
                 abbreviations = dict()
                 for bn in bns:
                     bn = expand_botanical_name(bn, abbreviations)
-                    if ' syn. ' in bn:
-                        # Un-abbreviate synonyms so we don't have to later.
-                        for key in abbreviations:
-                            bn = bn.replace(key, abbreviations[key])
-                    botanical_names.append(bn)
+                    if bn[:4] == 'syn.':
+                        botanical_names[-1] = botanical_names[-1] + ' ' + bn
+                    else:
+                        if ' syn. ' in bn:
+                            # Un-abbreviate synonyms so we don't have to later.
+                            for key in abbreviations:
+                                bn = bn.replace(key, abbreviations[key])
+                        # Do not append if it was a synonym.
+                        botanical_names.append(bn)
             cn['botanical names'] = botanical_names
         desc_divs = self.soup.find_all(class_='intro')
         if desc_divs:
@@ -179,96 +275,68 @@ class Page(object):
 
     @property
     def categories(self):
-        """list: A list of `OrderedDict` objects with `Category` data."""
-        # TODO: Make this inclusive, not just series.
-        cats_raw = self.soup.find_all(id=lambda x: x and 'series' in x.lower())
-        # Some series headers are in divs, some just have h2s, but the
-        # pattern <h2>series</h2><p>description</p> holds in both cases.
-        cats = [cat.h2 if cat.h2 else cat for cat in cats_raw]
-        category = []
+        """Get a list of categories and their data in `OrderedDict`s.
+
+        This includes the cultivars belonging to the category.
+
+        Returns:
+            list: List of `OrderedDict` containing `Category` data.
+        """
+        def cultivar_divs(cat):
+            """Generate divs containing `Cultivar` data for `cat`.
+
+            Args:
+                cat: The category div to find related cultivars for.
+
+            Yields:
+                div: A div containing cultivar data.
+            """
+            for div in cat.find_next_siblings(name='div'):
+                if 'class' in div.attrs:
+                    if 'cultivar' in [c.lower() for c in div['class']]:
+                        yield div
+                    else:
+                        break
+            
+        cats = self.soup.find_all(
+            name='div', class_=lambda x: x and ('categor' in x.lower() or
+                                                'series' in x.lower())
+        )
+        categories = []
         for cat in cats:
             catd = OrderedDict()
-            catd['category name'] = dbify(
-                cat.find(text=True, recursive=False).lower()
-            )
-            ps = cat.find_next_siblings('p')
+            catd['category name'] = dbify(cat.text.strip().split('\n')[0])
+            ps = cat.find_all('p')
             if ps:
                 catd['description'] = merge_p(ps)
-            category.append(catd)
-        return category
+            cvds = cultivar_divs(cat)
+            if cvds:
+                catd['cultivars'] = [cultivar_div_to_dict(cvd) for cvd in cvds]
+            categories.append(catd)
+        return categories
 
     @property
-    def cultivars(self):
-        """list: A list of `OrderedDict` objects with `Cultivar` data."""
-        cv_divs = self.soup.find_all(name='div', class_='cultivar')
-        cultivars = []
-        for cv_div in cv_divs:
-            cv = OrderedDict()
-            cv['cultivar name'] = dbify(cv_div.h3.find(text=True,
-                                                       recursive=False))
-            thumb = cv_div.img['src']
-            if thumb[0] == '/':  # Damn you, relative paths!
-                thumb = 'http://www.swallowtailgardenseeds.com' + thumb
-            elif 'http' not in thumb:
-                thumb = 'http://www.swallowtailgardenseeds.com/' + thumb
-            cv['thumbnail'] = thumb
-            ems = cv_div.h3.find_all('em')
-            botanical_name = None
-            veg_data = None
-            ems.pop(0)  # First em = common name, which isn't needed here.
-            for em in ems:
-                emt = em.text.strip()
-                if 'days' in emt or '(OP)' in emt:
-                    veg_data = em.text.strip()
-                else:
-                    botanical_name = em.text.strip()
-            if botanical_name:
-                if 'syn.' in botanical_name:
-                    # Remove synonym(s) if present because it could otherwise
-                    # Cause weird duplicates in db. Hopefully the bn and its
-                    # synonym are in `self.common_name`, otherwise the synonym
-                    # will have to be manually added later.
-                    bn_parts = botanical_name.split(' syn. ')
-                    bn = bn_parts[0].replace(',', '').strip()
-                else:
-                    bn = botanical_name
-                cv['botanical name'] = bn
-            if veg_data:
-                if '(OP)' in veg_data:
-                    cv['open pollinated'] = True
-                dtm = veg_data.replace('(OP)', '').replace('days', '').strip()
-                if dtm:
-                    cv['days to maturity'] = dtm
-            ps = cv_div.h3.find_next_siblings('p')
-            if ps:
-                desc = merge_p(ps)
-                cv['description'] = desc.strip()
-            pkt_tds = cv_div.find_all('td')
-            cv['packet'] = self._str_to_packet(pkt_tds[0].text)
-            cv['packet']['sku'] = cv_div.small.text
-            cv['packet'].move_to_end('sku', last=False)
-            if len(pkt_tds) == 2:  # Should indicate presence of jumbo packet.
-                cv['jumbo'] = self._str_to_packet(pkt_tds[1].text)
-                cv['jumbo']['sku'] = cv_div.small.text + 'J'
-            cultivars.append(cv)
-        return cultivars
+    def individual_cultivars(self):
+        """Return a list of `OrderedDict` of `Cultivar` not in a `Category`."""
+        if self.categories:
+            for cat in self.categories:
+                if 'individual' in cat['category name'].lower():
+                    return cat['cultivars']
+            return []
+        else:
+            cv_divs = self.soup.find_all(name='div', class_='cultivar')
+            return [cultivar_div_to_dict(cvd) for cvd in cv_divs]
 
     @property
     def tree(self):
         """OrderedDict: A tree of all data with `common_name` as the root."""
         cn = self.common_name
-        cn['categories'] = self.categories
-        cvs = self.cultivars
-        for cat in cn['categories']:
-            cat_name = cat['category name'].lower().replace('hybrid', '')
-            cat_name = cat_name.replace('series', '').strip()
-            for cv in list(cvs):
-                if cat_name in cv['cultivar name'].lower():
-                    if 'cultivars' not in cat:
-                        cat['cultivars'] = [cvs.pop(cvs.index(cv))]
-                    else:
-                        cat['cultivars'].append(cvs.pop(cvs.index(cv)))
-        cn['cultivars'] = cvs
+        cats = self.categories
+        for cat in list(cats):
+            if 'individual' in cat['category name'].lower():
+                cats.remove(cat)
+        cn['categories'] = cats
+        cn['cultivars'] = self.individual_cultivars
         return cn
 
     @property
@@ -504,6 +572,7 @@ class PageAdder(object):
             cn.instructions = cn_inst
             print('Planting instructions for \'{0}\' set to: {1}'
                   .format(cn.name, cn.instructions), file=stream)
+        # TODO: Handle whether or not cn is visible.
 
         if 'botanical names' in self.tree:
             bn_names = self.tree['botanical names']

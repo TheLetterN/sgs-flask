@@ -14,6 +14,7 @@ from app.seeds.models import (
     Index,
     Cultivar,
     Packet,
+    paragraphize,
     Quantity,
     Synonym,
     SynonymsMixin,
@@ -32,6 +33,14 @@ class TestModuleFunctions:
         assert dbify('tears for fears') == 'Tears for Fears'
         assert dbify('ashes to ashes') == 'Ashes to Ashes'
         assert dbify('CRUISE CONTROL FOR COOL') == 'Cruise Control for Cool'
+
+    def test_paragraphize(self):
+        """Add <p> tags to a block of text if they're not there."""
+        assert paragraphize('some text') == '<p>some text</p>'
+        assert paragraphize('<p>some text</p>') == '<p>some text</p>'
+        assert paragraphize(
+            '<p class="genuine">Alec Guinness</p>'
+        ) == '<p class="genuine">Alec Guinness</p>'
 
 
 class TestSynonymsMixin:
@@ -162,6 +171,18 @@ class TestIndex:
         index.name = 'Annual Flower'
         assert index.plural == 'Annual Flowers'
 
+    def test_generate_slug_with_name(self):
+        """Return a slugified version of the plural of name if name exists."""
+        idx = Index(name='Finger')
+        assert idx.generate_slug() == 'fingers'
+
+    def test_generate_slug_no_name(self):
+        """Return None if Index has no name."""
+        idx = Index()
+        assert idx.generate_slug() is None
+
+    # TODO: Test save_to_json_file
+
 
 class TestCommonName:
     """Test methods of CommonName in the seeds model."""
@@ -169,12 +190,6 @@ class TestCommonName:
         """Return string formatted <CommonName '<name>'>"""
         cn = CommonName(name='Coleus')
         assert cn.__repr__() == '<CommonName \'Coleus\'>'
-
-    def test_header(self):
-        """Return '<._name> Seeds'."""
-        cn = CommonName()
-        cn.name = 'Foxglove'
-        assert cn.header == 'Foxglove Seeds'
 
     def test_queryable_dict(self):
         """Return a dict containing the name and index of a CommonName."""
@@ -192,6 +207,34 @@ class TestCommonName:
         CommonName.from_queryable_dict(d={'Common Name': 'Foxglove',
                                           'Index': 'Perennial'})
         m_fqv.assert_called_with(name='Foxglove', index='Perennial')
+
+    def test_arranged_name_with_comma(self):
+        """Re-arrange name if a comma is in it."""
+        cn1 = CommonName(name='Nelson, Extremely Full')
+        assert cn1.arranged_name == 'Extremely Full Nelson'
+        cn2 = CommonName(name='Dead Dove, Do Not Eat')
+        assert cn2.arranged_name == 'Do Not Eat Dead Dove'
+
+    def test_arranged_name_no_comma(self):
+        """Return normal name if no comma is in it."""
+        cn = CommonName(name='John Smith')
+        assert cn.arranged_name == 'John Smith'
+
+    def test_arranged_name_multiple_commas(self):
+        """Don't mess with it if it's got more than one comma."""
+        cn = CommonName(name='Lies, Damned Lies, and Statistics')
+        assert cn.arranged_name == 'Lies, Damned Lies, and Statistics'
+
+    def test_header(self):
+        """Return '<arranged_name> Seeds'."""
+        cn = CommonName()
+        cn.name = 'Foxglove'
+        assert cn.header == 'Foxglove Seeds'
+
+    def test_select_field_title(self):
+        """Return '<name> (<index name>)'"""
+        cn = CommonName(name='Foxglove', index=Index(name='Perennial'))
+        assert cn.select_field_title == 'Foxglove (Perennial)'
 
 
 class TestBotanicalName:

@@ -84,57 +84,10 @@ from slugify import slugify
 from titlecase import titlecase
 from sqlalchemy import event, inspect
 from sqlalchemy.ext.hybrid import Comparator, hybrid_property
-from sqlalchemy.orm.mapper import Mapper
 from sqlalchemy.sql.expression import and_
 from flask_sqlalchemy import SignallingSession
 
 from app import db
-
-
-# Session Info Handling
-@event.listens_for(Mapper, 'after_configured', once=True)
-def intitialize_session_info():
-    """Set up `db.session.info`
-
-    This way we ensure that keys in `db.session.info` will (hopefully) exist
-    before any attempt is made to access them.
-
-    This is done here because `db.session` has not been initialized until after
-    this file has been parsed, so attempting to use `db.session` in the global
-    namespace of this module will result in a `RuntimeError`.
-    """
-    db.session.info['pending_commit'] = False
-
-
-@event.listens_for(SignallingSession, 'after_flush')
-def set_pending_commit_after_flush(session, flush_context):
-    """Set pending_commit to True if session flushed with changes.
-
-    This way we know changes have been made, but still need to be committed.
-    This takes a lot of the hassle out of figuring out whether or not changes
-    have been made during editing, as any changes can be flushed once made, and
-    we know from pending_commit whether or not changes have been made.
-    """
-    if session.new or session.dirty or session.deleted:
-        session.info['pending_commit'] = True
-
-
-@event.listens_for(SignallingSession, 'after_commit')
-def set_pending_commit_after_commit(session):
-    """Set pending_commit to False after commit.
-
-    Obviously, the session isn't pending commit once it's been committed.
-    """
-    session.info['pending_commit'] = False
-
-
-@event.listens_for(SignallingSession, 'after_rollback')
-def set_pending_commit_after_rollback(session):
-    """Set pending_commit to False after rollback.
-
-    If the session has been rolled back, there are no changes to commit.
-    """
-    session.info['pending_commit'] = False
 
 
 # Association Tables
@@ -210,18 +163,18 @@ def paragraphize(text):
         return text
 
 
-def row_exists(row, value):
+def row_exists(col, value):
     """Check to see if a given row exists in a table.
 
     Args:
-        row: The row to check, in the form of a db Model attribute, e.g.
+        col: The column to check, in the form of a db Model attribute, e.g.
             `Index.name` or `Packet.sku`.
         value: The value of the row to check for.
 
     Returns:
         bool: True if row exists, False if not.
     """
-    return db.session.query(db.exists().where(row == value)).scalar()
+    return db.session.query(db.exists().where(col == value)).scalar()
 
 
 # Helper Classes
@@ -641,8 +594,8 @@ class CommonName(SynonymsMixin, db.Model):
             Bean, Pole = Pole Bean
         """
         if self.name:
-            if ', ' in self.name:
-                parts = self.name.split(', ')
+            parts = self.name.split(', ')
+            if len(parts) == 2:
                 parts.append(parts.pop(0))
                 return ' '.join(parts)
             else:

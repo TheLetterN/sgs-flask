@@ -6,8 +6,20 @@ from app.seeds.models import (
     Cultivar,
     Index,
     Packet,
-    Quantity
+    Quantity,
+    row_exists
 )
+
+
+class TestModuleLevelFunctionsWithDB:
+    """Test module-level functions."""
+    def test_row_exists(self, db):
+        """True if row exists in db, False if not."""
+        idx = Index(name='Finger')
+        db.session.add(idx)
+        db.session.commit()
+        assert row_exists(Index.name, 'Finger')
+        assert not row_exists(Index.name, 'Toe')
 
 
 class TestIndexRelatedEventHandlers:
@@ -80,6 +92,23 @@ class TestIndexRelatedEventHandlers:
         assert not m_stjf.called
 
 
+class TestIndexWithDB:
+    """Test methods of `Index` which use the db."""
+    def test_get_or_create_get(self, db):
+        """Load Index if it exists."""
+        idx = Index(name='Finger')
+        db.session.add(idx)
+        db.session.commit()
+        assert Index.get_or_create(name='Finger') is idx
+        assert not idx.created
+
+    def test_get_or_create_create(self, db):
+        """Create Index if it does not exist."""
+        idx = Index.get_or_create(name='Finger')
+        assert not row_exists(Index.name, 'Finger')
+        assert idx.created
+
+
 class TestCommonNameWithDB:
     """Test methods of CommonName which use the database."""
     def test_from_queryable_values(self, db):
@@ -88,6 +117,28 @@ class TestCommonNameWithDB:
         db.session.commit()
         assert CommonName.from_queryable_values(name='Butterfly Weed',
                                                 index='Annual') is cn
+
+    def test_get_or_create_get(self, db):
+        cn = CommonName(name='Foxglove', index=Index(name='Perennial'))
+        db.session.add(cn)
+        db.session.commit()
+        assert CommonName.get_or_create(name='Foxglove',
+                                        index='Perennial') is cn
+        assert not cn.created
+
+    def test_get_or_create_create_with_existing_index(self, db):
+        idx = Index(name='Perennial')
+        db.session.add(idx)
+        db.session.commit()
+        cn = CommonName.get_or_create(name='Foxglove', index='Perennial')
+        assert cn.created
+        assert cn.index is idx
+        assert not idx.created
+
+    def test_get_or_create_create_all(self, db):
+        cn = CommonName.get_or_create(name='Foxglove', index='Perennial')
+        assert cn.created
+        assert cn.index.created
 
 
 class TestCommonNameRelatedEventHandlers:

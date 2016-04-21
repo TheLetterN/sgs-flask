@@ -13,11 +13,11 @@ from app.seeds.excel import (
     PacketsWorksheet,
     SeedsWorkbook,
     SeedsWorksheet,
-    CategoriesWorksheet
+    SectionsWorksheet
 )
 from app.seeds.models import (
     BotanicalName,
-    Category,
+    Section,
     CommonName,
     Cultivar,
     Image,
@@ -50,7 +50,7 @@ class TestExcelFunctions:
         gwcv2 = Cultivar(name='Petra')
         gwcv2.common_name = CommonName(name='Foxglove')
         gwcv2.common_name.index = Index(name='Perennial')
-        gwcv2.category = Category(name='Polkadot')
+        gwcv2.section = Section(name='Polkadot')
         assert queryable_dicts_to_json([gwcv1, gwcv2]) == \
             json.dumps((gwcv1.queryable_dict, gwcv2.queryable_dict))
 
@@ -527,57 +527,57 @@ class TestBotanicalNamesWorksheet:
             bnws.add_one(CommonName(name='Spurious'))
 
 
-class TestCategoriesWorksheet:
-    """Test methods of the CategoriesWorksheet container class."""
-    @mock.patch('app.seeds.excel.CategoriesWorksheet._setup')
+class TestSectionsWorksheet:
+    """Test methods of the SectionsWorksheet container class."""
+    @mock.patch('app.seeds.excel.SectionsWorksheet._setup')
     def test_setup_new(self, m_s):
-        """Run _setup with the titles for the Category worksheet."""
+        """Run _setup with the titles for the Section worksheet."""
         wb = Workbook()
         ws = wb.active
-        srws = CategoriesWorksheet(ws)
+        srws = SectionsWorksheet(ws)
         srws.setup()
-        titles = ('Common Name (JSON)', 'Category', 'Description')
+        titles = ('Common Name (JSON)', 'Section', 'Description')
         m_s.assert_called_with(titles)
 
-    @mock.patch('app.seeds.excel.CategoriesWorksheet._setup')
+    @mock.patch('app.seeds.excel.SectionsWorksheet._setup')
     def test_setup_existing(self, m_s):
         """Run _setup with no arguments if titles apready present."""
         wb = Workbook()
         ws = wb.active
         sws = SeedsWorksheet(ws)
         sws.set_column_titles(('One', 'Two', 'Three'))
-        srws = CategoriesWorksheet(sws._ws)
+        srws = SectionsWorksheet(sws._ws)
         srws.setup()
         assert m_s.call_args_list == [mock.call()]
 
     def test_add_one_no_optionals(self):
-        """Add a Category object to the Category worksheet."""
+        """Add a Section object to the Section worksheet."""
         messages = StringIO()
         wb = Workbook()
         ws = wb.active
-        srws = CategoriesWorksheet(ws)
+        srws = SectionsWorksheet(ws)
         srws.setup()
-        sr = Category(name='Polkadot')
+        sr = Section(name='Polkadot')
         sr.common_name = CommonName(name='Foxglove')
         sr.common_name.index = Index(name='Perennial')
         srws.add_one(sr, stream=messages)
         assert srws.cell(
             2, srws.cols['Common Name (JSON)']
         ).value == json.dumps(sr.common_name.queryable_dict)
-        assert srws.cell(2, srws.cols['Category']).value == 'Polkadot'
+        assert srws.cell(2, srws.cols['Section']).value == 'Polkadot'
         assert srws.cell(2, srws.cols['Description']).value is None
         messages.seek(0)
         msgs = messages.read()
-        assert ('Adding data from <Category \'Polkadot Foxglove\'> to row #2 '
-                'of categories worksheet') in msgs
+        assert ('Adding data from <Section \'Polkadot Foxglove\'> to row #2 '
+                'of sections worksheet') in msgs
 
     def test_add_one_with_description(self):
-        """Set Description column's cell with Category desc."""
+        """Set Description column's cell with Section desc."""
         wb = Workbook()
         ws = wb.active
-        srws = CategoriesWorksheet(ws)
+        srws = SectionsWorksheet(ws)
         srws.setup()
-        sr = Category(name='Polkadot', description='A bit spotty.')
+        sr = Section(name='Polkadot', description='A bit spotty.')
         sr.common_name = CommonName(name='Foxglove')
         sr.common_name.index = Index(name='Perennial')
         srws.add_one(sr)
@@ -585,11 +585,11 @@ class TestCategoriesWorksheet:
             2, srws.cols['Description']
         ).value == '<p>A bit spotty.</p>'
 
-    def test_add_one_not_category(self):
-        """Raise a TypeError if passed argument is not a Category object."""
+    def test_add_one_not_section(self):
+        """Raise a TypeError if passed argument is not a Section object."""
         wb = Workbook()
         ws = wb.active
-        srws = CategoriesWorksheet(ws)
+        srws = SectionsWorksheet(ws)
         srws.setup()
         with pytest.raises(TypeError):
             srws.add_one(42)
@@ -609,7 +609,7 @@ class TestCultivarsWorksheet:
         titles = ('Index',
                   'Common Name',
                   'Cultivar Name',
-                  'Category',
+                  'Section',
                   'Botanical Name',
                   'Thumbnail Filename',
                   'Description',
@@ -645,7 +645,7 @@ class TestCultivarsWorksheet:
         assert cvws.cell(2, cvws.cols['Index']).value == 'Perennial'
         assert cvws.cell(2, cvws.cols['Common Name']).value == 'Foxglove'
         assert cvws.cell(2, cvws.cols['Cultivar Name']).value == 'Foxy'
-        assert cvws.cell(2, cvws.cols['Category']).value is None
+        assert cvws.cell(2, cvws.cols['Section']).value is None
         assert cvws.cell(2, cvws.cols['Botanical Name']).value is None
         assert cvws.cell(2, cvws.cols['Thumbnail Filename']).value is None
         assert cvws.cell(2, cvws.cols['Description']).value is None
@@ -658,8 +658,8 @@ class TestCultivarsWorksheet:
         assert ('Adding data from <Cultivar \'Foxy Foxglove\'> to row #2 of '
                 'cultivars worksheet.') in msgs
 
-    def test_add_one_with_category(self):
-        """Add a Cultivar with Category to worksheet."""
+    def test_add_one_with_section(self):
+        """Add a Cultivar with Section to worksheet."""
         wb = Workbook()
         ws = wb.active
         cvws = CultivarsWorksheet(ws)
@@ -667,9 +667,9 @@ class TestCultivarsWorksheet:
         cv = Cultivar(name='Petra')
         cv.common_name = CommonName(name='Foxglove')
         cv.common_name.index = Index(name='Perennial')
-        cv.category = Category(name='Polkadot')
+        cv.section = Section(name='Polkadot')
         cvws.add_one(cv)
-        assert cvws.cell(2, cvws.cols['Category']).value == 'Polkadot'
+        assert cvws.cell(2, cvws.cols['Section']).value == 'Polkadot'
 
     def test_add_one_with_botanical_name(self):
         """Add a Cultivar with a Botanical Name to worksheet."""
@@ -793,7 +793,7 @@ class TestCultivarsWorksheet:
         with pytest.raises(TypeError):
             cvws.add_one(42)
         with pytest.raises(TypeError):
-            cvws.add_one(Category(name='Spurious'))
+            cvws.add_one(Section(name='Spurious'))
 
 
 class TestPacketsWorksheet:
@@ -881,7 +881,7 @@ class TestSeedsWorkbook:
     @mock.patch('app.seeds.excel.IndexesWorksheet.setup')
     @mock.patch('app.seeds.excel.CommonNamesWorksheet.setup')
     @mock.patch('app.seeds.excel.BotanicalNamesWorksheet.setup')
-    @mock.patch('app.seeds.excel.CategoriesWorksheet.setup')
+    @mock.patch('app.seeds.excel.SectionsWorksheet.setup')
     @mock.patch('app.seeds.excel.CultivarsWorksheet.setup')
     @mock.patch('app.seeds.excel.PacketsWorksheet.setup')
     def test_create_all_sheets(self,
@@ -903,7 +903,7 @@ class TestSeedsWorkbook:
         assert m_cn.called
         assert swb.botanical_names._ws is swb._wb['Botanical Names']
         assert m_bn.called
-        assert swb.category._ws is swb._wb['Category']
+        assert swb.section._ws is swb._wb['Section']
         assert m_sr.called
         assert swb.cultivars._ws is swb._wb['Cultivars']
         assert m_cv.called
@@ -913,7 +913,7 @@ class TestSeedsWorkbook:
     @mock.patch('app.seeds.excel.IndexesWorksheet.setup')
     @mock.patch('app.seeds.excel.CommonNamesWorksheet.setup')
     @mock.patch('app.seeds.excel.BotanicalNamesWorksheet.setup')
-    @mock.patch('app.seeds.excel.CategoriesWorksheet.setup')
+    @mock.patch('app.seeds.excel.SectionsWorksheet.setup')
     @mock.patch('app.seeds.excel.CultivarsWorksheet.setup')
     @mock.patch('app.seeds.excel.PacketsWorksheet.setup')
     def test_load_all_sheets_from_workbook(self,
@@ -932,7 +932,7 @@ class TestSeedsWorkbook:
         assert m_cn.called
         assert swb.botanical_names._ws is swb._wb['Botanical Names']
         assert m_bn.called
-        assert swb.category._ws is swb._wb['Category']
+        assert swb.section._ws is swb._wb['Section']
         assert m_sr.called
         assert swb.cultivars._ws is swb._wb['Cultivars']
         assert m_cv.called
@@ -943,7 +943,7 @@ class TestSeedsWorkbook:
     @mock.patch('app.seeds.excel.Index.query')
     @mock.patch('app.seeds.excel.CommonName.query')
     @mock.patch('app.seeds.excel.BotanicalName.query')
-    @mock.patch('app.seeds.excel.Category.query')
+    @mock.patch('app.seeds.excel.Section.query')
     @mock.patch('app.seeds.excel.Cultivar.query')
     @mock.patch('app.seeds.excel.Packet.query')
     def test_add_all_data_to_sheets(self,
@@ -968,7 +968,7 @@ class TestSeedsWorkbook:
     @mock.patch('app.seeds.excel.IndexesWorksheet.save_to_db')
     @mock.patch('app.seeds.excel.CommonNamesWorksheet.save_to_db')
     @mock.patch('app.seeds.excel.BotanicalNamesWorksheet.save_to_db')
-    @mock.patch('app.seeds.excel.CategoriesWorksheet.save_to_db')
+    @mock.patch('app.seeds.excel.SectionsWorksheet.save_to_db')
     @mock.patch('app.seeds.excel.CultivarsWorksheet.save_to_db')
     @mock.patch('app.seeds.excel.PacketsWorksheet.save_to_db')
     def test_save_all_sheets_to_db(self,

@@ -5,7 +5,7 @@ from unittest import mock
 from openpyxl import Workbook
 from app.seeds.excel import (
     BotanicalNamesWorksheet,
-    CategoriesWorksheet,
+    SectionsWorksheet,
     CommonNamesWorksheet,
     CultivarsWorksheet,
     IndexesWorksheet,
@@ -14,7 +14,7 @@ from app.seeds.excel import (
 )
 from app.seeds.models import (
     BotanicalName,
-    Category,
+    Section,
     CommonName,
     Cultivar,
     Image,
@@ -134,7 +134,7 @@ class TestExcelWithDB:
 #        assert cv.series.common_name is cv.common_name
 #        messages.seek(0)
 #        msgs = messages.read()
-#        assert 'The Category \'Polkadot\' does not yet exist' in msgs
+#        assert 'The Section \'Polkadot\' does not yet exist' in msgs
 #
 #    def test_get_or_create_cultivar_exists_no_series(self, db):
 #        """Return existing Cultivar instead of new one."""
@@ -159,7 +159,7 @@ class TestExcelWithDB:
 #        cv = Cultivar(name='Petra')
 #        cv.common_name = CommonName(name='Foxglove')
 #        cv.common_name.index = Index(name='Perennial')
-#        cv.series = Category(name='Polkadot')
+#        cv.series = Section(name='Polkadot')
 #        cv.series.common_name = cv.common_name
 #        db.session.add(cv)
 #        db.session.commit()
@@ -856,120 +856,120 @@ class TestBotanicalNamesWorksheetWithDB:
                 'purpurea\'.') in msgs
 
 
-class TestCategoriesWorksheetWithDB:
-    """Test methods of the CategoriesWorksheet that use the database."""
+class TestSectionsWorksheetWithDB:
+    """Test methods of the SectionsWorksheet that use the database."""
     @mock.patch('app.seeds.excel.db.session.flush')
     def test_save_row_to_db_no_changes(self, m_f, db):
         """If it ain't broke don't fix it."""
         messages = StringIO()
         wb = Workbook()
         ws = wb.active
-        catws = CategoriesWorksheet(ws)
-        catws.setup()
-        cat = Category(name='Polkadot')
-        cat.common_name = CommonName(name='Foxglove')
-        cat.common_name.index = Index(name='Perennial')
-        db.session.add(cat)
+        secws = SectionsWorksheet(ws)
+        secws.setup()
+        sec = Section(name='Polkadot')
+        sec.common_name = CommonName(name='Foxglove')
+        sec.common_name.index = Index(name='Perennial')
+        db.session.add(sec)
         db.session.commit()
-        cat2 = Category(name='Polkadot')
-        cat2.common_name = CommonName(name='Foxglove')
-        cat2.common_name.index = Index(name='Perennial')
-        catws.add_one(cat2)
-        assert not catws.save_row_to_db(2, stream=messages)
+        sec2 = Section(name='Polkadot')
+        sec2.common_name = CommonName(name='Foxglove')
+        sec2.common_name.index = Index(name='Perennial')
+        secws.add_one(sec2)
+        assert not secws.save_row_to_db(2, stream=messages)
         assert not m_f.called
         messages.seek(0)
         msgs = messages.read()
-        assert 'No changes were made to the Category \'Polkadot\'.' in msgs
+        assert 'No changes were made to the Section \'Polkadot\'.' in msgs
 
     def test_save_row_to_db_new_no_desc(self, db):
-        """Save new Category to database."""
+        """Save new Section to database."""
         messages = StringIO()
         wb = Workbook()
         ws = wb.active
-        catws = CategoriesWorksheet(ws)
-        catws.setup()
-        cat = Category(name='Polkadot')
-        cat.common_name = CommonName(name='Foxglove')
-        cat.common_name.index = Index(name='Perennial')
-        catws.add_one(cat)
-        assert catws.save_row_to_db(2, stream=messages)
-        catq = Category.query.filter(Category.name == 'Polkadot').one_or_none()
-        assert catq.name == 'Polkadot'
-        assert catq.common_name.name == 'Foxglove'
-        assert catq.common_name.index.name == 'Perennial'
+        secws = SectionsWorksheet(ws)
+        secws.setup()
+        sec = Section(name='Polkadot')
+        sec.common_name = CommonName(name='Foxglove')
+        sec.common_name.index = Index(name='Perennial')
+        secws.add_one(sec)
+        assert secws.save_row_to_db(2, stream=messages)
+        secq = Section.query.filter(Section.name == 'Polkadot').one_or_none()
+        assert secq.name == 'Polkadot'
+        assert secq.common_name.name == 'Foxglove'
+        assert secq.common_name.index.name == 'Perennial'
         messages.seek(0)
         msgs = messages.read()
         print(msgs)
-        assert ('The Category \'Polkadot\' does not yet exist in the '
+        assert ('The Section \'Polkadot\' does not yet exist in the '
                 'database, so it has been created.') in msgs
 
     def test_save_row_to_db_new_with_desc(self, db):
-        """Save a new Category with a description to database."""
+        """Save a new Section with a description to database."""
         messages = StringIO()
         wb = Workbook()
         ws = wb.active
-        catws = CategoriesWorksheet(ws)
-        catws.setup()
-        cat = Category(name='Polkadot', description='A bit spotty.')
-        cat.common_name = CommonName(name='Foxglove')
-        cat.common_name.index = Index(name='Perennial')
-        catws.add_one(cat)
-        assert catws.save_row_to_db(2, stream=messages)
-        catq = Category.query.filter(Category.name == 'Polkadot').one_or_none()
-        assert catq.description == '<p>A bit spotty.</p>'
+        secws = SectionsWorksheet(ws)
+        secws.setup()
+        sec = Section(name='Polkadot', description='A bit spotty.')
+        sec.common_name = CommonName(name='Foxglove')
+        sec.common_name.index = Index(name='Perennial')
+        secws.add_one(sec)
+        assert secws.save_row_to_db(2, stream=messages)
+        secq = Section.query.filter(Section.name == 'Polkadot').one_or_none()
+        assert secq.description == '<p>A bit spotty.</p>'
         messages.seek(0)
         msgs = messages.read()
-        assert ('Description for the Category \'Polkadot\' set to: <p>A bit '
+        assert ('Description for the Section \'Polkadot\' set to: <p>A bit '
                 'spotty.</p>') in msgs
 
     def test_save_row_to_db_existing_change_desc(self, db):
-        """Change the description of an existing Category."""
+        """Change the description of an existing Section."""
         messages = StringIO()
         wb = Workbook()
         ws = wb.active
-        catws = CategoriesWorksheet(ws)
-        catws.setup()
-        cat = Category(name='Polkadot', description='A bit spotty.')
-        cat.common_name = CommonName(name='Foxglove')
-        cat.common_name.index = Index(name='Perennial')
-        db.session.add(cat)
+        secws = SectionsWorksheet(ws)
+        secws.setup()
+        sec = Section(name='Polkadot', description='A bit spotty.')
+        sec.common_name = CommonName(name='Foxglove')
+        sec.common_name.index = Index(name='Perennial')
+        db.session.add(sec)
         db.session.commit()
-        cat2 = Category(name='Polkadot', description='More dots!')
-        cat2.common_name = CommonName(name='Foxglove')
-        cat2.common_name.index = Index(name='Perennial')
-        catws.add_one(cat2)
-        assert catws.save_row_to_db(2, stream=messages)
-        catq = Category.query.filter(Category.name == 'Polkadot').one_or_none()
-        assert catq is cat
-        assert cat.description == '<p>More dots!</p>'
+        sec2 = Section(name='Polkadot', description='More dots!')
+        sec2.common_name = CommonName(name='Foxglove')
+        sec2.common_name.index = Index(name='Perennial')
+        secws.add_one(sec2)
+        assert secws.save_row_to_db(2, stream=messages)
+        secq = Section.query.filter(Section.name == 'Polkadot').one_or_none()
+        assert secq is sec
+        assert sec.description == '<p>More dots!</p>'
         messages.seek(0)
         msgs = messages.read()
-        assert ('Description for the Category \'Polkadot\' set to: <p>More '
+        assert ('Description for the Section \'Polkadot\' set to: <p>More '
                 'dots!</p>') in msgs
 
     def test_save_row_to_db_existing_clears_desc(self, db):
-        """Clear description of existing Category if row has no desc."""
+        """Clear description of existing Section if row has no desc."""
         messages = StringIO()
         wb = Workbook()
         ws = wb.active
-        catws = CategoriesWorksheet(ws)
-        catws.setup()
-        cat = Category(name='Polkadot', description='A bit spotty.')
-        cat.common_name = CommonName(name='Foxglove')
-        cat.common_name.index = Index(name='Perennial')
-        db.session.add(cat)
+        secws = SectionsWorksheet(ws)
+        secws.setup()
+        sec = Section(name='Polkadot', description='A bit spotty.')
+        sec.common_name = CommonName(name='Foxglove')
+        sec.common_name.index = Index(name='Perennial')
+        db.session.add(sec)
         db.session.commit()
-        cat2 = Category(name='Polkadot')
-        cat2.common_name = CommonName(name='Foxglove')
-        cat2.common_name.index = Index(name='Perennial')
-        catws.add_one(cat2)
-        assert catws.save_row_to_db(2, stream=messages)
-        catq = Category.query.filter(Category.name == 'Polkadot').one_or_none()
-        assert catq is cat
-        assert not cat.description
+        sec2 = Section(name='Polkadot')
+        sec2.common_name = CommonName(name='Foxglove')
+        sec2.common_name.index = Index(name='Perennial')
+        secws.add_one(sec2)
+        assert secws.save_row_to_db(2, stream=messages)
+        secq = Section.query.filter(Section.name == 'Polkadot').one_or_none()
+        assert secq is sec
+        assert not sec.description
         messages.seek(0)
         msgs = messages.read()
-        assert ('Description for the Category \'Polkadot\' has been '
+        assert ('Description for the Section \'Polkadot\' has been '
                 'cleared') in msgs
 
 
@@ -1005,8 +1005,8 @@ class TestCultivarsWorksheetWithDB:
         assert 'No changes were made' in msgs
 
     @mock.patch('app.seeds.excel.db.session.flush')
-    def test_save_row_to_db_no_changes_with_category(self, m_f, db):
-        """Being in a Category shouldn't break the no changes scenario."""
+    def test_save_row_to_db_no_changes_with_section(self, m_f, db):
+        """Being in a Section shouldn't break the no changes scenario."""
         messages = StringIO()
         wb = Workbook()
         ws = wb.active
@@ -1015,8 +1015,8 @@ class TestCultivarsWorksheetWithDB:
         cv = Cultivar(name='Petra')
         cv.common_name = CommonName(name='Foxglove')
         cv.common_name.index = Index(name='Perennial')
-        cv.category = Category(name='Polkadot')
-        cv.category.common_name = cv.common_name
+        cv.section = Section(name='Polkadot')
+        cv.section.common_name = cv.common_name
         cv.in_stock = True
         cv.active = True
         cv.visible = False
@@ -1025,8 +1025,8 @@ class TestCultivarsWorksheetWithDB:
         cv2 = Cultivar(name='Petra')
         cv2.common_name = CommonName(name='Foxglove')
         cv2.common_name.index = Index(name='Perennial')
-        cv2.category = Category(name='Polkadot')
-        cv2.category.common_name = cv2.common_name
+        cv2.section = Section(name='Polkadot')
+        cv2.section.common_name = cv2.common_name
         cv2.in_stock = True
         cv2.active = True
         cv2.visible = False
@@ -1064,8 +1064,8 @@ class TestCultivarsWorksheetWithDB:
         assert ('Changes to the Cultivar \'Foxy Foxglove\' have been flushed '
                 'to the database.') in msgs
 
-    def test_save_row_to_db_new_with_category(self, db):
-        """Save a new Cultivar with a Category."""
+    def test_save_row_to_db_new_with_section(self, db):
+        """Save a new Cultivar with a Section."""
         messages = StringIO()
         wb = Workbook()
         ws = wb.active
@@ -1074,8 +1074,8 @@ class TestCultivarsWorksheetWithDB:
         cv = Cultivar(name='Polkadot Petra')
         cv.common_name = CommonName(name='Foxglove')
         cv.common_name.index = Index(name='Perennial')
-        cv.category = Category(name='Polkadot')
-        cv.category.common_name = cv.common_name
+        cv.section = Section(name='Polkadot')
+        cv.section.common_name = cv.common_name
         cv.in_stock = True
         cv.active = True
         cv.visible = False
@@ -1085,28 +1085,28 @@ class TestCultivarsWorksheetWithDB:
             .filter(Cultivar.name == 'Polkadot Petra').one_or_none()
         messages.seek(0)
         msgs = messages.read()
-        assert cv.category.name == 'Polkadot'
-        assert 'The Category \'Polkadot\' does not yet exist' in msgs
-        assert ('Category for the Cultivar \'Polkadot Petra Foxglove\' set '
+        assert cv.section.name == 'Polkadot'
+        assert 'The Section \'Polkadot\' does not yet exist' in msgs
+        assert ('Section for the Cultivar \'Polkadot Petra Foxglove\' set '
                 'to: Polkadot') in msgs
 
-    def test_save_row_to_db_new_with_existing_category(self, db):
-        """Use Category from the database if it already exists."""
+    def test_save_row_to_db_new_with_existing_section(self, db):
+        """Use Section from the database if it already exists."""
         messages = StringIO()
         wb = Workbook()
         ws = wb.active
         cvws = CultivarsWorksheet(ws)
         cvws.setup()
-        cat = Category(name='Polkadot')
-        cat.common_name = CommonName(name='Foxglove')
-        cat.common_name.index = Index(name='Perennial')
-        db.session.add(cat)
+        sec = Section(name='Polkadot')
+        sec.common_name = CommonName(name='Foxglove')
+        sec.common_name.index = Index(name='Perennial')
+        db.session.add(sec)
         db.session.commit()
         cv = Cultivar(name='Petra')
         cv.common_name = CommonName(name='Foxglove')
         cv.common_name.index = Index(name='Perennial')
-        cv.category = Category(name='Polkadot')
-        cv.category.common_name = cv.common_name
+        cv.section = Section(name='Polkadot')
+        cv.section.common_name = cv.common_name
         cv.in_stock = True
         cv.active = True
         cv.visible = False
@@ -1115,8 +1115,8 @@ class TestCultivarsWorksheetWithDB:
         cv = Cultivar.query.filter(Cultivar.name == 'Petra').one_or_none()
         messages.seek(0)
         msgs = messages.read()
-        assert cv.category is cat
-        assert 'The Category \'Polkadot\' has been loaded from' in msgs
+        assert cv.section is sec
+        assert 'The Section \'Polkadot\' has been loaded from' in msgs
 
     def test_save_row_to_db_new_with_new_botanical_name(self, db):
         """Create a BotanicalName when creating Cultivar."""

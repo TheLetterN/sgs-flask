@@ -38,7 +38,7 @@ from app import db
 from app.seeds.models import (
     dbify,
     BotanicalName,
-    Category,
+    Section,
     CommonName,
     Cultivar,
     Image,
@@ -409,54 +409,54 @@ class Page(object):
         return cn
 
     @property
-    def categories(self):
-        """Get a list of categories and their data in `OrderedDict`s.
+    def sections(self):
+        """Get a list of sections and their data in `OrderedDict`s.
 
-        This includes the cultivars belonging to the category.
+        This includes the cultivars belonging to the section.
 
         Returns:
-            list: List of `OrderedDict` containing `Category` data.
+            list: List of `OrderedDict` containing `Section` data.
         """
-        def cultivar_divs(cat):
-            """Generate divs containing `Cultivar` data for `cat`.
+        def cultivar_divs(sec):
+            """Generate divs containing `Cultivar` data for `sec`.
 
             Args:
-                cat: The category div to find related cultivars for.
+                sec: The section div to find related cultivars for.
 
             Yields:
                 div: A div containing cultivar data.
             """
-            for div in cat.find_next_siblings(name='div'):
+            for div in sec.find_next_siblings(name='div'):
                 if 'class' in div.attrs:
                     if 'cultivar' in [c.lower() for c in div['class']]:
                         yield div
                     else:
                         break
 
-        cats = self.soup.find_all(
+        secs = self.soup.find_all(
             name='div', class_=lambda x: x and ('categor' in x.lower() or
                                                 'series' in x.lower())
         )
-        categories = []
-        for cat in cats:
-            catd = OrderedDict()
-            catd['category name'] = dbify(cat.text.strip().split('\n')[0])
-            ps = cat.find_all('p')
+        sections = []
+        for sec in secs:
+            secd = OrderedDict()
+            secd['section name'] = dbify(sec.text.strip().split('\n')[0])
+            ps = sec.find_all('p')
             if ps:
-                catd['description'] = merge_p(ps)
-            cvds = cultivar_divs(cat)
+                secd['description'] = merge_p(ps)
+            cvds = cultivar_divs(sec)
             if cvds:
-                catd['cultivars'] = [cultivar_div_to_dict(cvd) for cvd in cvds]
-            categories.append(catd)
-        return categories
+                secd['cultivars'] = [cultivar_div_to_dict(cvd) for cvd in cvds]
+            sections.append(secd)
+        return sections
 
     @property
     def individual_cultivars(self):
-        """Return a list of `OrderedDict` of `Cultivar` not in a `Category`."""
-        if self.categories:
-            for cat in self.categories:
-                if 'individual' in cat['category name'].lower():
-                    return cat['cultivars']
+        """Return a list of `OrderedDict` of `Cultivar` not in a `Section`."""
+        if self.sections:
+            for sec in self.sections:
+                if 'individual' in sec['section name'].lower():
+                    return sec['cultivars']
             return []
         else:
             cv_divs = self.soup.find_all(name='div', class_='cultivar')
@@ -466,11 +466,11 @@ class Page(object):
     def tree(self):
         """OrderedDict: A tree of all data with `common_name` as the root."""
         cn = self.common_name
-        cats = self.categories
-        for cat in list(cats):
-            if 'individual' in cat['category name'].lower():
-                cats.remove(cat)
-        cn['categories'] = cats
+        secs = self.sections
+        for sec in list(secs):
+            if 'individual' in sec['section name'].lower():
+                secs.remove(sec)
+        cn['sections'] = secs
         cn['cultivars'] = self.individual_cultivars
         return cn
 
@@ -727,35 +727,35 @@ class PageAdder(object):
                     cn.botanical_names.append(bn)
                     print('Botanical name \'{0}\' added to \'{1}\'.'
                           .format(bn.name, cn.name), file=stream)
-        if 'categories' in self.tree:
-            catds = self.tree['categories']
-            for catd in catds:
-                cat_name = catd['category name']
-                if 'description' in catd:
-                    cat_desc = catd['description']
+        if 'sections' in self.tree:
+            secds = self.tree['sections']
+            for secd in secds:
+                sec_name = secd['section name']
+                if 'description' in secd:
+                    sec_desc = secd['description']
                 else:
-                    cat_desc = None
-                cat = Category.get_or_create(name=cat_name,
-                                             common_name=cn.name,
-                                             index=self.index.name)
-                if cat_desc and cat.description != cat_desc:
-                    cat.description = cat_desc
+                    sec_desc = None
+                sec = Section.get_or_create(name=sec_name,
+                                            common_name=cn.name,
+                                            index=self.index.name)
+                if sec_desc and sec.description != sec_desc:
+                    sec.description = sec_desc
                     print('Description for \'{0}\' set to: {1}'
-                          .format(cat.name, cat.description), file=stream)
-                if cat.common_name is not cn:
-                    cat.common_name = cn
-                    print('The Category \'{0}\' has been added to \'{1}\'.'
-                          .format(cat.name, cn.name), file=stream)
+                          .format(sec.name, sec.description), file=stream)
+                if sec.common_name is not cn:
+                    sec.common_name = cn
+                    print('The Section \'{0}\' has been added to \'{1}\'.'
+                          .format(sec.name, cn.name), file=stream)
 
-                if 'cultivars' in catd:
-                    cat_cvds = catd['cultivars']
+                if 'cultivars' in secd:
+                    sec_cvds = secd['cultivars']
                     for cv in self._generate_cultivars(cn=cn,
-                                                       cv_dicts=cat_cvds,
+                                                       cv_dicts=sec_cvds,
                                                        stream=stream):
-                        if cv not in cat.cultivars:
-                            cat.cultivars.append(cv)
-                            print('Cultivar \'{0}\' added to Category \'{1}\'.'
-                                  .format(cv.fullname, cat.fullname),
+                        if cv not in sec.cultivars:
+                            sec.cultivars.append(cv)
+                            print('Cultivar \'{0}\' added to Section \'{1}\'.'
+                                  .format(cv.fullname, sec.fullname),
                                   file=stream)
         if 'cultivars' in self.tree:
             for cv in self._generate_cultivars(cn=cn,

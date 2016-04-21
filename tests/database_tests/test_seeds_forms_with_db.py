@@ -4,19 +4,19 @@ import pytest
 from wtforms import ValidationError
 from app.seeds.forms import (
     AddBotanicalNameForm,
-    AddCategoryForm,
+    AddSectionForm,
     AddCommonNameForm,
     AddIndexForm,
     AddPacketForm,
     AddCultivarForm,
-    EditCategoryForm,
+    EditSectionForm,
     EditCultivarForm,
     EditPacketForm,
     select_field_choices
 )
 from app.seeds.models import (
     BotanicalName,
-    Category,
+    Section,
     CommonName,
     Index,
     Packet,
@@ -104,14 +104,14 @@ class TestAddBotanicalNameFormWithDB:
             form.validate_name(form.name)
 
 
-class TestAddCategoryForm:
-    """Test custom methods of AddCategoryForm."""
+class TestAddSectionForm:
+    """Test custom methods of AddSectionForm."""
     def test_validate_name(self, db):
-        category = Category(name='Polkadot',
-                            common_name=CommonName(name='Foxglove'))
-        db.session.add(category)
+        section = Section(name='Polkadot',
+                          common_name=CommonName(name='Foxglove'))
+        db.session.add(section)
         db.session.commit()
-        form = AddCategoryForm(cn=category.common_name)
+        form = AddSectionForm(cn=section.common_name)
         form.name.data = 'Dalmatian'
         form.validate_name(form.name)
         form.name.data = 'Polkadot'
@@ -142,12 +142,12 @@ class TestAddCultivarFormWithDB:
         """Raise error if cultivar already exists.
 
         Cultivars are constrained to have a unique combination of name, common
-            name, and category.
+            name, and section.
         """
         cv1 = Cultivar(name='Polkadot Petra')
         cv1.common_name = CommonName(name='Foxglove')
         cv1.common_name.index = Index(name='Perennial')
-        cv1.category = Category(name='Polkadot')
+        cv1.section = Section(name='Polkadot')
         cv2 = Cultivar(name='Silky Gold')
         cv2.common_name = CommonName(name='Butterfly Weed')
         cv2.common_name.index = Index(name='Annual')
@@ -196,8 +196,8 @@ class TestEditPacketFormWithDB:
             EditPacketForm.validate_qty_val(None, field)
 
 
-class TestEditCategoryFormWithDB:
-    """Test custom methods of EditCategoryForm."""
+class TestEditSectionFormWithDB:
+    """Test custom methods of EditSectionForm."""
     def test_set_selects(self, db):
         """Populate common_name select with ids from database."""
         cn1 = CommonName(name='Foxglove')
@@ -205,7 +205,7 @@ class TestEditCategoryFormWithDB:
         cn3 = CommonName(name='Tomato')
         db.session.add_all([cn1, cn2, cn3])
         db.session.commit()
-        form = EditCategoryForm()
+        form = EditSectionForm()
         form.set_selects()
         assert (cn1.id, cn1.name) in form.common_name_id.choices
         assert (cn2.id, cn2.name) in form.common_name_id.choices

@@ -19,7 +19,7 @@
 {% from "includes/form_field.html" import form_field %}
 {# Indent block head content 4 spaces, and block main content 6 spaces. #}
 {% block head %}
-    <title>Select Category</title>
+    <title>Select Section</title>
     {% if ALLOW_CRAWLING %}
     {# If ALLOW_CRAWLING is False, this tag is already generated. #}
     {# If ALLOW_CRAWLING is True, we still don't want admin pages like this crawled. #}
@@ -27,12 +27,12 @@
     {% endif %}
 {% endblock %}
 {% block main %}
-      <h1>Select a Category</h1>
+      <h1>Select a Section</h1>
       <form method="POST">
         {{ form.hidden_tag() }}
         <ol>
           <li>
-            {{ form_field(form.category)|indent(24)|safe }}
+            {{ form_field(form.section)|indent(24)|safe }}
           </li>
           <li>
             {{ form.submit }}

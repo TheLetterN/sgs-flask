@@ -19,7 +19,7 @@
 {% from "includes/form_field.html" import form_field %}
 {# Indent block head content 4 spaces, and block main content 6 spaces. #}
 {% block head %}
-    <title>Edit Category</title>
+    <title>Remove Section</title>
     {% if ALLOW_CRAWLING %}
     {# If ALLOW_CRAWLING is False, this tag is already generated. #}
     {# If ALLOW_CRAWLING is True, we still don't want admin pages like this crawled. #}
@@ -27,22 +27,14 @@
     {% endif %}
 {% endblock %}
 {% block main %}
-      <h1>Edit Category: {{ category.name }}</h1>
+      <h1>Remove Section: {{ section.fullname }}</h1>
       <form method="POST">
         {{ form.hidden_tag() }}
         <ol>
-          <fieldset>
-            <legend>Edit Category</legend>
-            <li>
-              {{ form_field(form.common_name_id)|indent(14)|safe }}
-            </li>
-            <li>
-              {{ form_field(form.name)|indent(14)|safe }}
-            </li>
-            <li>
-              {{ form_field(form.description)|indent(14)|safe }}
-            </li>
-          </fieldset>
+          <li>
+            <div class="warning">Are you sure you want to remove section: {{ section.name }}?</div>
+            {{ form_field(form.verify_removal)|indent(12)|safe }}
+          </li>
           <li>
             {{ form.submit }}
           </li>

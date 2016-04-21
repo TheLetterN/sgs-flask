@@ -8,7 +8,7 @@ from unittest import mock
 from app.seeds.models import (
     BotanicalName,
     dbify,
-    Category,
+    Section,
     CommonName,
     Image,
     Index,
@@ -329,17 +329,17 @@ class TestBotanicalName:
         assert BotanicalName.validate('Hydrangea Lacecap Group')
 
 
-class TestCategory:
-    """Test methods of the Category class in seeds.models."""
+class TestSection:
+    """Test methods of the Section class in seeds.models."""
     def test_repr(self):
         """Return formatted string with full name."""
-        cat = Category(name='Polkadot',
-                       common_name=CommonName(name='Foxglove'))
-        assert cat.__repr__() == '<Category \'Polkadot Foxglove\'>'
+        sec = Section(name='Polkadot',
+                      common_name=CommonName(name='Foxglove'))
+        assert sec.__repr__() == '<Section \'Polkadot Foxglove\'>'
 
     def test_fullname(self):
-        """Returns name of category along with common name."""
-        ser = Category()
+        """Returns name of section along with common name."""
+        ser = Section()
         assert ser.fullname is None
         ser.name = 'Dalmatian'
         assert ser.fullname == 'Dalmatian'

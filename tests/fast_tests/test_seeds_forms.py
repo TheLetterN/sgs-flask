@@ -6,7 +6,7 @@ from app.seeds.forms import (
     AddPacketForm,
     AddRedirectForm,
     EditBotanicalNameForm,
-    EditCategoryForm,
+    EditSectionForm,
     EditCommonNameForm,
     EditCultivarForm,
     EditIndexForm,
@@ -15,14 +15,14 @@ from app.seeds.forms import (
     NotSpace,
     ReplaceMe,
     RRPath,
-    SelectCategoryForm,
+    SelectSectionForm,
     select_field_choices,
     SynonymLength,
     USDollar
 )
 from app.seeds.models import (
-    BotanicalName, 
-    Category,
+    BotanicalName,
+    Section,
     CommonName,
     Index
 )
@@ -300,7 +300,6 @@ class TestEditCommonNameForm:
         assert self.index_id.choices == choices
         m_sfc.assert_called_with(model=Index)
 
-
     @mock.patch('app.seeds.models.CommonName.query')
     def test_validate_name(self, m_cnq):
         m_cnq.return_value = 'CN Exists.'
@@ -366,16 +365,16 @@ class TestEditBotanicalNameForm:
             EditBotanicalNameForm.validate_synonyms_string(None, field)
 
 
-class TestEditCategoryForm:
-    """Test methods of EditCategoryForm."""
-    @mock.patch('app.seeds.models.Category.query')
+class TestEditSectionForm:
+    """Test methods of EditSectionForm."""
+    @mock.patch('app.seeds.models.Section.query')
     def test_validate_name(self, m_cq):
-        """Raise error if Category already exists."""
+        """Raise error if Section already exists."""
         m_cq.return_value = 'Cat exists.'
         field = mock.MagicMock()
         self = mock.MagicMock()
         with pytest.raises(ValidationError):
-            EditCategoryForm.validate_name(self=self, field=field)
+            EditSectionForm.validate_name(self=self, field=field)
 
 
 class TestEditCultivarForm:
@@ -406,17 +405,17 @@ class TestEditCultivarForm:
         with pytest.raises(ValidationError):
             EditCultivarForm.validate_botanical_name_id(self=self, field=field)
 
-    @mock.patch('app.seeds.models.Category.query')
-    def test_validate_category_id(self, m_catq):
-        """Raise error if selected cat is not in selected CN."""
-        cat = Category(name='Five')
-        cat.common_name_id = 1
-        m_catq.return_value = cat
+    @mock.patch('app.seeds.models.Section.query')
+    def test_validate_section_id(self, m_secq):
+        """Raise error if selected sec is not in selected CN."""
+        sec = Section(name='Five')
+        sec.common_name_id = 1
+        m_secq.return_value = sec
         self = mock.MagicMock()
         self.common_name_id.data = 2
         field = mock.MagicMock()
         with pytest.raises(ValidationError):
-            EditCultivarForm.validate_category_id(self=self, field=field)
+            EditCultivarForm.validate_section_id(self=self, field=field)
 
     def test_validate_synonyms_string_too_long(self):
         """Raise ValidationError if any synonym is too long."""
@@ -434,20 +433,19 @@ class TestEditPacketForm:
     @mock.patch('app.seeds.models.Packet.query')
     def test_validate_sku(self, m_pktq):
         """Raise error if Packet exists with SKU."""
-        m_pktq.return_value='8675309'
+        m_pktq.return_value = '8675309'
         field = mock.MagicMock()
         self = mock.MagicMock()
         with pytest.raises(ValidationError):
             EditPacketForm.validate_sku(self=self, field=field)
 
 
-class TestSelectCategoryForm:
+class TestSelectSectionForm:
     @mock.patch('app.seeds.forms.select_field_choices')
     def test_set_select(self, m_sfc):
-        """Call select_field_choices with Category and order by name."""
+        """Call select_field_choices with Section and order by name."""
         choices = [(1, 'One'), (2, 'Two')]
         m_sfc.return_value = choices
         self = mock.MagicMock()
-        SelectCategoryForm.set_select(self=self)
-        assert self.category.choices == choices
-
+        SelectSectionForm.set_select(self=self)
+        assert self.section.choices == choices

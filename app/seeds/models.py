@@ -44,7 +44,7 @@ Notes:
         idx - Index
         cn - CommonName
         bn - BotanicalName
-        cat - Category
+        sec - Section
         cv - Cultivar
         pkt - Packet
         qty - Quantity
@@ -480,7 +480,7 @@ class CommonName(SynonymsMixin, db.Model):
             that explicitly include it. Default value: True.
 
         botanical_names: Backref from `BotanicalName.common_names`.
-        categories: Backref from `Category.common_name`.
+        sections: Backref from `Section.common_name`.
         cultivars: Backref from `Cultivar.common_name`.
         synonyms: Backref from `Synonym.common_name`.
     """
@@ -832,10 +832,10 @@ def before_botanical_name_insert_or_update(mapper, connection, target):
                          'whether or not a name is valid.')
 
 
-class Category(db.Model):
-    """Table for categories cultivars may fall under.
+class Section(db.Model):
+    """Table for sections cultivars may fall under.
 
-    Categories are subdivisions of a common name which contain cultivars, such
+    Sections are subdivisions of a common name which contain cultivars, such
     as the series a cultivar belongs to (e.g. the 'Sparkler' series contains
     the cultivars 'Sparkler White Cleome' and 'Sparkler Lavender Cleome') or
     some characteristic that is useful to know, such as whether cultivars are
@@ -843,30 +843,30 @@ class Category(db.Model):
 
 
     Attributes:
-        name: The name of the category.
+        name: The name of the section.
         common_name: MtO relationship with `CommonName`; the common name a
-            `Category` belongs to.
-            Backref: `CommonName.categories`
+            `Section` belongs to.
+            Backref: `CommonName.sections`
 
-        description: An HTML description of the `Category`.
+        description: An HTML description of the `Section`.
 
-        cultivars: Backref from `Cultivar.category`.
+        cultivars: Backref from `Cultivar.section`.
     """
-    __tablename__ = 'categories'
+    __tablename__ = 'sections'
     __table_args__ = (db.UniqueConstraint('name',
                                           'common_name_id',
-                                          name='_category_name_cn_uc'),)
+                                          name='_section_name_cn_uc'),)
     id = db.Column(db.Integer, primary_key=True)
 
     # Data Required
     name = db.Column(db.String(64))
     common_name_id = db.Column(db.Integer, db.ForeignKey('common_names.id'))
-    common_name = db.relationship('CommonName', backref='categories')
+    common_name = db.relationship('CommonName', backref='sections')
 
     # Data Optional
     description = db.Column(db.Text)
-    parent_id = db.Column(db.Integer, db.ForeignKey('categories.id'))
-    children = db.relationship('Category',
+    parent_id = db.Column(db.Integer, db.ForeignKey('sections.id'))
+    children = db.relationship('Section',
                                backref=db.backref('parent', remote_side=[id]))
 
     def __init__(self,
@@ -874,7 +874,7 @@ class Category(db.Model):
                  common_name=None,
                  description=None,
                  position=None):
-        """Create an instance of a Category."""
+        """Create an instance of a Section."""
         self.name = name
         self.common_name = common_name
         self.description = description
@@ -882,47 +882,47 @@ class Category(db.Model):
             self.position = position
 
     def __repr__(self):
-        """Return a string representing a `Category` instance."""
+        """Return a string representing a `Section` instance."""
         return '<{0} \'{1}\'>'.format(self.__class__.__name__, self.fullname)
 
     @classmethod
     def get_or_create(cls, name, common_name, index, stream=sys.stdout):
-        """Load a `Category` from the db, or create it if it doesn't exist.
+        """Load a `Section` from the db, or create it if it doesn't exist.
 
         Args:
-            name: The name of the `Category`.
+            name: The name of the `Section`.
             common_name: The name of the `CommonName` it belongs to.
             index: The name of the `Index` it belongs to.
             stream: Buffer to output messages to.
 
         Returns:
-            Category: The loaded or created `Category`.
+            Section: The loaded or created `Section`.
         """
         name = dbify(name)
         common_name = dbify(common_name)
         index = dbify(index)
-        cat = cls.query\
-            .join(CommonName, CommonName.id == Category.common_name_id)\
+        sec = cls.query\
+            .join(CommonName, CommonName.id == Section.common_name_id)\
             .join(Index, Index.id == CommonName.index_id)\
-            .filter(Category.name == name,
+            .filter(Section.name == name,
                     CommonName.name == common_name,
                     Index.name == index)\
             .one_or_none()
-        if cat:
-            cat.created = False
-            print('The Category \'{0}\' has been loaded from the database.'
-                  .format(cat.fullname), file=stream)
+        if sec:
+            sec.created = False
+            print('The Section \'{0}\' has been loaded from the database.'
+                  .format(sec.fullname), file=stream)
         else:
             cn = CommonName.get_or_create(common_name, index, stream=stream)
-            cat = Category(name=name, common_name=cn)
-            cat.created = True
-            print('The Category \'{0}\' does not yet exist in the database, '
-                  'so it has been created'.format(cat.fullname), file=stream)
-        return cat
+            sec = Section(name=name, common_name=cn)
+            sec.created = True
+            print('The Section \'{0}\' does not yet exist in the database, '
+                  'so it has been created'.format(sec.fullname), file=stream)
+        return sec
 
     @property
     def fullname(self):
-        """str: Name of `Category` with name of `CommonName`."""
+        """str: Name of `Section` with name of `CommonName`."""
         fn = []
         if self.name:
             fn.append(self.name)
@@ -935,7 +935,7 @@ class Category(db.Model):
 
     @property
     def has_public_cultivars(self):
-        """bool: Whether or not `Category` has any public cultivars."""
+        """bool: Whether or not `Section` has any public cultivars."""
         return self.cultivars and any(cv.public for cv in self.cultivars)
 
 
@@ -962,9 +962,9 @@ class Cultivar(SynonymsMixin, db.Model):
             cultivar falls under.
             Backref: `CommonName.cultivars`
 
-        category: MtO relationship with `Category`; the (optional) category a
+        section: MtO relationship with `Section`; the (optional) section a
             cultivar belongs to.
-            Backref: `Category.cultivars`
+            Backref: `Section.cultivars`
         botanical_name: MtO relationship with `BotanicalName`; the botanical
             name of this cultivar.
             Backref: `BotanicalName.cultivars`
@@ -1000,8 +1000,8 @@ class Cultivar(SynonymsMixin, db.Model):
     common_name = db.relationship('CommonName', backref='cultivars')
 
     # Data Optional
-    category_id = db.Column(db.Integer, db.ForeignKey('categories.id'))
-    category = db.relationship('Category', backref='cultivars')
+    section_id = db.Column(db.Integer, db.ForeignKey('sections.id'))
+    section = db.relationship('Section', backref='cultivars')
     botanical_name_id = db.Column(db.Integer,
                                   db.ForeignKey('botanical_names.id'))
     botanical_name = db.relationship('BotanicalName',
@@ -1027,7 +1027,7 @@ class Cultivar(SynonymsMixin, db.Model):
     def __init__(self,
                  name=None,
                  common_name=None,
-                 category=None,
+                 section=None,
                  botanical_name=None,
                  description=None,
                  new_for=None,
@@ -1042,7 +1042,7 @@ class Cultivar(SynonymsMixin, db.Model):
         """
         self.name = name
         self.common_name = common_name
-        self.category = category
+        self.section = section
         self.botanical_name = botanical_name
         self.description = description
         self.new_for = new_for
@@ -1793,7 +1793,7 @@ class VegetableData(db.Model):
 @event.listens_for(Index.description, 'set', retval=True)
 @event.listens_for(CommonName.description, 'set', retval=True)
 @event.listens_for(CommonName.instructions, 'set', retval=True)
-@event.listens_for(Category.description, 'set', retval=True)
+@event.listens_for(Section.description, 'set', retval=True)
 @event.listens_for(Cultivar.description, 'set', retval=True)
 def paragraphize_blocks(target, value, oldvalue, initiator):
     """Run `paragraphize` for attributes expected to contain HTML."""

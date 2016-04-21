@@ -159,11 +159,11 @@ class SynonymLength(object):
         so if no synonyms are present it will not raise an error.
     """
     def __init__(self, min_length, max_length, message=None):
-        if min_length < max_length:
+        if min_length <= max_length:
             self.min_length = min_length
             self.max_length = max_length
         else:
-            raise ValueError('min_length must be less than max_length!')
+            raise ValueError('min_length can\'t be larger than max_length!')
         if not message:
             self.message = ('Each synonym must be between {0} and {1} '
                             'characters in length!'.format(self.min_length,
@@ -454,11 +454,11 @@ class AddCultivarForm(Form):
             ValidationError: If a `Cultivar` with the same name, `CommonName`,
             and (optional) `Category` already exists.
         """
-        sr_id = self.category.data if self.category.data else None
+        cat_id = self.category.data if self.category.data else None
         cv = Cultivar.query.filter(
             Cultivar.name == field.data,
             Cultivar.common_name_id == self.cn.id,
-            Cultivar.category_id == sr_id
+            Cultivar.category_id == cat_id
         ).one_or_none()
         if cv:
             raise ValidationError(Markup(
@@ -681,7 +681,7 @@ class EditCommonNameForm(Form):
     synonyms_string = StringField('Synonyms', validators=[NotSpace()])
     submit = SubmitField('Edit Common Name')
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs):  # pragma: no cover
         super().__init__(*args, **kwargs)
         self.set_selects()
 
@@ -817,19 +817,19 @@ class EditCategoryForm(Form):
 
     def validate_name(self, field):
         """Raise if another `Category` exists with same name and CN."""
-        sr = Category.query.filter(
+        cat = Category.query.filter(
             Category.name == field.data,
             Category.common_name_id == int(self.common_name_id.data),
             Category.id != self.id.data
         ).one_or_none()
-        if sr:
+        if cat:
             raise ValidationError(Markup(
                 'A category named \'{0}\' already belongs to the common name '
                 '\{1}\'. <a href="{2}" target="_blank">Click here</a> if you '
                 'wish to edit it.'
-                .format(sr.name,
-                        sr.common_name.name,
-                        url_for('seeds.edit_category', category_id=sr.id))
+                .format(cat.name,
+                        cat.common_name.name,
+                        url_for('seeds.edit_category', category_id=cat.id))
             ))
 
 
@@ -896,11 +896,11 @@ class EditCultivarForm(Form):
     def validate_name(self, field):
         """Raise ValidationError if changes would create duplicate cultivar."""
         cn_id = self.common_name_id.data
-        sr_id = self.category_id.data if self.category_id.data else None
+        cat_id = self.category_id.data if self.category_id.data else None
         cv = Cultivar.query.filter(
             Cultivar.name == dbify(field.data),
             Cultivar.common_name_id == cn_id,
-            Cultivar.category_id == sr_id,
+            Cultivar.category_id == cat_id,
             Cultivar.id != self.id.data
         ).one_or_none()
         if cv:
@@ -934,14 +934,14 @@ class EditCultivarForm(Form):
                 common name.
         """
         if field.data:
-            sr = Category.query.get(field.data)
-            if self.common_name_id.data != sr.common_name_id:
-                sr_url = url_for('seeds.edit_category', category_id=sr.id)
+            cat = Category.query.get(field.data)
+            if self.common_name_id.data != cat.common_name_id:
+                cat_url = url_for('seeds.edit_category', category_id=cat.id)
                 raise ValidationError(Markup(
                     'The selected category does not belong to the selected '
                     'common name. <a href="{0}">Click here</a> if you would '
                     'like to edit the category \'{1}\'.'
-                    .format(sr_url, sr.name)
+                    .format(cat_url, cat.name)
                 ))
 
     def validate_synonyms_string(self, field):
@@ -1197,7 +1197,7 @@ class SelectCategoryForm(Form):
     category = SelectField('Select Category', coerce=int)
     submit = SubmitField('Submit')
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs):  # pragma: no cover
         super().__init__(*args, **kwargs)
         self.set_select()
 

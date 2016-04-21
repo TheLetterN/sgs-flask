@@ -510,7 +510,7 @@ class CommonName(SynonymsMixin, db.Model):
                  description=None,
                  instructions=None,
                  parent=None,
-                 invisible=None):
+                 invisible=None):  # pragma: no cover
         """Construct an instance of `CommonName`."""
         self.name = name
         self.index = index
@@ -865,6 +865,9 @@ class Category(db.Model):
 
     # Data Optional
     description = db.Column(db.Text)
+    parent_id = db.Column(db.Integer, db.ForeignKey('categories.id'))
+    children = db.relationship('Category',
+                               backref=db.backref('parent', remote_side=[id]))
 
     def __init__(self,
                  name=None,

@@ -2,21 +2,31 @@ from unittest import mock
 import pytest
 from wtforms import ValidationError
 from app.seeds.forms import (
+    AddCultivarForm,
     AddPacketForm,
     AddRedirectForm,
     EditBotanicalNameForm,
+    EditCategoryForm,
     EditCommonNameForm,
     EditCultivarForm,
+    EditIndexForm,
+    EditPacketForm,
     IsBotanicalName,
     NotSpace,
     ReplaceMe,
     RRPath,
+    SelectCategoryForm,
     select_field_choices,
     SynonymLength,
     USDollar
 )
+from app.seeds.models import (
+    BotanicalName, 
+    Category,
+    CommonName,
+    Index
+)
 from app.redirects import Redirect
-from tests.conftest import app  # noqa
 
 
 class TestModuleFunctions:
@@ -139,6 +149,47 @@ class TestValidators:
         with pytest.raises(ValidationError):
             rr.__call__(form, form.old_path)
 
+    def test_synonymlength_min_and_max_length(self):
+        """Raise error if min_length > max_length."""
+        SynonymLength(min_length=0, max_length=42)
+        SynonymLength(min_length=12, max_length=12)
+        with pytest.raises(ValueError):
+            SynonymLength(min_length=11, max_length=10)
+
+    def test_synonymlength_too_short(self):
+        """Raise error if any synonym is too short."""
+        sl = SynonymLength(min_length=9, max_length=32)
+        field = mock.MagicMock()
+        field.data = 'Napoleon'
+        with pytest.raises(ValidationError):
+            sl.__call__(form=None, field=field)
+
+    def test_synonymlength_too_long(self):
+        sl = SynonymLength(min_length=0, max_length=11)
+        field = mock.MagicMock()
+        field.data = 'Too long; didn\'t pass'
+        with pytest.raises(ValidationError):
+            sl.__call__(form=None, field=field)
+
+    def test_synonymlength_just_right(self):
+        sl = SynonymLength(min_length=0, max_length=16)
+        field = mock.MagicMock()
+        field.data = 'Just Right'
+        sl.__call__(form=None, field=field)
+
+    def test_synonymlength_no_data(self):
+        """Don't raise a ValidationError if no synonyms given.
+
+        Note that min_length is 1 here, as this validator should only care
+        about synonym length if synonyms are present.
+        """
+        sl = SynonymLength(1, 6)
+        field = mock.MagicMock()
+        field.data = ''
+        sl.__call__(None, field)
+        field.data = None
+        sl.__call__(None, field)
+
     def test_usdollar(self):
         """Raise validation error if value can't be converted to USD."""
         usd = USDollar()
@@ -155,34 +206,16 @@ class TestValidators:
             form.name.data = '$3/4'
             usd.__call__(form, form.name)
 
-    def test_synonymlength_too_short(self):
-        """Raise ValidationError if any synonym is too short."""
-        sl = SynonymLength(6, 12)
+
+class TestAddCultivarForm:
+    """Test methods of AddCultivarForm."""
+    @mock.patch('app.seeds.models.Image.query')
+    def test_validate_thumbnail(self, m_imgq):
+        m_imgq.return_value = 'Something'
         field = mock.MagicMock()
-        field.data = 'oops'
+        field.data.filename = 'Something'
         with pytest.raises(ValidationError):
-            sl.__call__(None, field)
-
-    def test_synonymlength_too_long(self):
-        """Raise ValidationError if any synonym is too long."""
-        sl = SynonymLength(1, 6)
-        field = mock.MagicMock()
-        field.data = 'Too long; didn\'t read'
-        with pytest.raises(ValidationError):
-            sl.__call__(None, field)
-
-    def test_synonymlength_no_data(self):
-        """Don't raise a ValidationError if no synonyms given.
-
-        Note that min_length is 1 here, as this validator should only care
-        about synonym length if synonyms are present.
-        """
-        sl = SynonymLength(1, 6)
-        field = mock.MagicMock()
-        field.data = ''
-        sl.__call__(None, field)
-        field.data = None
-        sl.__call__(None, field)
+            AddCultivarForm.validate_thumbnail(self=None, field=field)
 
 
 class TestAddPacketForm:
@@ -242,8 +275,76 @@ class TestAddRedirectForm:
                 form.validate_new_path(form.new_path)
 
 
+class TestEditIndexForm:
+    """Test methods of EditIndexForm."""
+    @mock.patch('app.seeds.models.Index.query')
+    def test_validate_name(self, m_idxq):
+        """Raise error if Index with name already exists."""
+        m_idxq.return_value = 'Index exists.'
+        field = mock.MagicMock()
+        self = mock.MagicMock()
+        field.data = 'Index exists.'
+        with pytest.raises(ValidationError):
+            EditIndexForm.validate_name(self=self, field=field)
+
+
+class TestEditCommonNameForm:
+    """Test methods of EditCommonNameForm."""
+    @mock.patch('app.seeds.forms.select_field_choices')
+    def test_set_selects(self, m_sfc):
+        """Call select_field_choices with model=Index."""
+        choices = [(1, 'One'), (2, 'Two')]
+        m_sfc.return_value = choices
+        self = mock.MagicMock()
+        EditCommonNameForm.set_selects(self=self)
+        assert self.index_id.choices == choices
+        m_sfc.assert_called_with(model=Index)
+
+
+    @mock.patch('app.seeds.models.CommonName.query')
+    def test_validate_name(self, m_cnq):
+        m_cnq.return_value = 'CN Exists.'
+        field = mock.MagicMock()
+        self = mock.MagicMock()
+        field.data = 'CN Exists.'
+        with pytest.raises(ValidationError):
+            EditCommonNameForm.validate_name(self=self, field=field)
+
+    def test_validate_synonyms_string(self):
+        """Raise ValidationError if any synonyms are too long."""
+        field = mock.MagicMock()
+        field.data = 'Digitalis'
+        EditCommonNameForm.validate_synonyms_string(None, field)
+        field.data = 'Digitalis, He just kept talking in one long '\
+                     'incredibly unbroken sentence moving from topic '\
+                     'to topic so that no one had a chance to interrupt'
+        with pytest.raises(ValidationError):
+            EditCommonNameForm.validate_synonyms_string(None, field)
+
+
 class TestEditBotanicalNameForm:
     """Test custom methods of EditBotanicalNameForm."""
+    @mock.patch('app.seeds.forms.select_field_choices')
+    def test_init(self, m_sfc):
+        m_sfc.return_value = [(1, 'One'), (2, 'Two'), (3, 'Three')]
+        cn1 = CommonName(name='One')
+        cn1.id = 1
+        cn2 = CommonName(name='Two')
+        cn2.id = 2
+        obj = BotanicalName(name='Bot nam')
+        obj.common_names = [cn1, cn2]
+        ebnf = EditBotanicalNameForm(obj=obj)
+        assert ebnf.common_names.data == [1, 2]
+
+    @mock.patch('app.seeds.models.BotanicalName.validate')
+    def test_validate_name(self, m_bnv):
+        """Raise error if data fails to pass BotanicalName.validate."""
+        m_bnv.return_value = False
+        field = mock.MagicMock()
+        field.data = 'invalid BOTANICAL name'
+        with pytest.raises(ValidationError):
+            EditBotanicalNameForm.validate_name(self=None, field=field)
+
     def test_validate_synonyms_string_too_long(self):
         """Raise ValidationError if any synonyms are too long."""
         field = mock.MagicMock()
@@ -265,22 +366,58 @@ class TestEditBotanicalNameForm:
             EditBotanicalNameForm.validate_synonyms_string(None, field)
 
 
-class TestEditCommonNameForm:
-    """Test custom methods of EditCommonNameForm."""
-    def test_validate_synonyms_string(self):
-        """Raise ValidationError if any synonyms are too long."""
+class TestEditCategoryForm:
+    """Test methods of EditCategoryForm."""
+    @mock.patch('app.seeds.models.Category.query')
+    def test_validate_name(self, m_cq):
+        """Raise error if Category already exists."""
+        m_cq.return_value = 'Cat exists.'
         field = mock.MagicMock()
-        field.data = 'Digitalis'
-        EditCommonNameForm.validate_synonyms_string(None, field)
-        field.data = 'Digitalis, He just kept talking in one long '\
-                     'incredibly unbroken sentence moving from topic '\
-                     'to topic so that no one had a chance to interrupt'
+        self = mock.MagicMock()
         with pytest.raises(ValidationError):
-            EditCommonNameForm.validate_synonyms_string(None, field)
+            EditCategoryForm.validate_name(self=self, field=field)
 
 
 class TestEditCultivarForm:
     """Test custom methods for EditCultivarForm."""
+    @mock.patch('app.seeds.models.Cultivar.query')
+    def test_validate_name(self, m_cvq):
+        """Raise error if Cultivar already exists."""
+        m_cvq.return_value = 'Cultivar exists.'
+        field = mock.MagicMock()
+        field.data = 'Cultivar exists.'
+        self = mock.MagicMock()
+        with pytest.raises(ValidationError):
+            EditCultivarForm.validate_name(self=self, field=field)
+
+    @mock.patch('app.seeds.models.BotanicalName.query')
+    def test_validate_botanical_name_id(self, m_bnq):
+        """Raise error if selected BN is not in selected CN."""
+        bn = BotanicalName('Digitalis über alles')
+        cn1 = CommonName(name='Fauxglove')
+        cn1.id = 1
+        cn2 = CommonName(name='Spuriousglove')
+        cn2.id = 2
+        bn.common_names = [cn1, cn2]
+        m_bnq.return_value = bn
+        self = mock.MagicMock()
+        self.common_name_id.data = 3
+        field = mock.MagicMock()
+        with pytest.raises(ValidationError):
+            EditCultivarForm.validate_botanical_name_id(self=self, field=field)
+
+    @mock.patch('app.seeds.models.Category.query')
+    def test_validate_category_id(self, m_catq):
+        """Raise error if selected cat is not in selected CN."""
+        cat = Category(name='Five')
+        cat.common_name_id = 1
+        m_catq.return_value = cat
+        self = mock.MagicMock()
+        self.common_name_id.data = 2
+        field = mock.MagicMock()
+        with pytest.raises(ValidationError):
+            EditCultivarForm.validate_category_id(self=self, field=field)
+
     def test_validate_synonyms_string_too_long(self):
         """Raise ValidationError if any synonym is too long."""
         field = mock.MagicMock()
@@ -291,3 +428,26 @@ class TestEditCultivarForm:
                       'no one had a chance to interrupt.')
         with pytest.raises(ValidationError):
             EditCultivarForm.validate_synonyms_string(None, field)
+
+
+class TestEditPacketForm:
+    @mock.patch('app.seeds.models.Packet.query')
+    def test_validate_sku(self, m_pktq):
+        """Raise error if Packet exists with SKU."""
+        m_pktq.return_value='8675309'
+        field = mock.MagicMock()
+        self = mock.MagicMock()
+        with pytest.raises(ValidationError):
+            EditPacketForm.validate_sku(self=self, field=field)
+
+
+class TestSelectCategoryForm:
+    @mock.patch('app.seeds.forms.select_field_choices')
+    def test_set_select(self, m_sfc):
+        """Call select_field_choices with Category and order by name."""
+        choices = [(1, 'One'), (2, 'Two')]
+        m_sfc.return_value = choices
+        self = mock.MagicMock()
+        SelectCategoryForm.set_select(self=self)
+        assert self.category.choices == choices
+

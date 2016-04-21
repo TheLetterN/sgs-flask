@@ -76,6 +76,13 @@ def merge_p(p_tags):
     return '\n'.join(str(p) for p in p_tags)
 
 
+def first_line(text):
+    """Return the first line of the contents of a string."""
+    return next(
+        l for l in text.strip().split('\n') if l and not l.isspace()
+    )
+
+
 def expand_botanical_name(bn, abbreviations):
     """Expand an abbreviated botanical name to its full name.
 
@@ -192,6 +199,133 @@ def str_to_packet(pkt_str):
     pkt['quantity'] = qty
     pkt['units'] = units
     return pkt
+
+
+def get_sections(parent):
+    """Get all sections in top level of parent."""
+    sections = parent.find_all(name='section', recursive=False)
+    sections += parent.find_all(
+        class_=lambda x: x and x.lower() == 'section',
+        recursive=False
+    )
+    return sections
+
+
+def section_dict(self, section):
+    """Get a dict containing section and subsection data."""
+    sd = OrderedDict()
+    if section.h2:
+        sd['section name'] = dbify(first_line(section.h2.text))
+    else:
+        sec_class = next(x for x in section['class'] if 'seeds' in x.lower())
+        cn = self.common_name['common name'].lower()
+        sec_name = sec_class.replace('-', ' ')
+        sec_name = sec_name.replace(cn, '').replace('seeds', '').strip()
+        sd['section name'] = dbify(sec_name)
+    subsections = get_sections(section)
+    if subsections:
+        sd['sections'] = []
+        for subsec in subsections:
+            sd['sections'].append(self.section_dict(subsec))
+
+    return sd
+
+
+class NewPage(object):
+    """A crawled page to extract data from."""
+    def __init__(self, url=None, parser=None):
+        self.url = url
+        if not parser:
+            parser = 'html.parser'
+        text = requests.get(url).text
+        text = clean(text)
+        self.soup = BeautifulSoup(text, parser)
+
+    @property
+    def main_div(self):
+        """Return the div the main content of the page is in.
+
+        Returns:
+            main: The main section of the page.
+
+        Raises:
+            RuntimeError: If no main section can be found.
+        """
+        main = self.soup.find(name='div', id='main')
+        if not main:
+            main = self.soup.find(
+                name='div', class_=lambda x: x and x.lower() == 'main'
+            )
+        if not main:
+            main = self.soup.main
+        if not main:
+            raise RuntimeError('Could not find a main section in the page!')
+        return main
+
+    @property
+    def common_name(self):
+        MULTIPLES = ('bean', 'corn', 'lettuce', 'pepper', 'squash', 'tomato')
+
+        cn = OrderedDict()
+        header_div = self.soup.find(
+            name='div', class_=lambda x: x and x.lower() == 'header'
+        )
+
+        raw_name = header_div.h1.text.lower().replace('seeds', '').strip()
+        name = first_line(raw_name)
+        for m in MULTIPLES:
+            if m in name:
+                name = m + ', ' + name.replace(m, '').strip()
+        cn['common name'] = dbify(name)
+
+        ps = header_div.find_all('p', recursive=False)
+        if ps:
+            cn['description'] = merge_p(ps)
+
+        if '/annuals/' in self.url:
+            cn['index'] = 'Annual Flower'
+        elif '/perennials/' in self.url:
+            cn['index'] = 'Perennial Flower'
+        elif '/vines/' in self.url:
+            cn['index'] = 'Flowering Vine'
+        elif '/veggies/' in self.url:
+            cn['index'] = 'Vegetable'
+        elif '/herbs/' in self.url:
+            cn['index'] = 'Herb'
+
+        return cn
+
+    @property
+    def sections(self):
+        sd = OrderedDict()
+        sd['sections'] = []
+        for section in get_sections(self.main_div):
+            sd['sections'].append(self.section_dict(section))
+
+        return sd
+
+    def section_dict(self, section):
+        """Get a dict containing section and subsection data."""
+        sd = OrderedDict()
+        if section.h2:
+            sec_name = first_line(section.h2.text).strip().lower()
+        else:
+            sec_class = section['class'][0]
+            sec_name = sec_class.replace('-', ' ').lower()
+        cn = self.common_name['common name'].lower()
+        cn_seeds = cn + ' seeds'
+        if cn_seeds in sec_name:
+            sec_name = sec_name.replace(cn_seeds, '')
+        else:
+            sec_name = sec_name.replace('seeds', '')
+        sd['section name'] = dbify(sec_name)
+        subsections = get_sections(section)
+        if subsections:
+            sd['sections'] = []
+            for subsec in subsections:
+                sd['sections'].append(self.section_dict(subsec))
+
+        return sd
 
 
 class Page(object):

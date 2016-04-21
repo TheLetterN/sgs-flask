@@ -191,6 +191,13 @@ class TestCommonName:
         cn = CommonName(name='Coleus')
         assert cn.__repr__() == '<CommonName \'Coleus\'>'
 
+    @mock.patch('app.seeds.models.CommonName.from_queryable_values')
+    def test_from_queryable_dict(self, m_fqv):
+        """Run CommonName.from_queryable_values with params from dict."""
+        CommonName.from_queryable_dict(d={'Common Name': 'Foxglove',
+                                          'Index': 'Perennial'})
+        m_fqv.assert_called_with(name='Foxglove', index='Perennial')
+
     def test_queryable_dict(self):
         """Return a dict containing the name and index of a CommonName."""
         cn = CommonName()
@@ -200,13 +207,6 @@ class TestCommonName:
         cn.index = Index(name='Perennial')
         assert cn.queryable_dict == {'Common Name': 'Foxglove',
                                      'Index': 'Perennial'}
-
-    @mock.patch('app.seeds.models.CommonName.from_queryable_values')
-    def test_from_queryable_dict(self, m_fqv):
-        """Run CommonName.from_queryable_values with params from dict."""
-        CommonName.from_queryable_dict(d={'Common Name': 'Foxglove',
-                                          'Index': 'Perennial'})
-        m_fqv.assert_called_with(name='Foxglove', index='Perennial')
 
     def test_arranged_name_with_comma(self):
         """Re-arrange name if a comma is in it."""
@@ -225,24 +225,84 @@ class TestCommonName:
         cn = CommonName(name='Lies, Damned Lies, and Statistics')
         assert cn.arranged_name == 'Lies, Damned Lies, and Statistics'
 
+    def test_arranged_name_no_name(self):
+        """Return None if self.name is None."""
+        cn = CommonName()
+        assert cn.arranged_name is None
+
     def test_header(self):
         """Return '<arranged_name> Seeds'."""
         cn = CommonName()
         cn.name = 'Foxglove'
         assert cn.header == 'Foxglove Seeds'
 
+    def test_header_no_name(self):
+        """Return an empty string if no name set."""
+        cn = CommonName()
+        assert cn.header == ''
+
     def test_select_field_title(self):
         """Return '<name> (<index name>)'"""
         cn = CommonName(name='Foxglove', index=Index(name='Perennial'))
         assert cn.select_field_title == 'Foxglove (Perennial)'
 
+    def test_html_botanical_names_no_bns(self):
+        """Return an empty string if CN has no BNs."""
+        cn = CommonName(name='Foxglove')
+        assert cn.html_botanical_names == ''
+
+    def test_html_botanical_names_with_bns(self):
+        """Return a list of botanical names formatted for use on webpage."""
+        cn = CommonName(name='Foxglove')
+        cn.botanical_names = [BotanicalName(name='Digitalis purpurea'),
+                              BotanicalName(name='Digitalis über alles'),
+                              BotanicalName(name='Digitalis does dallas')]
+        assert cn.html_botanical_names == (
+            'Digitalis purpurea, '
+            '<abbr title="Digitalis">D.</abbr> über alles, '
+            '<abbr title="Digitalis">D.</abbr> does dallas'
+        )
+
+    def test_has_public_cultivars(self):
+        """Return True if at least one Cultivar is public, False if not."""
+        cn = CommonName()
+        cv1 = mock.MagicMock()
+        cv1.public = False
+        cn.cultivars.append(cv1)
+        assert not cn.has_public_cultivars
+        cv2 = mock.MagicMock()
+        cv2.public = False
+        cn.cultivars.append(cv2)
+        assert not cn.has_public_cultivars
+        cv3 = mock.MagicMock()
+        cv3.public = True
+        cn.cultivars.append(cv3)
+        assert cn.has_public_cultivars
+
 
 class TestBotanicalName:
     """Test methods of BotanicalName in the seeds model."""
+    def test_init_with_common_names(self):
+        """Set common_names if given."""
+        cns = [CommonName('One'), CommonName('Two')]
+        bn = BotanicalName(name='Digitalis über alles',
+                           common_names=cns)
+        assert bn.common_names == cns
+
+    def test_init_without_common_names(self):
+        """Don't do anything to common_names if none given."""
+        bn = BotanicalName(name='Digitalis über alles')
+        assert bn.common_names == []
+
     def test_repr(self):
         """Return a string in format <BotanicalName '<botanical_name>'>"""
         bn = BotanicalName(name='Asclepias incarnata')
         assert bn.__repr__() == '<BotanicalName \'Asclepias incarnata\'>'
+
+    def test_genus(self):
+        """Return the first word in the BotanicalName."""
+        bn = BotanicalName(name='Digitalis über alles')
+        assert bn.genus == 'Digitalis'
 
     def test_validate_more_than_two_words(self):
         """A botanical name is still valid with more than 2 words."""

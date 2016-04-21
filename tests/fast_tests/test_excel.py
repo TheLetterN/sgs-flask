@@ -73,6 +73,26 @@ class TestSeedsWorksheet:
     We use Workbook to create sheets instead of Worksheet because it ensures
     the worksheet is created as it would be when used in a workbook.
     """
+    def test_getitem(self):
+        """Forward the [] functionality of sheet to SeedsWorksheet."""
+        legit_sheet = {'key': 'value'}
+        sws = SeedsWorksheet(legit_sheet)
+        assert sws['key'] == 'value'
+
+    def test_title_getter(self):
+        """Return title of given sheet."""
+        sheet = mock.MagicMock()
+        sheet.title = 'Worksheet: The Sheetening'
+        sws = SeedsWorksheet(sheet)
+        assert sws.title == 'Worksheet: The Sheetening'
+
+    def test_title_setter(self):
+        """Set title of contained sheet."""
+        sheet = mock.MagicMock()
+        sws = SeedsWorksheet(sheet)
+        sws.title = 'Worksheet 2: Electric Boogaloo'
+        assert sws._ws.title == 'Worksheet 2: Electric Boogaloo'
+
     def test_rows_property(self):
         """Return a tuple of tuples containing cells.
 
@@ -186,6 +206,13 @@ class TestSeedsWorksheet:
         sws = SeedsWorksheet(ws)
         with pytest.raises(ValueError):
             sws.populate_cols_dict()
+
+    def test_freeze_title_row(self):
+        """Freeze the top row of the worksheet."""
+        wb = Workbook()
+        sws = SeedsWorksheet(wb.active)
+        sws.freeze_title_row()
+        assert sws._ws.freeze_panes == 'A2'
 
     @mock.patch('app.seeds.excel.SeedsWorksheet.set_column_titles')
     @mock.patch('app.seeds.excel.SeedsWorksheet.populate_cols_dict')
@@ -832,6 +859,13 @@ class TestPacketsWorksheet:
 
 class TestSeedsWorkbook:
     """Test methods of the SeedsWorkbook container class."""
+    def test_getitem(self):
+        """Forward contained workbook when accessing via []."""
+        swb = SeedsWorkbook()
+        swb._wb = mock.MagicMock()
+        swb._wb = {'key': 'value'}
+        assert swb['key'] == 'value'
+
     @mock.patch('app.seeds.excel.SeedsWorkbook.create_all_sheets')
     def test_remove_all_sheets(self, m):
         """Remove all worksheets from the workbook."""

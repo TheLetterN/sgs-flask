@@ -27,6 +27,7 @@ of the website for Swallowtail Garden Seeds.
 
 import json
 import os
+import pyphen
 from collections import OrderedDict
 from flask import Flask, current_app
 from flask.ext.login import AnonymousUserMixin, LoginManager
@@ -35,6 +36,17 @@ from flask.ext.sqlalchemy import SQLAlchemy
 from config import CONFIG
 from .pending import Pending
 from .redirects import RedirectsFile
+
+
+# Initialize the hyphenator here so the cache will be global.
+hyphenator = pyphen.Pyphen(lang='en_US')
+
+def hyphenate(text):
+    """Return a soft-hyphenated version of text."""
+    if text:
+        return hyphenator.inserted(text, hyphen='&shy;')
+    else:
+        return text
 
 
 def get_index_map(filename=None):
@@ -132,6 +144,7 @@ def create_app(config_name):
 
     # Make things available to Jinja
     app.add_template_global(Permission, 'Permission')
+    app.add_template_global(hyphenate, 'hyphenate')
     app.add_template_global(get_index_map, 'get_index_map')
 
     return app

@@ -33,6 +33,7 @@ from flask import Flask, current_app
 from flask.ext.login import AnonymousUserMixin, LoginManager
 from flask.ext.mail import Mail
 from flask.ext.sqlalchemy import SQLAlchemy
+from slugify import slugify
 from config import CONFIG
 from .pending import Pending
 from .redirects import RedirectsFile
@@ -40,6 +41,7 @@ from .redirects import RedirectsFile
 
 # Initialize the hyphenator here so the cache will be global.
 hyphenator = pyphen.Pyphen(lang='en_US')
+
 
 def hyphenate(text):
     """Return a soft-hyphenated version of text."""
@@ -143,6 +145,7 @@ def create_app(config_name):
         pending.save()
 
     # Make things available to Jinja
+    app.add_template_global(slugify, 'slugify')
     app.add_template_global(Permission, 'Permission')
     app.add_template_global(hyphenate, 'hyphenate')
     app.add_template_global(get_index_map, 'get_index_map')

@@ -71,6 +71,7 @@ Notes:
 
 """
 
+import datetime
 import json
 import os
 import shutil
@@ -1030,7 +1031,7 @@ class Cultivar(SynonymsMixin, db.Model):
                  section=None,
                  botanical_name=None,
                  description=None,
-                 new_for=None,
+                 new_until=None,
                  active=None,
                  in_stock=None,
                  invisible=None):
@@ -1045,7 +1046,7 @@ class Cultivar(SynonymsMixin, db.Model):
         self.section = section
         self.botanical_name = botanical_name
         self.description = description
-        self.new_for = new_for
+        self.new_until = new_until
         if active is not None:
             self.active = active
         if in_stock is not None:
@@ -1171,6 +1172,14 @@ class Cultivar(SynonymsMixin, db.Model):
     def public(self):
         """bool: Whether or not `Cultivar` is visible to non-admin users."""
         return self.active and self.visible
+
+    @property
+    def new_for(self):
+        """int: Year cultivar is new for, if applicable."""
+        if self.new_until and self.new_until > datetime.date.today():
+            return self.new_until.year
+        else:
+            return None
 
     def generate_slug(self):
         """Generate a string for use in URLs for pages that use `Cultivar`."""

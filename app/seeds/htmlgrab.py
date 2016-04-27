@@ -62,7 +62,7 @@ def clean(text, unwanted=None):
         '&frac34;': '3/4'
     }
     if not unwanted:
-        unwanted = ['\r', '\t', '&shy;']
+        unwanted = ['\r', '\t', '&shy;', '<br>', '<br \>']
     for u in unwanted:
         text = text.replace(u, '')
     text = text.replace('\xa0', ' ')
@@ -73,7 +73,7 @@ def clean(text, unwanted=None):
 
 def merge_p(p_tags):
     """Merge a list of paragraphs into a single block of text."""
-    return '\n'.join(str(p) for p in p_tags)
+    return '\n'.join(str(p) for p in p_tags if 'go-to-next' not in str(p))
 
 
 def first_line(text):
@@ -88,7 +88,6 @@ def generate_botanical_names(bns_string):
     abbr = dict()
     for bn in bns_string.split(', '):
         yield expand_botanical_name(bn, abbr)
-
 
 
 def expand_botanical_name(bn, abbreviations):
@@ -129,13 +128,16 @@ def cultivar_div_to_dict(cv_div):
     if not cv_name:
         raise RuntimeError('Could not parse a cultivar name from {0}'
                            .format(cv_div))
-    cv['cultivar name'] = dbify(cv_name)
-    thumb = cv_div.img['src']
-    if thumb[0] == '/':  # Damn you, relative paths!
-        thumb = 'http://www.swallowtailgardenseeds.com' + thumb
-    elif 'http' not in thumb:
-        thumb = 'http://www.swallowtailgardenseeds.com/' + thumb
-    cv['thumbnail'] = thumb
+    cv['cultivar name'] = dbify(cv_name.replace('\n', ''))
+    if 'new for 2016' in cv_div.text.lower():
+        cv['new until'] = '12/31/2016'
+    if cv_div.img:
+        thumb = cv_div.img['src']
+        if thumb[0] == '/':  # Damn you, relative paths!
+            thumb = 'http://www.swallowtailgardenseeds.com' + thumb
+        elif 'http' not in thumb:
+            thumb = 'http://www.swallowtailgardenseeds.com/' + thumb
+        cv['thumbnail'] = thumb
     ems = cv_div.h3.find_all('em')
     botanical_name = None
     veg_data = None
@@ -175,7 +177,7 @@ def cultivar_div_to_dict(cv_div):
         cv['in stock'] = True
 
     cv['active'] = True  # If the CV isn't active, it will be set False later.
-    
+
     pkt_tds = cv_div.find_all('td')
     pkt_str = pkt_tds[0].text
     cv['packet'] = str_to_packet(pkt_str)
@@ -265,6 +267,26 @@ def generate_inactive_cultivar_dicts(parent):
         yield(cv_dict)
 
 
+def consolidate_sections(d):
+    """Find duplicate sections near root of section tree and move to branches.
+
+    Sometimes sections are duplicated, either by accident or for... reasons.
+    As such, we need to account for that and fix it here.
+
+    Args:
+        d: The dict to check the sections in.
+    """
+    sections = dict()
+    for s in d['sections']:
+        sections[s['section name']] = s
+        if 'sections' in s:
+            for ss in list(s['sections']):
+                if ss['section name'] in sections:
+                    sec = sections[ss['section name']]
+                    ss['cultivars'] += sec['cultivars']
+                    d['sections'].remove(sec)
+
+
 class NewPage(object):
     """A crawled page to extract data from."""
     def __init__(self, url=None, filename=None, parser=None):
@@ -308,7 +330,7 @@ class NewPage(object):
     def tree(self):
         """Return the full tree of dicts containing CN page data."""
         tree = self.common_name
-        
+
         tree['sections'] = list()
         for section in get_sections(self.main_div):
             tree['sections'].append(self.section_dict(section))
@@ -318,8 +340,9 @@ class NewPage(object):
         if cultivar_dicts:
             tree['cultivars'] = cultivar_dicts
 
-        return tree
+        consolidate_sections(tree)
 
+        return tree
 
     @property
     def common_name(self):
@@ -357,7 +380,7 @@ class NewPage(object):
             bns_string = header_div.h3.text.strip()
             # TODO: Parse and clean botanical names before assignment.
             cn['botanical names'] = list(generate_botanical_names(bns_string))
-        
+
         ps = header_div.find_all('p', recursive=False)
         if ps:
             cn['description'] = merge_p(ps)
@@ -400,6 +423,10 @@ class NewPage(object):
         else:
             sec_name = sec_name.replace('seeds', '')
         sd['section name'] = dbify(sec_name)
+
+        desc_div = section.div
+        if 'cultivar' not in (c.lower() for c in desc_div['class']):
+            sd['description'] = merge_p(desc_div.find_all('p'))
 
         cultivar_dicts = list(generate_cultivar_dicts(section))
         cultivar_dicts += list(generate_inactive_cultivar_dicts(section))
@@ -665,6 +692,10 @@ class PageAdder(object):
         """
         for cvd in cv_dicts:
             cv_name = cvd['cultivar name']
+            if 'new until' in cvd:
+                cv_nu = cvd['new until']
+            else:
+                cv_nu = None
             if 'thumbnail' in cvd:
                 cv_thumb = cvd['thumbnail']
             else:
@@ -703,6 +734,9 @@ class PageAdder(object):
                                         common_name=cn.name,
                                         index=cn.index.name,
                                         stream=stream)
+            if cv_nu:
+                cv.new_until = datetime.datetime.strptime(cv_nu,
+                                                          '%m/%d/%Y').date()
             if cv_thumb:
                 thumb = Thumbnail(cv_thumb)
                 if not cv.thumbnail or thumb.filename != cv.thumbnail.filename:
@@ -839,8 +873,10 @@ class PageAdder(object):
                     print('Botanical name \'{0}\' added to \'{1}\'.'
                           .format(bn.name, cn.name), file=stream)
         if 'sections' in self.tree:
-            for sec in self.generate_sections(self.tree['sections']):
-                cn.sections.apppend(sec)
+            for sec in self.generate_sections(cn,
+                                              self.tree['sections'],
+                                              stream=stream):
+                cn.sections.append(sec)
                 print('Section \'{0}\' and its subsections added to \'{1}\'.'
                       .format(sec.name, cn.name), file=stream)
         if 'cultivars' in self.tree:
@@ -851,38 +887,39 @@ class PageAdder(object):
                       .format(cv.fullname, cn.name), file=stream)
         db.session.commit()
 
-        def generate_sections(self, section_dicts):
-            """Generate sections from section_dicts."""
-            for secd in sections_dict:
-                sec_name = secd['section name']
-                if 'description' in secd:
-                    sec_desc = secd['description']
-                else:
-                    sec_desc = None
-                sec = Section.get_or_create(name=sec_name,
-                                            common_name=cn.name,
-                                            index=self.index.name)
-                if sec_desc and sec.description != sec_desc:
-                    sec.description = sec_desc
-                    print('Description for \'{0}\' set to: {1}'
-                          .format(sec.name, sec.description), file=stream)
+    def generate_sections(self, cn, section_dicts, stream=sys.stdout):
+        """Generate sections from section_dicts."""
+        for secd in section_dicts:
+            sec_name = secd['section name']
+            if 'description' in secd:
+                sec_desc = secd['description']
+            else:
+                sec_desc = None
+            sec = Section.get_or_create(name=sec_name,
+                                        common_name=cn.name,
+                                        index=self.index.name)
+            if sec_desc and sec.description != sec_desc:
+                sec.description = sec_desc
+                print('Description for \'{0}\' set to: {1}'
+                      .format(sec.name, sec.description), file=stream)
 
-                if 'cultivars' in secd:
-                    sec_cvds = secd['cultivars']
-                    for cv in self._generate_cultivars(cn=cn,
-                                                       cv_dicts=sec_cvds,
-                                                       stream=stream):
-                        if cv not in sec.cultivars:
-                            sec.cultivars.append(cv)
-                            print('Cultivar \'{0}\' added to Section \'{1}\'.'
-                                  .format(cv.fullname, sec.fullname),
-                                  file=stream)
+            if 'cultivars' in secd:
+                sec_cvds = secd['cultivars']
+                for cv in self._generate_cultivars(cn=cn,
+                                                   cv_dicts=sec_cvds,
+                                                   stream=stream):
+                    if cv not in sec.cultivars:
+                        sec.cultivars.append(cv)
+                        print('Cultivar \'{0}\' added to Section \'{1}\'.'
+                              .format(cv.fullname, sec.fullname),
+                              file=stream)
 
-                if 'sections' in secd:
-                    sec.children = self.generate_sections(secd['sections'])
+            if 'sections' in secd:
+                sec.children = list(self.generate_sections(cn,
+                                                           secd['sections'],
+                                                           stream=stream))
 
-                yield sec
-                    
+            yield sec
 
 
 class Thumbnail(object):

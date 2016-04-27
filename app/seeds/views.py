@@ -1775,9 +1775,9 @@ def common_name(idx_slug=None, cn_slug=None):
             cblr.crumble('index', cn.index.header, idx_slug=idx_slug),
             cn.name
         )
-        print(individuals)
+        sections = [s for s in cn.sections if not s.parent]
         return render_template('seeds/common_name.html',
-                               sections=cn.sections,
+                               sections=sections,
                                individuals=individuals,
                                cn=cn,
                                count=count,

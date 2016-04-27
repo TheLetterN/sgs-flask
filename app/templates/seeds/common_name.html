@@ -20,6 +20,7 @@
 {# block head: 2 indentations of 2 spaces each. (4 spaces total.) #}
 {# block main: 3 indentations of 2 spaces each. (6 spaces total.) #}
 {% from 'includes/cultivar_box.html' import cultivar_box with context %}
+{% from 'includes/section.html' import section with context %}
 {% block head %}
   <title>{{ cn.header }} | {{ count }} varieties</title>
     <link rel="canonical" href="{{ url_for('seeds.common_name', idx_slug=cn.index.slug, cn_slug=cn.slug, _external=True) }}">
@@ -43,9 +44,20 @@
       {% if sections %}
       <ul class="onpage-nav sections">
         {% for sec in sections %}
-          {% if sec.has_public_cultivars or current_user.can(Permission.MANAGE_SEEDS) %}
+          {% if sec.has_public_cultivars or sec.children or current_user.can(Permission.MANAGE_SEEDS) %}
         <li>
-          <a href="#section-{{ sec.name.replace(' ', '-') }}">{{ sec.name }}</a>
+          <a href="#section-{{ slugify(sec.name) }}">{{ sec.name }}</a>
+          {% if sec.children %}
+          <ul class="onpage-nav subsections">
+            {% for subsec in sec.children %}
+            {% if subsec.has_public_cultivars or current_user.can(Permission.MANAGE_SEEDS) %}
+            <li>
+              <a href="#section-{{ slugify(subsec.name) }}">{{ subsec.name }}</a>
+            </li>
+            {% endif %}
+            {% endfor %}
+          </ul>
+          {% endif %}
         </li>
           {% endif %}
         {% endfor %}
@@ -56,22 +68,11 @@
       {% endif %}
       {% if sections %}
         {% for sec in sections %}
-          {% if sec.has_public_cultivars or current_user.can(Permission.MANAGE_SEEDS) %}
-      <div class="section">
-        <h2 id="section-{{ sec.name.replace(' ', '-') }}">{{ sec.name }}</h2>
-        <em>{{ cn.header }}</em>
-            {% if sec.description %}
-        <div class="description">{{ sec.description|safe }}</div>
-            {% endif %}
-      </div>
-      <div class="section-cultivars">
-            {% for cv in sec.cultivars %}
-        {{ cultivar_box(cv)|indent(8)|safe }}
-            {% endfor %}
-      </div>
+        {% if sec.has_public_cultivars or current_user.can(Permission.MANAGE_SEEDS) %}
+      {{ section(sec, 6)|indent(6)|safe }}
           {% endif %}
         {% endfor %}
-      {% endif %}
+        {% endif %} 
       {% if individuals %}
         {% if sections %}
       <div class="cn-group-header cn-individuals-header">

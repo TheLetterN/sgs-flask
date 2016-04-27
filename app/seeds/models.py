@@ -937,7 +937,16 @@ class Section(db.Model):
     @property
     def has_public_cultivars(self):
         """bool: Whether or not `Section` has any public cultivars."""
-        return self.cultivars and any(cv.public for cv in self.cultivars)
+        rv = False
+        if self.cultivars:
+            if any(cv.public for cv in self.cultivars):
+                rv = True
+            if all(cv.featured for cv in self.cultivars):
+                rv = False
+        elif self.children:
+            if any(child.has_public_cultivars for child in self.children):
+                rv = True
+        return rv
 
 
 class Cultivar(SynonymsMixin, db.Model):
@@ -971,6 +980,8 @@ class Cultivar(SynonymsMixin, db.Model):
             Backref: `BotanicalName.cultivars`
         description: An optional HTML description of a cultivar.
         new_until: An optional date to mark a `Cultivar` as new until.
+        featured: Whether or not `Cultivar` should be featured on its common
+            name page.
         active: True if the cultivar's stock is being actively replenished,
             False if not.
         in_stock: True if a cultivar is in stock, False if not.
@@ -1009,6 +1020,7 @@ class Cultivar(SynonymsMixin, db.Model):
                                      backref='cultivars')
     description = db.Column(db.Text)
     new_until = db.Column(db.Date)
+    featured = db.Column(db.Boolean, default=False)
     active = db.Column(db.Boolean)
     in_stock = db.Column(db.Boolean)
     visible = db.Column(db.Boolean, default=True)

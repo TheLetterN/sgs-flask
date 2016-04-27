@@ -484,6 +484,10 @@ input[type=radio] + label:after {
     margin: 2em;
 }
 
+li ul {
+    background-color: red;
+}
+
 /* BEGIN cultivar groups */
 .cultivar-group {
     border: 1px solid #DDD;

@@ -26,6 +26,7 @@
     <link rel="canonical" href="{{ url_for('seeds.common_name', idx_slug=cn.index.slug, cn_slug=cn.slug, _external=True) }}">
 {% endblock %}
 {% block main %}
+      {# BEGIN common name page header #}
       <div class="header cn-header">
         <h1>{{ cn.header }}</h1>
         {% if cn.synonyms %}
@@ -41,6 +42,8 @@
         <a class="to-planting-instructions" href="#{{ cn.slug }}-instructions">How to plant {{ cn.arranged_name }} seeds</a>
         {% endif %}
       </div>
+      {# END common name page header #}
+      {# BEGIN onpage nav #}
       {% if sections %}
       <ul class="onpage-nav sections">
         {% for sec in sections %}
@@ -66,6 +69,14 @@
       <a class="to-indv-varieties" href="#individual-varieties">Individual {{ cn.arranged_name }} Varieties</a>
       {% endif %}
       {% endif %}
+      {# END onpage nav #}
+      {% if featured %}
+      <div class="featured">
+      {% for cv in featured %}
+        {{ cultivar_box(cv)|indent(8)|safe }}
+      {% endfor %}
+      </div>
+      {% endif %}
       {% if sections %}
         {% for sec in sections %}
         {% if sec.has_public_cultivars or current_user.can(Permission.MANAGE_SEEDS) %}
@@ -82,7 +93,9 @@
         {% endif %}
       <div class="cultivar-group cn-individual-cultivars">
         {% for cv in individuals %}
+        {% if not cv.featured %}
         {{ cultivar_box(cv)|indent(8)|safe }}
+        {% endif %}
         {% endfor %}
       </div>
       {% endif %}

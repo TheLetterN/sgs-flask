@@ -1776,7 +1776,9 @@ def common_name(idx_slug=None, cn_slug=None):
             cn.name
         )
         sections = [s for s in cn.sections if not s.parent]
+        featured = [c for c in cn.cultivars if c.featured]
         return render_template('seeds/common_name.html',
+                               featured=featured,
                                sections=sections,
                                individuals=individuals,
                                cn=cn,

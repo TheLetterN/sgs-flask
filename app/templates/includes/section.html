@@ -25,7 +25,9 @@
   {% endif %}
   <div class="section-cultivars">
     {% for cv in sec.cultivars %}
+    {% if not cv.featured %}
     {{ cultivar_box(cv)|indent(ind + 2)|safe }}
+    {% endif %}
     {% endfor %}
   </div>
   {% if sec.children %}

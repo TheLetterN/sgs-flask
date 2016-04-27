@@ -33,6 +33,9 @@
   {% if cultivar.description %}
   {{ cultivar.description|safe }}
   {% endif %}
+  {% if not cultivar.in_stock %}
+  <span style="background-color: red">OUT OF STOCK!</span> {# TODO: Change this. #}
+  {% endif %}
   {% if cultivar.packets %}
   <div class="packet-info">
     {% for packet in cultivar.packets %}

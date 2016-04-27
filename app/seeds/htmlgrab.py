@@ -277,7 +277,7 @@ def consolidate_sections(d):
         d: The dict to check the sections in.
     """
     sections = dict()
-    for s in d['sections']:
+    for s in list(d['sections']):
         sections[s['section name']] = s
         if 'sections' in s:
             for ss in list(s['sections']):
@@ -737,6 +737,8 @@ class PageAdder(object):
             if cv_nu:
                 cv.new_until = datetime.datetime.strptime(cv_nu,
                                                           '%m/%d/%Y').date()
+                cv.featured = True  #TODO: Handle featured better.
+
             if cv_thumb:
                 thumb = Thumbnail(cv_thumb)
                 if not cv.thumbnail or thumb.filename != cv.thumbnail.filename:
@@ -942,7 +944,7 @@ class Thumbnail(object):
             with open(self.savepath, 'wb') as outf:
                 outf.write(img.content)
         else:
-            img.raise_from_status()
+            img.raise_for_status()
 
     def exists(self):
         """Check if file exists already."""

@@ -43,3 +43,9 @@ migrations/
 
 # Ignore pages file.
 pages.txt
+
+# Ignore pages directory, too.
+pages/
+
+# Ignore 909 pages folder, they're just for data to scrape.
+909/

@@ -23,7 +23,7 @@
   {% if not cn_slug %}{% set cn_slug = cultivar.common_name.slug %}{% endif %}
   {% if cultivar.new_for %}<span class="Cultivar_span_new">New for {{ cultivar.new_for }}</span>{% endif %}
   <h3 id="{{ cultivar.slug }}">{% if config.SHOW_CULTIVAR_PAGES %}<a href="{{ url_for('seeds.cultivar', idx_slug=idx_slug, cn_slug=cn_slug, cv_slug=cultivar.slug)}}">{{ hyphenate(cultivar.name)|safe }}</a>{% else %}{{ hyphenate(cultivar.name)|safe }}{% endif %}</h3>
-  <em class="common-name">{{ cultivar.common_name.header }}</em>
+  <em class="subtitle">{% if cultivar.subtitle %}{{ cultivar.subtitle }}{% else %}{{ cultivar.common_name.header }}{% endif %}</em>
   {% if cultivar.botanical_name %}
   <i class="botanical-name">{{ cultivar.botanical_name.fullname|safe }}</i>
   {% endif %}

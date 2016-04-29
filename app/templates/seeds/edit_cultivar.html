@@ -48,6 +48,10 @@
             <li>
               {{ form_field(form.name)|indent(14)|safe }}
             </li>
+            <li>
+              {{ form_field(form.subtitle)|indent(14)|safe }}
+              <div>Default will be '&lt;common name&gt; Seeds'</div>
+            </li>
             <div>Current thumbnail:</div>
             <div><img src="{{ url_for('static', filename=cultivar.thumbnail.path) }}"></div>
             <li>

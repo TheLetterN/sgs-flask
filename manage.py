@@ -55,6 +55,44 @@ def create():
 
 
 @manager.command
+def grab_all(filename=None):
+    if not filename:
+        filename = 'pages.txt'
+    with open(filename, 'r') as infile:
+        txt = infile.read()
+    lines = txt.split('\n')
+    lines = [l for l in lines if l and not l.isspace()]
+    for line in lines:
+        if ' ' in line:
+            parts = line.split(' ')
+            url = parts[0]
+            f = os.path.join('909', parts[1])
+        else:
+            url = line
+            f = None
+        pagename = os.path.splitext(os.path.split(url)[-1])[0]
+        p = NewPage(url=url, filename=f)
+        jsonfile = os.path.join('pages', pagename + '.json')
+        print('Data from {0} saves as {1}'.format(url, jsonfile))
+        p.save_json(jsonfile)
+
+
+@manager.command
+def load_all(directory=None):
+    if not directory:
+        directory = 'pages'
+    pages = [os.path.join(directory, p) for p in os.listdir(directory)
+             if p[0] != '.']  # Damn you, dotfiles!
+    for page in pages:
+        try:
+            pa = PageAdder.from_json_file(page)
+            pa.save()
+        except Exception as e:
+            raise RuntimeError('An exception \'{}\' occurred when trying to load '
+                               'page: {}'.format(e, page))
+
+
+@manager.command
 def grab(url, outfile, infile=None):
     """Grab a webpage and save it to a JSON file."""
     p = NewPage(url=url, filename=infile)

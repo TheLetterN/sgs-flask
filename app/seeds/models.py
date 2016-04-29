@@ -972,6 +972,10 @@ class Cultivar(SynonymsMixin, db.Model):
             cultivar falls under.
             Backref: `CommonName.cultivars`
 
+        subtitle: An optional subtitle for cases in which the subtitle under
+            a `Cultivar` on a page should be something other than
+            '<`Cultivar.common_name.name`> Seeds', as in Fuseables, e.g.
+            'Bacopa/Petunia Multi-Species Seeds'.
         section: MtO relationship with `Section`; the (optional) section a
             cultivar belongs to.
             Backref: `Section.cultivars`
@@ -1012,6 +1016,7 @@ class Cultivar(SynonymsMixin, db.Model):
     common_name = db.relationship('CommonName', backref='cultivars')
 
     # Data Optional
+    subtitle = db.Column(db.String(64))
     section_id = db.Column(db.Integer, db.ForeignKey('sections.id'))
     section = db.relationship('Section', backref='cultivars')
     botanical_name_id = db.Column(db.Integer,

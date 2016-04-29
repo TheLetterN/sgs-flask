@@ -88,6 +88,9 @@ def get_h_title(tag):
         return title.strip().lower()
     except StopIteration:
         raise RuntimeError('Could not isolate the title in: {0}'.format(tag))
+    except Exception as e:
+        raise RuntimeError('An exception \'{0}\' was raised when trying to '
+                           'get the title out of: {1}'.format(e, tag))
 
 
 def generate_botanical_names(bns_string):
@@ -141,6 +144,8 @@ def cultivar_div_to_dict(cv_div):
         raise RuntimeError('Could not parse a cultivar name from {0}'
                            .format(cv_div))
     cv['cultivar name'] = dbify(cv_name.replace('\n', ''))
+    if cv_div.h3.em:
+        cv['subtitle'] = dbify(cv_div.h3.em.text.strip())
     if 'new for 2016' in cv_div.text.lower():
         cv['new until'] = '12/31/2016'
     if cv_div.img:
@@ -149,6 +154,7 @@ def cultivar_div_to_dict(cv_div):
             thumb = 'http://www.swallowtailgardenseeds.com' + thumb
         elif 'http' not in thumb:
             thumb = 'http://www.swallowtailgardenseeds.com/' + thumb
+            thumb = thumb.replace('../', '')
         cv['thumbnail'] = thumb
     ems = cv_div.h3.find_all('em')
     botanical_name = None
@@ -201,6 +207,32 @@ def cultivar_div_to_dict(cv_div):
         cv['jumbo'] = str_to_packet(pkt_tds[1].text)
         cv['jumbo']['sku'] = cv_div.small.text + 'J'
     return cv
+
+
+def generate_cultivar_dicts(parent):
+    """Yield dicts of all cultivars that are in the top level of parent."""
+    cv_divs = parent.find_all(
+        name='div',
+        class_=lambda x: x and x.lower() == 'cultivar',
+        recursive=False
+    )
+    for cv_div in cv_divs:
+        yield(cultivar_div_to_dict(cv_div))
+
+
+def generate_inactive_cultivar_dicts(parent):
+    """Yield dicts of commented out cultivars to be added as inactive."""
+    cv_divs_raw = parent.find_all(
+        text=(lambda x: x
+              and isinstance(x, Comment)
+              and 'class="cultivar"' in x.lower()),
+        recursive=False
+    )
+    cv_divs = [BeautifulSoup(d, 'html.parser').div for d in cv_divs_raw]
+    for cv_div in cv_divs:
+        cv_dict = cultivar_div_to_dict(cv_div)
+        cv_dict['active'] = False
+        yield(cv_dict)
 
 
 def str_to_packet(pkt_str):
@@ -274,32 +306,6 @@ def get_sections(parent):
     return sections
 
 
-def generate_cultivar_dicts(parent):
-    """Yield dicts of all cultivars that are in the top level of parent."""
-    cv_divs = parent.find_all(
-        name='div',
-        class_=lambda x: x and x.lower() == 'cultivar',
-        recursive=False
-    )
-    for cv_div in cv_divs:
-        yield(cultivar_div_to_dict(cv_div))
-
-
-def generate_inactive_cultivar_dicts(parent):
-    """Yield dicts of commented out cultivars to be added as inactive."""
-    cv_divs_raw = parent.find_all(
-        text=(lambda x: x
-              and isinstance(x, Comment)
-              and 'class="cultivar"' in x.lower()),
-        recursive=False
-    )
-    cv_divs = [BeautifulSoup(d, 'html.parser').div for d in cv_divs_raw]
-    for cv_div in cv_divs:
-        cv_dict = cultivar_div_to_dict(cv_div)
-        cv_dict['active'] = False
-        yield(cv_dict)
-
-
 def consolidate_sections(d):
     """Find duplicate sections near root of section tree and move to branches.
 
@@ -325,6 +331,16 @@ def consolidate_sections(d):
                         sec = sections[ss['section name']]
                         ss['cultivars'] += sec['cultivars']
                         d['sections'].remove(sec)
+
+
+def clean_cultivar_dicts(cultivar_dicts, cn):
+    """Remove unwanted subtitles from cultivar dicts."""
+    for cd in cultivar_dicts:
+        if 'subtitle' in cd:
+            st = cd['subtitle'].lower()
+            cleaned = st.replace(cn.lower(), '').replace('seeds', '')
+            if not cleaned or cleaned.isspace():
+                cd.pop('subtitle')
 
 
 class NewPage(object):
@@ -376,6 +392,8 @@ class NewPage(object):
                      'squash',
                      'tomato')
 
+        INDEXES = ('annual', 'perennial')
+
         cn = OrderedDict()
         header_div = self.soup.find(name='header')
         if not header_div:
@@ -384,9 +402,13 @@ class NewPage(object):
             )
 
         name = get_h_title(header_div.h1).strip().lower().replace('seeds', '')
-        for m in MULTIPLES:
-            if m in name and name != m:
-                name = m + ', ' + name.replace(m, '').strip()
+        # TODO: Find a better way to handle these cases.
+#        for m in MULTIPLES:
+#            if m in name and name != m:
+#                name = m + ', ' + name.replace(m, '').strip()
+        for i in INDEXES:
+            if i in name:
+                name = name.replace(i, '').strip()
         cn['common name'] = dbify(name)
 
         if '/annuals/' in self.url:
@@ -446,6 +468,8 @@ class NewPage(object):
 
         cultivar_dicts = list(generate_cultivar_dicts(self.main_div))
         cultivar_dicts += list(generate_inactive_cultivar_dicts(self.main_div))
+        clean_cultivar_dicts(cultivar_dicts,
+                             self.common_name['common name'].lower())
         if cultivar_dicts:
             tree['cultivars'] = cultivar_dicts
 
@@ -475,14 +499,24 @@ class NewPage(object):
         sd['section name'] = dbify(sec_name)
 
         desc_div = section.div
-        if 'cultivar' not in (c.lower() for c in desc_div['class']):
-            desc = merge_p(desc_div.find_all('p'))
-            if desc:
-                sd['description'] = desc
+        try:
+            if ('class' not in desc_div.attrs or
+                    'cultivar' not in (c.lower() for c in desc_div['class'])):
+                desc = merge_p(desc_div.find_all('p'))
+                if desc:
+                    sd['description'] = desc
+        except Exception as e:
+            raise RuntimeError(
+                'Something went wrong trying to parse description from desc '
+                'div {0}\n\nwith parent div {1}.'
+                .format(desc_div, section)
+            ).with_traceback(e.__traceback__)
 
         cultivar_dicts = list(generate_cultivar_dicts(section))
         cultivar_dicts += list(generate_inactive_cultivar_dicts(section))
         if cultivar_dicts:
+            # We don't need subtitles unless they differ from '<CN> Seeds'.
+            clean_cultivar_dicts(cultivar_dicts, cn)
             sd['cultivars'] = cultivar_dicts
 
         subsections = get_sections(section)
@@ -744,6 +778,10 @@ class PageAdder(object):
         """
         for cvd in cv_dicts:
             cv_name = cvd['cultivar name']
+            if 'subtitle' in cvd:
+                cv_st = cvd['subtitle']
+            else:
+                cv_st = None
             if 'new until' in cvd:
                 cv_nu = cvd['new until']
             else:
@@ -786,17 +824,28 @@ class PageAdder(object):
                                         common_name=cn.name,
                                         index=cn.index.name,
                                         stream=stream)
+            if cv_st:
+                cv.subtitle = cv_st
+                print('Subtitle for {0} set to: {1}'
+                      .format(cv.fullname, cv.subtitle), file=stream)
             if cv_nu:
                 cv.new_until = datetime.datetime.strptime(cv_nu,
                                                           '%m/%d/%Y').date()
-                cv.featured = True  #TODO: Handle featured better.
+                cv.featured = True  # TODO: Handle featured better.
 
             if cv_thumb:
                 thumb = Thumbnail(cv_thumb)
                 if not cv.thumbnail or thumb.filename != cv.thumbnail.filename:
-                    cv.thumbnail = thumb.save()
-                    print('Thumbnail for \'{0}\' set to \'{1}\'.'
-                          .format(cv.fullname, thumb.filename), file=stream)
+                    try:
+                        cv.thumbnail = thumb.save()
+                        print('Thumbnail for \'{0}\' set to \'{1}\'.'
+                              .format(cv.fullname, thumb.filename),
+                              file=stream)
+                    except requests.exceptions.HTTPError as e:
+                        cv.thumbnail = None
+                        print('Thumbnail for {0} was not saved because an '
+                              'HTTP Error was raised when trying to download '
+                              'it: {1}'.format(cv.fullname, e), file=stream)
             if cv_bn:
                 bn = BotanicalName.get_or_create(name=cv_bn,
                                                  stream=stream,
@@ -919,7 +968,6 @@ class PageAdder(object):
                                                  stream=stream,
                                                  fix_bad=True)
                 if bn_and_syn:  # Empty if no synonyms.
-                    print(bn_and_syn)
                     # TODO: Make this expand abbreviated genus in synonym.
                     bn.synonyms_string = ', '.join(bn_and_syn)
                 if bn not in cn.botanical_names:

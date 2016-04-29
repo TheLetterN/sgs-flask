@@ -407,6 +407,8 @@ class AddCultivarForm(Form):
 
     Attributes:
         name: DBified string field for the name of added `Cultivar`.
+        subtitle: An optional subtitle to use if the subtitle is something
+            other than '<common name> Seeds'.
         botanical_name: Select field for the optional `BotanicalName` for the
             added `Cultivar`.
         section: Select field for optional `Section` for added `Cultivar`.
@@ -427,6 +429,8 @@ class AddCultivarForm(Form):
     """
     name = DBifiedStringField('Cultivar Name',
                               validators=[Length(1, 64), NotSpace()])
+    subtitle = DBifiedStringField('Subtitle (Leave blank for default.)',
+                                  validators=[Length(1, 64), NotSpace()])
     botanical_name = SelectField('Botanical Name', coerce=int)
     section = SelectField('Section', coerce=int)
     thumbnail = FileField('Thumbnail Image',
@@ -846,6 +850,7 @@ class EditCultivarForm(Form):
         section_id: Select field for `Section` `Cultivar` is in, if any.
         name: DBified string field for `Cultivar` name, excluding section and
             common name.
+        subtitle: DBified string field for optional subtitle.
         description: Text field for HTML description of `Cultivar`.
         thumbnail: File field for thumbnail upload.
         synonyms_string: String field for synonyms of `Cultivar`.
@@ -865,6 +870,8 @@ class EditCultivarForm(Form):
     section_id = SelectField('Select Section', coerce=int)
     name = DBifiedStringField('Cultivar Name',
                               validators=[Length(1, 64), NotSpace()])
+    subtitle = DBifiedStringField('Subtitle (Leave blank for default.)',
+                                  validators=[Length(1, 64), NotSpace()])
     description = TextAreaField('Description', validators=[NotSpace()])
     thumbnail = FileField('New Thumbnail',
                           validators=[FileAllowed(IMAGE_EXTENSIONS,

@@ -38,6 +38,10 @@
               {{ form_field(form.name)|indent(14)|safe }}
             </li>
             <li>
+              {{ form_field(form.subtitle)|indent(14)|safe }}
+              <div>Default subtitle: '{{ form.cn.name }} Seeds'</div>
+            </li>
+            <li>
               {{ form_field(form.botanical_name)|indent(14)|safe }}
             </li>
             <li>

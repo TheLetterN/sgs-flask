@@ -531,6 +531,10 @@ def add_cultivar(cn_id=None):
         db.session.add(cv)
         messages.append('Creating cultivar with short name \'{0}\' for common '
                         'name \'{1}\':'.format(cv.name, cn.name))
+        if form.subtitle.data:
+            cv.subtitle = form.subtitle.data
+            messages.append('Subtitle for \'{0}\' set to: {1}'
+                            .format(cv.fullname, cv.subtitle))
         if form.botanical_name.data:
             cv.botanical_name = BotanicalName.query\
                 .get(form.botanical_name.data)
@@ -1006,6 +1010,16 @@ def edit_cultivar(cv_id=None):
             else:
                 cv.section = None
                 messages.append('Section cleared.')
+        if form.subtitle.data != cv.subtitle:
+            if form.subtitle.data:
+                edited = True
+                cv.subtitle = form.subtitle.data
+                messages.append('Subtitle changed to: \'{0}\.'
+                                .format(cv.subtitle))
+            elif cv.subtitle:
+                edited = True
+                cv.subtitle = None
+                messages.append('Subtitle set to default.')
         if cv.name != form.name.data:
             edited = True
             cv.name = form.name.data
@@ -1786,10 +1800,13 @@ def common_name(idx_slug=None, cn_slug=None):
         )
         sections = [s for s in cn.sections if not s.parent]
         featured = [c for c in cn.cultivars if c.featured]
+        # TMP
         print(cn.name)
         print('Total cultivars: {0}'.format(len(cn.cultivars)))
-        print('Active cultivars: {0}'.format(len([(c for c in cn.cultivars if c.active)])))
-        print('In stock cultivars: {0}'.format(len([(c for c in cn.cultivars if c.in_stock)])))
+        print('Active cultivars: {0}'.format(len([(c for c in cn.cultivars
+                                                   if c.active)])))
+        print('In stock cultivars: {0}'.format(len([(c for c in cn.cultivars
+                                                     if c.in_stock)])))
         return render_template('seeds/common_name.html',
                                featured=featured,
                                sections=sections,

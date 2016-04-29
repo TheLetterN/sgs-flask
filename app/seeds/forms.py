@@ -415,6 +415,8 @@ class AddCultivarForm(Form):
         synonyms: String field for optional synonyms of this cultivar.
         new_until: Date field for optional date to mark added `Cultivar` as new
             until.
+        featured: Checkbox for whether or not to feature the `Cultivar` on the
+            page for its `CommonName`.
         in_stock: Checkbox for whether or not added `Cultivar` is in stock.
         active: Checkbox for whether or not added `Cultivar` is to be actively
             replenished when stock gets low.
@@ -436,6 +438,7 @@ class AddCultivarForm(Form):
     new_until = DateField('New until (leave as-is if not new)',
                           format='%m/%d/%Y',
                           default=datetime.date.today())
+    featured = BooleanField('Featured')
     in_stock = BooleanField('In Stock', default='checked')
     active = BooleanField('Actively replenished', default='checked')
     visible = BooleanField('Visible on auto-generated pages',
@@ -848,8 +851,11 @@ class EditCultivarForm(Form):
         synonyms_string: String field for synonyms of `Cultivar`.
         new_until: Date field for when `Cultivar` will no longer be marked as
             new, if applicable.
-
-
+        featured: Checkbox for whether or not to feature the `Cultivar` on the
+            page for its `CommonName`.
+        active: Checkbox for whether or not `Cultivar` is to be restocked when
+            low/out of stock.
+        in_stock: Checkbox for whether or not `Cultivar` is in stock.
     """
     id = HiddenField()
     common_name_id = SelectField('Common Name',
@@ -868,6 +874,7 @@ class EditCultivarForm(Form):
                           format='%m/%d/%Y',
                           default=datetime.date.today(),
                           validators=[Optional()])
+    featured = BooleanField('Featured')
     active = BooleanField('Actively replenished')
     visible = BooleanField('Visible on auto-generated pages')
     in_stock = BooleanField('In Stock')

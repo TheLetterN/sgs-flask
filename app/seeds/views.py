@@ -560,6 +560,10 @@ def add_cultivar(cn_id=None):
             messages.append('\'{0}\' will be marked as new until: {1}'
                             .format(cv.fullname,
                                     cv.new_until.strftime('%m/%d/%Y')))
+        if form.featured.data:
+            cv.featured = True
+            messages.append('\'{0}\' will be featured on its common '
+                            'name\'s page.'.format(cv.fullname))
         if form.in_stock.data:
             cv.in_stock = True
             messages.append('\'{0}\' is in stock.'.format(cv.fullname))
@@ -1068,40 +1072,45 @@ def edit_cultivar(cv_id=None):
                 cv.new_until = form.new_until.data
                 messages.append('Marked as new until {0}.'
                                 .format(cv.new_until.strftime('%m/%d/%Y')))
-        if form.in_stock.data:
-            if not cv.in_stock:
-                edited = True
-                cv.in_stock = True
-                messages.append('\'{0}\' is now in stock.'.format(cv.fullname))
-        else:
-            if cv.in_stock:
-                edited = True
-                cv.in_stock = False
-                messages.append('\'{0}\' is now out of stock.'
-                                .format(cv.fullname))
-        if form.active.data:
-            if not cv.active:
-                edited = True
-                cv.active = True
-                messages.append('\'{0}\' is now active.'.format(cv.fullname))
-        else:
-            if cv.active:
-                edited = True
-                cv.active = False
-                messages.append('\'{0}\' is no longer active.'
-                                .format(cv.fullname))
-        if form.visible.data:
-            if not cv.visible:
-                edited = True
-                cv.visible = True
-                messages.append('\'{0}\' will now be visible on '
-                                'auto-generated pages.'.format(cv.fullname))
-        else:
-            if cv.visible:
-                edited = True
-                cv.visible = False
-                messages.append('\'{0}\' will no longer be visible on '
-                                'auto-generated pages.'.format(cv.fullname))
+        if form.featured.data and not cv.featured:
+            edited = True
+            cv.featured = True
+            messages.append('\'{0}\' will now be featured on its common '
+                            'name\'s page.'.format(cv.fullname))
+        elif not form.featured.data and cv.featured:
+            edited = True
+            cv.featured = False
+            messages.append('\'{0}\' will no longer be featured on its common '
+                            'name\'s page.'.format(cv.fullname))
+
+        if form.in_stock.data and not cv.in_stock:
+            edited = True
+            cv.in_stock = True
+            messages.append('\'{0}\' is now in stock.'.format(cv.fullname))
+        elif not form.in_stock.data and cv.in_stock:
+            edited = True
+            cv.in_stock = False
+            messages.append('\'{0}\' is now out of stock.'
+                            .format(cv.fullname))
+        if form.active.data and not cv.active:
+            edited = True
+            cv.active = True
+            messages.append('\'{0}\' is now active.'.format(cv.fullname))
+        elif not form.active.data and cv.active:
+            edited = True
+            cv.active = False
+            messages.append('\'{0}\' is no longer active.'
+                            .format(cv.fullname))
+        if form.visible.data and not cv.visible:
+            edited = True
+            cv.visible = True
+            messages.append('\'{0}\' will now be visible on '
+                            'auto-generated pages.'.format(cv.fullname))
+        elif not form.visible.data and cv.visible:
+            edited = True
+            cv.visible = False
+            messages.append('\'{0}\' will no longer be visible on '
+                            'auto-generated pages.'.format(cv.fullname))
         if edited:
             messages.append('Changes to \'{0}\' committed to the database.'
                             .format(cv.fullname))
@@ -1777,6 +1786,10 @@ def common_name(idx_slug=None, cn_slug=None):
         )
         sections = [s for s in cn.sections if not s.parent]
         featured = [c for c in cn.cultivars if c.featured]
+        print(cn.name)
+        print('Total cultivars: {0}'.format(len(cn.cultivars)))
+        print('Active cultivars: {0}'.format(len([(c for c in cn.cultivars if c.active)])))
+        print('In stock cultivars: {0}'.format(len([(c for c in cn.cultivars if c.in_stock)])))
         return render_template('seeds/common_name.html',
                                featured=featured,
                                sections=sections,
@@ -1807,6 +1820,26 @@ def cultivar(idx_slug=None, cn_slug=None, cv_slug=None):
                                    # crumbs=crumbs,
                                    cultivar=cv)
     abort(404)
+
+
+@seeds.route('flip_featured/<cv_id>')
+@login_required
+@permission_required(Permission.MANAGE_SEEDS)
+def flip_featured(cv_id):
+    """Toggle 'featured' status of given `Cultivar`."""
+    cv = Cultivar.query.get(cv_id)
+    if cv is None:
+        abort(404)
+    if cv.featured:
+        cv.featured = False
+        flash('\'{0}\' will no longer be featured on its common name\'s page.'
+              .format(cv.fullname))
+    else:
+        cv.featured = True
+        flash('\'{0}\' will now be featured on its common name\'s page.'
+              .format(cv.fullname))
+    db.session.commit()
+    return redirect(request.args.get('next') or url_for('seeds.manage'))
 
 
 @seeds.route('/flip_in_stock/<cv_id>')

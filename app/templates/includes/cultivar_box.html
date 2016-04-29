@@ -46,6 +46,13 @@
   <div class="cultivar-admin">
     <h3>ADMIN - Options for {{ cultivar.fullname }}:</h3>
     <ul class="cultivar-status">
+      <li class="cultivar-featured">
+        {% if cultivar.featured %}
+        {{ cultivar.fullname }} is <em class="status-true">featured</em>. <a class="toggle-false" href="{{ url_for('seeds.flip_featured', cv_id=cultivar.id, next=request.path + '#' + cultivar.slug) }}">Set as not featured</a>
+        {% else %}
+        {{ cultivar.fullname }} is <em class="status-false">not featured</em>. <a class="toggle-true" href="{{ url_for('seeds.flip_featured', cv_id=cultivar.id, next=request.path + '#' + cultivar.slug) }}">Set as featured</a>
+        {% endif %}
+      </li>
       <li class="cultivar-in-stock">
         {% if cultivar.in_stock %}
         {{ cultivar.fullname }} is <em class="status-true">in stock</em>. <a class="toggle-false" href="{{ url_for('seeds.flip_in_stock', cv_id=cultivar.id, next=request.path + '#' + cultivar.slug) }}">Set as out of stock</a>

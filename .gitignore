@@ -40,3 +40,6 @@ migrations/
 
 # Ignore .cache directories.
 .cache
+
+# Ignore pages file.
+pages.txt

@@ -483,7 +483,7 @@ class NewPage(object):
             cn['index'] = 'Perennial Flower'
         elif '/vines/' in self.url:
             cn['index'] = 'Flowering Vine'
-        elif '/veggies/' or '/vegetables/' in self.url:
+        elif '/veggies/' in self.url or '/vegetables/' in self.url:
             cn['index'] = 'Vegetable'
         elif '/herbs/' in self.url:
             cn['index'] = 'Herb'

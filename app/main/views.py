@@ -24,3 +24,9 @@ from . import main
 def index():
     """Generate the index page of the website."""
     return render_template('main/index.html')
+
+@main.route('/test')
+def test():
+    """Test page, please ignore."""
+    var = 'Have a link to index: url_for(\'main.index\'). Isn\'t it nice?'
+    return render_template('main/test.html', var=var)

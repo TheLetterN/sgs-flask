@@ -55,34 +55,45 @@ def create():
 
 
 @manager.command
-def grab_all(filename=None):
-    if not filename:
-        filename = 'pages.txt'
+def grab_all(index):
+    if 'annual' in index.lower():
+        idx = 'annual'
+    elif 'perennial' in index.lower():
+        idx = 'perennial'
+    else:
+        idx = 'herbs'
+    filename = os.path.join('pages', idx + '.txt')
     with open(filename, 'r') as infile:
         txt = infile.read()
     lines = txt.split('\n')
     lines = [l for l in lines if l and not l.isspace()]
     for line in lines:
-        if ' ' in line:
-            parts = line.split(' ')
-            url = parts[0]
-            f = os.path.join('909', parts[1])
-        else:
-            url = line
-            f = None
-        pagename = os.path.splitext(os.path.split(url)[-1])[0]
-        p = NewPage(url=url, filename=f)
-        jsonfile = os.path.join('pages', pagename + '.json')
-        print('Data from {0} saves as {1}'.format(url, jsonfile))
-        p.save_json(jsonfile)
+        if '#' not in line[:4]:
+            if ' ' in line:
+                parts = line.split(' ')
+                url = parts[0]
+                f = os.path.join('909', idx, parts[1])
+            else:
+                url = line
+                f = None
+            pagename = os.path.splitext(os.path.split(url)[-1])[0]
+            p = NewPage(url=url, filename=f)
+            jsonfile = os.path.join('pages', idx, pagename + '.json')
+            print('Data from {0} saved as {1}'.format(url, jsonfile))
+            p.save_json(jsonfile)
 
 
 @manager.command
-def load_all(directory=None):
-    if not directory:
-        directory = 'pages'
-    pages = [os.path.join(directory, p) for p in os.listdir(directory)
-             if p[0] != '.']  # Damn you, dotfiles!
+def load_all(index):
+    if 'annual' in index.lower():
+        idx = 'annual'
+    elif 'perennial' in index.lower():
+        idx = 'perennial'
+    else:
+        idx = 'herbs'
+    directory = os.path.join('pages', idx)
+    pages = sorted([os.path.join(directory, p) for p in os.listdir(directory)
+                    if '.json' in p])
     for page in pages:
         try:
             pa = PageAdder.from_json_file(page)

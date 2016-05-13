@@ -102,6 +102,16 @@ botanical_names_to_common_names = db.Table(
 )
 
 
+botanical_names_to_sections = db.Table(
+    'botanical_names_to_sections',
+    db.Model.metadata,
+    db.Column('botanical_names_id',
+              db.Integer,
+              db.ForeignKey('botanical_names.id')),
+    db.Column('sections.id', db.Integer, db.ForeignKey('sections.id'))
+)
+
+
 cultivars_to_custom_pages = db.Table(
     'cultivars_to_custom_pages',
     db.Model.metadata,
@@ -137,11 +147,17 @@ def dbify(string):
         e.g forget-me-not > Forget-Me-Not, while we want forget-me-not >
         Forget-me-not.
 
+        Also correctly express roman numerals instead of titlecasing them.
+
         Returns:
             str: Corrected hyphenated word.
         """
+        # Some things should be allcaps, such as roman numerals.
+        ALLCAPS = ('I', 'II', 'III', 'IV', 'V', 'XP')
         if '-' in word:
             return word[0].upper() + word[1:].lower()
+        elif word.upper() in ALLCAPS:
+            return word.upper()
 
     if string:
         return titlecase(string.lower().strip(), callback=cb)
@@ -849,7 +865,13 @@ class Section(db.Model):
             `Section` belongs to.
             Backref: `CommonName.sections`
 
+        botanical_names: MtO relationship with `BotanicalName`; optional
+            botanical names to associate with `Section`.
+            Backref: `BotanicalName.sections`
+        subtitle: An optional subtitle to use if not just using '<common name>
+            ' Seeds' as the subtitle.
         description: An HTML description of the `Section`.
+        children: Optional subsections belonging to `Section`.
 
         cultivars: Backref from `Cultivar.section`.
     """
@@ -865,6 +887,10 @@ class Section(db.Model):
     common_name = db.relationship('CommonName', backref='sections')
 
     # Data Optional
+    botanical_names = db.relationship('BotanicalName',
+                                      secondary=botanical_names_to_sections,
+                                      backref='sections')
+    subtitle = db.Column(db.String(64))
     description = db.Column(db.Text)
     parent_id = db.Column(db.Integer, db.ForeignKey('sections.id'))
     children = db.relationship('Section',
@@ -1801,6 +1827,7 @@ class VegetableData(db.Model):
 
     Attributes:
         open_pollinated: Whether or not the vegetable is open pollinated.
+        hybrid: Whether or not a vegetable is hybrid.
         days_to_maturity: A string containing the number of days (or a range
             of the number of days) it is estimated to take for the plant to be
             ready to harvest.
@@ -1808,8 +1835,9 @@ class VegetableData(db.Model):
     __tablename__ = 'vegetable_data'
     id = db.Column(db.Integer, primary_key=True)
     open_pollinated = db.Column(db.Boolean)
+    hybrid = db.Column(db.Boolean)
     # TODO: Make custom comparator for days_to_maturity.
-    days_to_maturity = db.Column(db.String(16))
+    days_to_maturity = db.Column(db.String(64))
 
     def __init__(self, open_pollinated=False, days_to_maturity=None):
         self.open_pollinated = open_pollinated

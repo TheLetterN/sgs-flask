@@ -350,6 +350,9 @@ class Index(db.Model):
     (herb, vegetable) or its life cycle. (perennial, annual)
 
     Attributes:
+        position: An integer determining where an `Index` belongs in a list
+            of `Index` instances.
+        
         name: The name for the `Index` itself, such as 'Herb'  or 'Perennial'.
         slug: A URL-safe version of _name.
         description: An optional HTML description of the `Index`.
@@ -358,6 +361,7 @@ class Index(db.Model):
     """
     __tablename__ = 'indexes'
     id = db.Column(db.Integer, primary_key=True)
+    position = db.Column(db.Integer)
 
     # Data Required
     name = db.Column(db.String(64), unique=True)
@@ -410,6 +414,16 @@ class Index(db.Model):
         return idx
 
     @property
+    def dict_(self):
+        """Return a dictionary of values needed to instantiate an `Index`."""
+        return {
+            'id': self.id,
+            'name': self.name,
+            'slug': self.slug,
+            'description': self.description
+        }
+
+    @property
     def header(self):
         """str: contents of `name` in a str for headers, titles, etc."""
         # TODO : Maybe make the string setable via config?
@@ -446,6 +460,18 @@ class Index(db.Model):
             ofile.write(
                 json.dumps({idx.id: (idx.header, idx.slug) for idx in indexes})
             )
+
+    def _auto_position(self):
+        """Set position automatically before adding `Index` to session."""
+        if not self.position:
+            indexes = Index.query.all()
+            indexes += [i for i in db.session.new if isinstance(i, Index)]
+            last = max(indexes, key=lambda x: x.position) if indexes else None
+            if last:
+                self.position = last.position + 1
+            else:
+                self.position = 1
+
 
 
 @event.listens_for(Index, 'before_insert')
@@ -1853,6 +1879,13 @@ def paragraphize_blocks(target, value, oldvalue, initiator):
     """Run `paragraphize` for attributes expected to contain HTML."""
     if value:
         return paragraphize(value)
+
+
+@event.listens_for(SignallingSession, 'before_attach')
+def auto_position_before_attach(session, instance):
+    """Auto-generate positions for new instances of classes that have them."""
+    if hasattr(instance, '_auto_position'):
+        instance._auto_position()
 
 
 @event.listens_for(Image, 'before_delete')

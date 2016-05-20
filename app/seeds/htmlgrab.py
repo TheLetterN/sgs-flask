@@ -292,9 +292,10 @@ def cultivar_div_to_dict(cv_div):
                 cv['open pollinated'] = True
             if 'hyb' in veg_data.lower():
                 cv['hybrid'] = True
-            dtm = veg_data.replace('(OP)', '').replace('(Hyb.)', '').strip()
-            if dtm:
-                cv['days to maturity'] = dtm
+            if 'days' in veg_data:
+                dtm = veg_data.replace('(OP)', '').replace('(Hyb.)', '')
+                if dtm:
+                    cv['days to maturity'] = dtm.strip()
     ps = cv_div.h3.find_next_siblings('p')
     if ps:
         spans = ps[-1].find_next_siblings('span')

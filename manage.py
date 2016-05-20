@@ -26,7 +26,7 @@ from flask.ext.script import Manager, Shell
 from app import create_app, db, mail, Permission
 from app.auth.models import User
 from app.seeds.excel import SeedsWorkbook
-from app.seeds.htmlgrab import NewPage, PageAdder
+from app.seeds.htmlgrab import Page, PageAdder, save_batch
 
 app = create_app(os.getenv('SGS_CONFIG') or 'default')
 manager = Manager(app)
@@ -60,27 +60,20 @@ def grab_all(index):
         idx = 'annual'
     elif 'perennial' in index.lower():
         idx = 'perennial'
+    elif 'vegetable' in index.lower():
+        idx = 'vegetable'
+    elif 'vine' in index.lower():
+        idx = 'vine'
     else:
         idx = 'herbs'
+    directory = os.path.join('pages', idx)
+    if not os.path.exists(directory):
+        os.mkdir(directory)
+    pages_dir = os.path.join('909', idx)
     filename = os.path.join('pages', idx + '.txt')
     with open(filename, 'r') as infile:
-        txt = infile.read()
-    lines = txt.split('\n')
-    lines = [l for l in lines if l and not l.isspace()]
-    for line in lines:
-        if '#' not in line[:4]:
-            if ' ' in line:
-                parts = line.split(' ')
-                url = parts[0]
-                f = os.path.join('909', idx, parts[1])
-            else:
-                url = line
-                f = None
-            pagename = os.path.splitext(os.path.split(url)[-1])[0]
-            p = NewPage(url=url, filename=f)
-            jsonfile = os.path.join('pages', idx, pagename + '.json')
-            print('Data from {0} saved as {1}'.format(url, jsonfile))
-            p.save_json(jsonfile)
+        lines = [l.strip() for l in infile.readlines()]
+    save_batch(lines, idx, directory, pages_dir)
 
 
 @manager.command
@@ -89,6 +82,10 @@ def load_all(index):
         idx = 'annual'
     elif 'perennial' in index.lower():
         idx = 'perennial'
+    elif 'vegetable' in index.lower():
+        idx = 'vegetable'
+    elif 'vine' in index.lower():
+        idx = 'vine'
     else:
         idx = 'herbs'
     directory = os.path.join('pages', idx)
@@ -106,7 +103,7 @@ def load_all(index):
 @manager.command
 def grab(url, outfile, infile=None):
     """Grab a webpage and save it to a JSON file."""
-    p = NewPage(url=url, filename=infile)
+    p = Page(url=url, filename=infile)
     p.save_json(outfile)
     print('Contents of \'{0}\' saved to: {1}'.format(url, outfile))
 

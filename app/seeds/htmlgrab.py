@@ -51,6 +51,54 @@ from app.seeds.models import (
 )
 
 
+def save_batch(lines, index, directory=None, pages_dir=None):
+    """Save a batch of pages to JSON.
+    
+    Args:
+        lines: A multi-line string containing URLs and optionally corrected
+            pages.
+        directory: The directory to save JSON files to.
+    """
+    if not directory:
+        directory = os.path.join('/tmp', index)
+    if not os.path.exists(directory) and directory[:4] == '/tmp':
+        os.mkdir(directory)
+    if not pages_dir:
+        pages_dir = os.path.join(os.getcwd(), '909', index)
+    for line in lines:
+        if line[0] == '#':
+            print('Line is commented out: {0}'.format(line))
+            continue
+
+        if '#' in line:
+            comment = line[line.index('#'):]
+            line = line[:line.index('#')].strip()
+        else:
+            comment = None
+        parts = line.split(' ')
+        url = parts[0]
+        if len(parts) > 2:
+            raise ValueError('The line {0} has too many spaces!'.format(line))
+        elif len(parts) == 2:
+            page = os.path.join(pages_dir, parts[1])
+        else:
+            page = None
+
+        if page:
+            p = Page(url=url, filename=page)
+            print('USING PAGE: {0}'.format(page), end='\t')
+        else:
+            p = Page(url=url)
+        filename = os.path.splitext(os.path.split(url)[1])[0]
+        jfile = os.path.join(directory, filename + '.json')
+        p.save_json(jfile)
+        print('Saving data from {0} to {1}'.format(url, jfile),
+              end='\t' if comment else '\n')
+        if comment:
+            print('Comment: {0}'.format(comment))
+    print('All pages in this batch were saved.')
+
+
 def clean(text, unwanted=None):
     """Remove unwanted characters/substrings from a block of text.
 
@@ -67,16 +115,34 @@ def clean(text, unwanted=None):
         '&#8531;': '1/3',
         # Unicode weirdness
         '\xa0': ' ',
-        '\u2019': '\''
+        '\u2019': '\'',
+        # Common errors
+        '&#176F': '&#176;F'
     }
+    for r in REPLACEMENTS:
+        text = text.replace(r, REPLACEMENTS[r])
+    # Replace tabs preceded by non-space with spaces before stripping out tabs.
+    text = re.sub(r'([^\s])\t', r'\1 ', text)
     if not unwanted:
         unwanted = ['\r', '\t', '&shy;', '<br>', '<br \>', '</img>']
     for u in unwanted:
         text = text.replace(u, '')
-    for r in REPLACEMENTS:
-        text = text.replace(r, REPLACEMENTS[r])
     # Deal with commented out product info.
-    text = re.sub('--><.*><!--', '', text)
+    text = re.sub('--><!--.*--><!--', '', text)
+    # Deal with multiple classes in sequence.
+    text = re.sub(r'(class="[a-zA-Z0-9_-]*") class="[a-zA-Z0-9_-]*"',
+                  r'\1',
+                  text)
+    # Convert HTML5 void elements to HTML4 because html.parser is dumb.
+    # For the sake of efficiency, not all void elements are checked, as most
+    # of them are either unused, or not used in a way that will cause problems
+    # if html.parser tries to close them.
+    VOID_ELEMENTS = [
+        r'img',
+        r'input'
+    ]
+    for v in VOID_ELEMENTS:
+        text = re.sub(r'(<' + v + '.*?)>', r'\1 />', text)
     return text.strip()
 
 
@@ -116,8 +182,22 @@ def get_h_title(tag):
 def generate_botanical_names(bns_string):
     """Clean up a string listing multiple botanical names as a header."""
     abbr = dict()
-    for bn in bns_string.replace(', syn.', ' syn.').split(', '):
-        yield expand_botanical_name(bn, abbr)
+    bns_string = re.sub(r'\.([a-zA-z])', r'. \1', bns_string)
+    bns = bns_string.replace(', syn.', ' syn.').split(', ')
+    bns = [b.strip() for b in bns]
+    bns = sorted(bns, key=lambda x: len(x.split()[0]), reverse=True)
+    for bn in bns:
+        try:
+            yield expand_botanical_name(bn, abbr)
+        except IndexError as e:
+            raise RuntimeError(
+                'Invalid bn {0} in {1}'.format(bn, bns_string)
+            ).with_traceback(e.__traceback__)
+        except KeyError as e:
+            raise RuntimeError(
+                'Index error {0} in botanical names {1}'.format(e, bns_string),
+            ).with_traceback(e.__traceback__)
+
 
 
 def expand_botanical_name(bn, abbreviations):
@@ -162,7 +242,7 @@ def cultivar_div_to_dict(cv_div):
     if not cv_name:
         raise RuntimeError('Could not parse a cultivar name from {0}'
                            .format(cv_div))
-    cv['cultivar name'] = dbify(cv_name.replace('\n', ''))
+    cv['cultivar name'] = dbify(' '.join(cv_name.split()))  # Fix whitespace.
     if cv_div.h3.em:
         cv['subtitle'] = dbify(cv_div.h3.em.text.strip())
     if 'new for 2016' in cv_div.text.lower():
@@ -217,6 +297,9 @@ def cultivar_div_to_dict(cv_div):
                 cv['days to maturity'] = dtm
     ps = cv_div.h3.find_next_siblings('p')
     if ps:
+        spans = ps[-1].find_next_siblings('span')
+        if spans:
+            ps = ps + spans
         desc = merge_p(ps)
         cv['description'] = desc.strip()
 
@@ -237,12 +320,18 @@ def cultivar_div_to_dict(cv_div):
         raise RuntimeError('IndexError triggered making packet for {0}.'
                            .format(cv_div))
     cv['packet'] = str_to_packet(pkt_str)
-    try:
-        cv['packet']['sku'] = cv_div.small.text.strip()
-    except AttributeError as e:
-        raise RuntimeError(
-            'Could not find sku in: {0}'.format(cv_div)
-        ).with_traceback(e.__traceback__)
+    partno = cv_div.find('input', {'name': 'PartNo'})
+    if partno:
+
+        cv['packet']['sku'] = partno['value']
+    else:
+        small = cv_div.small
+        if small:
+            cv['packet']['sku'] = small.text.strip()
+        else:
+            raise RuntimeError(
+                'Could not find sku in: {0}'.format(cv_div)
+            ).with_traceback(e.__traceback__)
     cv['packet'].move_to_end('sku', last=False)
     if len(pkt_tds) == 2:  # Should indicate presence of jumbo packet.
         cv['jumbo'] = str_to_packet(pkt_tds[1].text)
@@ -254,12 +343,32 @@ def generate_cultivar_dicts(parent):
     """Yield dicts of all cultivars that are in the top level of parent."""
     cv_divs = parent.find_all(
         name='div',
-        class_=lambda x: x and (x.lower() == 'cultivar' or
-                                x.lower() == 'holdum'),
+        class_=lambda x: x and x.lower() == 'cultivar', 
         recursive=False
     )
+
+    def fix_holdums(holdums):
+        """Yield parent divs of holdums with the holdum divs unwrapped."""
+        for holdum in holdums:
+            p = holdum.parent
+            while p.name != 'div':
+                if p is parent:
+                    raise RuntimeError(
+                        'Could not find a parent cultivar div for holdum: {0}'
+                        .format(holdum)
+                    )
+                else:
+                    p = p.parent
+            holdum.unwrap()
+            yield p
+
+    holdums = parent.find_all(name='div', 
+                              class_=lambda x: x and x.lower() == 'holdum')
+    if holdums:
+        for fixed in fix_holdums(holdums):
+            cv_divs.append(fixed)
     for cv_div in cv_divs:
-        yield(cultivar_div_to_dict(cv_div))
+        yield cultivar_div_to_dict(cv_div)
 
 
 def generate_inactive_cultivar_dicts(parent):
@@ -398,12 +507,13 @@ def split_botanical_name_synonyms(bn):
         return (bn, [])
 
 
-class NewPage(object):
+class Page(object):
     """A crawled page to extract data from."""
     def __init__(self, url=None, filename=None, parser=None):
         self.url = url
         if not parser:
-            self.parser = 'html.parser'
+            parser = 'html.parser'
+        self.parser = parser
         if filename:
             with open(filename, 'r') as ifile:
                 text = ifile.read()
@@ -491,27 +601,38 @@ class NewPage(object):
         if header_div.h2:
             cn['synonyms'] = header_div.h2.text.strip()
 
-        if header_div.h3:
+        if (header_div.h3
+                and header_div.h3.text
+                and not header_div.h3.text.isspace()):
             bns_string = header_div.h3.text.strip()
             # TODO: Parse and clean botanical names before assignment.
             cn['botanical names'] = list(generate_botanical_names(bns_string))
-
-        ps = header_div.find_all('p', recursive=False)
+        intro = header_div.find_next_sibling(
+            name='div', class_=lambda x: x and 'intro' in x.lower()
+        )
+        if 'heirloom.html' in self.url:  # Page has intro in a cultivar div.
+            # Extract div to prevent it from being parsed as a cultivar.
+            intro = self.main_div.find('div', class_='Cultivar').extract()
+        if intro:
+            ps = intro.find_all('p', recursive=False)
+        else:
+            ps = None
+        if not ps:
+            ps = header_div.find_all('p', recursive=False)
         if not ps:
             ps = header_div.find_next_siblings('p')
-        if not ps:
-            intro = header_div.find_next_sibling(
-                name='div', class_=lambda x: x and 'intro' in x.lower()
-            )
-            if intro:
-                ps = intro.find_all('p', recursive=False)
-        if ps:
-            cn['description'] = merge_p(ps)
         else:
             intro_div = self.main_div.find(name='div', class_='intro')
             if intro_div:
                 ps = intro_div.find_all('p', recursive=False)
-                cn['description'] = merge_p(ps)
+        if ps:
+            ps = [p for p in ps if 'how-to-plant' not in str(p)]
+        if ps:
+            spans = ps[-1].find_next_siblings('span')
+            if spans:
+                ps = ps + spans
+        if ps:
+            cn['description'] = merge_p(ps)
 
         growing = self.main_div.find_all(
             name='div',

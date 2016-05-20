@@ -74,6 +74,7 @@ Notes:
 import datetime
 import json
 import os
+import re
 import shutil
 import sys
 from decimal import Decimal, ROUND_DOWN
@@ -81,6 +82,7 @@ from decimal import Decimal, ROUND_DOWN
 from flask import current_app
 from fractions import Fraction
 from inflection import pluralize
+from PIL import Image as Pimage
 from slugify import slugify
 from titlecase import titlecase
 from sqlalchemy import event, inspect
@@ -147,7 +149,9 @@ def dbify(string):
         e.g forget-me-not > Forget-Me-Not, while we want forget-me-not >
         Forget-me-not.
 
-        Also correctly express roman numerals instead of titlecasing them.
+        Also some 'words' should be in all-caps, such as roman numerals, and
+        if a number followed by an uppercase letter occurs, it should be
+        assumed it's meant to be that way, as in Texas 1015Y Onion.
 
         Returns:
             str: Corrected hyphenated word.
@@ -158,9 +162,32 @@ def dbify(string):
             return word[0].upper() + word[1:].lower()
         elif word.upper() in ALLCAPS:
             return word.upper()
+        elif re.search(r'[0-9][A-Z]', word):
+            return word
+        elif word == 'W/':
+            return 'w/'
+        elif re.search(r'[dD]\'[A-Z]+', word):  # d'Avignon
+            parts = word.split('\'')
+            parts[0] = parts[0].lower()
+            parts[1] = parts[1].title()
+            return '\''.join(parts)
+        elif re.search(r'[oO]\'[A-Z]+', word):  # O'Hara
+            parts = word.split('\'')
+            parts[0] = parts[0].upper()
+            parts[1] = parts[1].title()
+            return '\''.join(parts)
 
     if string:
-        return titlecase(string.lower().strip(), callback=cb)
+        string = string.strip()
+        dbified = titlecase(string, callback=cb)
+
+        # titlecase skips lines with some but not all words in all-caps.
+        # While this makes sense for most use cases, it doesn't for ours.
+        # e.g. BENARY'S GIANT FORMULA MIX (Blue Point) should become:
+        # Benary's Giant Formula Mix (Blue Point).
+        if dbified == string:
+            dbified = titlecase(string.lower(), callback=cb)
+        return dbified
     else:
         return None
 
@@ -1794,9 +1821,15 @@ class Image(db.Model):
     __tablename__ = 'images'
     id = db.Column(db.Integer, primary_key=True)
     filename = db.Column(db.String(32), unique=True)
+    width = db.Column(db.Integer)
+    height = db.Column(db.Integer)
 
     def __init__(self, filename=None):
         self.filename = filename
+        if self.exists():
+            img = Pimage.open(self.full_path)
+            self.width = img.width
+            self.height = img.height
 
     def __repr__(self):
         return '<{0} filename: \'{1}\'>'.format(self.__class__.__name__,
@@ -1813,6 +1846,14 @@ class Image(db.Model):
         return os.path.join(current_app.config.get('IMAGES_FOLDER'),
                             'plants',
                             self.filename)
+
+    @property
+    def is_extra_wide(self):
+        """bool: True if the width of image is at least twice its height."""
+        if self.width and self.height:
+            return self.width >= 2 * self.height
+        else:
+            return None
 
     def delete_file(self):
         """Deletes the image file associated with this Image object."""

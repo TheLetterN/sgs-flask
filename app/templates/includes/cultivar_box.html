@@ -28,7 +28,7 @@
   <i class="botanical-name">{{ cultivar.botanical_name.fullname|safe }}</i>
   {% endif %}
   {% if cultivar.vegetable_data %}
-  <div class="vegetable-data"><em>{% if cultivar.vegetable_data.open_pollinated %}<abbr title="Open Pollinated">(OP)</abbr> {% endif %}{% if cultivar.vegetable_data.days_to_maturity %}{{ cultivar.vegetable_data.days_to_maturity }} days{% endif %}</em></div>
+  <div class="vegetable-data"><em>{% if cultivar.vegetable_data.open_pollinated %}<abbr title="Open Pollinated">(OP)</abbr> {% endif %}{% if cultivar.vegetable_data.days_to_maturity %}{{ cultivar.vegetable_data.days_to_maturity }}{% endif %}</em></div>
   {% endif %}
   {% if cultivar.description %}
   {{ cultivar.description|safe }}

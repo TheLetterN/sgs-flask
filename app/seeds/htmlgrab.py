@@ -562,7 +562,7 @@ class Page(object):
 
         INDEXES = ('annual', 'perennial')
 
-        cn = OrderedDict()
+        cn = dict()
         header_div = self.soup.find(name='header')
         if not header_div:
             header_div = self.soup.find(
@@ -654,6 +654,12 @@ class Page(object):
         if harvest:
             cn['harvesting'] = ''.join(str(c) for c in harvest.contents)
 
+        grows_with = self.main_div.find(
+            'div', class_=lambda x: x and 'relatedlinks' in x.lower()
+        )
+        if grows_with:
+            cn['grows with'] = ''.join(str(c) for c in grows_with.contents)
+
         return cn
 
     @property
@@ -681,8 +687,31 @@ class Page(object):
         if cultivar_dicts:
             tree['cultivars'] = cultivar_dicts
 
+        ordered_keys = [
+            'common name',
+            'index',
+            'synonyms',
+            'botanical names',
+            'description',
+            'sections',
+            'cultivars',
+            'grows with',
+            'harvesting',
+            'instructions'
+        ]
+        for key in tree.keys():
+            if key not in ordered_keys:
+                raise RuntimeError(
+                    'The key \'{0}\' is present in tree, but not in otree!'
+                    .format(key)
+                )
+                                
+        otree = OrderedDict()
+        for key in ordered_keys:
+            if key in tree:
+                otree[key] = tree[key]
 
-        return tree
+        return otree
 
     def section_dict(self, section):
         """Get a dict containing section and subsection data."""

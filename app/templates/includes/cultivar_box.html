@@ -1,97 +1,109 @@
 {# This file is part of SGS-Flask.
-
-   SGS-Flask is free software: you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation, either version 3 of the License, or
-   (at your option) any later version.
- 
-   SGS-Flask is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
- 
-   You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- 
-   Copyright Swallowtail Garden Seeds, Inc 
+SGS-Flask is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+SGS-Flask is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see
+<http://www.gnu.org/licenses/>.
+Copyright Swallowtail Garden Seeds, Inc
 #}
 {% macro cultivar_box(cultivar) %}
 {% if cultivar.active and cultivar.visible or current_user.can(Permission.MANAGE_SEEDS) %}
-<div class="cultivar">
-  <img alt="{{ cultivar.fullname }}" class="thumbnail" src="{% if cultivar.thumbnail %}{{ url_for('static', filename=cultivar.thumbnail.path) }}{% else %}{{ url_for('static', filename='images/assets/default_thumb.jpg') }}{% endif %}">
-  {% if not idx_slug %}{% set idx_slug = cultivar.common_name.index.slug %}{% endif %}
-  {% if not cn_slug %}{% set cn_slug = cultivar.common_name.slug %}{% endif %}
-  {% if cultivar.new_for %}<span class="Cultivar_span_new">New for {{ cultivar.new_for }}</span>{% endif %}
-  <h3 id="{{ cultivar.slug }}">{% if config.SHOW_CULTIVAR_PAGES %}<a href="{{ url_for('seeds.cultivar', idx_slug=idx_slug, cn_slug=cn_slug, cv_slug=cultivar.slug)}}">{{ hyphenate(cultivar.name)|safe }}</a>{% else %}{{ hyphenate(cultivar.name)|safe }}{% endif %}</h3>
-  <em class="subtitle">{% if cultivar.subtitle %}{{ cultivar.subtitle }}{% else %}{{ cultivar.common_name.header }}{% endif %}</em>
-  {% if cultivar.botanical_name %}
-  <i class="botanical-name">{{ cultivar.botanical_name.fullname|safe }}</i>
-  {% endif %}
-  {% if cultivar.vegetable_data %}
-  <div class="vegetable-data"><em>{% if cultivar.vegetable_data.open_pollinated %}<abbr title="Open Pollinated">(OP)</abbr> {% endif %}{% if cultivar.vegetable_data.days_to_maturity %}{{ cultivar.vegetable_data.days_to_maturity }}{% endif %}</em></div>
-  {% endif %}
-  {% if cultivar.description %}
-  {{ cultivar.description|safe }}
-  {% endif %}
-  {% if not cultivar.in_stock %}
-  <span style="background-color: red">OUT OF STOCK!</span> {# TODO: Change this. #}
-  {% endif %}
-  {% if cultivar.packets %}
-  <div class="packet-info">
-    {% for packet in cultivar.packets %}
-    {{ packet.sku }}: {{ packet.quantity.html_value|safe }} {{ packet.quantity.units }} - ${{ packet.price }}{% endfor %} 
-  </div>
-  {% endif %}
-  {% if current_user.can(Permission.MANAGE_SEEDS) %}
-  <div class="cultivar-admin">
-    <h3>ADMIN - Options for {{ cultivar.fullname }}:</h3>
-    <ul class="cultivar-status">
-      <li class="cultivar-featured">
-        {% if cultivar.featured %}
-        {{ cultivar.fullname }} is <em class="status-true">featured</em>. <a class="toggle-false" href="{{ url_for('seeds.flip_featured', cv_id=cultivar.id, next=request.path + '#' + cultivar.slug) }}">Set as not featured</a>
-        {% else %}
-        {{ cultivar.fullname }} is <em class="status-false">not featured</em>. <a class="toggle-true" href="{{ url_for('seeds.flip_featured', cv_id=cultivar.id, next=request.path + '#' + cultivar.slug) }}">Set as featured</a>
-        {% endif %}
-      </li>
-      <li class="cultivar-in-stock">
-        {% if cultivar.in_stock %}
-        {{ cultivar.fullname }} is <em class="status-true">in stock</em>. <a class="toggle-false" href="{{ url_for('seeds.flip_in_stock', cv_id=cultivar.id, next=request.path + '#' + cultivar.slug) }}">Set as out of stock</a>
-        {% else %}
-        {{ cultivar.fullname }} is <em class="status-false">out of stock</em>. <a class="toggle-true" href="{{ url_for('seeds.flip_in_stock', cv_id=cultivar.id, next=request.path + '#' + cultivar.slug) }}">Set as in stock</a>
-        {% endif %}
-      </li>
-      <li>
-        {% if cultivar.active %}
-        {{ cultivar.fullname }} is <em class="status-true">active</em>. <a class="toggle-false" href="{{ url_for('seeds.flip_active', cv_id=cultivar.id, next=request.path + '#' + cultivar.slug) }}">Set as inactive</a>
-        {% else %}
-        {{ cultivar.fullname }} is <em class="status-false">inactive</em>. <a class="toggle-true" href="{{ url_for('seeds.flip_active', cv_id=cultivar.id, next=request.path + '#' + cultivar.slug) }}">Set as active</a>
-        {% endif %}
-      </li>
-      <li>
-        {% if cultivar.visible %}
-        {{ cultivar.fullname }} is <em class="status-true">visible</em> on auto-generated pages. <a class="toggle-false" href="{{ url_for('seeds.flip_visible', cv_id=cultivar.id, next=request.path + '#' + cultivar.slug) }}">Set as invisible</a>
-        {% else %}
-        {{ cultivar.fullname }} is <em class="status-false">not visible</em> on auto-generated pages. <a class="toggle-true" href="{{ url_for('seeds.flip_visible', cv_id=cultivar.id, next=request.path + '#' + cultivar.slug) }}">Set as visible</a>
-        {% endif %}
-      </li>
-    </ul>
-    <a href="{{ url_for('seeds.edit_cultivar', cv_id=cultivar.id) }}">Edit {{ cultivar.fullname }}</a>
-    <a href="{{ url_for('seeds.remove_cultivar', cv_id=cultivar.id) }}">Remove {{ cultivar.fullname }}</a>
-    <div class="packet-admin">
-      <h4>Packets for {{ cultivar.fullname }}:</h4>
-      {% if cultivar.packets %}
-      <ul class="packet-options">
-        {% for packet in cultivar.packets %}
-        <li>
-          {{ packet.info }}: <a href="{{ url_for('seeds.edit_packet', pkt_id=packet.id) }}">Edit</a><a href="{{ url_for('seeds.remove_packet', pkt_id=packet.id) }}">Remove</a>
-        </li>
-        {% endfor %}
-      </ul>
-      {% endif %}
-      <a href="{{ url_for('seeds.add_packet', cv_id=cultivar.id) }}">Add Packet</a>
-    </div>
-  </div>
-  {% endif %}
+<div class="Cultivar">
+	<img alt="{{ cultivar.fullname }}" class="Cultivar_img" src="{% if cultivar.thumbnail %}{{ url_for('static', filename=cultivar.thumbnail.path) }}{% else %}{{ url_for('static', filename='images/assets/default_thumb.jpg') }}{% endif %}">
+	{% if not idx_slug %}{% set idx_slug = cultivar.common_name.index.slug %}{% endif %}
+	{% if not cn_slug %}{% set cn_slug = cultivar.common_name.slug %}{% endif %}
+	{% if cultivar.new_for %}<span class="Cultivar_span_new">New for {{ cultivar.new_for }}</span>{% endif %}
+	<small class="Cultivar_small">{% if cultivar.packets[0] %}{{ cultivar.packets[0].sku }}{% endif %}</small>
+	<h3 class="Cultivar_h3" id="{{ cultivar.slug }}">{% if config.SHOW_CULTIVAR_PAGES %}<a href="{{ url_for('seeds.cultivar', idx_slug=idx_slug, cn_slug=cn_slug, cv_slug=cultivar.slug)}}">{{ hyphenate(cultivar.name)|safe }}</a>{% else %}{{ hyphenate(cultivar.name)|safe }}{% endif %}
+		<em class="Cultivar_em">{% if cultivar.subtitle %}{{ cultivar.subtitle }}{% else %}{{ cultivar.common_name.header }}{% endif %}</em>
+		{% if cultivar.botanical_name %}
+		<em class="Cultivar_em2">{{ cultivar.botanical_name.fullname|safe }}</em>
+		{% endif %}
+		{% if cultivar.vegetable_data %}
+		<em class="Cultivar_em2">{% if cultivar.vegetable_data.open_pollinated %}<abbr title="Open Pollinated">(OP)</abbr> {% endif %}{% if cultivar.vegetable_data.days_to_maturity %}{{ cultivar.vegetable_data.days_to_maturity }}{% endif %}
+		</em>
+		{% endif %}
+	</h3>
+	{% if cultivar.description %}
+	<p class="Cultivar_p">
+		{{ cultivar.description|safe }}
+		{% endif %}
+		{% if not cultivar.in_stock %}
+		<span style="background-color: red">OUT OF STOCK!</span> {# TODO: Change this. #}
+	</p>
+	{% endif %}
+	{% if cultivar.packets %}
+	<table class="Cultivar_table">
+		<tr>
+			<td  colspan=3 class="Cultivar_table_size_price">
+				{% for packet in cultivar.packets %}
+				{# {{ packet.sku }}: #}{{ packet.quantity.html_value|safe }} {{ packet.quantity.units }} - ${{ packet.price }}{% endfor %}
+			</td>
+		</tr>
+		<tr>
+			<th class="Cultivar_table_qty">Qty:
+			</th>
+			<th class="Cultivar_table_th"><input class="Cultivar_table_text" type="text" name="Qty" value="1"></th>
+			<th class="Cultivar_table_th2"><button class="Cultivar_button_submit" type="submit">ADD TO CART</button></th>
+		</tr>
+	</table>
+	{% endif %}
+	{% if current_user.can(Permission.MANAGE_SEEDS) %}
+	<div class="cultivar-admin">
+		<h3>ADMIN - Options for {{ cultivar.fullname }}:</h3>
+		<ul class="cultivar-status">
+			<li class="cultivar-featured">
+				{% if cultivar.featured %}
+				{{ cultivar.fullname }} is <em class="status-true">featured</em>. <a class="toggle-false" href="{{ url_for('seeds.flip_featured', cv_id=cultivar.id, next=request.path + '#' + cultivar.slug) }}">Set as not featured</a>
+				{% else %}
+				{{ cultivar.fullname }} is <em class="status-false">not featured</em>. <a class="toggle-true" href="{{ url_for('seeds.flip_featured', cv_id=cultivar.id, next=request.path + '#' + cultivar.slug) }}">Set as featured</a>
+				{% endif %}
+			</li>
+			<li class="cultivar-in-stock">
+				{% if cultivar.in_stock %}
+				{{ cultivar.fullname }} is <em class="status-true">in stock</em>. <a class="toggle-false" href="{{ url_for('seeds.flip_in_stock', cv_id=cultivar.id, next=request.path + '#' + cultivar.slug) }}">Set as out of stock</a>
+				{% else %}
+				{{ cultivar.fullname }} is <em class="status-false">out of stock</em>. <a class="toggle-true" href="{{ url_for('seeds.flip_in_stock', cv_id=cultivar.id, next=request.path + '#' + cultivar.slug) }}">Set as in stock</a>
+				{% endif %}
+			</li>
+			<li>
+				{% if cultivar.active %}
+				{{ cultivar.fullname }} is <em class="status-true">active</em>. <a class="toggle-false" href="{{ url_for('seeds.flip_active', cv_id=cultivar.id, next=request.path + '#' + cultivar.slug) }}">Set as inactive</a>
+				{% else %}
+				{{ cultivar.fullname }} is <em class="status-false">inactive</em>. <a class="toggle-true" href="{{ url_for('seeds.flip_active', cv_id=cultivar.id, next=request.path + '#' + cultivar.slug) }}">Set as active</a>
+				{% endif %}
+			</li>
+			<li>
+				{% if cultivar.visible %}
+				{{ cultivar.fullname }} is <em class="status-true">visible</em> on auto-generated pages. <a class="toggle-false" href="{{ url_for('seeds.flip_visible', cv_id=cultivar.id, next=request.path + '#' + cultivar.slug) }}">Set as invisible</a>
+				{% else %}
+				{{ cultivar.fullname }} is <em class="status-false">not visible</em> on auto-generated pages. <a class="toggle-true" href="{{ url_for('seeds.flip_visible', cv_id=cultivar.id, next=request.path + '#' + cultivar.slug) }}">Set as visible</a>
+				{% endif %}
+			</li>
+		</ul>
+		<a href="{{ url_for('seeds.edit_cultivar', cv_id=cultivar.id) }}">Edit {{ cultivar.fullname }}</a>
+		<a href="{{ url_for('seeds.remove_cultivar', cv_id=cultivar.id) }}">Remove {{ cultivar.fullname }}</a>
+		<div class="packet-admin">
+			<h4>Packets for {{ cultivar.fullname }}:</h4>
+			{% if cultivar.packets %}
+			<ul class="packet-options">
+				{% for packet in cultivar.packets %}
+				<li>
+					{{ packet.info }}: <a href="{{ url_for('seeds.edit_packet', pkt_id=packet.id) }}">Edit</a><a href="{{ url_for('seeds.remove_packet', pkt_id=packet.id) }}">Remove</a>
+				</li>
+				{% endfor %}
+			</ul>
+			{% endif %}
+			<a href="{{ url_for('seeds.add_packet', cv_id=cultivar.id) }}">Add Packet</a>
+		</div>
+	</div>
+	{% endif %}
 </div>
 {% endif %}
 {% endmacro %}

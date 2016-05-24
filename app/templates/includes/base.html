@@ -1,19 +1,16 @@
 {# This file is part of SGS-Flask.
-
-   SGS-Flask is free software: you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation, either version 3 of the License, or
-   (at your option) any later version.
- 
-   SGS-Flask is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
- 
-   You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- 
-   Copyright Swallowtail Garden Seeds, Inc 
+SGS-Flask is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+SGS-Flask is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see
+<http://www.gnu.org/licenses/>.
+Copyright Swallowtail Garden Seeds, Inc
 #}
 {# This is our main skeleton template, from which other pages inherit. #}
 {# It should only contain elements we want on all pages. #}
@@ -21,34 +18,45 @@
 {# The main block should be indented 6 spaces in derived pages. #}
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    {% if not ALLOW_CRAWLING %}
+	<head>
+		<meta charset="utf-8">
+		<link rel='stylesheet' href='http://fonts.googleapis.com/css?family=Droid+Serif:400,700,400italic,700italic |Droid+Sans:400,700'>
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		{% if not ALLOW_CRAWLING %}
     <!-- ALLOW_CRAWLING is set to False. Please set it to True if you want pages to be crawled by robots! -->
-    <meta name="robots" content="noindex, nofollow">
-    {% endif %}
-    {% block head %}{% endblock %}
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
-  </head>
-  <body>
-    <div id="masthead">
-      <div class="contact"><span class="phone">Toll Free: 1-877-489-7333</span><a class="email" href="mailto:info@swallowtailgardenseeds.com">info@swallowtailgardenseeds.com</a></div>
-      <a href="{{ url_for('seeds.home') }}"><img id="banner" src="{{ url_for('static', filename='images/assets/sgs-banner.jpg') }}" alt="Swallowtail Garden Seeds"></a>
-      {% include "includes/nav.html" %}
-
-    </div>
-    <div id="main">
-      {% if crumbs %}
-      {% include "includes/breadcrumbs.html" %}
-      {% endif %}
-      {% include "includes/flashed.html" %}
-      {% block main %}
-      {% endblock %}
-    </div>
-    <div class="footer">
-      <p class="copyright"><b>Copyright&nbsp;&#169;&nbsp;2016 Swallowtail&nbsp;Garden&nbsp;Seeds - All&nbsp;Rights&nbsp;Reserved</b></p>
-      <p class="copyright">Copyright pertains to all images, none of which may be reproduced in any form without<br> the expressed written consent of Swallowtail Garden Seeds.</p>
-    </div>
-  </body>
+		<meta name="robots" content="noindex, nofollow">
+		{% endif %}
+		{% block head %}{% endblock %}
+		<link rel="stylesheet" href="{{ url_for('static', filename='css/present.css') }}">
+	</head>
+	<body>
+		<div class="Page_header">
+			<div class="Page_header-contact-bar">
+				<p class="Page_header-contact-bar-p"><b>Toll Free: 1-877-489-7333<br class="no-desktop-display"><a class="Page_header-contact-bar-email-link" href="mailto:info@swallowtailgardenseeds.com">info@swallowtailgardenseeds.com</a></b>
+				</p>
+			</div>
+			<div class="Page_header-banner-container">
+				<a class="Page_header-banner-home-link" href="{{ url_for('seeds.home') }}"></a><img class="Page_header-banner" src="{{ url_for('static', filename='images/assets/sgs-banner.jpg') }}" alt="Swallowtail Garden Seeds">
+			</div>
+		</div>
+		{% include "includes/nav.html" %}
+		<div id="main" class="group" role="main">
+			{% if crumbs %}
+			{% include "includes/breadcrumbs.html" %}
+			{% endif %}
+			{% include "includes/flashed.html" %}
+			{% block main %}
+			{% endblock %}
+		</div>
+		<div class="Footer">
+			<a class="Footer_site-map-link" href="http://www.swallowtailgardenseeds.com/site-map.html">Site Map</a>
+			<p class="Footer_copyright_p">Copyright&nbsp;&#169;&nbsp;2016 Swallowtail&nbsp;Garden&nbsp;Seeds - All&nbsp;Rights&nbsp;Reserved
+			</p>
+			<p class="Footer_copyright_p Footer_copyright_p2">Copyright pertains to all images, none of which may be reproduced in any form without<br class="no-mobile-display"> the expressed written consent of Swallowtail Garden Seeds.
+			</p>
+			<a href="https://seal.godaddy.com/verifySeal?sealID=FgdBKY27IIpHp2q5LkxzgzlbX27e0tqGEF9J5PgG2j7VUTmpgtsRrz" onclick="return popitup('https://seal.godaddy.com/verifySeal?sealID=FgdBKY27IIpHp2q5LkxzgzlbX27e0tqGEF9J5PgG2j7VUTmpgtsRrz')"><img class="Footer_siteseal" src="http://www.swallowtailgardenseeds.com/image-assets/site-seal.gif" alt="Go Daddy Site Seal"></a>
+		</div>
+<script src="http://www.swallowtailgardenseeds.com/scripts/scripts.js"></script>
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.3/jquery.min.js"></script>
+	</body>
 </html>

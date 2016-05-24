@@ -1,19 +1,16 @@
 {# This file is part of SGS-Flask.
-
-   SGS-Flask is free software: you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation, either version 3 of the License, or
-   (at your option) any later version.
- 
-   SGS-Flask is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
- 
-   You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- 
-   Copyright Swallowtail Garden Seeds, Inc 
+SGS-Flask is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+SGS-Flask is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see
+<http://www.gnu.org/licenses/>.
+Copyright Swallowtail Garden Seeds, Inc
 #}
 {% extends "includes/base.html" %}
 {# HTML within blocks should be indented as follows for consistency: #}
@@ -22,87 +19,89 @@
 {% from 'includes/cultivar_box.html' import cultivar_box with context %}
 {% from 'includes/section.html' import section with context %}
 {% block head %}
-  <title>{{ cn.header }} | {{ count }} varieties</title>
-    <link rel="canonical" href="{{ url_for('seeds.common_name', idx_slug=cn.index.slug, cn_slug=cn.slug, _external=True) }}">
+<title>{{ cn.header }} | {{ count }} varieties</title>
+<link rel="canonical" href="{{ url_for('seeds.common_name', idx_slug=cn.index.slug, cn_slug=cn.slug, _external=True) }}">
 {% endblock %}
 {% block main %}
-      {# BEGIN common name page header #}
-      <div class="header cn-header">
-        <h1>{{ cn.header }}</h1>
-        {% if cn.synonyms %}
-        <h2 class="synomyms">{{ cn.synonyms_string }}</h2>
-        {% endif %}
-        {% if cn.botanical_names %}
-        <h3 class="botanical-names">{{ cn.html_botanical_names|safe }}</h3>
-        {% endif %}
-        {% if cn.description %}
-        <div class="description">{{ cn.description|safe }}</div>
-        {% endif %}
-        {% if cn.instructions %}
-        <a class="to-planting-instructions" href="#{{ cn.slug }}-instructions">How to plant {{ cn.arranged_name }} seeds</a>
-        {% endif %}
-      </div>
-      {# END common name page header #}
-      {# BEGIN onpage nav #}
-      {% if sections %}
-      <ul class="onpage-nav sections">
-        {% for sec in sections %}
-          {% if sec.has_public_cultivars or sec.children or current_user.can(Permission.MANAGE_SEEDS) %}
-        <li>
-          <a href="#section-{{ slugify(sec.name) }}">{{ sec.name }}</a>
-          {% if sec.children %}
-          <ul class="onpage-nav subsections">
-            {% for subsec in sec.children %}
-            {% if subsec.has_public_cultivars or current_user.can(Permission.MANAGE_SEEDS) %}
-            <li>
-              <a href="#section-{{ slugify(subsec.name) }}">{{ subsec.name }}</a>
-            </li>
-            {% endif %}
-            {% endfor %}
-          </ul>
-          {% endif %}
-        </li>
-          {% endif %}
-        {% endfor %}
-      </ul>
-      {% if individuals %}
-      <a class="to-indv-varieties" href="#individual-varieties">Individual {{ cn.arranged_name }} Varieties</a>
-      {% endif %}
-      {% endif %}
-      {# END onpage nav #}
-      {% if featured %}
-      <div class="featured">
-      {% for cv in featured %}
-        {{ cultivar_box(cv)|indent(8)|safe }}
-      {% endfor %}
-      </div>
-      {% endif %}
-      {% if sections %}
-        {% for sec in sections %}
-        {% if sec.has_public_cultivars or current_user.can(Permission.MANAGE_SEEDS) %}
-      {{ section(sec, 6)|indent(6)|safe }}
-          {% endif %}
-        {% endfor %}
-        {% endif %} 
-      {% if individuals %}
-        {% if sections %}
-      <div class="cn-group-header cn-individuals-header">
-        <h2 id="individual-varieties">Individual {{ cn.arranged_name }} Varieties</h2>
-        <a class="to-planting-instructions" href="#{{ cn.slug }}-instructions">How to plant {{ cn.arranged_name }} seeds</a>
-      </div>
-        {% endif %}
-      <div class="cultivar-group cn-individual-cultivars">
-        {% for cv in individuals %}
-        {% if not cv.featured %}
-        {{ cultivar_box(cv)|indent(8)|safe }}
-        {% endif %}
-        {% endfor %}
-      </div>
-      {% endif %}
-      {% if cn.instructions %}
-      <div id="{{ cn.slug }}-instructions" class="planting-instructions">
-        <h2>How to Plant {{ cn.arranged_name }} Seeds</h2>
-        {{ cn.instructions|indent(6)|safe }}
-      </div>
-      {% endif %}
+{# BEGIN common name page header #}
+<div class="Header">
+	<h1 class="Header_h1">{{ cn.header }}</h1>
+	{% if cn.synonyms %}
+	<h2 class="Header_h2">{{ cn.synonyms_string }}</h2>
+	{% endif %}
+	{% if cn.botanical_names %}
+	<h3 class="Header_h3">{{ cn.html_botanical_names|safe }}</h3>
+	{% endif %}
+	{% if cn.instructions %}
+	<p class="Header_p"><a href="#{{ cn.slug }}-instructions">How to plant {{ cn.arranged_name }} seeds</a></p>
+	{% endif %}
+	{% if cn.description %}
+	<div class="Introduction"><p class="Introduction_p">{{ cn.description|safe }}</p></div>
+	{% endif %}
+</div>
+{# END common name page header #}
+{# BEGIN onpage nav #}
+{% if sections %}
+<ul class="onpage-nav sections">
+	{% for sec in sections %}
+	{% if sec.has_public_cultivars or sec.children or current_user.can(Permission.MANAGE_SEEDS) %}
+	<li>
+		<a href="#{{ slugify(sec.name) }}">{{ sec.name }}</a>
+		{% if sec.children %}
+		<ul class="onpage-nav subsections">
+			{% for subsec in sec.children %}
+			{% if subsec.has_public_cultivars or current_user.can(Permission.MANAGE_SEEDS) %}
+			<li>
+				<a href="#{{ slugify(subsec.name) }}">{{ subsec.name }}</a>
+			</li>
+			{% endif %}
+			{% endfor %}
+		</ul>
+		{% endif %}
+	</li>
+	{% endif %}
+	{% endfor %}
+</ul>
+{% if individuals %}
+<a class="to-indv-varieties" href="#individual-varieties">Individual {{ cn.arranged_name }} Varieties</a>
+{% endif %}
+{% endif %}
+{# END onpage nav #}
+{% if featured %}
+<div class="featured">
+	{% for cv in featured %}
+	{{ cultivar_box(cv)|indent(8)|safe }}
+	{% endfor %}
+</div>
+{% endif %}
+{% if sections %}
+{% for sec in sections %}
+{% if sec.has_public_cultivars or current_user.can(Permission.MANAGE_SEEDS) %}
+{{ section(sec, 6)|indent(6)|safe }}
+{% endif %}
+{% endfor %}
+{% endif %}
+{% if individuals %}
+{% if sections %}
+<div class="cn-group-header cn-individuals-header">
+	<h2 id="individual-varieties">Individual {{ cn.arranged_name }} Varieties</h2>
+	<a class="to-planting-instructions" href="#{{ cn.slug }}-instructions">How to plant {{ cn.arranged_name }} seeds</a>
+</div>
+{% endif %}
+<div class="cultivar-group cn-individual-cultivars">
+	{% for cv in individuals %}
+	{% if not cv.featured %}
+	{{ cultivar_box(cv)|indent(8)|safe }}
+	{% endif %}
+	{% endfor %}
+</div>
+{% endif %}
+{% if cn.instructions %}
+<div id="{{ cn.slug }}-instructions" class="Growing">
+	<h2 class="Growing_h2">How to Plant {{ cn.arranged_name }} Seeds</h2>
+	<p class="Growing_p">
+		{{ cn.instructions|indent(6)|safe }}
+	</p>
+</div>
+{% endif %}
 {% endblock %}

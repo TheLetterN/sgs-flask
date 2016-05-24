@@ -1,44 +1,45 @@
 {# This file is part of SGS-Flask.
-
-   SGS-Flask is free software: you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation, either version 3 of the License, or
-   (at your option) any later version.
- 
-   SGS-Flask is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
- 
-   You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- 
-   Copyright Swallowtail Garden Seeds, Inc 
-   #}
+SGS-Flask is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+SGS-Flask is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see
+<http://www.gnu.org/licenses/>.
+Copyright Swallowtail Garden Seeds, Inc
+#}
 {% from 'includes/cultivar_box.html' import cultivar_box with context %}
-{% macro section(sec, ind=2) %}
-<div class="section" id="section-{{ slugify(sec.name) }}">
-  <h2>{{ sec.name }}</h2>
-  <em class="subtitle">{% if sec.subtitle %}{{ sec.subtitle }}{% else %}{{ sec.common_name.header }}{% endif %}</em>
-  {% if sec.botanical_name %}
-  <i class="botanical-name">{{ sec.botanical_name.name }}</i>
-  {% endif %}
-  {% if sec.description %}
-  <div class="description">{{ sec.description|safe }}</div>
-  {% endif %}
-  <div class="section-cultivars">
-    {% for cv in sec.cultivars %}
-    {% if not cv.featured %}
-    {{ cultivar_box(cv)|indent(ind + 2)|safe }}
-    {% endif %}
-    {% endfor %}
-  </div>
-  {% if sec.children %}
-  {% for subsec in sec.children %}
-  {% if subsec.has_public_cultivars or current_user.can(Permission.MANAGE_SEEDS) %}
-  {{ section(subsec, ind + 2)|indent(ind + 2)|safe }}
-  {% endif %}
-  {% endfor %}
-  {% endif %}
-</div> 
+{% macro section(sec, ind=2, sub=false) %}
+{% if sub %}{% set class_prefix = 'Series' %}{% else %}{% set class_prefix = 'Section' %}{% endif %}
+<section class="{{ class_prefix|lower }}-{{ slugify(sec.name) }}">
+	<div class="{{ class_prefix }}" id="{{ slugify(sec.name) }}">
+		<h2 class="{{ class_prefix }}_h2">{{ sec.name }}
+			<em class="{{ class_prefix }}_em">{% if sec.subtitle %}{{ sec.subtitle }}{% else %}{{ sec.common_name.header }}{% endif %}</em>
+			{% if sec.botanical_name %}
+			<em class="{{ class_prefix }}_em2">{{ sec.botanical_name.name }}</em>
+			{% endif %}
+		</h2>
+		{% if sec.description %}
+		<p class="{{ class_prefix }}_p">{{ sec.description|safe }}</p>
+		{% endif %}
+	</div>
+	<div class="{{ class_prefix }}_cultivars">
+		{% for cv in sec.cultivars %}
+		{% if not cv.featured %}
+		{{ cultivar_box(cv)|indent(ind + 2)|safe }}
+		{% endif %}
+		{% endfor %}
+	</div>
+	{% if sec.children %}
+	{% for subsec in sec.children %}
+	{% if subsec.has_public_cultivars or current_user.can(Permission.MANAGE_SEEDS) %}
+	{{ section(subsec, ind=ind + 2, sub=true)|indent(ind + 2)|safe }}
+	{% endif %}
+	{% endfor %}
+	{% endif %}
+</section>
 {% endmacro %}

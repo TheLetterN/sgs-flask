@@ -1,61 +1,65 @@
 {# This file is part of SGS-Flask.
-
-   SGS-Flask is free software: you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation, either version 3 of the License, or
-   (at your option) any later version.
- 
-   SGS-Flask is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
- 
-   You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- 
-   Copyright Swallowtail Garden Seeds, Inc 
+SGS-Flask is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+SGS-Flask is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see
+<http://www.gnu.org/licenses/>.
+Copyright Swallowtail Garden Seeds, Inc
 #}
 {# nav needs to be indented 6 spaces fit in with page formatting. #}
-      <div id="nav-main">
-        <a class="mobile-menu show-menu" href="#nav-main" title="Show navigation"><span class="menu">&#9776;&nbsp;</span> Show Menu</a>
-        <a class="mobile-menu hide-menu" id="hide" href="#hide" title="Hide navigation"><span class="menu">&#9776;&nbsp;</span> Hide Menu</a>
-        <ul id="nav-seeds">
-          {% set index_map = get_index_map() %}
-          {% for i in index_map %}
-          <li>
-            <a href="{{ url_for('seeds.index', idx_slug=index_map[i][1])}}">{{ index_map[i][0] }}</a>
-          </li>
-          {% endfor %}
-        </ul>
-        <ul id="nav-user">
-          {% if current_user.is_anonymous %}
-          <li>
-            <a href="{{ url_for('auth.login') }}">Log In</a>
-          </li>
-          <li>
-            <a href="{{ url_for('auth.register') }}">Create an Account</a>
-          </li>
-          {% else %}
-          <li>
-            <a id="user-button" href="{{ url_for('auth.edit_user') }}">{{ current_user.name }}</a>
-          </li>
-          <li>
-            <a href="{{ url_for('auth.logout') }}">Log Out</a>
-          </li>
-          {% endif %}
-        </ul>
-        {% if current_user.permissions > 0 %}
-        <ul id="nav-admin">
-        {% if current_user.can(Permission.MANAGE_USERS) %}
-          <li>
-            <a href="{{ url_for('auth.manage_user') }}">Manage Users</a>
-          </li>
-          {% endif %}
-          {% if current_user.can(Permission.MANAGE_SEEDS) %}
-          <li>
-            <a href="{{ url_for('seeds.manage') }}">Manage Seeds</a>
-          </li>
-          {% endif %}
-        </ul>
-        {% endif %}
-      </div>
+<div class="Main_nav" id="Main_nav">
+	<a class="Main_nav-show-hide-links" href="#Main_nav" title="Show Navigation"><span class="menu">&#9776;&nbsp;</span> Show Menu</a>
+	<a class="Main_nav-show-hide-links" id="hide" href="#hide" title="Hide Navigation"><span class="menu">&#9776;&nbsp;</span> Hide Menu</a>
+	<ul class="Main_nav-links">
+		{% set index_map = get_index_map() %}
+		{% for i in index_map %}
+		<li class="Main_nav-not-shown-links">
+			<a href="{{ url_for('seeds.index', idx_slug=index_map[i][1])}}">{{ index_map[i][0] }}</a>
+		</li>
+		{% endfor %}
+		<li class="Main_nav-search">
+			<div class="Google_search">
+				<div class="gcse-search"></div>
+			</div>
+		</li>
+	</ul>
+</div>
+<div id="nav-main">
+	<ul id="nav-user">
+		{% if current_user.is_anonymous %}
+		<li>
+			<a href="{{ url_for('auth.login') }}">Log In</a>
+		</li>
+		<li>
+			<a href="{{ url_for('auth.register') }}">Create an Account</a>
+		</li>
+		{% else %}
+		<li>
+			<a id="user-button" href="{{ url_for('auth.edit_user') }}">{{ current_user.name }}</a>
+		</li>
+		<li>
+			<a href="{{ url_for('auth.logout') }}">Log Out</a>
+		</li>
+		{% endif %}
+	</ul>
+	{% if current_user.permissions > 0 %}
+	<ul id="nav-admin">
+		{% if current_user.can(Permission.MANAGE_USERS) %}
+		<li>
+			<a href="{{ url_for('auth.manage_user') }}">Manage Users</a>
+		</li>
+		{% endif %}
+		{% if current_user.can(Permission.MANAGE_SEEDS) %}
+		<li>
+			<a href="{{ url_for('seeds.manage') }}">Manage Seeds</a>
+		</li>
+		{% endif %}
+	</ul>
+	{% endif %}
+</div>

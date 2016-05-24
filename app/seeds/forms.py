@@ -429,8 +429,10 @@ class AddCultivarForm(Form):
     """
     name = DBifiedStringField('Cultivar Name',
                               validators=[Length(1, 64), NotSpace()])
-    subtitle = DBifiedStringField('Subtitle (Leave blank for default.)',
-                                  validators=[Length(1, 64), NotSpace()])
+    subtitle = DBifiedStringField(
+        'Subtitle (Leave blank for default.)',
+        validators=[Length(1, 64), NotSpace(), Optional()]
+    )
     botanical_name = SelectField('Botanical Name', coerce=int)
     section = SelectField('Section', coerce=int)
     thumbnail = FileField('Thumbnail Image',

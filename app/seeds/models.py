@@ -157,7 +157,7 @@ def dbify(string):
             str: Corrected hyphenated word.
         """
         # Some things should be allcaps, such as roman numerals.
-        ALLCAPS = ('I', 'II', 'III', 'IV', 'V', 'XP')
+        ALLCAPS = ('I', 'II', 'III', 'IV', 'V', 'XP', 'BLBP')
         if '-' in word:
             return word[0].upper() + word[1:].lower()
         elif word.upper() in ALLCAPS:
@@ -379,7 +379,7 @@ class Index(db.Model):
     Attributes:
         position: An integer determining where an `Index` belongs in a list
             of `Index` instances.
-        
+
         name: The name for the `Index` itself, such as 'Herb'  or 'Perennial'.
         slug: A URL-safe version of _name.
         description: An optional HTML description of the `Index`.
@@ -500,7 +500,6 @@ class Index(db.Model):
                 self.position = 1
 
 
-
 @event.listens_for(Index, 'before_insert')
 @event.listens_for(Index, 'before_update')
 def before_index_insert_or_update(mapper, connection, target):
@@ -572,7 +571,7 @@ class CommonName(SynonymsMixin, db.Model):
     # Data Optional
     description = db.Column(db.Text)
     instructions = db.Column(db.Text)
-    visible = db.Column(db.Boolean, default=False)
+    visible = db.Column(db.Boolean)
 
     def __init__(self,
                  name=None,
@@ -893,7 +892,7 @@ def before_botanical_name_insert_or_update(mapper, connection, target):
     # are caught.
     #
     # This exception should **never** be raised in production code!
-    if not BotanicalName.validate(target.name):
+    if target.name and not BotanicalName.validate(target.name):
         raise ValueError('An attempt to insert an invalid BotanicalName into '
                          'the database has occurred! Please ensure the name '
                          'of any new or edited BotanicalName is validated '
@@ -1107,7 +1106,7 @@ class Cultivar(SynonymsMixin, db.Model):
     featured = db.Column(db.Boolean, default=False)
     active = db.Column(db.Boolean)
     in_stock = db.Column(db.Boolean)
-    visible = db.Column(db.Boolean, default=True)
+    visible = db.Column(db.Boolean)
     thumbnail_id = db.Column(db.Integer, db.ForeignKey('images.id'))
     thumbnail = db.relationship('Image',
                                 foreign_keys=thumbnail_id,
@@ -1825,11 +1824,12 @@ class Image(db.Model):
     height = db.Column(db.Integer)
 
     def __init__(self, filename=None):
-        self.filename = filename
-        if self.exists():
-            img = Pimage.open(self.full_path)
-            self.width = img.width
-            self.height = img.height
+        if filename:
+            self.filename = filename
+            if self.exists():
+                img = Pimage.open(self.full_path)
+                self.width = img.width
+                self.height = img.height
 
     def __repr__(self):
         return '<{0} filename: \'{1}\'>'.format(self.__class__.__name__,

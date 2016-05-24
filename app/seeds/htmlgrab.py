@@ -46,14 +46,13 @@ from app.seeds.models import (
     Index,
     Packet,
     Quantity,
-    row_exists,
     VegetableData
 )
 
 
 def save_batch(lines, index, directory=None, pages_dir=None):
     """Save a batch of pages to JSON.
-    
+
     Args:
         lines: A multi-line string containing URLs and optionally corrected
             pages.
@@ -199,7 +198,6 @@ def generate_botanical_names(bns_string):
             ).with_traceback(e.__traceback__)
 
 
-
 def expand_botanical_name(bn, abbreviations):
     """Expand an abbreviated botanical name to its full name.
 
@@ -292,9 +290,10 @@ def cultivar_div_to_dict(cv_div):
                 cv['open pollinated'] = True
             if 'hyb' in veg_data.lower():
                 cv['hybrid'] = True
-            dtm = veg_data.replace('(OP)', '').replace('(Hyb.)', '').strip()
-            if dtm:
-                cv['days to maturity'] = dtm
+            if 'days' in veg_data:
+                dtm = veg_data.replace('(OP)', '').replace('(Hyb.)', '')
+                if dtm:
+                    cv['days to maturity'] = dtm.strip()
     ps = cv_div.h3.find_next_siblings('p')
     if ps:
         spans = ps[-1].find_next_siblings('span')
@@ -343,7 +342,7 @@ def generate_cultivar_dicts(parent):
     """Yield dicts of all cultivars that are in the top level of parent."""
     cv_divs = parent.find_all(
         name='div',
-        class_=lambda x: x and x.lower() == 'cultivar', 
+        class_=lambda x: x and x.lower() == 'cultivar',
         recursive=False
     )
 
@@ -362,7 +361,7 @@ def generate_cultivar_dicts(parent):
             holdum.unwrap()
             yield p
 
-    holdums = parent.find_all(name='div', 
+    holdums = parent.find_all(name='div',
                               class_=lambda x: x and x.lower() == 'holdum')
     if holdums:
         for fixed in fix_holdums(holdums):
@@ -551,17 +550,9 @@ class Page(object):
 
     @property
     def common_name(self):
-        MULTIPLES = ('bean',
-                     'corn',
-                     'lettuce',
-                     'pepper',
-                     'petunia',
-                     'squash',
-                     'tomato')
-
         INDEXES = ('annual', 'perennial')
 
-        cn = OrderedDict()
+        cn = dict()
         header_div = self.soup.find(name='header')
         if not header_div:
             header_div = self.soup.find(
@@ -578,10 +569,6 @@ class Page(object):
             header_div = BeautifulSoup(html, self.parser)
 
         name = get_h_title(header_div.h1).strip().lower().replace('seeds', '')
-        # TODO: Find a better way to handle these cases.
-#        for m in MULTIPLES:
-#            if m in name and name != m:
-#                name = m + ', ' + name.replace(m, '').strip()
         for i in INDEXES:
             if i in name:
                 name = name.replace(i, '').strip()
@@ -653,6 +640,12 @@ class Page(object):
         if harvest:
             cn['harvesting'] = ''.join(str(c) for c in harvest.contents)
 
+        grows_with = self.main_div.find(
+            'div', class_=lambda x: x and 'relatedlinks' in x.lower()
+        )
+        if grows_with:
+            cn['grows with'] = ''.join(str(c) for c in grows_with.contents)
+
         return cn
 
     @property
@@ -673,6 +666,12 @@ class Page(object):
         for section in get_sections(self.main_div):
             tree['sections'].append(self.section_dict(section))
 
+        # Milk Thistle has a weird cultivar div that's classed 'Section'
+        if 'thistle_milk.html' in self.url:
+            scv = self.main_div.find('div', class_='Section')
+            # Add 'cultivar' to classes so generate_cultivar_dicts finds it.
+            scv.attrs['class'].append('cultivar')
+
         cultivar_dicts = list(generate_cultivar_dicts(self.main_div))
         cultivar_dicts += list(generate_inactive_cultivar_dicts(self.main_div))
         clean_cultivar_dicts(cultivar_dicts,
@@ -680,8 +679,31 @@ class Page(object):
         if cultivar_dicts:
             tree['cultivars'] = cultivar_dicts
 
+        ordered_keys = [
+            'common name',
+            'index',
+            'synonyms',
+            'botanical names',
+            'description',
+            'sections',
+            'cultivars',
+            'grows with',
+            'harvesting',
+            'instructions'
+        ]
+        for key in tree.keys():
+            if key not in ordered_keys:
+                raise RuntimeError(
+                    'The key \'{0}\' is present in tree, but not in otree!'
+                    .format(key)
+                )
 
-        return tree
+        otree = OrderedDict()
+        for key in ordered_keys:
+            if key in tree:
+                otree[key] = tree[key]
+
+        return otree
 
     def section_dict(self, section):
         """Get a dict containing section and subsection data."""
@@ -707,8 +729,8 @@ class Page(object):
                     sec_class = section['id']
                 else:
                     raise RuntimeError(
-                        'KeyError {0} raised attempting to find class in section: '
-                        '{1}'.format(e, section)
+                        'KeyError {0} raised attempting to find class in '
+                        'section: {1}'.format(e, section)
                     ).with_traceback(e.__traceback__)
             sec_name = sec_class.replace('-', ' ').lower()
             if cn_seeds in sec_name:
@@ -1112,14 +1134,6 @@ class Thumbnail(object):
         Returns:
             Image: The `Image` to be set as a thumbnail.
         """
-#        if row_exists(Image.filename, self.filename):
-#            now = datetime.datetime.now().strftime('%m-%d-%Y_at_%H-%M-%S')
-#            parts = os.path.splitext(self.filename)
-#            self.filename = parts[0] + now + parts[1]
-#            if row_exists(Image.filename, self.filename):
-#                raise RuntimeError('Attempt to rename thumbnail failed, as an '
-#                                   'image named \'{0}\' already exists!'
-#                                   .format(self.filename))
         if not self.exists():
             self.download()
         img = Image.query.filter(Image.filename == self.filename).one_or_none()

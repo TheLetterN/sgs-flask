@@ -64,8 +64,11 @@ def grab_all(index):
         idx = 'vegetable'
     elif 'vine' in index.lower():
         idx = 'vine'
+    elif 'herb' in index.lower():
+        idx = 'herb'
     else:
-        idx = 'herbs'
+        raise ValueError('\'{0}\' does not match any known index!'
+                         .format(index))
     directory = os.path.join('pages', idx)
     if not os.path.exists(directory):
         os.mkdir(directory)
@@ -87,7 +90,7 @@ def load_all(index):
     elif 'vine' in index.lower():
         idx = 'vine'
     else:
-        idx = 'herbs'
+        idx = 'herb'
     directory = os.path.join('pages', idx)
     pages = sorted([os.path.join(directory, p) for p in os.listdir(directory)
                     if '.json' in p])

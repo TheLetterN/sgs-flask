@@ -326,12 +326,14 @@ class TestCommonNamesWorksheet:
         cnws.setup()
         cn = CommonName(name='Foxglove')
         cn.index = Index(name='Perennial')
+        cn.visible = False
         db.session.add(cn)
         db.session.commit()
         cnws.add_one(cn)
-        assert not cnws.save_row_to_db(row=2, stream=messages)
+        edited = cnws.save_row_to_db(row=2, stream=messages)
         messages.seek(0)
         msgs = messages.read()
+        assert not edited
         assert 'No changes were made to the CommonName \'Foxglove\'' in msgs
 
     @mock.patch('app.seeds.models.CommonName.get_or_create')
@@ -1231,9 +1233,17 @@ class TestCultivarsWorksheetWithDB:
                 'Digitalis purpurea') in msgs
 
     @mock.patch('app.seeds.excel.Image.exists')
-    def test_save_row_to_db_new_with_new_thumbnail_file_exists(self, m_i, db):
+    @mock.patch('app.seeds.models.Pimage.open')
+    def test_save_row_to_db_new_with_new_thumbnail_file_exists(self,
+                                                               m_pi,
+                                                               m_i,
+                                                               db):
         """Add a Cultivar with a thumbnail filename."""
         m_i.return_value = True
+        pimg_mock = mock.MagicMock()
+        pimg_mock.width = 300
+        pimg_mock.height = 300
+        m_pi.return_value = pimg_mock
         messages = StringIO()
         wb = Workbook()
         ws = wb.active

@@ -25,6 +25,7 @@ def index():
     """Generate the index page of the website."""
     return render_template('main/index.html')
 
+
 @main.route('/test')
 def test():
     """Test page, please ignore."""

@@ -358,7 +358,7 @@ class TestIndexesWorksheet:
         assert iws.cell(2, iws.cols['Index']).value == 'Perennial'
         assert iws.cell(
             2, iws.cols['Description']
-        ).value == '<p>Built to last.</p>'
+        ).value == 'Built to last.'
         messages.seek(0)
         msgs = messages.read()
         assert ('Adding data from <Index \'Perennial\'> to row #2 of indexes '
@@ -434,10 +434,10 @@ class TestCommonNamesWorksheet:
         cn.index = Index(name='Perennial')
         cn.synonyms_string = 'Digitalis'
         cnws.add_one(cn)
-        assert cnws.cell(2, cnws.cols['Description']).value == '<p>Spotty.</p>'
+        assert cnws.cell(2, cnws.cols['Description']).value == 'Spotty.'
         assert cnws.cell(
             2, cnws.cols['Planting Instructions']
-        ).value == '<p>Just add water!</p>'
+        ).value == 'Just add water!'
         assert cnws.cell(2, cnws.cols['Synonyms']).value == 'Digitalis'
 
     def test_add_one_not_common_name(self):
@@ -583,7 +583,7 @@ class TestSectionsWorksheet:
         srws.add_one(sr)
         assert srws.cell(
             2, srws.cols['Description']
-        ).value == '<p>A bit spotty.</p>'
+        ).value == 'A bit spotty.'
 
     def test_add_one_not_section(self):
         """Raise a TypeError if passed argument is not a Section object."""
@@ -712,7 +712,7 @@ class TestCultivarsWorksheet:
         cvws.add_one(cv)
         assert cvws.cell(
             2, cvws.cols['Description']
-        ).value == '<p>Like a lady!</p>'
+        ).value == 'Like a lady!'
 
     def test_add_one_with_synonyms(self):
         """Add a Cultivar with synonyms to worksheet."""

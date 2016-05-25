@@ -22,24 +22,7 @@ Copyright Swallowtail Garden Seeds, Inc
 <title>{{ cn.header }} | {{ count }} varieties</title>
 <link rel="canonical" href="{{ url_for('seeds.common_name', idx_slug=cn.index.slug, cn_slug=cn.slug, _external=True) }}">
 {% endblock %}
-{% block main %}
-{# BEGIN common name page header #}
-<div class="Header">
-	<h1 class="Header_h1">{{ cn.header }}</h1>
-	{% if cn.synonyms %}
-	<h2 class="Header_h2">{{ cn.synonyms_string }}</h2>
-	{% endif %}
-	{% if cn.botanical_names %}
-	<h3 class="Header_h3">{{ cn.html_botanical_names|safe }}</h3>
-	{% endif %}
-	{% if cn.instructions %}
-	<p class="Header_p"><a href="#{{ cn.slug }}-instructions">How to plant {{ cn.arranged_name }} seeds</a></p>
-	{% endif %}
-	{% if cn.description %}
-	<div class="Introduction"><p class="Introduction_p">{{ cn.description|safe }}</p></div>
-	{% endif %}
-</div>
-{# END common name page header #}
+{% block subnav %}
 {# BEGIN onpage nav #}
 {% if sections %}
 <ul class="onpage-nav sections">
@@ -67,6 +50,25 @@ Copyright Swallowtail Garden Seeds, Inc
 {% endif %}
 {% endif %}
 {# END onpage nav #}
+{% endblock %}
+{% block main %}
+{# BEGIN common name page header #}
+<div class="Header">
+	<h1 class="Header_h1">{{ cn.header }}</h1>
+	{% if cn.synonyms %}
+	<h2 class="Header_h2">{{ cn.synonyms_string }}</h2>
+	{% endif %}
+	{% if cn.botanical_names %}
+	<h3 class="Header_h3">{{ cn.html_botanical_names|safe }}</h3>
+	{% endif %}
+	{% if cn.instructions %}
+	<p class="Header_p"><a href="#{{ cn.slug }}-instructions">How to plant {{ cn.arranged_name }} seeds</a></p>
+	{% endif %}
+	{% if cn.description %}
+	<div class="Introduction"><p class="Introduction_p">{{ cn.description|safe }}</p></div>
+	{% endif %}
+</div>
+{# END common name page header #}
 {% if featured %}
 <div class="featured">
 	{% for cv in featured %}

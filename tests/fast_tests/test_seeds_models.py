@@ -14,7 +14,6 @@ from app.seeds.models import (
     Index,
     Cultivar,
     Packet,
-    paragraphize,
     Quantity,
     Synonym,
     SynonymsMixin,
@@ -34,13 +33,25 @@ class TestModuleFunctions:
         assert dbify('ashes to ashes') == 'Ashes to Ashes'
         assert dbify('CRUISE CONTROL FOR COOL') == 'Cruise Control for Cool'
 
-    def test_paragraphize(self):
-        """Add <p> tags to a block of text if they're not there."""
-        assert paragraphize('some text') == '<p>some text</p>'
-        assert paragraphize('<p>some text</p>') == '<p>some text</p>'
-        assert paragraphize(
-            '<p class="genuine">Alec Guinness</p>'
-        ) == '<p class="genuine">Alec Guinness</p>'
+    def test_dbify_cb(self):
+        """Test special cases handled by the callback function cb in dbify."""
+        assert dbify('I II III IV V XP BLBP') == 'I II III IV V XP BLBP'
+        assert dbify('THIRTY-THREE') == 'Thirty-three'
+        assert dbify('FORM 1040EZ') == 'Form 1040EZ'
+        assert dbify('ROYALE W/ CHEESE') == 'Royale w/ Cheese'
+        assert dbify('D\'AVIGNON RADISH') == 'd\'Avignon Radish'
+        assert dbify('O\'HARA') == 'O\'Hara'
+
+    def test_dbify_null(self):
+        """Return None if given None or an empty string."""
+        assert dbify(None) is None
+        assert dbify('') is None
+
+    def test_dbify_mixed_case(self):
+        """Don't let titlecase leave mixed-case strings alone."""
+        assert dbify(
+            'BENARY\'S GIANT FORMULA MIX (Blue Point)'
+        ) == 'Benary\'s Giant Formula Mix (Blue Point)'
 
 
 class TestSynonymsMixin:
@@ -153,11 +164,59 @@ class TestUSDollar:
 
 class TestIndex:
     """Test methods of Index in the seeds model."""
-    def test_repr(self):
+    def test__repr__(self):
         """Return string formatted <Index '<index>'>"""
         index = Index()
         index.name = 'vegetable'
         assert index.__repr__() == '<Index \'vegetable\'>'
+
+    def test__eq__(self):
+        """Return True if all columns are the same value."""
+        idx1 = Index()
+        idx2 = Index()
+        idx1.id = 42
+        assert idx1 != idx2
+        idx2.id = 42
+        assert idx1 == idx2
+        idx1.position = 3
+        idx1.name = 'Annual'
+        idx1.slug = 'annual'
+        idx1.description = 'Not built to last.'
+        assert idx1 != idx2
+        idx2.position = 3
+        idx2.name = 'Annual'
+        idx2.slug = 'annual'
+        idx2.description = 'Not built to last.'
+        assert idx1 == idx2
+
+    @mock.patch('app.seeds.models.Index.query')
+    def test_dict__to_from_dict__(self, m_q):
+        """An Index.dict_ fed to Index.from_dict_ creates identical Index."""
+        m_q.get.return_value = None
+        idx1 = Index()
+        idx1.id = 42
+        idx1.position = 3
+        idx1.name = 'Annual'
+        idx1.slug = 'annual'
+        idx1.description = 'Not built to last.'
+        d = idx1.dict_
+        assert Index.from_dict_(d) == idx1
+
+    @mock.patch('app.seeds.models.Index.query')
+    def test_from_dict__index_exists(self, m_q):
+        """Do not allow from_dict_ to create an Index w/ id already in use."""
+        old_idx = Index()
+        old_idx.id = 42
+        m_q.get.return_value = old_idx
+        idx = Index()
+        idx.id = 42
+        idx.position = 3
+        idx.name = 'Annual'
+        idx.slug = 'annual'
+        idx.description = 'Not built to last.'
+        d = idx.dict_
+        with pytest.raises(ValueError):
+            Index.from_dict_(d)
 
     def test_header(self):
         """Return '<._name> Seeds'"""
@@ -186,10 +245,86 @@ class TestIndex:
 
 class TestCommonName:
     """Test methods of CommonName in the seeds model."""
-    def test_repr(self):
+    def test__repr__(self):
         """Return string formatted <CommonName '<name>'>"""
         cn = CommonName(name='Coleus')
         assert cn.__repr__() == '<CommonName \'Coleus\'>'
+
+    def test__eq__(self):
+        """A `CommonName` is equal to another if relevant columns match."""
+        cn1 = CommonName()
+        cn2 = CommonName()
+        idx = Index()
+        idx.id = 1
+        x = CommonName()
+        y = CommonName()
+        z = CommonName()
+        x.id = 24
+        y.id = 25
+        z.id = 26
+        cn1.id = 42
+        cn1.index = idx
+        cn1.name = 'Annual'
+        cn1.slug = 'annual'
+        cn1.description = 'Not built to last.'
+        cn1.instructions = 'Plant them.'
+        cn1.grows_with = [x, y, z]
+        cn1.visible = True
+        assert cn1 != cn2
+        cn2.id = 42
+        cn2.index = idx
+        cn2.name = 'Annual'
+        cn2.slug = 'annual'
+        cn2.description = 'Not built to last.'
+        cn2.instructions = 'Plant them.'
+        cn2.grows_with = [x, y, z]
+        cn2.visible = True
+        assert cn1 == cn2
+
+    @mock.patch('app.seeds.models.CommonName.query')
+    @mock.patch('app.seeds.models.Index.query')
+    def test_dict__to_from_dict_(self, m_iq, m_cq):
+        """Create new CommonName equal to CN.dict_
+        
+        Note:
+        
+        grows_with is excluded because that must be handled by a different
+        function.
+        """
+        m_cq.get.return_value = None
+        cn = CommonName()
+        idx = Index()
+        m_iq.get.return_value = idx
+        idx.id = 1
+        cn.id = 42
+        cn.index = idx
+        cn.name = 'Annual'
+        cn.slug = 'annual'
+        cn.description = 'Not built to last.'
+        cn.instructions = 'Plant them.'
+        cn.visible = True
+        d = cn.dict_
+        assert CommonName.from_dict_(d)
+
+    @mock.patch('app.seeds.models.CommonName.query')
+    def test_dict__to_from_dict_existing_cn(self, m_q):
+        """Do not create `CommonName` if id already exists in db."""
+        old_cn = CommonName()
+        old_cn.id = 42
+        m_q.get.return_value = old_cn
+        cn = CommonName()
+        idx = Index()
+        idx.id = 1
+        cn.id = 42
+        cn.index = idx
+        cn.name = 'Annual'
+        cn.slug = 'annual'
+        cn.description = 'Not built to last.'
+        cn.instructions = 'Plant them.'
+        cn.visible = True
+        d = cn.dict_
+        with pytest.raises(ValueError):
+            CommonName.from_dict_(d)
 
     @mock.patch('app.seeds.models.CommonName.from_queryable_values')
     def test_from_queryable_dict(self, m_fqv):

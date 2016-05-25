@@ -192,21 +192,6 @@ def dbify(string):
         return None
 
 
-def paragraphize(text):
-    """Put the `text` in <p> tags if it isn't already.
-
-    Args:
-        text: A string to wrap in <p> tags.
-
-    Returns:
-        str: `text` wrapped in <p> tags if needed.
-    """
-    if text[:2] != '<p':
-        return '<p>' + text + '</p>'
-    else:
-        return text
-
-
 def row_exists(col, value):
     """Check to see if a given row exists in a table.
 
@@ -414,6 +399,18 @@ class Index(db.Model):
         return '<{0} \'{1}\'>'.format(self.__class__.__name__,
                                       self.name)
 
+    def __eq__(self, other):
+        return all((
+            self.id == other.id,
+            self.position == other.position,
+            self.name == other.name,
+            self.slug == other.slug,
+            self.description == other.description
+        )) if other else False  # other can be None.
+
+    def __hash__(self):
+        return hash(self.id)
+
     @classmethod
     def get_or_create(cls, name, stream=sys.stdout):
         """Load an `Index` if it exists, create it if not.
@@ -446,13 +443,13 @@ class Index(db.Model):
     @property
     def dict_(self):
         """Return a dictionary of values needed to instantiate an `Index`."""
-        return {
-            'id': self.id,
-            'position': self.position,
-            'name': self.name,
-            'slug': self.slug,
-            'description': self.description
-        }
+        return dict(
+            id=self.id,
+            position=self.position,
+            name=self.name,
+            slug=self.slug,
+            description=self.description
+        )
 
     @classmethod
     def from_dict_(cls, dict_):
@@ -471,10 +468,10 @@ class Index(db.Model):
                 'An Index with id {0} already exists as: \'{0}\''
                 .format(idx.id, idx.name)
             )
-        else:
-            idx = cls()
-            for key in dict_.keys():
-                idx.__setattr__(key, dict_[key])
+
+        idx = cls()
+        for key in dict_.keys():
+            idx.__setattr__(key, dict_[key])
         return idx
 
     @property
@@ -535,13 +532,6 @@ def before_index_insert_or_update(mapper, connection, target):
     target.slug = target.generate_slug()
 
 
-@event.listens_for(Index.description, 'set', retval=True)
-def index_set_description(target, value, oldvalue, initiator):
-    """Run tasks when `Index.description` is set."""
-    if value:
-        return paragraphize(value)
-
-
 @event.listens_for(SignallingSession, 'before_commit')
 def save_indexes_json_before_commit(session):
     """Save Indexes if any have been added, edited, or deleted."""
@@ -571,6 +561,8 @@ class CommonName(SynonymsMixin, db.Model):
         description: An optional HTML description for this CommonName.
         instructions: Optional planting instructions for seeds with the
             specified CommonName.
+        grows_with: OtM relationship with self; other common names a given
+            `CommonName` instance grows well with.
         visible: True if the specified `CommonName` is to be shown on auto-
             generated pages, False if it should only be shown on custom pages
             that explicitly include it. Default value: True.
@@ -598,6 +590,8 @@ class CommonName(SynonymsMixin, db.Model):
     # Data Optional
     description = db.Column(db.Text)
     instructions = db.Column(db.Text)
+    grows_with_id = db.Column(db.Integer, db.ForeignKey('common_names.id'))
+    grows_with = db.relationship('CommonName')
     visible = db.Column(db.Boolean)
 
     def __init__(self,
@@ -605,19 +599,85 @@ class CommonName(SynonymsMixin, db.Model):
                  index=None,
                  description=None,
                  instructions=None,
-                 parent=None,
-                 invisible=None):  # pragma: no cover
+                 visible=None):  # pragma: no cover
         """Construct an instance of `CommonName`."""
         self.name = name
         self.index = index
         self.description = description
         self.instructions = instructions
-        self.parent = parent
-        if invisible is not None:  # Do not override default value
-            self.invisible = invisible
+        if visible is not None:  # Do not override default value
+            self.visible = visible
 
     def __repr__(self):
         return '<{0} \'{1}\'>'.format(self.__class__.__name__, self.name)
+
+    def __eq__(self, other):
+        return all((
+            self.id == other.id,
+            self.index == other.index,
+            self.name == other.name,
+            self.slug == other.slug,
+            self.description == other.description,
+            self.instructions == other.instructions,
+            self.grows_with == other.grows_with,
+            self.visible == other.visible
+        )) if other else False
+
+    def __hash__(self):
+        return hash(self.id)
+
+    @property
+    def dict_(self):
+        """Return a dictionary of values needed to duplicate `CommonName`."""
+        return dict(
+            id=self.id,
+            index=self.index.id if self.index else None,
+            name=self.name,
+            slug=self.slug,
+            description=self.description,
+            instructions=self.instructions,
+            grows_with=[
+                g.id for g in self.grows_with
+            ] if self.grows_with else None,
+            visible=self.visible
+        )
+
+    @classmethod
+    def from_dict_(cls, dict_):
+        """Create a new `CommonName` from a dict provided by dict_.
+        
+        Note:
+
+        `grows_with` is NOT handled by this function, as it requires all
+        `CommonName` instances already exist in the database. Use the
+        `CommonName.gw_from_dict_` function to set `grows_with` after
+        all `CommonName` instances have been flushed or committed to db.
+        """
+        cn = cls.query.get(dict_['id'])
+        if cn:
+            raise ValueError(
+                'A CommonName with the id {0} already exists as: \'{1}\''
+                .format(cn.id, cn.name)
+            )
+
+        cn = cls()
+        for key in dict_.keys():
+            if key == 'index':
+                cn.index = Index.query.get(dict_[key])
+            elif key != 'grows_with':
+                cn.__setattr__(key, dict_[key])
+        return cn
+
+    def gw_from_dict_(self, dict_):
+        """Set `self.grows_with` w/ `CommonName` instances listed in dict_."""
+        gw = [CommonName.query.get(i) for i in dict_['grows_with']]
+        if not all(gw):
+            raise KeyError(
+                'One or more of the specified ids does not correspond to any '
+                'CommonName in the database! (id, CommonName): {0}'
+                .format([(i, cn) for i, cn in zip(dict_['grows_with'], gw)])
+            )
+        self.grows_with = gw
 
     @classmethod
     def from_queryable_values(cls, name, index):
@@ -1936,17 +1996,6 @@ class VegetableData(db.Model):
     def __init__(self, open_pollinated=False, days_to_maturity=None):
         self.open_pollinated = open_pollinated
         self.days_to_maturity = days_to_maturity
-
-
-@event.listens_for(Index.description, 'set', retval=True)
-@event.listens_for(CommonName.description, 'set', retval=True)
-@event.listens_for(CommonName.instructions, 'set', retval=True)
-@event.listens_for(Section.description, 'set', retval=True)
-@event.listens_for(Cultivar.description, 'set', retval=True)
-def paragraphize_blocks(target, value, oldvalue, initiator):
-    """Run `paragraphize` for attributes expected to contain HTML."""
-    if value:
-        return paragraphize(value)
 
 
 @event.listens_for(SignallingSession, 'before_attach')

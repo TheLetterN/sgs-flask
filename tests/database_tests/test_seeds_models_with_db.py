@@ -111,6 +111,35 @@ class TestIndexWithDB:
 
 class TestCommonNameWithDB:
     """Test methods of CommonName which use the database."""
+    def test_gw_from_dict_(self, db):
+        """Set grows_with with a list of ids from a CommonName.dict_"""
+        a = CommonName(name='a')
+        b = CommonName(name='b')
+        c = CommonName(name='c')
+        db.session.add_all([a, b, c])
+        db.session.flush()
+        cn = CommonName(name='Test')
+        cn.grows_with = [a, b, c]
+        d = cn.dict_
+        cn2 = CommonName(name='Test2')
+        cn2.gw_from_dict_(d)
+        assert cn.grows_with == cn2.grows_with
+
+    def test_gw_from_dict_missing_cns(self, db):
+        """Raise a KeyError if any needed CNs are missing."""
+        a = CommonName(name='a')
+        b = CommonName(name='b')
+        c = CommonName(name='c')
+        db.session.add_all([a, b, c])
+        db.session.flush()
+        cn = CommonName(name='Test')
+        cn.grows_with = [a, b, c]
+        d = cn.dict_
+        d['grows_with'].append(42)
+        cn2 = CommonName(name='Test2')
+        with pytest.raises(KeyError):
+            cn2.gw_from_dict_(d)
+
     def test_from_queryable_values(self, db):
         cn = CommonName(name='Butterfly Weed', index=Index(name='Annual'))
         db.session.add(cn)

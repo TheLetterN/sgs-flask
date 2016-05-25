@@ -238,7 +238,7 @@ def login():
                 '<a href="{0}'.format(url_for('auth.reset_password_request')) +
                 '">Click here if you forgot your password</a>')
             flash('Error: Login information is incorrect! ' + reset_url + '.')
-            return redirect(url_for('auth.login'))
+            return redirect(url_for('auth.login', next=request.args.get('next')))
     return render_template('auth/login.html', form=form)
 
 
@@ -253,7 +253,7 @@ def logout():
     """
     logout_user()
     flash('You have been logged out.')
-    return redirect(request.args.get('next') or url_for('main.index'))
+    return redirect(request.values.get('next') or url_for('main.index'))
 
 
 @auth.route('/manage_user', methods=['GET', 'POST'])

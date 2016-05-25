@@ -40,8 +40,9 @@ Copyright Swallowtail Garden Seeds, Inc
 				<a class="Page_header-banner-home-link" href="{{ url_for('seeds.home') }}"></a><img class="Page_header-banner" src="{{ url_for('static', filename='images/assets/sgs-banner.jpg') }}" alt="Swallowtail Garden Seeds">
 			</div>
 		</div>
-		{% include "includes/nav.html" %}
+		{% include "includes/main_nav.html" %}
     {% block subnav %}{% endblock %}
+    {% include "includes/admin_nav.html" %}
 		<div id="main" class="group" role="main">
 			{% if crumbs %}
 			{% include "includes/breadcrumbs.html" %}

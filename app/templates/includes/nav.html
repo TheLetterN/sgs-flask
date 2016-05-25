@@ -30,8 +30,8 @@ Copyright Swallowtail Garden Seeds, Inc
 		</li>
 	</ul>
 </div>
-<div id="nav-main">
-	<ul id="nav-user">
+<div class="Account_nav">
+	<ul class="Account_nav-user">
 		{% if current_user.is_anonymous %}
 		<li>
 			<a href="{{ url_for('auth.login') }}">Log In</a>
@@ -49,7 +49,7 @@ Copyright Swallowtail Garden Seeds, Inc
 		{% endif %}
 	</ul>
 	{% if current_user.permissions > 0 %}
-	<ul id="nav-admin">
+	<ul class="Account_nav-admin">
 		{% if current_user.can(Permission.MANAGE_USERS) %}
 		<li>
 			<a href="{{ url_for('auth.manage_user') }}">Manage Users</a>

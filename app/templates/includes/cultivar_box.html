@@ -35,7 +35,6 @@ Copyright Swallowtail Garden Seeds, Inc
 		{{ cultivar.description|safe }}
 		{% endif %}
 		{% if not cultivar.in_stock %}
-		<span style="background-color: red">OUT OF STOCK!</span> {# TODO: Change this. #}
 	</p>
 	{% endif %}
 	{% if cultivar.packets %}
@@ -46,12 +45,16 @@ Copyright Swallowtail Garden Seeds, Inc
 				{# {{ packet.sku }}: #}{{ packet.quantity.html_value|safe }} {{ packet.quantity.units }} - ${{ packet.price }}{% endfor %}
 			</td>
 		</tr>
+		{% if cultivar.in_stock %}
 		<tr>
 			<th class="Cultivar_table_qty">Qty:
 			</th>
 			<th class="Cultivar_table_th"><input class="Cultivar_table_text" type="text" name="Qty" value="1"></th>
 			<th class="Cultivar_table_th2"><button class="Cultivar_button_submit" type="submit">ADD TO CART</button></th>
 		</tr>
+		{% else %}
+		<tr><th class="Cultivar_table_out_of_stock">OUT OF STOCK</th></tr>
+		{% endif %}
 	</table>
 	{% endif %}
 	{% if current_user.can(Permission.MANAGE_SEEDS) %}

@@ -28,7 +28,7 @@
 {% endblock %}
 {% block main %}
       <h1>Remove Index</h1>
-      <form method="POST">
+      <form class="admin" method="POST">
         {{ form.hidden_tag() }}
         <ol>
           <li><div class="warning">Are you sure you want to remove the index &apos;{{ form.index.name }}&apos;?</div>

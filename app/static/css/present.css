@@ -267,7 +267,7 @@ border-color: #eedd22;
 }
 /* END flashed messages */
 /* BEGIN buttons */
-/*input[type=submit], a.button {
+form.admin input[type=submit], form.admin a.button {
 color: #ffffff;
 text-decoration: none;
 text-shadow: 1px 1px 1px #223322;
@@ -284,11 +284,11 @@ padding-left: 1em;
 padding-right: 1em;
 box-sizing: border-box;
 }
-input[type=submit]:hover, a.button:hover {
+form.admin input[type=submit]:hover, form.admin a.button:hover {
 background-color: #77dd77;
 border-color: #55bb55;
 }
-input[type=submit]:active, a.button:active {
+form.admin input[type=submit]:active, form.admin a.button:active {
 border-style: inset;
 text-shadow: -1px -1px 1px #223322;
 }
@@ -305,19 +305,19 @@ border-color: #bb5555;
 a#delete_user:active {
 text-shadow: -1px -1px 1px #332222;
 }
-*//* END buttons */
+/* END buttons */
 /* BEGIN forms */
-/*form {
+form.admin {
 clear: both;
 display: block;
 margin-top: 0.5em;
 margin-bottom: 0.5em;
 }
-form li {
+form.admin li {
 display: block;
 margin-bottom: 1em;
 }
-fieldset {
+form.admin fieldset {
 display: block;
 border-style: solid;
 border-width: 1px;
@@ -326,24 +326,24 @@ margin-bottom: 0.5em;
 padding: 0.5em;
 vertical-align: top;
 }
-fieldset legend {
+form.admin fieldset legend {
 border: 1px solid #00dd00;
 padding: 0.25em;
 }
-label {
+form.admin label {
 text-align: left;
 }
-label + input, label + textarea, label + select[multiple] {
+form.admin label + input, form.admin label + textarea, form.admin label + select[multiple] {
 display: block;
 margin-top: 0.2em;
 }
-label + input[type=checkbox] {
+form.admin label + input[type=checkbox] {
 display: inline;
 }
-input[type=checkbox] + label {
+form.admin input[type=checkbox] + label {
 display: inline;
 }
-input[type=text], input[type=password], textarea, select[multiple] {
+form.admin input[type=text], form.admin input[type=password], form.admin textarea, form.admin select[multiple] {
 width: 240px;
 font-family: monospace;
 color: black;
@@ -351,17 +351,17 @@ background-color: white;
 border: 1px solid #888;
 box-sizing: border-box;
 }
-input[type=text]:focus, input[type=password]:focus, textarea:focus {
+form.admin input[type=text]:focus, form.admin input[type=password]:focus, form.admin textarea:focus {
 background-color: #ffff99;
 }
-input[type=text]:hover, input[type=password]:hover, textarea:hover {
+form.admin input[type=text]:hover, form.admin input[type=password]:hover, form.admin textarea:hover {
 border: 1px solid #88f;
 background-color: #ddf;
 }
-label:after {
+form.admin label:after {
 content: ": ";
 }
-input[type=radio] + label:after {
+form.admin input[type=radio] + label:after {
 content: None;
 }
 .form_error {
@@ -376,7 +376,7 @@ max-width: 240px;
 display: block;
 box-sizing: border-box;
 }
-*//* END forms */
+/* END forms */
 /* BEGIN common name page formatting */
 .cn-header {
 display: block;

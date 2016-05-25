@@ -270,7 +270,7 @@ class TestIndexesWorksheetWithDB:
         iws.add_one(idx)
         assert iws.save_row_to_db(row=2, stream=messages)
         idxq = Index.query.filter(Index.name == 'Perennial').one_or_none()
-        assert idxq.description == '<p>Built to last.</p>'
+        assert idxq.description == 'Built to last.'
         messages.seek(0)
         msgs = messages.read()
         assert 'Description for the Index \'Perennial\' set to:' in msgs
@@ -289,7 +289,7 @@ class TestIndexesWorksheetWithDB:
         assert iws.save_row_to_db(row=2, stream=messages)
         idxq = Index.query.filter(Index.name == 'Perennial').one_or_none()
         assert idxq is idx
-        assert idx.description == '<p>Live long time.</p>'
+        assert idx.description == 'Live long time.'
         messages.seek(0)
         msgs = messages.read()
         assert 'Description for the Index \'Perennial\' set to:' in msgs
@@ -374,7 +374,7 @@ class TestCommonNamesWorksheet:
         cnq = CommonName.query\
             .filter(CommonName.name == 'Foxglove')\
             .one_or_none()
-        assert cnq.description == '<p>A bit spotty.</p>'
+        assert cnq.description == 'A bit spotty.'
         messages.seek(0)
         msgs = messages.read()
         assert 'Description for the CommonName \'Foxglove\' set to' in msgs
@@ -398,11 +398,11 @@ class TestCommonNamesWorksheet:
             .filter(CommonName.name == 'Foxglove')\
             .one_or_none()
         assert cnq is cn
-        assert cn.description == '<p>More dots!</p>'
+        assert cn.description == 'More dots!'
         messages.seek(0)
         msgs = messages.read()
         assert ('Description for the CommonName \'Foxglove\' set to: '
-                '<p>More dots!</p>') in msgs
+                'More dots!') in msgs
 
     def test_save_row_to_db_existing_clears_desc(self, db):
         """Clear description of existing CommonName if row has none."""
@@ -443,11 +443,11 @@ class TestCommonNamesWorksheet:
         cnq = CommonName.query\
             .filter(CommonName.name == 'Foxglove')\
             .one_or_none()
-        assert cnq.instructions == '<p>Just add water!</p>'
+        assert cnq.instructions == 'Just add water!'
         messages.seek(0)
         msgs = messages.read()
         assert ('Planting instructions for the CommonName \'Foxglove\' set '
-                'to: <p>Just add water!</p>') in msgs
+                'to: Just add water!') in msgs
 
     def test_save_row_to_db_existing_with_new_instructions(self, db):
         """Change instructions of existing CommonName in db."""
@@ -468,11 +468,11 @@ class TestCommonNamesWorksheet:
             .filter(CommonName.name == 'Foxglove')\
             .one_or_none()
         assert cnq is cn
-        assert cn.instructions == '<p>Put them in soil.</p>'
+        assert cn.instructions == 'Put them in soil.'
         messages.seek(0)
         msgs = messages.read()
         assert ('Planting instructions for the CommonName \'Foxglove\' set '
-                'to: <p>Put them in soil.</p>') in msgs
+                'to: Put them in soil.') in msgs
 
     def test_save_row_to_db_existing_clears_instructions(self, db):
         """Clear instructions from CommonName with blank inst. in row."""
@@ -918,11 +918,11 @@ class TestSectionsWorksheetWithDB:
         secws.add_one(sec)
         assert secws.save_row_to_db(2, stream=messages)
         secq = Section.query.filter(Section.name == 'Polkadot').one_or_none()
-        assert secq.description == '<p>A bit spotty.</p>'
+        assert secq.description == 'A bit spotty.'
         messages.seek(0)
         msgs = messages.read()
-        assert ('Description for the Section \'Polkadot\' set to: <p>A bit '
-                'spotty.</p>') in msgs
+        assert ('Description for the Section \'Polkadot\' set to: A bit '
+                'spotty.') in msgs
 
     def test_save_row_to_db_existing_change_desc(self, db):
         """Change the description of an existing Section."""
@@ -943,11 +943,11 @@ class TestSectionsWorksheetWithDB:
         assert secws.save_row_to_db(2, stream=messages)
         secq = Section.query.filter(Section.name == 'Polkadot').one_or_none()
         assert secq is sec
-        assert sec.description == '<p>More dots!</p>'
+        assert sec.description == 'More dots!'
         messages.seek(0)
         msgs = messages.read()
-        assert ('Description for the Section \'Polkadot\' set to: <p>More '
-                'dots!</p>') in msgs
+        assert ('Description for the Section \'Polkadot\' set to: More '
+                'dots!') in msgs
 
     def test_save_row_to_db_existing_clears_desc(self, db):
         """Clear description of existing Section if row has no desc."""
@@ -1364,9 +1364,9 @@ class TestCultivarsWorksheetWithDB:
         cvq = Cultivar.query.filter(Cultivar.name == 'Foxy').one_or_none()
         messages.seek(0)
         msgs = messages.read()
-        assert cvq.description == '<p>Like a lady.</p>'
+        assert cvq.description == 'Like a lady.'
         assert ('Description for the Cultivar \'Foxy Foxglove\' set to: '
-                '<p>Like a lady.</p>') in msgs
+                'Like a lady.') in msgs
 
     def test_save_row_to_db_existing_changes_description(self, db):
         """Set a new description for an existing Cultivar."""
@@ -1395,9 +1395,9 @@ class TestCultivarsWorksheetWithDB:
         messages.seek(0)
         msgs = messages.read()
         assert cvq is cv
-        assert cv.description == '<p>Like a Hendrix song.</p>'
+        assert cv.description == 'Like a Hendrix song.'
         assert ('Description for the Cultivar \'Foxy Foxglove\' set to: '
-                '<p>Like a Hendrix song.</p>') in msgs
+                'Like a Hendrix song.') in msgs
 
     def test_save_row_to_db_existing_clears_description(self, db):
         """Clear the description for an existing Cultivar."""

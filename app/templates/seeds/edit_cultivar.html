@@ -28,7 +28,7 @@
 {% endblock %}
 {% block main %}
       <h1>Edit Cultivar: {{ cultivar.fullname }}</h1>
-      <form method="POST" enctype="multipart/form-data">
+      <form class="admin" method="POST" enctype="multipart/form-data">
         {{ form.hidden_tag() }}
         <ol>
           <fieldset>

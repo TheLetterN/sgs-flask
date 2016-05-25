@@ -31,7 +31,7 @@
       <p>Note: Redirects will not take effect until restart of the Flask application.</p>
       <p> Also, do not include domain in redirect paths, use only root-relative paths.</p>
       <p> Finally, be careful creating 301 redirects, they should never point to another redirect!</p>
-      <form method="POST">
+      <form class="admin" method="POST">
         {{ form.hidden_tag() }}
         <ol>
           <li>

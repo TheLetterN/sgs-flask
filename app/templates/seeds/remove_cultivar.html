@@ -31,7 +31,7 @@
 {% block main %}
       <h1>Remove Cultivar:</h1>
       {{ cultivar_box(cultivar)|indent(12)|safe }}
-      <form method="POST">
+      <form class="admin" method="POST">
         {{ form.hidden_tag() }}
         <ol>
           <li><div class="warning">Are you sure you want to remove the cultivar '{{ cultivar.fullname }}'?</div>

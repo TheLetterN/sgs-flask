@@ -41,6 +41,7 @@ Copyright Swallowtail Garden Seeds, Inc
 			</div>
 		</div>
 		{% include "includes/nav.html" %}
+    {% block subnav %}{% endblock %}
 		<div id="main" class="group" role="main">
 			{% if crumbs %}
 			{% include "includes/breadcrumbs.html" %}
@@ -48,7 +49,7 @@ Copyright Swallowtail Garden Seeds, Inc
 			{% include "includes/flashed.html" %}
 			{% block main %}
 			{% endblock %}
-		</div>
+    </div>
 		<div class="Footer">
 			<a class="Footer_site-map-link" href="http://www.swallowtailgardenseeds.com/site-map.html">Site Map</a>
 			<p class="Footer_copyright_p">Copyright&nbsp;&#169;&nbsp;2016 Swallowtail&nbsp;Garden&nbsp;Seeds - All&nbsp;Rights&nbsp;Reserved

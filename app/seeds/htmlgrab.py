@@ -574,16 +574,30 @@ class Page(object):
                 name = name.replace(i, '').strip()
         cn['common name'] = dbify(name)
 
+
         if '/annuals/' in self.url:
+            ipage = 'http://www.swallowtailgardenseeds.com/annualsA-Z.html'
             cn['index'] = 'Annual Flower'
         elif '/perennials/' in self.url:
+            ipage = 'http://www.swallowtailgardenseeds.com/perennialsA-Z.html'
             cn['index'] = 'Perennial Flower'
         elif '/vines/' in self.url:
+            ipage = 'http://www.swallowtailgardenseeds.com/vinesaz.html'
             cn['index'] = 'Flowering Vine'
         elif '/veggies/' in self.url or '/vegetables/' in self.url:
+            ipage = 'http://www.swallowtailgardenseeds.com/vegetablesaz.html'
             cn['index'] = 'Vegetable'
         elif '/herbs/' in self.url:
+            ipage = 'http://www.swallowtailgardenseeds.com/herbsaz.html'
             cn['index'] = 'Herb'
+
+        # Get thumbnail from ipage.
+        r = requests.get(ipage)
+        soup = BeautifulSoup(r.text, self.parser)
+        a = soup.find('a', href=self.url)
+        thumb = a.img
+        if thumb:
+            cn['thumbnail'] = thumb['src']
 
         if header_div.h2:
             cn['synonyms'] = header_div.h2.text.strip()
@@ -682,6 +696,7 @@ class Page(object):
         ordered_keys = [
             'common name',
             'index',
+            'thumbnail',
             'synonyms',
             'botanical names',
             'description',
@@ -981,6 +996,8 @@ class PageAdder(object):
     def save(self, stream=sys.stdout):
         """Save all information to the database."""
         cn_name = self.tree['common name']
+        if 'thumbnail' in self.tree:
+            cn_thumb = self.tree['thumbnail']
         if 'synonyms' in self.tree:
             cn_synonyms = self.tree['synonyms']
         else:
@@ -998,6 +1015,19 @@ class PageAdder(object):
                                       stream=stream)
         if cn.created:
             db.session.add(cn)
+        if cn_thumb:
+            thumb = Thumbnail(cn_thumb)
+            if not cn.thumbnail or thumb.filename != cn.thumbnail.filename:
+                try:
+                    cn.thumbnail = thumb.save()
+                    print('Thumbnail for \'{0}\' set to \'{1}\'.'
+                          .format(cn.name, thumb.filename),
+                          file=stream)
+                except requests.exceptions.HTTPError as e:
+                    cn.thumbnail = None
+                    print('Thumbnail for {0} was not saved because an '
+                          'HTTP Error was raised when trying to download '
+                          'it: {1}'.format(cn.name, e), file=stream)
         if cn_synonyms and cn.synonyms_string != cn_synonyms:
             cn.synonyms_string = cn_synonyms
             print('Synonyms for \'{0}\' set to: {1}.'

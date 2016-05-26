@@ -586,6 +586,11 @@ class CommonName(SynonymsMixin, db.Model):
     slug = db.Column(db.String(64))
 
     # Data Optional
+    thumbnail_id = db.Column(db.Integer, db.ForeignKey('images.id'))
+    thumbnail = db.relationship(
+        'Image', foreign_keys=thumbnail_id, backref=db.backref('common_name',
+                                                               uselist=False)
+    )
     description = db.Column(db.Text)
     instructions = db.Column(db.Text)
     grows_with_id = db.Column(db.Integer, db.ForeignKey('common_names.id'))

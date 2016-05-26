@@ -1,38 +1,61 @@
 {# This file is part of SGS-Flask.
-
-   SGS-Flask is free software: you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation, either version 3 of the License, or
-   (at your option) any later version.
- 
-   SGS-Flask is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
- 
-   You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- 
-   Copyright Swallowtail Garden Seeds, Inc 
+SGS-Flask is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+SGS-Flask is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see
+<http://www.gnu.org/licenses/>.
+Copyright Swallowtail Garden Seeds, Inc
 #}
 {% extends "includes/base.html" %}
 {# Indent block head content 4 spaces, and block main content 6 spaces. #}
 {% block head %}
-    <title>Swallowtail Garden Seeds - {{ index.header }}</title>
-    <link rel="canonical" href="{{ url_for('seeds.index', idx_slug=index.slug, _external=True) }}">
+<title>Swallowtail Garden Seeds - {{ index.header }}</title>
+<link rel="canonical" href="{{ url_for('seeds.index', idx_slug=index.slug, _external=True) }}">
+<style>
+#main{font-family:"Droid sans","Lucida Sans Unicode",Helvetica,Arial,sans-serif;}
+#main a{border-bottom:none}
+#main .Index_pages-h1,.Index_pages-intro{text-align:center;}
+#main .Index_pages-intro{padding:0 1.2em;font-size:1.1em;}
+#main .Index_pages-image-links-wrapper{margin:1em auto;text-align:center;background:pink;}
+#main .Index_pages-image-links-wrapper2{text-align:left;margin:1em auto;background:yellow;}
+
+#main .Index_pages-image-links-wrapper a{display:inline-block;vertical-align:top;;width:7.4em;margin:1em 0 1em 1.5em;}
+#main .Index_pages-image-links-wrapper a:link,#main .Index_pages-image-links-wrapper a:visited{background-color:#f0f1F9;color:#141414;}
+#main .Index_pages-image-links-wrapper a:hover{transition:.25s;background-color:#cbd6c1;}
+#main .Index_pages-image-links-wrapper img{display:block;width:7.4em;height:7.4em;}
+#main .Index_pages-image-links-wrapper a:hover img{border:.08em solid #c14424;}
+#main .Index_pages-image-links-wrapper a figure{display:inline-block;width:100%;border-bottom:.08em solid #141414;border-left:.08em solid #141414;border-right:.08em solid #141414;margin:0}
+#main .Index_pages-image-links-wrapper figcaption{font-size:.85em;padding:.25em;}
+#main .Index_pages-image-links-wrapper span{display:block}
+
+
+
+@media all and (min-width:48em){
+#main .Index_pages-h1,#main .Index_pages-intro{text-align:left;}
+#main .Index_pages-intro{text-indent:2.5em;padding:0;}
+}
+</style>
 {% endblock %}
 {% block main %}
-      <h1>{{ index.header }}</h1>
-      {% if index.description %}
-      <div class="description">{{ index.description|safe }}</div>
-      {% endif %}
-      <div id="common_names">
-        {% if index.common_names %}
-        {% for cn in index.common_names %}
-        <div class="common_name">
-          <a href="{{ url_for('seeds.common_name', idx_slug=index.slug, cn_slug=cn.slug) }}">{{ cn.name }}</a>
-        </div>
-        {% endfor %}
-        {% endif %}
-      </div>
+<h1 class="Index_pages-h1">{{ index.header }}</h1>
+{% if index.description %}
+<p class="Index_pages-intro">{{ index.description|safe }}</p>
+{% endif %}
+
+		<div class="Index_pages-image-links-wrapper">
+			<div class="Index_pages-image-links-wrapper2">
+
+				{% if index.common_names %}
+				{% for cn in index.common_names %}
+				<a href="{{ url_for('seeds.common_name', idx_slug=index.slug, cn_slug=cn.slug) }}"><figure><img src="http://www.swallowtailgardenseeds.com/assets/ageratum-annual-seeds-index.jpg" alt="{{ cn.name }}"><figcaption><span>{{ cn.name }}</span></figcaption></figure></a>
+				{% endfor %}
+				{% endif %}
+</div>
+</div>
 {% endblock %}

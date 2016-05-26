@@ -411,35 +411,6 @@ class Index(db.Model):
     def __hash__(self):
         return hash(self.id)
 
-    @classmethod
-    def get_or_create(cls, name, stream=sys.stdout):
-        """Load an `Index` if it exists, create it if not.
-
-        Note:
-            The boolean attribute 'created' is attached to the `Index`
-                instance so we know whether the returned Index was created or
-                loaded.
-
-        Args:
-            name: The name of the `Index` to query or create.
-            stream: Optional IO stream to write messages to.
-
-        Returns:
-            Index: The `Index` loaded/created.
-        """
-        name = dbify(name)
-        idx = cls.query.filter(cls.name == name).one_or_none()
-        if idx:
-            print('The Index \'{0}\' has been loaded from the database.'
-                  .format(idx.name), file=stream)
-            idx.created = False
-        else:
-            idx = cls(name=name)
-            print('The Index \'{0}\' does not yet exist in the database, so '
-                  'it has been created.'.format(idx.name), file=stream)
-            idx.created = True
-        return idx
-
     @property
     def dict_(self):
         """Return a dictionary of values needed to instantiate an `Index`."""
@@ -472,6 +443,34 @@ class Index(db.Model):
         idx = cls()
         for key in dict_.keys():
             idx.__setattr__(key, dict_[key])
+        return idx
+
+    @classmethod
+    def get_or_create(cls, name, stream=sys.stdout):
+        """Load an `Index` if it exists, create it if not.
+
+        Note:
+            The boolean attribute 'created' is attached to the `Index`
+                instance so we know whether the returned Index was created or
+                loaded.
+
+        Args:
+            name: The name of the `Index` to query or create.
+            stream: Optional IO stream to write messages to.
+
+        Returns:
+            Index: The `Index` loaded/created.
+        """
+        idx = cls.query.filter(cls.name == name).one_or_none()
+        if idx:
+            print('The Index \'{0}\' has been loaded from the database.'
+                  .format(idx.name), file=stream)
+            idx.created = False
+        else:
+            idx = cls(name=name)
+            print('The Index \'{0}\' does not yet exist in the database, so '
+                  'it has been created.'.format(idx.name), file=stream)
+            idx.created = True
         return idx
 
     @property
@@ -528,7 +527,6 @@ class Index(db.Model):
 @event.listens_for(Index, 'before_update')
 def before_index_insert_or_update(mapper, connection, target):
     """Run tasks best done before flushing an `Index` to the database."""
-    target.name = dbify(target.name)
     target.slug = target.generate_slug()
 
 
@@ -727,8 +725,6 @@ class CommonName(SynonymsMixin, db.Model):
         Returns:
             CommonName: The `CommonName` loaded or created.
         """
-        name = dbify(name)
-        index = dbify(index)
         cn = cls.from_queryable_values(name=name, index=index)
         if cn:
             print('The CommonName \'{0}\' has been loaded from the database.'
@@ -816,7 +812,6 @@ class CommonName(SynonymsMixin, db.Model):
 @event.listens_for(CommonName, 'before_update')
 def before_common_name_insert_or_update(mapper, connection, target):
     """Run tasks best done before flushing a `CommonName` to the database."""
-    target.name = dbify(target.name)
     target.slug = target.generate_slug()
 
 
@@ -1064,9 +1059,6 @@ class Section(db.Model):
         Returns:
             Section: The loaded or created `Section`.
         """
-        name = dbify(name)
-        common_name = dbify(common_name)
-        index = dbify(index)
         sec = cls.query\
             .join(CommonName, CommonName.id == Section.common_name_id)\
             .join(Index, Index.id == CommonName.index_id)\
@@ -1372,7 +1364,6 @@ class Cultivar(SynonymsMixin, db.Model):
 @event.listens_for(Cultivar, 'before_update')
 def before_cultivar_insert_or_update(mapper, connection, target):
     """Update a `Cultivar` before flushing changes to the database."""
-    target.name = dbify(target.name)
     target.slug = target.generate_slug()
 
 

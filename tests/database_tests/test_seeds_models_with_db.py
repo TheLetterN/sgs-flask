@@ -35,16 +35,6 @@ class TestIndexRelatedEventHandlers:
         assert m_gs.called
         assert idx.slug == 'new-index'
 
-    @mock.patch('app.seeds.models.dbify')
-    def test_before_index_insert_or_update_dbify(self, m_d, db):
-        """dbify `Index.name` before flushing."""
-        m_d.return_value = 'dbified-index'
-        idx = Index(name='dirty-index')
-        db.session.add(idx)
-        db.session.flush()
-        assert m_d.called_with('dirty-index')
-        assert idx.name == 'dbified-index'
-
     # save_indexes_to_json_before_commit
     @mock.patch('app.seeds.models.Index.save_to_json_file')
     def test_save_indexes_json_before_commit_new_index(self, m_stjf, db):
@@ -182,16 +172,6 @@ class TestCommonNameRelatedEventHandlers:
         assert m_gs.called
         assert cn.slug == 'new-common-name'
 
-    @mock.patch('app.seeds.models.dbify')
-    def test_before_common_name_insert_or_update_dbify(self, m_d, db):
-        """dbify CommonName.name before flush."""
-        m_d.return_value = 'dbified-name'
-        cn = CommonName(name='dirty name')
-        db.session.add(cn)
-        db.session.flush()
-        m_d.assert_called_with('dirty name')
-        assert cn.name == 'dbified-name'
-
 
 class TestBotanicalNameRelatedEventHandlers:
     """Test event listener functions that involve BotanicalName instances."""
@@ -229,16 +209,6 @@ class TestCultivarRelatedEventHandlers:
         db.session.flush()
         assert m_gs.called
         assert cv.slug == 'new-cultivar'
-
-    @mock.patch('app.seeds.models.dbify')
-    def test_before_cultivar_insert_or_update_dbify(self, m_d, db):
-        """dbify Cultivar.name before flush."""
-        m_d.return_value = 'dbified-name'
-        cv = Cultivar(name='dirty name')
-        db.session.add(cv)
-        db.session.flush()
-        m_d.assert_called_with('dirty name')
-        assert cv.name == 'dbified-name'
 
 
 class TestPacketRelatedEventHandlers:

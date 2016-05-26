@@ -25,30 +25,24 @@ Copyright Swallowtail Garden Seeds, Inc
 {% block subnav %}
 {# BEGIN onpage nav #}
 {% if sections %}
-<ul class="onpage-nav sections">
+<div class="onpagenav">
 	{% for sec in sections %}
 	{% if sec.has_public_cultivars or sec.children or current_user.can(Permission.MANAGE_SEEDS) %}
-	<li>
-		<a href="#{{ slugify(sec.name) }}">{{ sec.name }}</a>
-		{% if sec.children %}
-		<ul class="onpage-nav subsections">
-			{% for subsec in sec.children %}
-			{% if subsec.has_public_cultivars or current_user.can(Permission.MANAGE_SEEDS) %}
-			<li>
-				<a href="#{{ slugify(subsec.name) }}">{{ subsec.name }}</a>
-			</li>
-			{% endif %}
-			{% endfor %}
-		</ul>
-		{% endif %}
-	</li>
+	<a href="#{{ slugify(sec.name) }}"><h2 class="button100">{{ sec.name }}</h2></a>
+	{% if sec.children %}
+	{% for subsec in sec.children %}
+	{% if subsec.has_public_cultivars or current_user.can(Permission.MANAGE_SEEDS) %}
+	<a href="#{{ slugify(subsec.name) }}"><h2 class="button50">{{ subsec.name }}</h2></a>
 	{% endif %}
 	{% endfor %}
-</ul>
-{% if individuals %}
-<a class="to-indv-varieties" href="#individual-varieties">Individual {{ cn.arranged_name }} Varieties</a>
-{% endif %}
-{% endif %}
+	{% endif %}
+	{% endif %}
+	{% endfor %}
+	{% if individuals %}
+	<a class="to-indv-varieties" href="#individual-varieties"><h2 class="button100">Individual {{ cn.arranged_name }} Varieties</h2></a>
+	{% endif %}
+	{% endif %}
+</div>
 {# END onpage nav #}
 {% endblock %}
 {% block main %}

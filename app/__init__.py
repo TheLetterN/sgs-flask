@@ -57,7 +57,8 @@ def get_index_map(filename=None):
         filename = current_app.config.get('INDEXES_JSON_FILE')
     if os.path.exists(filename):
         with open(filename, 'r', encoding='utf-8') as ifile:
-            return json.loads(ifile.read(), object_pairs_hook=OrderedDict)
+            d = json.loads(ifile.read())
+            return d
     else:
         return {}
 

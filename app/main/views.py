@@ -32,6 +32,6 @@ def index():
 def static_html(page):
     """Display a page generated from html files in app/static/html"""
     try:
-        return render_template('static/' + page + '.html')
+        return render_template('static/' + page + '.html', page=page)
     except TemplateNotFound:
         abort(404)

@@ -51,10 +51,12 @@ def hyphenate(text):
         return text
 
 
-def get_index_map(filename=None):
-    """Return a map used for showing links to Indexes in the nav."""
+def get_index_nav(filename=None):
+    """Return a dict of tuples used for showing links to Indexes in the nav."""
     if not filename:
-        filename = current_app.config.get('INDEXES_JSON_FILE')
+        filename = os.path.join(
+            current_app.config.get('JSON_FOLDER'), 'nav', 'indexes.json'
+        )
     if os.path.exists(filename):
         with open(filename, 'r', encoding='utf-8') as ifile:
             d = json.loads(ifile.read())
@@ -149,6 +151,6 @@ def create_app(config_name):
     app.add_template_global(slugify, 'slugify')
     app.add_template_global(Permission, 'Permission')
     app.add_template_global(hyphenate, 'hyphenate')
-    app.add_template_global(get_index_map, 'get_index_map')
+    app.add_template_global(get_index_nav, 'get_index_nav')
 
     return app

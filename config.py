@@ -68,8 +68,8 @@ class Config(object):
     ERFP_MINUTES_BETWEEN_REQUESTS = int(ERFP_MINUTES_BETWEEN_REQUESTS)
     EMAIL_SUBJECT_PREFIX = os.environ.get('SGS_EMAIL_SUBJECT_PREFIX') or \
         'Swallowtail Garden Seeds - '
-    INDEXES_JSON_FILE = os.environ.get('SGS_INDEXES_JSON_FILE') or \
-        'indexes.json'
+    JSON_FOLDER = os.environ.get('SGS_JSON_FOLDER') or \
+        os.path.join(BASEDIR, 'json')
     IMAGES_FOLDER = os.environ.get('SGS_IMAGES_FOLDER') or \
         os.path.join(BASEDIR, 'app', 'static', 'images')
     INFO_EMAIL = os.environ.get('SGS_INFO_EMAIL') or \

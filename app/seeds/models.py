@@ -494,26 +494,24 @@ class Index(db.Model):
         return slugify(self.plural) if self.name is not None else None
 
     @classmethod
-    def save_to_json_file(cls, json_file=None):
-        """Save given or all `Index` instances to a JSON file.
+    def save_nav_json(cls, json_file=None):
+        """Save a JSON file with data for use in navs.
 
         Args:
             json_file: Optional filename to save JSON indexes to. If not given,
-                it will default to `config.INDEXES_JSON_FILE`.
-
-        Since indexes are rarely changed and there are only going to be a
-        handful of them, it is better to store them in a JSON file and load
-        them that way in the main nav interface, as otherwise there would a db
-        query for `Index` values every time a page with the main nav is loaded.
+                it will default to `config.JSON_FOLDER`/nav/indexes.json.
         """
         indexes = cls.query.all()
         if not json_file:
-            json_file = current_app.config.get('INDEXES_JSON_FILE')
+            json_file = os.path.join(
+                current_app.config.get('JSON_FOLDER'), 'nav', 'indexes.json'
+            )
         with open(json_file,
                   'w',
                   encoding='utf-8') as ofile:
             ofile.write(
-                json.dumps({idx.id: (idx.header, idx.slug) for idx in indexes})
+                json.dumps({idx.id: (idx.header, idx.slug) for idx in indexes},
+                           indent=4)
             )
 
     def _auto_position(self):
@@ -539,11 +537,11 @@ def before_index_insert_or_update(mapper, connection, target):
 def save_indexes_json_before_commit(session):
     """Save Indexes if any have been added, edited, or deleted."""
     if any(isinstance(obj, Index) for obj in db.session):
-        # It is appropriate to run `save_indexes_to_json_file` even if there
+        # It is appropriate to run `save_nav_json` even if there
         # are deleted `Index` instances in the session, because the deleted
         # instances will not be returned by `Index.query.all()`, so deleted
         # indexes will be removed from the indexes JSON file.
-        Index.save_to_json_file()
+        Index.save_nav_json()
 
 
 class CommonName(SynonymsMixin, db.Model):

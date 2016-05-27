@@ -541,17 +541,6 @@ class Index(db.Model):
         with open(json_file, 'w', encoding='utf-8') as ofile:
             ofile.write(json.dumps(dicts, indent=4))
 
-#    def _auto_position(self):
-#        """Set position automatically before adding `Index` to session."""
-#        if not self.position:
-#            indexes = Index.query.all()
-#            indexes += [i for i in db.session.new if isinstance(i, Index)]
-#            last = max(indexes, key=lambda x: x.position) if indexes else None
-#            if last:
-#                self.position = last.position + 1
-#            else:
-#                self.position = 1
-
 
 @event.listens_for(Index, 'before_insert')
 @event.listens_for(Index, 'before_update')
@@ -1052,6 +1041,7 @@ class Section(db.Model):
                                           'common_name_id',
                                           name='_section_name_cn_uc'),)
     id = db.Column(db.Integer, primary_key=True)
+    position = db.Column(db.Integer)
 
     # Data Required
     name = db.Column(db.String(64))
@@ -1200,6 +1190,7 @@ class Cultivar(SynonymsMixin, db.Model):
     """
     __tablename__ = 'cultivars'
     id = db.Column(db.Integer, primary_key=True)
+    position = db.Column(db.Integer)
     __table_args__ = (db.UniqueConstraint('name',
                                           'common_name_id',
                                           name='_cultivar_name_cn_uc'),)

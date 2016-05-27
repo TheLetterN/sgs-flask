@@ -37,12 +37,12 @@ Copyright Swallowtail Garden Seeds, Inc
 				</p>
 			</div>
 			<div class="Page_header-banner-container">
-				<a class="Page_header-banner-home-link" href="{{ url_for('seeds.home') }}"></a><img class="Page_header-banner" src="{{ url_for('static', filename='images/assets/sgs-banner.jpg') }}" alt="Swallowtail Garden Seeds">
+				<a class="Page_header-banner-home-link" href="{{ url_for('main.index') }}"></a><img class="Page_header-banner" src="{{ url_for('static', filename='images/assets/sgs-banner.jpg') }}" alt="Swallowtail Garden Seeds">
 			</div>
 		</div>
 		{% include "includes/main_nav.html" %}
-    {% block subnav %}{% endblock %}
-    {% include "includes/admin_nav.html" %}
+		{% block subnav %}{% endblock %}
+		{% include "includes/admin_nav.html" %}
 		<div id="main" class="group" role="main">
 			{% if crumbs %}
 			{% include "includes/breadcrumbs.html" %}
@@ -50,7 +50,7 @@ Copyright Swallowtail Garden Seeds, Inc
 			{% include "includes/flashed.html" %}
 			{% block main %}
 			{% endblock %}
-    </div>
+		</div>
 		<div class="Footer">
 			<a class="Footer_site-map-link" href="http://www.swallowtailgardenseeds.com/site-map.html">Site Map</a>
 			<p class="Footer_copyright_p">Copyright&nbsp;&#169;&nbsp;2016 Swallowtail&nbsp;Garden&nbsp;Seeds - All&nbsp;Rights&nbsp;Reserved

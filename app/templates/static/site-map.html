@@ -1,0 +1,477 @@
+{# This file is part of SGS-Flask.
+SGS-Flask is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+SGS-Flask is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see
+<http://www.gnu.org/licenses/>.
+Copyright Swallowtail Garden Seeds, Inc
+#}
+{% extends "includes/base.html" %}
+{# This is an example of how to add a 'static' HTML page. #}
+{# Put head data in block head, and main content in block main. #}
+{# Any templates in this folder will be rendered when accessed from root. #}
+{# i.e. localhost:5000/example.html in testing/dev mode renders this template. #}
+{% block head %}
+<title>Swallowtail Garden Seeds - Site Map</title>
+<link rel="canonical" href="{{ url_for('main.static_html', page=page,  _external=True) }}">
+<style>	
+#main a{border-bottom:none}
+.Sitemap-h1{margin-bottom:1em;}
+.Sitemap_split{width:96%;margin:0 auto;font-family:"Droid sans","Lucida Sans Unicode",Helvetica,Arial,sans-serif;}
+.Sitemap_split-left-side,.Sitemap_split-right-side{display:block;vertical-align:top;width:98%;}
+.Sitemap_split-h2{background:#dee9de;padding:.25em;margin:1.75em 0 .25em 0;}
+.Sitemap_split-ul{list-style-type:none;padding-top:1em;}
+.Sitemap_split-ul a{text-decoration:none;}
+.Sitemap_split-ul a:link{color:#487289;}
+.Sitemap_split-ul a:visited{color:#487289;}
+.Sitemap_split-ul a:hover{color:#b34141;}
+@media all and (min-width:48em){
+p span{color:#f7f7f7;}
+.Sitemap_split{margin:0;}
+.Sitemap_split-ul{margin-left:1em;}
+.Sitemap_split-h2{margin:.25em .5em .25em 0;}
+.Sitemap_split-left-side,.Sitemap_split-right-side{display:inline-block;width:49%;}
+}
+</style>
+{% endblock %}
+{% block main %}
+<h1 class="Sitemap-h1">Site Map of Swallowtail Garden Seeds</h1>
+<div class="Sitemap_split">
+	<div class="Sitemap_split-left-side">
+		<h2 class="Sitemap_split-h2">Seed Categories</h2>
+		<ul class="Sitemap_split-ul">
+			<li><a href="http://www.swallowtailgardenseeds.com/new-for-2016.html">New Seeds for 2016</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annualsA-Z.html">Annual Flower Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennialsA-Z.html">Perennial Flower Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/vinesaz.html">Flowering Vine Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/vegetablesaz.html">Vegetable Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/herbsaz.html">Herb Seeds </a></li>
+		</ul>
+	</div>
+	<div class="Sitemap_split-right-side">
+		<h2 class="Sitemap_split-h2">Important Information</h2>
+		<ul class="Sitemap_split-ul">
+			<li><a href="http://www.swallowtailgardenseeds.com/about.html">About Us</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/contact.html">Contact Us</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/howtoorder.html">How To Order</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/form.html">Print Order Form</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/gift-certificates.html">Gift Certificates</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/international-shipping.html">International Shipping Information</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/privacy_policy.html">Privacy Policy</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/tips_lists/">Gardening Tips</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/zonemap.html">Zone Map</a></li>
+		</ul>
+	</div>
+</div>
+<div class="Sitemap_split">
+	<div class="Sitemap_split-left-side">
+		<h2 class="Sitemap_split-h2">Annual Flower Seeds</h2>
+		<ul class="Sitemap_split-ul">
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/ageratum.html">Ageratum Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/alyssum.html">Alyssum Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/amaranthus.html">Amaranthus Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/anchusa_blue_angel_annual.html">Anchusa Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/angelonia.html">Angelonia Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/angels_trumpet.html">Angel's Trumpet Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/asterann.html">Aster Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/baby_blue_eyes.html">Baby Blue Eyes Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/babys_breathann.html">Baby's Breath Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/bachelor_button.html">Bachelor's Button Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/bacopa.html">Bacopa Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/begonia.html">Begonia Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/bellsofireland.html">Bells of Ireland Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/birds-eyes.html">Bird's Eyes Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/brachycome.html">Brachycome Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/browallia.html">Browallia Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/butterfly_weed_annual.html">Butterfly Weed Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/calendulaann.html">Calendula Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/calibrachoa.html">Calibrachoa Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/canna.html">Canna Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/cape_daisy.html">Cape Daisy Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/chinese_houses.html">Chinese Houses Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/chrysanthemum.html">Chrysanthemum Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/clarkia.html">Clarkia Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/cleome.html">Cleome Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/coleus.html">Coleus Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/commelina.html">Commelina Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/coreopsisann.html">Coreopsis Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/corn_ornamental.html">Ornamental Corn Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/cosmidium-seeds.html">Cosmidium Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/cosmos.html">Cosmos Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/dahlia.html">Dahlia seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/dianthusann.html">Dianthus seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/dichondra.html">Dichondra Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/dustymiller.html">Dusty Miller Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/eyeball.html">Eyeball Plant Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/gazania.html">Gazania Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/geranium.html">Geranium Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/bluethimble.html">Globe Gilia</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/heliophila.html">Heliophila Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/heliotrope.html">Heliotrope Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/honeywort.html">Honeywort Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/impatiens.html">Impatiens Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/iresine.html">Iresine Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/laceflower.html">Laceflower Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/larkspur.html">Larkspur Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/lisianthus.html">Lisianthus Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/livingstone.html">Livingstone Daisy Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/lobelia.html">Lobelia Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/loveinamist.html">Love-In-A-Mist Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/lupine-seeds-annual.html">Lupine seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/marigold.html">Marigold Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/mignonette.html">Mignonette Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/mimosa.html">Mimosa Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/mimulus.html">Mimulus Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/nasturtium.html">Nasturtium Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/nicotiana.html">Nicotiana Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/orn_millet.html">Ornamental Millet Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/osteospermum.html">Osteospermum Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/pansiesviolas.html">Pansy Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/paper_daisy.html">Paper Daisy seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/petunia.html">Petunia Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/petuniats.html">Trailing Petunia Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/poppy_assorted.html">Assorted Poppy Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/poppy_breadseed.html">Breadseed Poppy Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/poppy_ca.html">California Poppy Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/poppy_peony.html">Peony Poppy Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/poppy_shirley.html">Shirley Poppy Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/portulaca.html">Portulaca Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/ptilotus.html">Ptilotus Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/rudbeckia.html">Rudbeckia Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/salvia.html">Salvia Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/scarlet_flax.html">Scarlet Flax Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/snapdragon.html">Snapdragon Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/statice-seeds.html">Statice Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/stock.html">Stock Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/strawflower.html">Strawflower Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/sunflowers.html">Sunflower Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/tidytips.html">Tidy Tips Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/tithonia.html">Tithonia Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/ursinia.html">Ursinia Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/verbenaann.html">Verbena Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/vinca.html">Vinca Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/viola.html">Viola Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/viscaria.html">Viscaria Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/wishbone_flower.html">Wishbone Flower Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/xeranthemum.html">Xeranthemum seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/annuals/zinnias.html">Zinnia Seeds</a></li>
+		</ul>
+	</div>
+	<div class="Sitemap_split-right-side">
+		<h2 class="Sitemap_split-h2">Perennial Flower Seeds</h2>
+		<ul class="Sitemap_split-ul">
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/acanthus.html">Acanthus Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/agapanthus.html">Agapanthus Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/agastache.html">Agastache Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/alstroemeria.html">Alstroemeria Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/anchusa.html">Anchusa Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/anemone.html">Anemone Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/armenian_basket.html">Armenian Basket Flower Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/armeria.html">Armeria Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/artemisia.html">Artemisia Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/asparagusfern.html">Asparagus Fern Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/aster.html">Aster Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/astilbe.html">Astilbe Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/babys_breath.html">Baby's Breath Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/balloon_flower.html">Balloon Flower Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/basketofgold.html">Basket of Gold Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/beebalmper.html">Bee Balm Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/bergenia.html">Bergenia Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/blackberry_lily.html">Blackberry Lily Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/butterflybush.html">Butterfly Bush Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/butterfly_weed_peren.html">Butterfly Weed Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/calamintha-seeds.html">Calamintha Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/campanula.html">Campanula Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/candytuftper.html">Candytuft Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/capefuchsia.html">Cape Fuchsia Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/carpetbugle.html">Carpet Bugle Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/chaenorhinum.html">Chaenorhinum Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/chelone.html">Chelone Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/chinese_foxglove.html">Chinese Foxglove Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/chinese_lantern.html">Chinese Lantern Plant Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/chrysanthemum-seeds.html">Chrysanthemum Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/columbine.html">Columbine Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/coral_bells.html">Coral Bells Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/coreopsisper.html">Coreopsis Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/cymbalaria.html">Kenilworth Ivy Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/dames_rocket.html">Dame's Rocket Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/delphinium.html">Delphinium Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/dianthus.html">Dianthus Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/dinosaur_food.html">Dinosaur Food Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/echinacea.html">Echinacea Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/english_daisy.html">English Daisy Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/evening_primrose.html">Evening Primrose Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/fairywand.html">Fairy Wand seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/flax.html">Flax Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/forgetmenotper.html">Forget-Me-Not Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/fouroclockper.html">Four O'Clock Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/foxglove.html">Foxglove Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/gaillardia.html">Gaillardia Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/gaura.html">Gaura Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/gayfeather.html">Gayfeather Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/geranium-seeds.html">Geranium Seeds </a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/geum-seeds.html">Geum Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/globe_thistle.html">Globe Thistle Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/goatsbeard.html">Goat's Beard Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/goldenrod.html">Goldenrod Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/grassesassortedper.html">Ornamental Grass Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/helenium.html">Helenium Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/hibiscus.html">Hibiscus Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/hollyhocks.html">Hollyhock Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/hosta.html">Hosta Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/iceplant.html">Hardy Ice Plant Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/jacobs_ladder.html">Jacob's Ladder Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/joe_pye_weed.html">Joe-pye Weed Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/jupiters_beard.html">Jupiter's Beard Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/ladysmantle.html">Lady's Mantle Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/lavender.html">Lavender Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/limonium.html">Limonium Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/lobeliaper.html">Lobelia Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/lupine.html">Lupine Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/lychnis.html">Lychnis Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/meconopsis_poppy.html">Meconopsis Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/money_plant.html">Money Plant Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/moss_irish.html">Irish Moss Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/nepeta.html">Nepeta Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/obedience_plant.html">Obedience Plant Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/painted_daisy.html">Painted Daisy Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/pampas_grass.html">Pampas Grass Seeds </a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/penstemon.html">Penstemon Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/phlomis.html">Phlomis Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/phormium.html">Phormium Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/polygonum.html">Polygonum Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/alpine_poppy.html">Alpine Poppy Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/poppy_iceland.html">Iceland Poppy Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/poppy_oriental.html">Oriental Poppy Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/primrose.html">Primrose Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/prunella.html">Prunella Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/red_hot_poker.html">Red Hot Poker Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/rock_cress.html">Rock Cress Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/russiansage.html">Russian Sage Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/salviaper.html">Salvia Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/sbdaisy.html">Santa Barbara Daisy Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/saponaria.html">Saponaria Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/perennial_scabiosa.html">Scabiosa Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/sea_holly.html">Sea Holly Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/sedum.html">Sedum Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/sempervivum.html">Sempervivum Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/shasta_daisy.html">Shasta Daisy Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/sidalcea.html">Sidalcea Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/sisyrinchium.html">Sisyrinchium Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/snowinsummer.html">Snow-in-Summer Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/spiderwort.html">Spiderwort Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/stachys.html">Stachys Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/stokesia.html">Stokesia seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/sweet_violet.html">Sweet Violet Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/thymeper.html">Creeping Thyme Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/verbascum.html">Verbascum Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/verbena.html">Verbena Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/veronica.html">Veronica Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/wallrock_cress.html">Wall Rock Cress Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/yarrow.html">Yarrow Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/zebra_hollyhock.html">Zebra Hollyhock Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/perennials/zulu-warrior.html">Zulu Warrior Seeds</a></li>
+		</ul>
+	</div>
+</div>
+<div class="Sitemap_split">
+	<div class="Sitemap_split-left-side">
+		<h2 class="Sitemap_split-h2">Flowering Vine Seeds</h2>
+		<ul class="Sitemap_split-ul">
+			<li><a href="http://www.swallowtailgardenseeds.com/vines/asarina.html">Asarina Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/vines/black_eyed_susan.html">Black-Eyed Susan Vine Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/vines/canary_bird.html">Canary Bird Vine Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/vines/cardinal_climber.html">Cardinal Climber Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/vines/clematis.html">Clematis Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/vines/cup_and_saucer_vine.html">Cup and Saucer Vine Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/vines/cypress_vine.html">Cypress Vine Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/vines/firecracker.html">Firecracker Vine Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/vines/hyacinthvine.html">Hyacinth Vine Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/vines/moonvine.html">Moon Vine Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/vines/morningglory.html">Morning Glory Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/vines/passion_vine.html">Passion Flower Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/vines/purple_bell_vine.html">Purple Bell Vine Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/vines/sweet_pea_vines.html">Sweet Peas Seeds</a></li>
+		</ul>
+	</div>
+	<div class="Sitemap_split-right-side">
+		<h2 class="Sitemap_split-h2">Vegetable Seeds</h2>
+		<ul class="Sitemap_split-ul">
+			<li><a href="http://www.swallowtailgardenseeds.com/veggies/artiandcardoon.html">Artichoke Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/veggies/bushbeans.html">Bush Bean Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/veggies/polebeans.html">Pole Bean Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/veggies/beansrunner.html">Runner Bean Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/veggies/beets.html">Beet Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/veggies/broccoli.html">Broccoli Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/veggies/cabbage-seeds.html">Cabbage Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/veggies/carrots.html">Carrot Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/veggies/chard.html">Chard Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/veggies/sweetcorn.html">Sweet Corn Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/veggies/popcorn.html">Popcorn Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/veggies/cucumber.html">Cucumber Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/veggies/eggplant.html">Eggplant Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/veggies/greens.html">Greens Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/veggies/kale-seeds.html">Kale Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/vegetables/leek-seeds.html">Leek Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/veggies/butterhead.html">Butterhead Lettuce Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/veggies/looseleaf.html">Loose-leaf Lettuce Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/veggies/oakleaf.html">Oakleaf Lettuce Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/veggies/romaine_cos.html">Romaine Lettuce Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/veggies/summercrisp.html">Summer Crisp Lettuce Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/veggies/melons.html">Melon Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/vegetables/okra-seeds.html">Okra Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/veggies/onion-seeds.html">Onion Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/veggies/peas.html">Pea Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/veggies/bellpeppers.html">Bell Pepper Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/veggies/hotpepper.html">Hot Pepper Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/veggies/sweetpeppers.html">Sweet Pepper Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/veggies/pumpkins.html">Pumpkin Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/veggies/radishes.html">Radish Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/veggies/spinach.html">Spinach Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/vegetables/summer-squash-seeds.html">Summer Squash Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/vegetables/winter-squash-seeds.html">Winter Squash Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/veggies/strawberry_alpine.html">Strawberry Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/veggies/heirloom.html">Heirloom Tomato Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/veggies/cherry.html">Cherry Tomato Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/veggies/saucedrying.html">Sauce Tomato Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/veggies/watermelons.html">Watermelon Seeds</a></li>
+		</ul>
+	</div>
+</div>
+<div class="Sitemap_split">
+	<div class="Sitemap_split-left-side">
+		<h2 class="Sitemap_split-h2">Herb Seeds</h2>
+		<ul class="Sitemap_split-ul">
+			<li><a href="http://www.swallowtailgardenseeds.com/herbs/anise.html">Anise Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/herbs/basil.html">Basil Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/herbs/beebalm.html">Bee Balm Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/herbs/borage.html">Borage Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/herbs/burdock.html">Burdock Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/herbs/burnet_salad.html">Salad Burnet Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/herbs/calendula_h.html"> Calendula Herb Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/herbs/caraway.html">Caraway Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/herbs/catnip.html">Catnip Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/herbs/chamomile.html">German Chamomile seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/herbs/chervil.html">Chervil Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/herbs/chives.html">Chives Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/herbs/garlicchives.html">Garlic Chives Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/herbs/cilantro.html">Cilantro Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/herbs/dill.html">Dill Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/herbs/echinacea_h.html">Echinacea purpurea seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/herbs/epazote.html">Epazote Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/herbs/fennel_bronze.html">Fennel Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/herbs/feverfew.html">Feverfew Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/herbs/hyssop.html">Hyssop Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/herbs/lemonbalm.html">Lemon Balm Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/herbs/lemongrass.html">Lemon Grass Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/herbs/lovage.html">Lovage Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/herbs/marjoram_sweet.html">Sweet Marjoram Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/herbs/thistle_milk.html">Milk Thistle Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/herbs/motherwort.html">Motherwort Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/herbs/oregano_greek.html">Greek Oregano Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/herbs/parsley.html">Parsley Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/herbs/perilla.html">Perilla Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/herbs/rosemary.html">Rosemary Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/herbs/sage.html">Sage Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/herbs/savory_summer.html">Summer Savory Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/herbs/skullcap.html">Skullcap Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/herbs/sorrel-seeds.html">Sorrel seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/herbs/stjohnswort.html">St. John's Wort Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/herbs/stevia.html">Stevia seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/herbs/thyme.html">Thyme Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/herbs/valerian.html">Valerian Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/herbs/wormwood.html">Wormwood Seeds</a></li>
+			<li><a href="http://www.swallowtailgardenseeds.com/herbs/proa.html">Yarrow Herb Seeds</a></li>
+		</ul>
+	</div>
+	<div class="Sitemap_split-right-side">
+		<h2 class="Sitemap_split-h2">Gardening Tips</h2>
+		<ul class="Sitemap_split-ul">
+			<li><a href="http://www.swallowtailgardenseeds.com/tips_lists/drought-tolerant-plants.html">Drought Tolerant Plants</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/tips_lists/chitting-your-seeds.html">Chitting Your Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/tips_lists/perennials_first_year_flowers.html">First-Year Flowering Perennials</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/tips_lists/startingyourseeds.html">Starting Your Seeds</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/tips_lists/deer_resistant_list.html">Deer Resistant Plants</a>
+			</li>
+			<li><a href="http://www.swallowtailgardenseeds.com/tips_lists/floral-fun.html">Floral Fun</a>
+			</li>
+		</ul>
+	</div>
+</div>
+{% endblock %}

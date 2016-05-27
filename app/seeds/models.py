@@ -206,6 +206,35 @@ def row_exists(col, value):
     return db.session.query(db.exists().where(col == value)).scalar()
 
 
+def auto_position(instance):
+    """Set position automatically before adding model instance to session.
+    
+    Args:
+        instance: The instance to set the position of.
+    """
+    model = instance.__class__
+    
+    if not instance.position:
+        rows = model.query.all()
+        rows += [i for i in db.session.new if isinstance(i, model)]
+        last = max(rows, key=lambda x: x.position) if rows else None
+        if last:
+            instance.position = last.position + 1
+        else:
+            instance.position = 1
+
+
+def swap_positions(obj1, obj2):
+    """Swap positions of two objects of the same type."""
+    if type(obj1) is not type(obj2):
+        raise ValueError(
+            'Can only swap positions of objects of the same type!'
+        )
+    old_pos = obj1.position
+    obj1.position = obj2.position
+    obj2.position = old_pos
+
+
 # Helper Classes
 class SynonymsMixin(object):
     """A mixin class to easily interact with synonyms in child classes."""
@@ -512,16 +541,16 @@ class Index(db.Model):
         with open(json_file, 'w', encoding='utf-8') as ofile:
             ofile.write(json.dumps(dicts, indent=4))
 
-    def _auto_position(self):
-        """Set position automatically before adding `Index` to session."""
-        if not self.position:
-            indexes = Index.query.all()
-            indexes += [i for i in db.session.new if isinstance(i, Index)]
-            last = max(indexes, key=lambda x: x.position) if indexes else None
-            if last:
-                self.position = last.position + 1
-            else:
-                self.position = 1
+#    def _auto_position(self):
+#        """Set position automatically before adding `Index` to session."""
+#        if not self.position:
+#            indexes = Index.query.all()
+#            indexes += [i for i in db.session.new if isinstance(i, Index)]
+#            last = max(indexes, key=lambda x: x.position) if indexes else None
+#            if last:
+#                self.position = last.position + 1
+#            else:
+#                self.position = 1
 
 
 @event.listens_for(Index, 'before_insert')
@@ -550,6 +579,8 @@ class CommonName(SynonymsMixin, db.Model):
     belongs to.
 
     Attributes:
+        position: An integer representing order in which `CommonName` should be
+            listed.
         index: MtO relationship with `Index`; the `Index` this `CommonName`
             falls under.
             Backref: `Index.common_names`
@@ -579,6 +610,7 @@ class CommonName(SynonymsMixin, db.Model):
                                           'index_id',
                                           name='cn_slug_index_uc'))
     id = db.Column(db.Integer, primary_key=True)
+    position = db.Column(db.Integer)
 
     # Data Required
     index_id = db.Column(db.Integer, db.ForeignKey('indexes.id'))
@@ -1998,8 +2030,8 @@ class VegetableData(db.Model):
 @event.listens_for(SignallingSession, 'before_attach')
 def auto_position_before_attach(session, instance):
     """Auto-generate positions for new instances of classes that have them."""
-    if hasattr(instance, '_auto_position'):
-        instance._auto_position()
+    if hasattr(instance, 'position'):
+        auto_position(instance)
 
 
 @event.listens_for(Image, 'before_delete')

@@ -52,7 +52,7 @@ Copyright Swallowtail Garden Seeds, Inc
 			{% endblock %}
 		</div>
 		<div class="Footer">
-			<a class="Footer_site-map-link" href="http://www.swallowtailgardenseeds.com/site-map.html">Site Map</a>
+			<a class="Footer_site-map-link" href="{{ url_for('main.static_html', page='site-map',  _external=True) }}">Site Map</a>
 			<p class="Footer_copyright_p">Copyright&nbsp;&#169;&nbsp;2016 Swallowtail&nbsp;Garden&nbsp;Seeds - All&nbsp;Rights&nbsp;Reserved
 			</p>
 			<p class="Footer_copyright_p Footer_copyright_p2">Copyright pertains to all images, none of which may be reproduced in any form without<br class="no-mobile-display"> the expressed written consent of Swallowtail Garden Seeds.

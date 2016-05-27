@@ -1,7 +1,7 @@
 import pytest
 from unittest import mock
 from flask import current_app
-from app import Anonymous, get_index_map
+from app import Anonymous, get_index_nav
 
 
 @pytest.mark.usefixtures('app')
@@ -13,17 +13,17 @@ class TestApp:
     def test_is_testing(self):
         assert current_app.config['TESTING']
 
-    def test_get_index_map_no_file(self):
+    def test_get_index_nav_no_file(self):
         """Return an empty dict if no file is loaded."""
-        assert get_index_map('/tmp/some_nonexistent_file.blargh') == {}
+        assert get_index_nav('/tmp/some_nonexistent_file.blargh') == {}
 
     @mock.patch('app.current_app.config.get')
     @mock.patch('app.os.path.exists')
-    def test_get_index_map_uses_default_file(self, m_exists, m_get):
-        """Use the file specified by config['INDEXES_JSON_FILE']"""
+    def test_get_index_nav_uses_default_file(self, m_exists, m_get):
+        """Use the folder specified by config['JSON_FOLDER']"""
         m_exists.return_value = False
-        get_index_map()
-        m_get.assert_called_with('INDEXES_JSON_FILE')
+        get_index_nav()
+        m_get.assert_called_with('JSON_FOLDER')
 
 
 @pytest.mark.usefixtures('app')

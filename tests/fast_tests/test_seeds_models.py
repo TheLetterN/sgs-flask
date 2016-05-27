@@ -285,9 +285,9 @@ class TestCommonName:
     @mock.patch('app.seeds.models.Index.query')
     def test_dict__to_from_dict_(self, m_iq, m_cq):
         """Create new CommonName equal to CN.dict_
-        
+
         Note:
-        
+
         grows_with is excluded because that must be handled by a different
         function.
         """

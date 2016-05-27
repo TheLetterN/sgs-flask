@@ -574,7 +574,6 @@ class Page(object):
                 name = name.replace(i, '').strip()
         cn['common name'] = dbify(name)
 
-
         if '/annuals/' in self.url:
             ipage = 'http://www.swallowtailgardenseeds.com/annualsA-Z.html'
             cn['index'] = 'Annual Flower'

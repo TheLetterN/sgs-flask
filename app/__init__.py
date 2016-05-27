@@ -28,7 +28,6 @@ of the website for Swallowtail Garden Seeds.
 import json
 import os
 import pyphen
-from collections import OrderedDict
 from flask import Flask, current_app
 from flask.ext.login import AnonymousUserMixin, LoginManager
 from flask.ext.mail import Mail

@@ -20,13 +20,13 @@ from flask import abort, render_template
 from jinja2 import TemplateNotFound
 
 from . import main
-from config import BASEDIR
 
 
 @main.route('/')
 def index():
     """Generate the index page of the website."""
     return render_template('main/index.html')
+
 
 @main.route('/<page>.html')
 def static_html(page):

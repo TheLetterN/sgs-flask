@@ -16,8 +16,11 @@
 # Copyright Swallowtail Garden Seeds, Inc
 
 
-from flask import render_template
+from flask import abort, render_template
+from jinja2 import TemplateNotFound
+
 from . import main
+from config import BASEDIR
 
 
 @main.route('/')
@@ -25,9 +28,10 @@ def index():
     """Generate the index page of the website."""
     return render_template('main/index.html')
 
-
-@main.route('/test')
-def test():
-    """Test page, please ignore."""
-    var = 'Have a link to index: url_for(\'main.index\'). Isn\'t it nice?'
-    return render_template('main/test.html', var=var)
+@main.route('/<page>.html')
+def static_html(page):
+    """Display a page generated from html files in app/static/html"""
+    try:
+        return render_template('static/' + page + '.html')
+    except TemplateNotFound:
+        abort(404)

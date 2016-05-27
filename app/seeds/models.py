@@ -383,6 +383,11 @@ class Index(db.Model):
     slug = db.Column(db.String(64), unique=True)
 
     # Data Optional
+    thumbnail_id = db.Column(db.Integer, db.ForeignKey('images.id'))
+    thumbnail = db.relationship(
+        'Image', foreign_keys=thumbnail_id, backref=db.backref('index',
+                                                               uselist=False)
+    )
     description = db.Column(db.Text)
 
     def __init__(self, name=None, description=None):

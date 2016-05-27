@@ -507,7 +507,7 @@ class Index(db.Model):
                 current_app.config.get('JSON_FOLDER'), 'nav', 'indexes.json'
             )
             dicts = {
-                idx.id: {
+                idx.position if idx.position is not None else idx.id: {
                     'header': idx.header,
                     'slug': idx.slug
                 } for idx in indexes

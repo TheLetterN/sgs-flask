@@ -26,6 +26,7 @@ from flask.ext.script import Manager, Shell
 from app import create_app, db, mail, Permission
 from app.auth.models import User
 from app.seeds.excel import SeedsWorkbook
+from app.seeds.models import Cultivar
 from app.seeds.htmlgrab import Page, PageAdder, save_batch
 
 app = create_app(os.getenv('SGS_CONFIG') or 'default')
@@ -52,6 +53,15 @@ def create():
     admin.grant_permission(Permission.MANAGE_USERS)
     admin.confirmed = True
     db.session.commit()
+
+
+@manager.command
+def make_cultivars_visible():
+    """Make all cultivars visible."""
+    for cv in Cultivar.query.all():
+        cv.visible = True
+    db.session.commit()
+    print('All cultivars are now visible.')
 
 
 @manager.command

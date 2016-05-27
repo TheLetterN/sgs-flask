@@ -20,7 +20,7 @@ Copyright Swallowtail Garden Seeds, Inc
 		{% set indexes = get_index_nav() %}
 		{% for i in indexes|sort %}
 		<li class="Main_nav-not-shown-links">
-			<a href="{{ url_for('seeds.index', idx_slug=indexes[i][1])}}">{{ indexes[i][0] }}</a>
+			<a href="{{ url_for('seeds.index', idx_slug=indexes[i]['slug']) }}">{{ indexes[i]['header'] }}</a>
 		</li>
 		{% endfor %}
 		<li class="Main_nav-search">

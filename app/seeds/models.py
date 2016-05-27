@@ -506,13 +506,14 @@ class Index(db.Model):
             json_file = os.path.join(
                 current_app.config.get('JSON_FOLDER'), 'nav', 'indexes.json'
             )
-        with open(json_file,
-                  'w',
-                  encoding='utf-8') as ofile:
-            ofile.write(
-                json.dumps({idx.id: (idx.header, idx.slug) for idx in indexes},
-                           indent=4)
-            )
+            dicts = {
+                idx.id: {
+                    'header': idx.header,
+                    'slug': idx.slug
+                } for idx in indexes
+            }
+        with open(json_file, 'w', encoding='utf-8') as ofile:
+            ofile.write(json.dumps(dicts, indent=4))
 
     def _auto_position(self):
         """Set position automatically before adding `Index` to session."""

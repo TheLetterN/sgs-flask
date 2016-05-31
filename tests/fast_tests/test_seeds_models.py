@@ -6,15 +6,19 @@ from flask import current_app
 from fractions import Fraction
 from unittest import mock
 from app.seeds.models import (
+    auto_position,
     BotanicalName,
     dbify,
     Section,
+    clean_positions,
     CommonName,
     Image,
     Index,
     Cultivar,
     Packet,
     Quantity,
+    set_position,
+    swap_positions,
     Synonym,
     SynonymsMixin,
     USDollar
@@ -52,6 +56,138 @@ class TestModuleFunctions:
         assert dbify(
             'BENARY\'S GIANT FORMULA MIX (Blue Point)'
         ) == 'Benary\'s Giant Formula Mix (Blue Point)'
+
+    @mock.patch('app.seeds.models.get_active_instances')
+    def test_auto_position_with_existing(self, m_gai):
+        """Set position of new instance based on existing ones."""
+        i1 = Index(name='one')
+        i1.position = 1
+        i2 = Index(name='two')
+        i2.position = 2
+        i3 = Index(name='three')
+        i3.position = 3
+        m_gai.return_value = [i1, i2, i3]
+        idx = Index(name='test')
+        auto_position(idx)
+        assert idx.position == 4
+
+    @mock.patch('app.seeds.models.get_active_instances')
+    def test_auto_position_no_existing(self, m_gai):
+        """Set position to 1 if no other instances exist."""
+        m_gai.return_value = []
+        idx = Index(name='test')
+        auto_position(idx)
+        assert idx.position == 1
+
+    @mock.patch('app.seeds.models.get_active_instances')
+    def test_auto_position_no_positioned(self, m_gai):
+        """Set position to 1 if existing instances lack position."""
+        i1 = Index(name='one')
+        i2 = Index(name='two')
+        i3 = Index(name='three')
+        m_gai.return_value = [i1, i2, i3]
+        idx = Index(name='test')
+        auto_position(idx)
+        assert idx.position == 1
+
+    def test_swap_positions(self):
+        """Swap positions of two instances without altering others."""
+        i1 = Index(name='one')
+        i1.position = 1
+        i2 = Index(name='two')
+        i2.position = 2
+        i3 = Index(name='three')
+        i3.position = 3
+        swap_positions(i1, i3)
+        assert i1.position == 3
+        assert i2.position == 2
+        assert i3.position == 1
+
+    @mock.patch('app.seeds.models.get_active_instances')
+    def test_set_position_inserts(self, m_gai):
+        """Inserting an instance at a position should bump up higher pos."""
+        i1 = Index(name='one')
+        i1.position = 1
+        i2 = Index(name='two')
+        i2.position = 2
+        i3 = Index(name='three')
+        i3.position = 3
+        m_gai.return_value = [i1, i2, i3]
+        idx = Index(name='test')
+        set_position(idx, 2)
+        assert i1.position == 1
+        assert idx.position == 2
+        assert i2.position == 3
+        assert i3.position == 4
+
+    @mock.patch('app.seeds.models.get_active_instances')
+    def test_set_position_unique(self, m_gai):
+        """If position doesn't exist yet, leave other positions alone."""
+        i5 = Index(name='five')
+        i5.position = 5
+        i42 = Index(name='forty-two')
+        i42.position = 42
+        m_gai.return_value = [i5, i42]
+        idx = Index(name='test')
+        set_position(idx, 1)
+        assert idx.position == 1
+        assert i5.position == 5
+        assert i42.position == 42
+
+    @mock.patch('app.seeds.models.get_active_instances')
+    def test_set_position_w_null(self, m_gai):
+        """Don't break if there are instances with no position."""
+        i1 = Index(name='one')
+        i2 = Index(name='two')
+        i1.position = None
+        i2.position = 2
+        m_gai.return_value = [i1, i2]
+        idx = Index(name='test')
+        set_position(idx, 2)
+        assert idx.position == 2
+        assert i2.position == 3
+
+    @mock.patch('app.seeds.models.get_active_instances')
+    def test_set_position_no_others(self, m_gai):
+        """Work even if no other instances present."""
+        m_gai.return_value = []
+        idx = Index(name='test')
+        set_position(idx, 42)
+        assert idx.position == 42
+
+    @mock.patch('app.seeds.models.get_active_instances')
+    def test_clean_positions_removes_gaps(self, m_gai):
+        """Remove gaps in ordering of positions when cleaning them."""
+        i1 = Index(name='one')
+        i1.position = 1
+        i4 = Index(name='four')
+        i4.position = 4
+        i42 = Index(name='forty-two')
+        i42.position = 42
+        i9001 = Index(name='OVER NINE THOUSAND')
+        i9001.position = 9001
+        m_gai.return_value = [i1, i4, i42, i9001]
+        clean_positions(Index)
+        assert i1.position == 1
+        assert i4.position == 2
+        assert i42.position == 3
+        assert i9001.position == 4
+
+    @mock.patch('app.seeds.models.get_active_instances')
+    def test_clean_positions_includes_nulls(self, m_gai):
+        """If null positions exist, set them during cleaning."""
+        i1 = Index(name='one')
+        i1.position = 1
+        i2 = Index(name='two')
+        i3 = Index(name='three')
+        i3.position = 3
+        i4 = Index(name='four')
+        m_gai.return_value = [i1, i2, i3, i4]
+        clean_positions(Index)
+        assert i1.position == 1
+        assert i3.position == 2
+        assert i2.position == 3  # Unset positions are after max position.
+        assert i4.position == 4
 
 
 class TestSynonymsMixin:

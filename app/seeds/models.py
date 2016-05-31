@@ -206,22 +206,39 @@ def row_exists(col, value):
     return db.session.query(db.exists().where(col == value)).scalar()
 
 
+def get_active_instances(model):
+    """Return a list of all instances of a model in both db and session.
+
+    Args:
+        model: The model to gather instances from.
+
+    Returns:
+        list: All active instances of the model.
+    """
+    rows = model.query.all()
+    rows += [i for i in db.session.new if isinstance(i, model)]
+    return rows
+
+
 def auto_position(instance):
     """Set position automatically before adding model instance to session.
-    
+
     Args:
         instance: The instance to set the position of.
     """
-    model = instance.__class__
-    
     if not instance.position:
-        rows = model.query.all()
-        rows += [i for i in db.session.new if isinstance(i, model)]
-        last = max(rows, key=lambda x: x.position) if rows else None
-        if last:
-            instance.position = last.position + 1
-        else:
-            instance.position = 1
+        rows = get_active_instances(instance.__class__)
+        # Remove rows with no position from the list so they don't break max.
+        # Although in practice an instance with no position shouldn't happen
+        # due to event handlers, it is not vital that a position be defined,
+        # so it's okay to exclude instances without positions here.
+        pruned_rows = [r for r in rows if r.position is not None]
+        if pruned_rows:
+            last = max(pruned_rows, key=lambda x: x.position)
+            if last:
+                instance.position = last.position + 1
+    if not instance.position:
+        instance.position = 1
 
 
 def swap_positions(obj1, obj2):
@@ -233,6 +250,36 @@ def swap_positions(obj1, obj2):
     old_pos = obj1.position
     obj1.position = obj2.position
     obj2.position = old_pos
+
+
+def set_position(instance, position):
+    """Manually set position of instance, and change position of others."""
+    rows = get_active_instances(instance.__class__)
+    pruned_rows = [r for r in rows if r.position is not None]
+    # Only increment others if space needs to be made.
+    if any(r.position == position for r in pruned_rows):
+        # Increment others before setting instance position because that way
+        # instance doesn't accidentally get changed after it's been set.
+        for row in pruned_rows:
+            if row.position >= position:
+                row.position += 1
+    instance.position = position
+
+
+def clean_positions(model):
+    """Re-number positions to account for gaps and inconsistencies."""
+    rows = get_active_instances(model)
+    if rows:
+        if any(r.position is None for r in rows):
+            for row in rows:
+                if row.position is None:
+                    auto_position(row)
+        sorted_rows = sorted(rows, key=lambda x: x.position)
+        # Start with 1 because it makes the most semantic sense, and the
+        # actual position numbers are irrelevant, what matters is where they
+        # are in relation to each other.
+        for i, row in enumerate(sorted_rows, 1):
+            row.position = i
 
 
 # Helper Classes

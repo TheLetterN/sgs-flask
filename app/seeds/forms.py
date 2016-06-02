@@ -90,6 +90,14 @@ def select_field_choices(model=None,
     return [(item.id, getattr(item, title_attribute)) for item in items]
 
 
+def position_choices(model):
+    """Return a list of choices for selecting where to position an instance."""
+    choices = select_field_choices(model=model, order_by='position')
+    choices = [(c[0], 'After: ' + c[1]) for c in choices]
+    choices.insert(0, (-1, 'First'))
+    return choices
+
+
 # Custom validators
 #
 # Note: Each validator has a `messages` attribute, which is just the error
@@ -217,10 +225,12 @@ class AddIndexForm(Form):
     Attributes:
         name: DBified string field for the name of an `Index`.
         description: Text field for the description of an`Index`.
+        pos: Select field for where this `Index` belongs in relation to others.
     """
     name = DBifiedStringField('Index Name',
                               validators=[Length(1, 64), NotSpace()])
     description = TextAreaField('Description', validators=[NotSpace()])
+    pos = SelectField('Position', coerce=int)
     submit = SubmitField('Add Index')
 
     def validate_name(self, field):
@@ -238,6 +248,12 @@ class AddIndexForm(Form):
                        'href="{1}">Click here</a> to edit it.'
                        .format(idx.name, idx_url))
             )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.pos.choices = position_choices(Index)
+        if not self.pos.data:
+            self.pos.data = self.pos.choices[-1][0]
 
 
 class AddCommonNameForm(Form):
@@ -653,6 +669,7 @@ class EditIndexForm(Form):
     id = HiddenField()
     name = DBifiedStringField('Index', validators=[Length(1, 64), NotSpace()])
     description = TextAreaField('Description', validators=[NotSpace()])
+    pos = SelectField('Position', coerce=int)
     submit = SubmitField('Edit Index')
 
     def validate_name(self, field):
@@ -666,6 +683,19 @@ class EditIndexForm(Form):
                 .format(idx.name,
                         url_for('seeds.edit_index', idx_id=self.id))
             ))
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.pos.choices = position_choices(Index)
+        obj = kwargs['obj']
+        choice = next(c for c in self.pos.choices if c[0] == obj.id)
+        choice_index = self.pos.choices.index(choice)
+        if not self.pos.data:
+            if choice_index == 0:
+                self.pos.data = -1
+            else:
+                self.pos.data = self.pos.choices[choice_index - 1][0]
+        self.pos.choices.pop(choice_index)
 
 
 class EditCommonNameForm(Form):

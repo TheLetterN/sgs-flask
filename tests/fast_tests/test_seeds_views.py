@@ -21,26 +21,6 @@ class TestModuleFunctions:
             'wish to redirect it to <link to new path>.'
 
 
-class TestAddIndex:
-    """Test add_index route."""
-    def test_add_index_renders_page(self, app):
-        """Render the Add Index page given no form data."""
-        with app.test_client() as tc:
-            rv = tc.get(url_for('seeds.add_index'), follow_redirects=True)
-        assert 'Add Index' in str(rv.data)
-
-
-class TestAddPacket:
-    """Test add_packet route."""
-    def test_add_packet_no_cv_id(self, app):
-        """Redirect to select_cultivar given no cv_id."""
-        with app.test_client() as tc:
-            rv = tc.get(url_for('seeds.add_packet'))
-        assert rv.location == url_for('seeds.select_cultivar',
-                                      dest='seeds.add_packet',
-                                      _external=True)
-
-
 class TestAddRedirect:
     """Test add_redirect_route."""
     def test_add_redirect_renders_with_args(self, app):

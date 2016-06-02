@@ -59,7 +59,8 @@ def get_index_nav(filename=None):
     if os.path.exists(filename):
         with open(filename, 'r', encoding='utf-8') as ifile:
             d = json.loads(ifile.read())
-            return d
+            fixed = {int(k): d[k] for k in d}
+            return fixed
     else:
         return {}
 

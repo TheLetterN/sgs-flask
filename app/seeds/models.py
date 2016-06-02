@@ -220,6 +220,43 @@ def get_active_instances(model):
     return rows
 
 
+def get_last_instance(model):
+    """Get the highest positioned index in the given model.
+
+    Args:
+        model: The model to get the instance from.
+
+    Returns:
+        The highest positioned instance of model, or `None` if there isn't
+        one.
+    """
+    rows = get_active_instances(model)
+    # Remove rows with no position from the list so they don't break max.
+    # Although in practice an instance with no position shouldn't happen
+    # due to event handlers, it is not vital that a position be defined,
+    # so it's okay to exclude instances without positions here.
+    pruned_rows = [r for r in rows if r.position is not None]
+    if pruned_rows:
+        return max(pruned_rows, key=lambda x: x.position)
+    else:
+        return None
+
+
+def get_previous_instance(instance):
+    """Get the instance before the given instance."""
+    prev = None
+    cur_pos = instance.position - 1
+    model = instance.__class__
+    # Each position should be 1 away from the next/previous, but just in case
+    # there are gaps, it's better to loop until the first lower position is
+    # found than to assume it's only 1 away.
+    while prev is None:
+        if cur_pos == 0:  # This also shouldn't happen, but best not to assume.
+            return None
+        prev = model.query.filter(model.position == cur_pos).first()
+    return prev
+
+
 def auto_position(instance):
     """Set position automatically before adding model instance to session.
 
@@ -227,18 +264,11 @@ def auto_position(instance):
         instance: The instance to set the position of.
     """
     if not instance.position:
-        rows = get_active_instances(instance.__class__)
-        # Remove rows with no position from the list so they don't break max.
-        # Although in practice an instance with no position shouldn't happen
-        # due to event handlers, it is not vital that a position be defined,
-        # so it's okay to exclude instances without positions here.
-        pruned_rows = [r for r in rows if r.position is not None]
-        if pruned_rows:
-            last = max(pruned_rows, key=lambda x: x.position)
-            if last:
-                instance.position = last.position + 1
-    if not instance.position:
-        instance.position = 1
+        last = get_last_instance(instance.__class__)
+        if last:
+            instance.position = last.position + 1
+        else:
+            instance.position = 1
 
 
 def swap_positions(obj1, obj2):
@@ -256,14 +286,27 @@ def set_position(instance, position):
     """Manually set position of instance, and change position of others."""
     rows = get_active_instances(instance.__class__)
     pruned_rows = [r for r in rows if r.position is not None]
-    # Only increment others if space needs to be made.
-    if any(r.position == position for r in pruned_rows):
-        # Increment others before setting instance position because that way
-        # instance doesn't accidentally get changed after it's been set.
-        for row in pruned_rows:
-            if row.position >= position:
-                row.position += 1
-    instance.position = position
+    if pruned_rows:
+        last = max(pruned_rows, key=lambda x: x.position)
+        # This needs to be done instead of just checking against None because
+        # auto_position is run whenever an instance is inserted into the
+        # session, so in most cases this function will be run after auto
+        # positioning.
+        has_gap = (instance.position is not None and
+                   instance.position < last.position)
+        # Only increment others if space needs to be made.
+        if any(r.position == position for r in pruned_rows):
+            # Increment others before setting instance position because that
+            # way instance doesn't accidentally get changed after it's been
+            # set.
+            for row in pruned_rows:
+                if row.position >= position:
+                    row.position += 1
+        instance.position = position
+        if has_gap:
+            clean_positions(instance.__class__)
+    else:
+        auto_position(instance)
 
 
 def clean_positions(model):

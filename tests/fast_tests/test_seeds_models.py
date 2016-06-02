@@ -12,6 +12,7 @@ from app.seeds.models import (
     Section,
     clean_positions,
     CommonName,
+    get_last_instance,
     Image,
     Index,
     Cultivar,
@@ -56,6 +57,26 @@ class TestModuleFunctions:
         assert dbify(
             'BENARY\'S GIANT FORMULA MIX (Blue Point)'
         ) == 'Benary\'s Giant Formula Mix (Blue Point)'
+
+    @mock.patch('app.seeds.models.get_active_instances')
+    def test_get_last_instance_with_existing(self, m_gai):
+        """Return the last positioned instance if it exists."""
+        i1 = Index(name='one')
+        i1.position = 1
+        i2 = Index(name='two')
+        i2.position = 2
+        i3 = Index(name='three')
+        i3.position = 3
+        m_gai.return_value = [i1, i2, i3]
+        assert get_last_instance(Index) is i3
+
+    @mock.patch('app.seeds.models.get_active_instances')
+    def test_get_last_instance_no_existing(self, m_gai):
+        """Return None if no positioned instances exist."""
+        i1 = Index(name='one')
+        i2 = Index(name='two')
+        m_gai.return_value = [i1, i2]
+        assert get_last_instance(Index) is None
 
     @mock.patch('app.seeds.models.get_active_instances')
     def test_auto_position_with_existing(self, m_gai):
@@ -149,11 +170,11 @@ class TestModuleFunctions:
 
     @mock.patch('app.seeds.models.get_active_instances')
     def test_set_position_no_others(self, m_gai):
-        """Work even if no other instances present."""
+        """Set to 1 if no indexes present, regardless of given value."""
         m_gai.return_value = []
         idx = Index(name='test')
         set_position(idx, 42)
-        assert idx.position == 42
+        assert idx.position == 1
 
     @mock.patch('app.seeds.models.get_active_instances')
     def test_clean_positions_removes_gaps(self, m_gai):

@@ -37,14 +37,17 @@ from app.redirects import Redirect, RedirectsFile
 from . import seeds
 from ..lastcommit import LastCommit
 from .models import (
+    auto_position,
     BotanicalName,
     Section,
     CommonName,
     Cultivar,
+    get_previous_instance,
     Image,
     Index,
     Packet,
     Quantity,
+    set_position,
     USDollar
 )
 from .forms import (
@@ -385,6 +388,15 @@ def add_index():
             index.description = form.description.data
             messages.append('Description set to: <p>{0}</p>'
                             .format(index.description))
+        if form.pos.data is -1:
+            set_position(index, 1)
+            messages.append('Will be listed before other indexes.')
+        else:
+            other = Index.query.get(form.pos.data)
+            if other.position is None:
+                auto_position(other)
+            set_position(index, other.position + 1)
+            messages.append('Will be listed after \'{0}\''.format(other.name))
         db.session.commit()
         messages.append('New index \'{0}\' added to the database.'
                         .format(index.name))
@@ -707,6 +719,16 @@ def edit_index(idx_id=None):
             else:
                 index.description = None
                 messages.append('Description cleared.')
+        prev = get_previous_instance(index)
+        if prev and form.pos.data == -1:  # Moving to first position.
+            edited = True
+            set_position(index, 1)
+            messages.append('Will be listed before all other indexes.')
+        elif (not prev and form.pos.data != -1) or (prev and prev.id != form.pos.data):
+            edited = True
+            other = Index.query.get(form.pos.data)
+            set_position(index, other.position + 1)
+            messages.append('Will be listed after \'{0}\'.'.format(other.name))
         if edited:
             db.session.commit()
             messages.append('Changes to \'{0}\' committed to the database.'

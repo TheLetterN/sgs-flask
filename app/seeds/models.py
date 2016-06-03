@@ -206,126 +206,159 @@ def row_exists(col, value):
     return db.session.query(db.exists().where(col == value)).scalar()
 
 
-def get_active_instances(model):
-    """Return a list of all instances of a model in both db and session.
 
-    Args:
-        model: The model to gather instances from.
-
-    Returns:
-        list: All active instances of the model.
-    """
-    rows = model.query.all()
-    rows += [i for i in db.session.new if isinstance(i, model)]
-    return rows
-
-
-def get_last_instance(model):
-    """Get the highest positioned index in the given model.
-
-    Args:
-        model: The model to get the instance from.
-
-    Returns:
-        The highest positioned instance of model, or `None` if there isn't
-        one.
-    """
-    rows = get_active_instances(model)
-    # Remove rows with no position from the list so they don't break max.
-    # Although in practice an instance with no position shouldn't happen
-    # due to event handlers, it is not vital that a position be defined,
-    # so it's okay to exclude instances without positions here.
-    pruned_rows = [r for r in rows if r.position is not None]
-    if pruned_rows:
-        return max(pruned_rows, key=lambda x: x.position)
-    else:
-        return None
-
-
-def get_previous_instance(instance):
-    """Get the instance before the given instance."""
-    prev = None
-    cur_pos = instance.position - 1
-    model = instance.__class__
-    # Each position should be 1 away from the next/previous, but just in case
-    # there are gaps, it's better to loop until the first lower position is
-    # found than to assume it's only 1 away.
-    while prev is None:
-        if cur_pos == 0:  # This also shouldn't happen, but best not to assume.
-            return None
-        prev = model.query.filter(model.position == cur_pos).first()
-    return prev
-
-
-def auto_position(instance):
-    """Set position automatically before adding model instance to session.
-
-    Args:
-        instance: The instance to set the position of.
-    """
-    if not instance.position:
-        last = get_last_instance(instance.__class__)
-        if last:
-            instance.position = last.position + 1
-        else:
-            instance.position = 1
-
-
-def swap_positions(obj1, obj2):
-    """Swap positions of two objects of the same type."""
-    if type(obj1) is not type(obj2):
-        raise ValueError(
-            'Can only swap positions of objects of the same type!'
-        )
-    old_pos = obj1.position
-    obj1.position = obj2.position
-    obj2.position = old_pos
-
-
-def set_position(instance, position):
-    """Manually set position of instance, and change position of others."""
-    rows = get_active_instances(instance.__class__)
-    pruned_rows = [r for r in rows if r.position is not None]
-    if pruned_rows:
-        last = max(pruned_rows, key=lambda x: x.position)
-        # This needs to be done instead of just checking against None because
-        # auto_position is run whenever an instance is inserted into the
-        # session, so in most cases this function will be run after auto
-        # positioning.
-        has_gap = (instance.position is not None and
-                   instance.position < last.position)
-        # Only increment others if space needs to be made.
-        if any(r.position == position for r in pruned_rows):
-            # Increment others before setting instance position because that
-            # way instance doesn't accidentally get changed after it's been
-            # set.
-            for row in pruned_rows:
-                if row.position >= position:
-                    row.position += 1
-        instance.position = position
-        if has_gap:
-            clean_positions(instance.__class__)
-    else:
-        auto_position(instance)
-
-
-def clean_positions(model):
-    """Re-number positions to account for gaps and inconsistencies."""
-    rows = get_active_instances(model)
-    if rows:
-        if any(r.position is None for r in rows):
-            for row in rows:
-                if row.position is None:
-                    auto_position(row)
-        sorted_rows = sorted(rows, key=lambda x: x.position)
-        # Start with 1 because it makes the most semantic sense, and the
-        # actual position numbers are irrelevant, what matters is where they
-        # are in relation to each other.
-        for i, row in enumerate(sorted_rows, 1):
-            row.position = i
 
 
 # Helper Classes
+class PositionableMixin(object):
+    """A mixin class to provide position functionality to models.
+
+    While positions are integer numbers, all users need to know about positions
+    is how they relate to each other, so the actual numbers are arbitrary. The
+    numbers can and will change as instances are added or moved around.
+    
+    Attributes:
+        position: An integer column for an instance's position relative to the
+            other instances of that model.
+    """
+    position = db.Column(db.Integer)
+
+    @classmethod
+    def get_active_instances(cls):
+        """Return a list of all instances of model in both db and session.
+
+        Returns:
+            list: All active instances of the model.
+        """
+        rows = cls.query.all()
+        # This will not result in every instance of every class that inherits
+        # from this mixin being added to rows, as `cls` will evaluate to the
+        # child class, not `PositionableMixin`.
+        rows += [i for i in db.session.new if isinstance(i, cls)]
+        return rows
+
+    @classmethod
+    def clean_positions(cls):
+        """Re-number positions to account for gaps and inconsistencies."""
+        rows = cls.get_active_instances()
+        if rows:
+            if any(r.position is None for r in rows):
+                for row in rows:
+                    if row.position is None:
+                        auto_position(row)
+            sorted_rows = sorted(rows, key=lambda x: x.position)
+            for i, row in enumerate(sorted_rows, 1):
+                row.position = i
+
+    def auto_position(self):
+        """Automatically position this instance.
+
+        This should generally only be run when adding a new instance, otherwise
+        it should do nothing.
+        """
+        if not self.position:
+            last = self.last()
+            if last:
+                self.position = last.position + 1
+            else:
+                self.position = 1
+
+    def set_position(self, position):
+        """Manually set position of instance, and change position of others."""
+        if self.position != position:
+            rows = self.get_active_instances()
+            pruned_rows = [r for r in rows if r.position is not None]
+            if pruned_rows:
+                first = min(pruned_rows, key=lambda x: x.position)
+                last = max(pruned_rows, key=lambda x: x.position)
+                if position < first.position:
+                    position = first.position
+                if position > last.position + 1:
+                    position = last.position + 1
+                if not self.position:
+                    self.auto_position()
+                old_pos = self.position
+
+                for r in pruned_rows:
+                    if r.position >= position:
+                        r.position += 1
+                self.position = position
+                pruned_rows = sorted(pruned_rows, key=lambda x: x.position)
+                for i, r in enumerate(pruned_rows, 1):
+                    r.position = i
+                print([(r.name, r.position) for r in pruned_rows])
+            else:
+                self.auto_position()
+
+    # Navigation methods
+    def _step(self, forward=True):
+        """Return next or previous instance by position.
+
+        Args:
+            forward: True if getting next instance, False if previous.
+
+        Returns:
+            The next or previous instance, or None if there is no next or
+            previous instance.
+        """
+        model = self.__class__
+        cur_pos = self.position
+        if forward:
+            end_pos = self.last().position
+        else:
+            end_pos = self.first().position
+        inst = None
+        while inst is None:
+            if cur_pos == end_pos:
+                break
+
+            if forward:
+                cur_pos += 1
+            else:
+                cur_pos -= 1
+            inst = model.query.filter(model.position == cur_pos).first()
+
+        return inst
+
+    @classmethod
+    def first(cls):
+        """Get the first instance according to position.
+        
+        Returns:
+            The lowest positioned instance of <parent class>.
+        """
+        return min(cls.get_active_instances(),
+                   key=lambda x: x.position,
+                   default=None)
+
+    def previous(self):
+        """Get the previous instance according to position.
+
+        Returns:
+            The previous instance, or None if this instance is first.
+        """
+        return self._step(forward=False)
+
+    def next(self):
+        """Get the next instance according to position.
+
+        Returns:
+            The next instance, or None if this instance is last.
+        """
+        return self._step(forward=True)
+
+    @classmethod
+    def last(cls):
+        """Get the last instance according to position.
+        
+        Returns:
+            The highest positioned instance of <parent class>.
+        """
+        return max(cls.get_active_instances(),
+                   key=lambda x: x.position,
+                   default=None)
+
+
 class SynonymsMixin(object):
     """A mixin class to easily interact with synonyms in child classes."""
     @property
@@ -473,7 +506,7 @@ class USDollar(db.TypeDecorator):
 
 
 # Models
-class Index(db.Model):
+class Index(db.Model, PositionableMixin):
     """Table for seed indexes.
 
     Indexes are the first/broadest divisions we use to sort seeds. The
@@ -492,7 +525,7 @@ class Index(db.Model):
     """
     __tablename__ = 'indexes'
     id = db.Column(db.Integer, primary_key=True)
-    position = db.Column(db.Integer)
+    #position = db.Column(db.Integer)
 
     # Data Required
     name = db.Column(db.String(64), unique=True)
@@ -2111,8 +2144,8 @@ class VegetableData(db.Model):
 @event.listens_for(SignallingSession, 'before_attach')
 def auto_position_before_attach(session, instance):
     """Auto-generate positions for new instances of classes that have them."""
-    if hasattr(instance, 'position'):
-        auto_position(instance)
+    if hasattr(instance, 'auto_position'):
+        instance.auto_position()
 
 
 @event.listens_for(Image, 'before_delete')

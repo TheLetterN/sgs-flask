@@ -20,7 +20,7 @@ from datetime import datetime, timedelta
 from flask import current_app
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from werkzeug import generate_password_hash, check_password_hash
-from flask.ext.login import UserMixin
+from flask_login import UserMixin
 from app import db, login_manager
 from app.email import send_email
 

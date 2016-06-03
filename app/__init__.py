@@ -29,9 +29,9 @@ import json
 import os
 import pyphen
 from flask import Flask, current_app
-from flask.ext.login import AnonymousUserMixin, LoginManager
-from flask.ext.mail import Mail
-from flask.ext.sqlalchemy import SQLAlchemy
+from flask_login import AnonymousUserMixin, LoginManager
+from flask_mail import Mail
+from flask_sqlalchemy import SQLAlchemy
 from slugify import slugify
 from config import CONFIG
 from .pending import Pending

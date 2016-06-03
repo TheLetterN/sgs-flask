@@ -24,7 +24,7 @@ from flask import (
     request,
     url_for
 )
-from flask.ext.login import (
+from flask_login import (
     current_user,
     login_required,
     login_user,

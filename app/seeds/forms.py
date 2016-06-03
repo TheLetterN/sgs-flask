@@ -19,8 +19,8 @@ import datetime
 
 from flask import current_app, Markup, url_for
 from werkzeug import secure_filename
-from flask.ext.wtf import Form
-from flask.ext.wtf.file import FileAllowed, FileField
+from flask_wtf import Form
+from flask_wtf.file import FileAllowed, FileField
 from wtforms import (
     BooleanField,
     DateField,
@@ -56,7 +56,7 @@ IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png']
 def select_field_choices(model=None,
                          items=None,
                          title_attribute='name',
-                         order_by='id'):
+                         order_by=None):
     """Create a list of select field choices from a model or list of items.
 
     Note:
@@ -80,6 +80,8 @@ def select_field_choices(model=None,
             from the attribute specified by `title_attribute`. If model is not
             set and items is falsey, return an empty list.
     """
+    if not order_by:
+        order_by = 'position' if hasattr(model, 'position') else 'id'
     if not items:
         if model:
             items = model.query.order_by(order_by).all()

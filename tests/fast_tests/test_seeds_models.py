@@ -58,7 +58,7 @@ class TestModuleFunctions:
 class TestPositionableMixin:
     """Test methods of the PositionableMixin class."""
     @mock.patch('app.seeds.models.db')
-    def test_get_active_instances(self, m_db):
+    def test_positionable_instances(self, m_db):
         """Get all instances from db and db.session.new."""
         p1 = PositionableMixin()
         p2 = PositionableMixin()
@@ -69,11 +69,11 @@ class TestPositionableMixin:
         p5 = PositionableMixin()
         p6 = PositionableMixin()
         m_db.session.new = [p4, p5, p6]
-        assert PositionableMixin.get_active_instances() == [
+        assert p1.positionable_instances == [
             p1, p2, p3, p4, p5, p6
         ]
 
-    @mock.patch('app.seeds.models.PositionableMixin.get_active_instances')
+    @mock.patch('app.seeds.models.PositionableMixin.positionable_instances')
     def test_auto_position_first(self, m_gai):
         """Set position to 1 if no other instances exist."""
         m_gai.return_value = []
@@ -87,7 +87,8 @@ class TestPositionableMixin:
         assert p1.position == 1
 
 
-    @mock.patch('app.seeds.models.PositionableMixin.get_active_instances')
+    @mock.patch('app.seeds.models.PositionableMixin.positionable_instances',
+                new_callable=mock.PropertyMock)
     def test_auto_position_with_others(self, m_gai):
         p1 = PositionableMixin()
         p1.position = 1
@@ -101,7 +102,7 @@ class TestPositionableMixin:
         p4.auto_position()
         assert p4.position == 4
 
-#    @mock.patch('app.seeds.models.get_active_instances')
+#    @mock.patch('app.seeds.models.positionable_instances')
 #    def test_set_position_inserts(self, m_gai):
 #        """Inserting an instance at a position should bump up higher pos."""
 #        i1 = Index(name='one')
@@ -118,7 +119,7 @@ class TestPositionableMixin:
 #        assert i2.position == 3
 #        assert i3.position == 4
 #
-#    @mock.patch('app.seeds.models.get_active_instances')
+#    @mock.patch('app.seeds.models.positionable_instances')
 #    def test_set_position_unique(self, m_gai):
 #        """If position doesn't exist yet, leave other positions alone."""
 #        i5 = Index(name='five')
@@ -132,7 +133,7 @@ class TestPositionableMixin:
 #        assert i5.position == 5
 #        assert i42.position == 42
 #
-#    @mock.patch('app.seeds.models.get_active_instances')
+#    @mock.patch('app.seeds.models.positionable_instances')
 #    def test_set_position_w_null(self, m_gai):
 #        """Don't break if there are instances with no position."""
 #        i1 = Index(name='one')
@@ -145,7 +146,7 @@ class TestPositionableMixin:
 #        assert idx.position == 2
 #        assert i2.position == 3
 #
-#    @mock.patch('app.seeds.models.get_active_instances')
+#    @mock.patch('app.seeds.models.positionable_instances')
 #    def test_set_position_no_others(self, m_gai):
 #        """Set to 1 if no indexes present, regardless of given value."""
 #        m_gai.return_value = []
@@ -153,7 +154,7 @@ class TestPositionableMixin:
 #        set_position(idx, 42)
 #        assert idx.position == 1
 #
-#    @mock.patch('app.seeds.models.get_active_instances')
+#    @mock.patch('app.seeds.models.positionable_instances')
 #    def test_clean_positions_removes_gaps(self, m_gai):
 #        """Remove gaps in ordering of positions when cleaning them."""
 #        i1 = Index(name='one')
@@ -171,7 +172,7 @@ class TestPositionableMixin:
 #        assert i42.position == 3
 #        assert i9001.position == 4
 #
-#    @mock.patch('app.seeds.models.get_active_instances')
+#    @mock.patch('app.seeds.models.positionable_instances')
 #    def test_clean_positions_includes_nulls(self, m_gai):
 #        """If null positions exist, set them during cleaning."""
 #        i1 = Index(name='one')

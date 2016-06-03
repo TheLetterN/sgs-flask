@@ -223,13 +223,20 @@ class PositionableMixin(object):
     """
     position = db.Column(db.Integer)
 
-    @classmethod
-    def get_active_instances(cls):
+    @property
+    def positionable_instances(self):
         """Return a list of all instances of model in both db and session.
+
+        Note:
+            This method should be overridden in child models that should be
+            positioned relative to a parent instead of all instances of the
+            child model. e.g. in `CommonName`, `positionable_instances` should 
+            return all instances of `CommonName` with the same parent `Index`.
 
         Returns:
             list: All active instances of the model.
         """
+        cls = self.__class__
         rows = cls.query.all()
         # This will not result in every instance of every class that inherits
         # from this mixin being added to rows, as `cls` will evaluate to the
@@ -237,15 +244,23 @@ class PositionableMixin(object):
         rows += [i for i in db.session.new if isinstance(i, cls)]
         return rows
 
-    @classmethod
-    def clean_positions(cls):
-        """Re-number positions to account for gaps and inconsistencies."""
-        rows = cls.get_active_instances()
+    def clean_positions(self, remove_self=False):
+        """Re-number positions to account for gaps and inconsistencies.
+        
+        Args:
+            remove_self: True if the instance `self` should be removed from
+                the list of active instances before cleaning. This should
+                only be set to True if `self` is being moved to a different
+                parent, or being deleted from the database.
+        """
+        rows = self.positionable_instances
+        if remove_self:
+            rows.pop(rows.index(self))
         if rows:
             if any(r.position is None for r in rows):
                 for row in rows:
                     if row.position is None:
-                        auto_position(row)
+                        row.auto_position()
             sorted_rows = sorted(rows, key=lambda x: x.position)
             for i, row in enumerate(sorted_rows, 1):
                 row.position = i
@@ -257,7 +272,7 @@ class PositionableMixin(object):
         it should do nothing.
         """
         if not self.position:
-            last = self.last()
+            last = self.last
             if last:
                 self.position = last.position + 1
             else:
@@ -266,7 +281,7 @@ class PositionableMixin(object):
     def set_position(self, position):
         """Manually set position of instance, and change position of others."""
         if self.position != position:
-            rows = self.get_active_instances()
+            rows = self.positionable_instances
             pruned_rows = [r for r in rows if r.position is not None]
             if pruned_rows:
                 first = min(pruned_rows, key=lambda x: x.position)
@@ -286,7 +301,6 @@ class PositionableMixin(object):
                 pruned_rows = sorted(pruned_rows, key=lambda x: x.position)
                 for i, r in enumerate(pruned_rows, 1):
                     r.position = i
-                print([(r.name, r.position) for r in pruned_rows])
             else:
                 self.auto_position()
 
@@ -304,9 +318,9 @@ class PositionableMixin(object):
         model = self.__class__
         cur_pos = self.position
         if forward:
-            end_pos = self.last().position
+            end_pos = self.last.position
         else:
-            end_pos = self.first().position
+            end_pos = self.first.position
         inst = None
         while inst is None:
             if cur_pos == end_pos:
@@ -320,17 +334,17 @@ class PositionableMixin(object):
 
         return inst
 
-    @classmethod
-    def first(cls):
+    @property
+    def first(self):
         """Get the first instance according to position.
         
         Returns:
             The lowest positioned instance of <parent class>.
         """
-        return min(cls.get_active_instances(),
+        return min(self.positionable_instances,
                    key=lambda x: x.position,
                    default=None)
-
+    @property
     def previous(self):
         """Get the previous instance according to position.
 
@@ -338,7 +352,7 @@ class PositionableMixin(object):
             The previous instance, or None if this instance is first.
         """
         return self._step(forward=False)
-
+    @property
     def next(self):
         """Get the next instance according to position.
 
@@ -347,14 +361,14 @@ class PositionableMixin(object):
         """
         return self._step(forward=True)
 
-    @classmethod
-    def last(cls):
+    @property
+    def last(self):
         """Get the last instance according to position.
         
         Returns:
             The highest positioned instance of <parent class>.
         """
-        return max(cls.get_active_instances(),
+        return max(self.positionable_instances,
                    key=lambda x: x.position,
                    default=None)
 

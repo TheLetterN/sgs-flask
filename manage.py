@@ -21,8 +21,8 @@
 
 import os, sys
 import pytest
-from flask.ext.migrate import Migrate, MigrateCommand
-from flask.ext.script import Manager, Shell
+from flask_migrate import Migrate, MigrateCommand
+from flask_script import Manager, Shell
 from app import create_app, db, mail, Permission
 from app.auth.models import User
 from app.seeds.excel import SeedsWorkbook

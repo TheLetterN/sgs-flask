@@ -4,7 +4,6 @@ from app.seeds.models import (
     BotanicalName,
     CommonName,
     Cultivar,
-    get_active_instances,
     Index,
     Packet,
     Quantity,
@@ -21,27 +20,6 @@ class TestModuleLevelFunctionsWithDB:
         db.session.commit()
         assert row_exists(Index.name, 'Finger')
         assert not row_exists(Index.name, 'Toe')
-
-    def test_get_active_instances(self, db):
-        """Get instances active in the session and db."""
-        i1 = Index(name='one')
-        i2 = Index(name='two')
-        i3 = Index(name='three')
-        db.session.add_all([i1, i2, i3])
-        db.session.commit()
-        i4 = Index(name='four')
-        db.session.add(i4)
-        db.session.flush()
-        i5 = Index(name='five')
-        db.session.add(i5)
-        i6 = Index(name='six')
-        idxes = get_active_instances(Index)
-        assert i1 in idxes
-        assert i2 in idxes
-        assert i3 in idxes
-        assert i4 in idxes
-        assert i5 in idxes
-        assert i6 not in idxes
 
 
 class TestIndexRelatedEventHandlers:

@@ -28,7 +28,7 @@ from flask import (
     url_for
 )
 from werkzeug import secure_filename
-from flask.ext.login import login_required
+from flask_login import login_required
 from app import db, Permission
 from app.breadcrumbs import Crumbler
 from app.decorators import permission_required
@@ -717,7 +717,7 @@ def edit_index(idx_id=None):
                 edited = True
                 index.description = None
                 messages.append('Description cleared.')
-        prev = index.previous()
+        prev = index.previous
         if prev and form.pos.data == -1:  # Moving to first position.
             edited = True
             index.set_position(1)
@@ -1374,6 +1374,7 @@ def remove_index(idx_id=None):
             # TODO: See if there are any bugs in this due to things moving
             # after redirect warnings are given.
             warnings += move_common_names(index, new_index)
+            index.clean_positions(remove_self=True)
             db.session.delete(index)
             db.session.commit()
             messages.append('Index removed.')

@@ -87,6 +87,7 @@ from slugify import slugify
 from titlecase import titlecase
 from sqlalchemy import event, inspect
 from sqlalchemy.ext.hybrid import Comparator, hybrid_property
+from sqlalchemy.ext.orderinglist import ordering_list
 from sqlalchemy.sql.expression import and_
 from flask_sqlalchemy import SignallingSession
 
@@ -736,11 +737,20 @@ class CommonName(SynonymsMixin, db.Model):
                                           'index_id',
                                           name='cn_slug_index_uc'))
     id = db.Column(db.Integer, primary_key=True)
-    position = db.Column(db.Integer)
+    
+    # Position
+    idx_pos = db.Column(db.Integer)
 
     # Data Required
     index_id = db.Column(db.Integer, db.ForeignKey('indexes.id'))
-    index = db.relationship('Index', backref='common_names')
+    index = db.relationship(
+        'Index',
+        backref=db.backref(
+            'common_names',
+            order_by='CommonName.idx_pos',
+            collection_class=ordering_list('idx_pos', count_from=1)
+        )
+    )
     name = db.Column(db.String(64))
     slug = db.Column(db.String(64))
 
@@ -1178,12 +1188,22 @@ class Section(db.Model):
                                           'common_name_id',
                                           name='_section_name_cn_uc'),)
     id = db.Column(db.Integer, primary_key=True)
-    position = db.Column(db.Integer)
+
+    # Positions
+    cn_pos = db.Column(db.Integer)
+    parent_pos = db.Column(db.Integer)
 
     # Data Required
     name = db.Column(db.String(64))
     common_name_id = db.Column(db.Integer, db.ForeignKey('common_names.id'))
-    common_name = db.relationship('CommonName', backref='sections')
+    common_name = db.relationship(
+        'CommonName',
+        backref=db.backref(
+            'sections',
+            order_by='Section.cn_pos',
+            collection_class=ordering_list('cn_pos', count_from=1)
+        )
+    )
 
     # Data Optional
     botanical_names = db.relationship('BotanicalName',
@@ -1192,8 +1212,12 @@ class Section(db.Model):
     subtitle = db.Column(db.String(64))
     description = db.Column(db.Text)
     parent_id = db.Column(db.Integer, db.ForeignKey('sections.id'))
-    children = db.relationship('Section',
-                               backref=db.backref('parent', remote_side=[id]))
+    children = db.relationship(
+        'Section',
+        order_by='Section.parent_pos',
+        collection_class=ordering_list('parent_pos', count_from=1),
+        backref=db.backref('parent', remote_side=[id])
+    )
 
     def __init__(self,
                  name=None,
@@ -1327,21 +1351,38 @@ class Cultivar(SynonymsMixin, db.Model):
     """
     __tablename__ = 'cultivars'
     id = db.Column(db.Integer, primary_key=True)
-    position = db.Column(db.Integer)
     __table_args__ = (db.UniqueConstraint('name',
                                           'common_name_id',
                                           name='_cultivar_name_cn_uc'),)
+
+    # Positions
+    cn_pos = db.Column(db.Integer)
+    sec_pos = db.Column(db.Integer)
 
     # Data Required
     name = db.Column(db.String(64))
     slug = db.Column(db.String(64))
     common_name_id = db.Column(db.Integer, db.ForeignKey('common_names.id'))
-    common_name = db.relationship('CommonName', backref='cultivars')
+    common_name = db.relationship(
+        'CommonName',
+        backref=db.backref(
+            'cultivars',
+            order_by='Cultivar.cn_pos',
+            collection_class=ordering_list('cn_pos', count_from=1)
+        )
+    )
 
     # Data Optional
     subtitle = db.Column(db.String(64))
     section_id = db.Column(db.Integer, db.ForeignKey('sections.id'))
-    section = db.relationship('Section', backref='cultivars')
+    section = db.relationship(
+        'Section',
+        backref=db.backref(
+            'cultivars',
+            order_by='Cultivar.sec_pos',
+            collection_class=ordering_list('sec_pos', count_from=1)
+        )
+    )
     botanical_name_id = db.Column(db.Integer,
                                   db.ForeignKey('botanical_names.id'))
     botanical_name = db.relationship('BotanicalName',

@@ -417,7 +417,7 @@ def add_common_name(idx_id=None):
     form = AddCommonNameForm(index=idx)
     if form.validate_on_submit():
         messages = []
-        cn = CommonName(name=form.name.data, index=idx)
+        cn = CommonName(name=form.name.data)
         db.session.add(cn)
         messages.append('Creating new common name \'{0}\' and adding it to '
                         'index \'{1}\':'.format(cn.name, idx.name))
@@ -433,6 +433,14 @@ def add_common_name(idx_id=None):
             cn.synonyms_string = form.synonyms.data
             messages.append('Synonyms set to: \'{0}\'.'
                             .format(cn.synonyms_string))
+        if form.pos.data == -1:
+            idx.common_names.insert(0, cn)
+            messages.append('Will be listed before other common names.')
+        else:
+            after = CommonName.query.get(form.pos.data)
+            idx.common_names.insert(after.idx_pos, cn)
+            messages.append('Will be listed after \'{0}\'.'
+                            .format(after.name))
         if form.visible.data:
             cn.visible = True
             messages.append('\'{0}\' is visible on auto-generated pages.'
@@ -772,14 +780,23 @@ def edit_common_name(cn_id=None):
         return redirect(url_for('seeds.select_common_name',
                                 dest='seeds.edit_common_name'))
     form = EditCommonNameForm(obj=cn)
+    dest = url_for('seeds.manage')
     if form.validate_on_submit():
         edited = False
         messages = []
+        warnings = []
         old_slugs = {'cn': cn.slug, 'idx': cn.index.slug}
+        idx = cn.index
         messages.append('Editing common name \'{0}\':'.format(cn.name))
         if form.index_id.data != cn.index.id:
             edited = True
-            cn.index = Index.query.get(form.index_id.data)
+            new_idx = Index.query.get(form.index_id.data)
+            idx.common_names.remove(cn)
+            ncns = new_idx.common_names
+            # This will insert cn at the end of new_idx.common_names.
+            # This is done instead of appending to ensure cn.idx_pos is set
+            # correctly.
+            new_idx.common_names.insert(len(new_idx.common_names), cn)
             messages.append('Index changed to: \'{0}\'.'.format(cn.index.name))
         if form.name.data != cn.name:
             edited = True
@@ -816,6 +833,31 @@ def edit_common_name(cn_id=None):
             else:
                 cn.synonyms_string = None
                 messages.append('Synonyms cleared.')
+        if idx is cn.index:
+            if form.pos.data == -1 and cn.idx_pos != 1:
+                edited = True
+                idx.common_names.remove(cn)
+                idx.common_names.insert(0, cn)
+                messages.append('Will now be listed first.')
+            else:
+                # Index.common_names is sorted by CommonName.idx_pos
+                prev = idx.common_names[idx.common_names.index(cn) - 1]
+            if form.pos.data != -1 and (cn.idx_pos == 1 or
+                                        form.pos.data != prev.id):
+                edited = True
+                after = CommonName.query.get(form.pos.data)
+                idx.common_names.remove(cn)
+                idx.common_names.insert(after.idx_pos, cn)
+                messages.append('Will now be listed after \'{0}\'.'
+                                .format(after.name))
+        else:
+            dest = url_for('seeds.edit_common_name', cn_id=cn.id)
+            warnings.append(
+                'Due to changing {0}\'s index to \'{1}\', it will be listed '
+                'last under that index. You will need to edit it again if you '
+                'want it in a different position.'
+                .format(cn.name, cn.index.name)
+            )
         if edited:
             messages.append('Changes to \'{0}\' committed to the database.'
                             .format(cn.name))
@@ -823,8 +865,7 @@ def edit_common_name(cn_id=None):
             flash_all(messages)
 
             if old_slugs['cn'] != cn.slug or old_slugs['idx'] != cn.index.slug:
-                warnings = None
-                warnings = redirect_common_name_warnings(
+                warnings += redirect_common_name_warnings(
                     cn,
                     old_idx_slug=old_slugs['idx'],
                     old_cn_slug=old_slugs['cn'],
@@ -834,7 +875,7 @@ def edit_common_name(cn_id=None):
                 if warnings:
                     flash_all(warnings, 'warning')
 
-            return redirect(url_for('seeds.manage'))
+            return redirect(dest)
         else:
             messages.append('No changes to \'{0}\' were made.'.format(cn.name))
             flash_all(messages)
@@ -1426,6 +1467,7 @@ def remove_common_name(cn_id=None):
             except NotEnabledError:
                 pass
             warnings += move_cultivars(cn, new_cn)
+            cn.index.common_names.remove(cn)  # Sets idx_pos for remaining.
             db.session.delete(cn)
             db.session.commit()
             messages.append('Common name removed.')

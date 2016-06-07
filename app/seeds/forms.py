@@ -92,9 +92,9 @@ def select_field_choices(model=None,
     return [(item.id, getattr(item, title_attribute)) for item in items]
 
 
-def position_choices(model):
+def position_choices(**kwargs):
     """Return a list of choices for selecting where to position an instance."""
-    choices = select_field_choices(model=model, order_by='position')
+    choices = select_field_choices(**kwargs)
     choices = [(c[0], 'After: ' + c[1]) for c in choices]
     choices.insert(0, (-1, 'First'))
     return choices
@@ -253,7 +253,7 @@ class AddIndexForm(Form):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.pos.choices = position_choices(Index)
+        self.pos.choices = position_choices(model=Index, order_by='position')
         if not self.pos.data:
             self.pos.data = self.pos.choices[-1][0]
 
@@ -278,6 +278,7 @@ class AddCommonNameForm(Form):
                                  validators=[NotSpace()])
     synonyms = StringField('Synonyms',
                            validators=[NotSpace(), SynonymLength(0, 64)])
+    pos = SelectField('Position', coerce=int)
     visible = BooleanField('Show on auto-generated pages', default='checked')
     next_page = RadioField(
         'After submission, go to',
@@ -296,6 +297,10 @@ class AddCommonNameForm(Form):
         """
         super().__init__(*args, **kwargs)
         self.index = index
+        self.pos.choices = position_choices(items=self.index.common_names,
+                                            order_by='idx_pos')
+        if not self.pos.data:
+            self.pos.data = self.pos.choices[-1][0]
 
     def validate_name(self, field):
         """Raise `ValidationError` if `CommonName` instance already exists.
@@ -688,7 +693,7 @@ class EditIndexForm(Form):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.pos.choices = position_choices(Index)
+        self.pos.choices = position_choices(model=Index, order_by='position')
         obj = kwargs['obj']
         choice = next(c for c in self.pos.choices if c[0] == obj.id)
         choice_index = self.pos.choices.index(choice)
@@ -720,11 +725,37 @@ class EditCommonNameForm(Form):
     instructions = TextAreaField('Planting Instructions',
                                  validators=[NotSpace()])
     synonyms_string = StringField('Synonyms', validators=[NotSpace()])
+    pos = SelectField('Position', coerce=int)
     submit = SubmitField('Edit Common Name')
 
     def __init__(self, *args, **kwargs):  # pragma: no cover
         super().__init__(*args, **kwargs)
         self.set_selects()
+        cn = kwargs['obj']
+        self.pos.choices = position_choices(items=cn.index.common_names,
+                                            order_by='idx_pos')
+        self_choice = next((c for c in self.pos.choices if c[0] == cn.id),
+                           None)
+        self.pos.choices.pop(self.pos.choices.index(self_choice))
+        if not self.pos.data:
+            if not cn.idx_pos:
+                self.pos.data = self.pos.choices[-1][0]
+            elif cn.idx_pos <= 1:
+                self.pos.data = -1
+            else:
+                cur_pos = cn.idx_pos - 1
+                prev = None
+                while prev is None:
+                    if cur_pos < 1:
+                        self.pos.data = -1
+                        break
+                    prev = CommonName.query.filter(
+                        CommonName.index_id == cn.index_id
+                    ).filter(
+                        CommonName.idx_pos == cur_pos
+                    ).one_or_none()
+                    cur_pos -= 1
+                self.pos.data = prev.id
 
     def set_selects(self):
         """Populate indexes with Indexes from the database."""

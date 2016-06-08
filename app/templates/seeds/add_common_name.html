@@ -29,13 +29,16 @@
 {% endblock %}
 {% block main %}
       <h1>Add a Common Name to {{ form.index.plural }}:</h1>
-        <form class="admin" method="POST">
+        <form class="admin" method="POST" enctype="multipart/form-data">
           {{ form.hidden_tag() }}
           <ol>
             <fieldset>
               <legend>Add Common Name</legend>
               <li>
                 {{ form_field(form.name)|indent(16)|safe }}
+              </li>
+              <li>
+                {{ form_field(form.thumbnail)|indent(16)|safe }}
               </li>
               <li>
                 {{ form_field(form.description)|indent(16)|safe }}

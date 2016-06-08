@@ -28,7 +28,7 @@
 {% endblock %}
 {% block main %}
       <h1>Edit Common Name</h1>
-      <form class="admin" method="POST">
+      <form class="admin" method="POST" enctype="multipart/form-data">
         {{ form.hidden_tag() }}
         <ol>
           <fieldset>
@@ -38,6 +38,11 @@
             </li>
             <li>
               {{ form_field(form.name)|indent(14)|safe }}
+            </li>
+            <div>Current thumbnail:</div>
+            <div><img src="{{ cn.thumbnail.url }}" class="existing_image"></div>
+            <li>
+              {{ form_field(form.thumbnail)|indent(14)|safe }}
             </li>
             <li>
               {{ form_field(form.description)|indent(14)|safe }}

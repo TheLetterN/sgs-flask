@@ -234,6 +234,7 @@ class AddIndexForm(Form):
 
     Attributes:
         name: DBified string field for the name of an `Index`.
+        thumbnail: FileField for thumbnail image.
         description: Text field for the description of an`Index`.
         pos: Select field for where this `Index` belongs in relation to others.
     """
@@ -274,6 +275,7 @@ class AddCommonNameForm(Form):
 
     Attributes:
         name: DBified string field for the name of a `CommonName`.
+        thumbnail: FileField for thumbnail image.
         description: Text field for the optional description of a `CommonName`.
         instructions: Text field for optional planting instructions.
         synonyms: Text field for optional synonyms of added `CommonName`.
@@ -284,6 +286,9 @@ class AddCommonNameForm(Form):
     """
     name = DBifiedStringField('Common Name',
                               validators=[Length(1, 64), NotSpace()])
+    thumbnail = SecureFileField('Thumbnail Image',
+                                validators=[FileAllowed(IMAGE_EXTENSIONS,
+                                                        'Images only!')])
     description = TextAreaField('Description', validators=[NotSpace()])
     instructions = TextAreaField('Planting Instructions',
                                  validators=[NotSpace()])
@@ -688,7 +693,7 @@ class EditIndexForm(Form):
     id = HiddenField()
     name = DBifiedStringField('Index', validators=[Length(1, 64), NotSpace()])
     thumbnail = SecureFileField(
-        'Thumbnail Image',
+        'New Thumbnail',
         validators=[FileAllowed(IMAGE_EXTENSIONS, 'Images only!')]
     )
     description = TextAreaField('Description', validators=[NotSpace()])
@@ -737,6 +742,10 @@ class EditCommonNameForm(Form):
                            validators=[DataRequired()])
     name = DBifiedStringField('Common Name',
                               validators=[Length(1, 64), NotSpace()])
+    thumbnail = SecureFileField(
+        'New Thumbnail',
+        validators=[FileAllowed(IMAGE_EXTENSIONS, 'Images only!')]
+    )
     description = TextAreaField('Description', validators=[NotSpace()])
     instructions = TextAreaField('Planting Instructions',
                                  validators=[NotSpace()])

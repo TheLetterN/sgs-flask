@@ -819,7 +819,7 @@ class CommonName(SynonymsMixin, db.Model):
             self.instructions == other.instructions,
             self.grows_with == other.grows_with,
             self.visible == other.visible
-        )) if other else False
+        )) if isinstance(other, CommonName) else False
 
     def __hash__(self):
         return hash(self.id)

@@ -463,6 +463,8 @@ def add_common_name(idx_id=None):
         db.session.add(cn)
         messages.append('Creating new common name \'{0}\' and adding it to '
                         'index \'{1}\':'.format(cn.name, idx.name))
+        if form.thumbnail.data:
+            add_thumbnail(form.thumbnail, cn, messages)
         if form.description.data:
             cn.description = form.description.data
             messages.append('Description set to: <p>{0}</p>'
@@ -842,6 +844,9 @@ def edit_common_name(cn_id=None):
             edited = True
             cn.name = form.name.data
             messages.append('Name changed to: \'{0}\'.'.format(cn.name))
+        if form.thumbnail.data:
+            edited = True
+            edit_thumbnail(form.thumbnail, cn, messages)
         if not form.description.data:
             form.description.data = None
         if form.description.data != cn.description:
@@ -923,7 +928,8 @@ def edit_common_name(cn_id=None):
     crumbs = cblr.crumble_route_group('edit_common_name', EDIT_ROUTES)
     return render_template('seeds/edit_common_name.html',
                            crumbs=crumbs,
-                           form=form)
+                           form=form,
+                           cn=cn)
 
 
 @seeds.route('/edit_botanical_name', methods=['GET', 'POST'])
@@ -1428,6 +1434,8 @@ def remove_index(idx_id=None):
             # TODO: See if there are any bugs in this due to things moving
             # after redirect warnings are given.
             warnings += move_common_names(index, new_index)
+            if index.thumbnail:
+                db.session.delete(index.thumbnail)
             index.clean_positions(remove_self=True)
             db.session.delete(index)
             db.session.commit()
@@ -1480,6 +1488,8 @@ def remove_common_name(cn_id=None):
             except NotEnabledError:
                 pass
             warnings += move_cultivars(cn, new_cn)
+            if cn.thumbnail:
+                db.session.delete(cn.thumbnail)
             cn.index.common_names.remove(cn)  # Sets idx_pos for remaining.
             db.session.delete(cn)
             db.session.commit()

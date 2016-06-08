@@ -120,7 +120,7 @@ class TestingConfig(Config):
     LOGIN_DISABLED = True
     TESTING = True
     WTF_CSRF_ENABLED = False
-    INDEXES_JSON_FILE = os.path.join(TEMPDIR, 'indexes.json')
+    JSON_FOLDER = os.path.join(TEMPDIR, 'json')
     PENDING_FILE = os.path.join(TEMPDIR, 'pending.txt')
     REDIRECTS_FILE = os.path.join(TEMPDIR, 'redirects.json')
     SQLALCHEMY_DATABASE_URI = os.environ.get('SGS_TEST_DATABASE_URI') or \

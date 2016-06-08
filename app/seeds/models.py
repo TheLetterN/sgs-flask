@@ -78,6 +78,7 @@ import re
 import shutil
 import sys
 from decimal import Decimal, ROUND_DOWN
+from pathlib import Path
 
 from flask import current_app, url_for
 from fractions import Fraction
@@ -693,16 +694,18 @@ class Index(db.Model, PositionableMixin):
         """
         indexes = cls.query.all()
         if not json_file:
-            json_file = os.path.join(
+            json_file = Path(
                 current_app.config.get('JSON_FOLDER'), 'nav', 'indexes.json'
             )
+            if not json_file.parent.exists():
+                json_file.parent.mkdir(parents=True)
             dicts = {
                 idx.position if idx.position is not None else idx.id: {
                     'header': idx.header,
                     'slug': idx.slug
                 } for idx in indexes
             }
-        with open(json_file, 'w', encoding='utf-8') as ofile:
+        with json_file.open('w', encoding='utf-8') as ofile:
             ofile.write(json.dumps(dicts, indent=4))
 
 

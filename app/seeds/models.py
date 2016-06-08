@@ -79,7 +79,7 @@ import shutil
 import sys
 from decimal import Decimal, ROUND_DOWN
 
-from flask import current_app
+from flask import current_app, url_for
 from fractions import Fraction
 from inflection import pluralize
 from PIL import Image as Pimage
@@ -90,6 +90,7 @@ from sqlalchemy.ext.hybrid import Comparator, hybrid_property
 from sqlalchemy.ext.orderinglist import ordering_list
 from sqlalchemy.sql.expression import and_
 from flask_sqlalchemy import SignallingSession
+from werkzeug import secure_filename
 
 from app import db
 
@@ -129,6 +130,28 @@ cultivars_to_images = db.Table(
     db.Column('cultivar_id', db.Integer, db.ForeignKey('cultivars.id')),
     db.Column('images_id', db.Integer, db.ForeignKey('images.id'))
 )
+
+
+def dump_db_to_json(filename):
+    """Save all data needed to copy the database into a JSON file."""
+    d = dict()
+    d['images'] = [i.dict_ for i in Image.query.all()]
+    d['indexes'] = [i.dict_ for i in Index.query.all()]
+
+    with open(filename, 'w') as outfile:
+        outfile.write(json.dumps(d, indent=4))
+
+
+def populate_db_from_json(filename):
+    """Populate a new db with data loaded from a JSON file."""
+    with open(filename, 'r') as infile:
+        d = json.loads(infile.read())
+    for img_d in d['images']:
+        db.session.add(Image.from_dict_(img_d))
+    for idx_d in d['indexes']:
+        db.session.add(Index.from_dict_(idx_d))
+
+    db.session.commit()
 
 
 # Module-level Functions
@@ -205,9 +228,6 @@ def row_exists(col, value):
         bool: True if row exists, False if not.
     """
     return db.session.query(db.exists().where(col == value)).scalar()
-
-
-
 
 
 # Helper Classes
@@ -530,7 +550,7 @@ class Index(db.Model, PositionableMixin):
 
     Attributes:
         position: An integer determining where an `Index` belongs in a list
-            of `Index` instances.
+            of `Index` instances. Inherited from `PositionableMixin`.
 
         name: The name for the `Index` itself, such as 'Herb'  or 'Perennial'.
         slug: A URL-safe version of _name.
@@ -575,19 +595,26 @@ class Index(db.Model, PositionableMixin):
             self.name == other.name,
             self.slug == other.slug,
             self.description == other.description
-        )) if other else False  # other can be None.
+        )) if isinstance(other, Index) else False  # other can be None.
 
     def __hash__(self):
         return hash(self.id)
 
     @property
     def dict_(self):
-        """Return a dictionary of values needed to instantiate an `Index`."""
+        """Return a dictionary of values needed to instantiate an `Index`.
+        
+        Note:
+            Relationships with rows expected to be created after this are
+            intentionally left out. They will be dealt with in their respective
+            models.
+        """
         return dict(
             id=self.id,
             position=self.position,
             name=self.name,
             slug=self.slug,
+            thumbnail_id=self.thumbnail_id,
             description=self.description
         )
 
@@ -608,9 +635,10 @@ class Index(db.Model, PositionableMixin):
                 'An Index with id {0} already exists as: \'{0}\''
                 .format(idx.id, idx.name)
             )
-
         idx = cls()
         for key in dict_.keys():
+            if key == 'thumbnail_id' and dict_[key] is not None:
+                idx.thumbnail = Image.query.get(dict_[key])
             idx.__setattr__(key, dict_[key])
         return idx
 
@@ -2108,17 +2136,50 @@ class Image(db.Model):
     width = db.Column(db.Integer)
     height = db.Column(db.Integer)
 
-    def __init__(self, filename=None):
+    def __init__(self, filename=None, make_unique=False):
         if filename:
             self.filename = filename
-            if self.exists():
-                img = Pimage.open(self.full_path)
-                self.width = img.width
-                self.height = img.height
+        if make_unique:
+            self.make_unique()
 
     def __repr__(self):
         return '<{0} filename: \'{1}\'>'.format(self.__class__.__name__,
                                                 self.filename)
+
+    @property
+    def dict_(self):
+        """Return dict with needed info to copy `Image`."""
+        return {
+            'id': self.id,
+            'filename': self.filename
+        }
+
+    @classmethod
+    def from_form_field(cls, field, make_unique=True):
+        """Create an Image from data from a wtforms FileField.
+
+        Args:
+            field: The FileField to get data from.
+            make_unique: Whether or not to make sure the created image does
+                not overwrite existing image data. Defaults to True for safety,
+                but can be set False if, for example, one wants to replace an
+                old version of the image with a new one when editing the object
+                it belongs to.
+        """
+        img = cls(filename=field.data.filename,
+                  make_unique=make_unique)
+        field.data.save(img.full_path)
+        img.set_dimensions()
+        return img
+
+    def save_form_field_image(self, field):
+        """Save an image via a wtforms FileField."""
+        field.data.save(self.full_path)
+        self.set_dimensions()
+
+    @property
+    def url(self):
+        return url_for('static', filename=self.path, _external=True)
 
     @property
     def path(self):
@@ -2128,8 +2189,7 @@ class Image(db.Model):
     @property
     def full_path(self):
         """str: The full path to the file this image entry represents."""
-        return os.path.join(current_app.config.get('IMAGES_FOLDER'),
-                            'plants',
+        return os.path.join(current_app.config.get('PLANT_IMAGES_FOLDER'),
                             self.filename)
 
     @property
@@ -2152,12 +2212,21 @@ class Image(db.Model):
         """Rename an image to add a postfix to it.
 
         Usually this would be used for when an image with the same filename is
-        added, thus allowing the old one to be renamed instead of overwritten.
+        added, thus allowing the new image to be renamed instead of overwriting
+        the existing file.
         """
         old_path = self.full_path
         parts = os.path.splitext(self.filename)
         self.filename = parts[0] + postfix + parts[1]
-        shutil.move(old_path, self.full_path)
+
+    def make_unique(self):
+        """Rename an image if it would overwrite an existing image."""
+        old_name = self.filename
+        count = 0
+        while self.exists():
+            count += 1
+            parts = os.path.splitext(old_name)
+            self.filename = parts[0] + '_' + str(count) + parts[1]
 
     def rename(self, new_name):
         """Rename an image with new name.
@@ -2168,6 +2237,13 @@ class Image(db.Model):
         old_path = self.full_path
         self.filename = new_name
         shutil.move(old_path, self.full_path)
+
+    def set_dimensions(self):
+        """Set width and height if the image exists."""
+        if self.exists():
+            img = Pimage.open(self.full_path)
+            self.width = img.width
+            self.height = img.height
 
 
 class VegetableData(db.Model):

@@ -53,7 +53,7 @@
               <div>Default will be '&lt;common name&gt; Seeds'</div>
             </li>
             <div>Current thumbnail:</div>
-            <div><img src="{{ url_for('static', filename=cultivar.thumbnail.path) }}"></div>
+            <div><img src="{{ cultivar.thumbnail.url }}" class="existing_image"></div>
             <li>
               {{ form_field(form.thumbnail)|indent(14)|safe }}
             </li>

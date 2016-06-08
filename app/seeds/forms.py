@@ -201,7 +201,7 @@ class USDollar(object):
                 USDollar_.usd_to_decimal(field.data)
             except:
                 raise ValidationError(self.message)
-
+            
 
 # Custom fields
 class DBifiedStringField(StringField):
@@ -215,6 +215,15 @@ class DBifiedStringField(StringField):
     def process_formdata(self, value):
         super().process_formdata(value)
         self.data = dbify(self.data)
+
+
+class SecureFileField(FileField):
+    """A FileField that automatically secures its filename."""
+    def process_formdata(self, value):
+        super().process_formdata(value)
+        print(self.data)#TMP
+        if self.data:
+            self.data.filename = secure_filename(self.data.filename)
 
 
 # Forms
@@ -231,6 +240,9 @@ class AddIndexForm(Form):
     """
     name = DBifiedStringField('Index Name',
                               validators=[Length(1, 64), NotSpace()])
+    thumbnail = SecureFileField('Thumbnail Image',
+                                validators=[FileAllowed(IMAGE_EXTENSIONS,
+                                                        'Images only!')])
     description = TextAreaField('Description', validators=[NotSpace()])
     pos = SelectField('Position', coerce=int)
     submit = SubmitField('Add Index')
@@ -458,7 +470,7 @@ class AddCultivarForm(Form):
     )
     botanical_name = SelectField('Botanical Name', coerce=int)
     section = SelectField('Section', coerce=int)
-    thumbnail = FileField('Thumbnail Image',
+    thumbnail = SecureFileField('Thumbnail Image',
                           validators=[FileAllowed(IMAGE_EXTENSIONS,
                                                   'Images only!')])
     description = TextAreaField('Description', validators=[NotSpace()])
@@ -675,6 +687,9 @@ class EditIndexForm(Form):
     """
     id = HiddenField()
     name = DBifiedStringField('Index', validators=[Length(1, 64), NotSpace()])
+    thumbnail = SecureFileField('Thumbnail Image',
+                          validators=[FileAllowed(IMAGE_EXTENSIONS,
+                                                  'Images only!')])
     description = TextAreaField('Description', validators=[NotSpace()])
     pos = SelectField('Position', coerce=int)
     submit = SubmitField('Edit Index')
@@ -936,9 +951,11 @@ class EditCultivarForm(Form):
     name = DBifiedStringField('Cultivar Name',
                               validators=[Length(1, 64), NotSpace()])
     subtitle = DBifiedStringField('Subtitle (Leave blank for default.)',
-                                  validators=[Length(1, 64), NotSpace()])
+                                  validators=[Length(1, 64),
+                                              NotSpace(),
+                                              Optional()])
     description = TextAreaField('Description', validators=[NotSpace()])
-    thumbnail = FileField('New Thumbnail',
+    thumbnail = SecureFileField('New Thumbnail',
                           validators=[FileAllowed(IMAGE_EXTENSIONS,
                                                   'Images only!')])
     synonyms_string = StringField('Synonyms', validators=[NotSpace()])

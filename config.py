@@ -72,6 +72,7 @@ class Config(object):
         os.path.join(BASEDIR, 'json')
     IMAGES_FOLDER = os.environ.get('SGS_IMAGES_FOLDER') or \
         os.path.join(BASEDIR, 'app', 'static', 'images')
+    PLANT_IMAGES_FOLDER = os.path.join(IMAGES_FOLDER, 'plants')
     INFO_EMAIL = os.environ.get('SGS_INFO_EMAIL') or \
         'info@swallowtailgardenseeds.com'
     PENDING_FILE = os.environ.get('SGS_PENDING_FILE') or \

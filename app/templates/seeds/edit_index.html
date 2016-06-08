@@ -29,11 +29,16 @@
 {% endblock %}
 {% block main %}
       <h1>Edit Index</h1>
-      <form class="admin" method="POST">
+      <form class="admin" method="POST" enctype="multipart/form-data">
         {{ form.hidden_tag() }}
         <ol>
           <li>
             {{ form_field(form.name)|indent(12)|safe }}
+          </li>
+          <div>Current thumbnail:</div>
+          <div><img src="{{ index.thumbnail.url }}" class="existing_image"></div>
+          <li>
+            {{ form_field(form.thumbnail)|indent(14)|safe }}
           </li>
           <li>
             {{ form_field(form.description)|indent(12)|safe }}

@@ -369,6 +369,47 @@ def redirect_cultivar_warning(cultivar,
     )
 
 
+# Thumbnail functions
+def add_thumbnail(field, obj, messages):
+    """Add a thumbnail to the given object.
+
+    Args:
+        field: The FileField to get image from.
+        messages: The list to append messages to.
+    """
+    obj.thumbnail = Image.from_form_field(field)
+    messages.append('Thumbnail uploaded as: \'{0}\'.'
+                    .format(obj.thumbnail.filename))
+
+def edit_thumbnail(field, obj, messages):
+    """Edit a thumbnail based on a new upload.
+
+    Args:
+        field: The FileField the new thumbnail is uploaded with.
+        obj: The object with the thumbnail to edit.
+        messages: The list to append messages to.
+    """
+    if obj.thumbnail and field.data.filename == obj.thumbnail.filename:
+        obj.thumbnail.save_form_field_image(field)
+        messages.append('New thumbnail has same filename as old, so old file '
+                        'been replaced.')
+    else:
+        if obj.thumbnail:
+            old = obj.thumbnail
+            obj.thumbnail = None
+            if hasattr(obj, 'images'):
+                obj.images.append(old)
+                messages.append('Old thumbnail \'{0}\' moved to images.'
+                                .format(old.filename))
+            else:
+                messages.append('Old thumbnail \'{0}\' was deleted.'
+                                .format(old.filename))
+                db.session.delete(old)
+            obj.thumbnail = Image.from_form_field(field)
+            messages.append('Uploading new thumbnail as \'{0}\'.'
+                            .format(obj.thumbnail.filename))
+
+
 @seeds.route('/add_index', methods=['GET', 'POST'])
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
@@ -381,6 +422,8 @@ def add_index():
         db.session.add(index)
         messages.append('Creating new index \'{0}\':'
                         .format(index.name))
+        if form.thumbnail.data:
+            add_thumbnail(form.thumbnail, index, messages)
         if form.description.data:
             index.description = form.description.data
             messages.append('Description set to: <p>{0}</p>'
@@ -562,12 +605,7 @@ def add_cultivar(cn_id=None):
             messages.append('Section set to: \'{0}\'.'
                             .format(cv.section.name))
         if form.thumbnail.data:
-            thumb_name = secure_filename(form.thumbnail.data.filename)
-            upload_path = os.path.join(current_app.config.get('IMAGES_FOLDER'),
-                                       thumb_name)
-            cv.thumbnail = Image(filename=thumb_name)
-            form.thumbnail.data.save(upload_path)
-            messages.append('Thumbnail uploaded as: {0}'.format(thumb_name))
+            add_thumbnail(form.thumbnail, cv, messages)
         if form.description.data:
             cv.description = form.description.data
             messages.append('Description set to: <p>{0}</p>'
@@ -715,6 +753,9 @@ def edit_index(idx_id=None):
             edited = True
             index.name = form.name.data
             messages.append('Name changed to: \'{0}\'.'.format(index.name))
+        if form.thumbnail.data:
+            edited = True
+            edit_thumbnail(form.thumbnail, index, messages)
         if form.description.data != index.description:
             if form.description.data:
                 edited = True
@@ -762,7 +803,8 @@ def edit_index(idx_id=None):
     crumbs = cblr.crumble_route_group('edit_index', EDIT_ROUTES)
     return render_template('seeds/edit_index.html',
                            crumbs=crumbs,
-                           form=form)
+                           form=form,
+                           index=index)
 
 
 @seeds.route('/edit_common_name', methods=['GET', 'POST'])
@@ -1089,35 +1131,8 @@ def edit_cultivar(cv_id=None):
             messages.append('(Short) Name changed to: \'{0}\'.'
                             .format(cv.name))
         if form.thumbnail.data:
-            thumb_name = secure_filename(form.thumbnail.data.filename)
             edited = True
-            upload_path = os.path.join(current_app.config.
-                                       get('IMAGES_FOLDER'),
-                                       thumb_name)
-            if cv.thumbnail is not None:
-                # Do not delete or orphan thumbnail, move to images.
-                # Do not directly add cultivar.thumbnail to
-                # cultivar.images, as that will cause a
-                # CircularDependencyError.
-                tb = cv.thumbnail
-                cv.thumbnail = None
-                cv.images.append(tb)
-            img = Image.query.filter_by(filename=thumb_name).one_or_none()
-            if img:
-                # Rename existing image instead of overwriting it.
-                now = datetime.datetime.now().strftime('%m-%d-%Y_%H_%M_%S_%f')
-                postfix = '_moved_' + now
-                img.add_postfix(postfix)
-                warnings.append(
-                    'Warning: An image already exists with the filename '
-                    '\'{0}\', so it has been renamed to \'{1}\' to prevent '
-                    'it from being overwritten by the upload of \'{0}\'.'
-                    .format(thumb_name, img.filename)
-                )
-            cv.thumbnail = Image(filename=thumb_name)
-            form.thumbnail.data.save(upload_path)
-            messages.append('Thumbnail uploaded as: \'{0}\'.'
-                            .format(cv.thumbnail.filename))
+            edit_thumbnail(form.thumbnail, cv, messages)
         if not form.description.data:
             form.description.data = None
         if form.description.data != cv.description:

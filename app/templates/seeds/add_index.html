@@ -29,12 +29,14 @@
 {% endblock %}
 {% block main %}
       <h1>Add an Index:</h1>
-      <form class="admin" method="POST">
+      <form class="admin" method="POST" enctype="multipart/form-data">
         {{ form.hidden_tag() }}
         <ol>
           <li>
             {{ form_field(form.name)|indent(12)|safe }}
           </li>
+          <li>
+            {{ form_field(form.thumbnail)|indent(12)|safe }}
           <li>
             {{ form_field(form.description)|indent(12)|safe }}
           </li>

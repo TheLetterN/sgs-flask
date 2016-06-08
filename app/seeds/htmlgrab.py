@@ -1136,8 +1136,7 @@ class Thumbnail(object):
     def __init__(self, url):
         self.url = url
         self.filename = secure_filename(os.path.split(self.url)[-1])
-        self.directory = os.path.join(current_app.config.get('IMAGES_FOLDER'),
-                                      'plants')
+        self.directory = current_app.config.get('PLANT_IMAGES_FOLDER')
 
     @property
     def savepath(self):

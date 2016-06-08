@@ -17,7 +17,6 @@
 
 
 import datetime
-import os
 from flask import (
     abort,
     current_app,
@@ -27,7 +26,6 @@ from flask import (
     request,
     url_for
 )
-from werkzeug import secure_filename
 from flask_login import login_required
 from app import db, Permission
 from app.breadcrumbs import Crumbler
@@ -380,6 +378,7 @@ def add_thumbnail(field, obj, messages):
     obj.thumbnail = Image.from_form_field(field)
     messages.append('Thumbnail uploaded as: \'{0}\'.'
                     .format(obj.thumbnail.filename))
+
 
 def edit_thumbnail(field, obj, messages):
     """Edit a thumbnail based on a new upload.
@@ -834,7 +833,6 @@ def edit_common_name(cn_id=None):
             edited = True
             new_idx = Index.query.get(form.index_id.data)
             idx.common_names.remove(cn)
-            ncns = new_idx.common_names
             # This will insert cn at the end of new_idx.common_names.
             # This is done instead of appending to ensure cn.idx_pos is set
             # correctly.

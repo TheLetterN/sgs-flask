@@ -86,7 +86,6 @@ class TestPositionableMixin:
         p1.auto_position()
         assert p1.position == 1
 
-
     @mock.patch('app.seeds.models.PositionableMixin.positionable_instances',
                 new_callable=mock.PropertyMock)
     def test_auto_position_with_others(self, m_gai):

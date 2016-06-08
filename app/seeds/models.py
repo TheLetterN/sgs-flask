@@ -90,7 +90,6 @@ from sqlalchemy.ext.hybrid import Comparator, hybrid_property
 from sqlalchemy.ext.orderinglist import ordering_list
 from sqlalchemy.sql.expression import and_
 from flask_sqlalchemy import SignallingSession
-from werkzeug import secure_filename
 
 from app import db
 
@@ -237,7 +236,7 @@ class PositionableMixin(object):
     While positions are integer numbers, all users need to know about positions
     is how they relate to each other, so the actual numbers are arbitrary. The
     numbers can and will change as instances are added or moved around.
-    
+
     Attributes:
         position: An integer column for an instance's position relative to the
             other instances of that model.
@@ -251,7 +250,7 @@ class PositionableMixin(object):
         Note:
             This method should be overridden in child models that should be
             positioned relative to a parent instead of all instances of the
-            child model. e.g. in `CommonName`, `positionable_instances` should 
+            child model. e.g. in `CommonName`, `positionable_instances` should
             return all instances of `CommonName` with the same parent `Index`.
 
         Returns:
@@ -267,7 +266,7 @@ class PositionableMixin(object):
 
     def clean_positions(self, remove_self=False):
         """Re-number positions to account for gaps and inconsistencies.
-        
+
         Args:
             remove_self: True if the instance `self` should be removed from
                 the list of active instances before cleaning. This should
@@ -313,8 +312,6 @@ class PositionableMixin(object):
                     position = last.position + 1
                 if not self.position:
                     self.auto_position()
-                old_pos = self.position
-
                 for r in pruned_rows:
                     if r.position >= position:
                         r.position += 1
@@ -358,13 +355,14 @@ class PositionableMixin(object):
     @property
     def first(self):
         """Get the first instance according to position.
-        
+
         Returns:
             The lowest positioned instance of <parent class>.
         """
         return min(self.positionable_instances,
                    key=lambda x: x.position,
                    default=None)
+
     @property
     def previous(self):
         """Get the previous instance according to position.
@@ -373,6 +371,7 @@ class PositionableMixin(object):
             The previous instance, or None if this instance is first.
         """
         return self._step(forward=False)
+
     @property
     def next(self):
         """Get the next instance according to position.
@@ -385,7 +384,7 @@ class PositionableMixin(object):
     @property
     def last(self):
         """Get the last instance according to position.
-        
+
         Returns:
             The highest positioned instance of <parent class>.
         """
@@ -560,7 +559,6 @@ class Index(db.Model, PositionableMixin):
     """
     __tablename__ = 'indexes'
     id = db.Column(db.Integer, primary_key=True)
-    #position = db.Column(db.Integer)
 
     # Data Required
     name = db.Column(db.String(64), unique=True)
@@ -603,7 +601,7 @@ class Index(db.Model, PositionableMixin):
     @property
     def dict_(self):
         """Return a dictionary of values needed to instantiate an `Index`.
-        
+
         Note:
             Relationships with rows expected to be created after this are
             intentionally left out. They will be dealt with in their respective
@@ -765,7 +763,7 @@ class CommonName(SynonymsMixin, db.Model):
                                           'index_id',
                                           name='cn_slug_index_uc'))
     id = db.Column(db.Integer, primary_key=True)
-    
+
     # Position
     idx_pos = db.Column(db.Integer)
 
@@ -2215,7 +2213,6 @@ class Image(db.Model):
         added, thus allowing the new image to be renamed instead of overwriting
         the existing file.
         """
-        old_path = self.full_path
         parts = os.path.splitext(self.filename)
         self.filename = parts[0] + postfix + parts[1]
 

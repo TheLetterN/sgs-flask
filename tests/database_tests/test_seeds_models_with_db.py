@@ -127,7 +127,7 @@ class TestCommonNameWithDB:
         d = cn.dict_
         d['grows_with'].append(42)
         cn2 = CommonName(name='Test2')
-        with pytest.raises(KeyError):
+        with pytest.raises(RuntimeError):
             cn2.gw_from_dict_(d)
 
     def test_from_queryable_values(self, db):

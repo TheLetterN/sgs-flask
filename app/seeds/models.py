@@ -580,11 +580,14 @@ class Index(db.Model, PositionableMixin):
 
     # Data Optional
     thumbnail_id = db.Column(db.Integer, db.ForeignKey('images.id'))
-    thumbnail = db.relationship(
-        'Image', foreign_keys=thumbnail_id, backref=db.backref('index',
-                                                               uselist=False)
-    )
+    thumbnail = db.relationship('Image', back_populates='index')
     description = db.Column(db.Text)
+    common_names = db.relationship(
+        'CommonName',
+        order_by='CommonName.idx_pos',
+        collection_class=ordering_list('idx_pos', count_from=1),
+        back_populates='index'
+    )
 
     def __init__(self, name=None, description=None):
         """Construct an instance of Index.
@@ -786,28 +789,37 @@ class CommonName(SynonymsMixin, db.Model):
 
     # Data Required
     index_id = db.Column(db.Integer, db.ForeignKey('indexes.id'))
-    index = db.relationship(
-        'Index',
-        backref=db.backref(
-            'common_names',
-            order_by='CommonName.idx_pos',
-            collection_class=ordering_list('idx_pos', count_from=1)
-        )
-    )
+    index = db.relationship('Index', back_populates='common_names')
     name = db.Column(db.String(64))
     slug = db.Column(db.String(64))
 
     # Data Optional
     thumbnail_id = db.Column(db.Integer, db.ForeignKey('images.id'))
-    thumbnail = db.relationship(
-        'Image', foreign_keys=thumbnail_id, backref=db.backref('common_name',
-                                                               uselist=False)
-    )
+    thumbnail = db.relationship('Image', back_populates='common_name')
     description = db.Column(db.Text)
     instructions = db.Column(db.Text)
     grows_with_id = db.Column(db.Integer, db.ForeignKey('common_names.id'))
     grows_with = db.relationship('CommonName')
     visible = db.Column(db.Boolean)
+
+    botanical_names = db.relationship(
+        'BotanicalName',
+        secondary=botanical_names_to_common_names,
+        back_populates='common_names'
+    )
+    sections = db.relationship(
+        'Section',
+        order_by='Section.cn_pos',
+        collection_class=ordering_list('cn_pos', count_from=1),
+        back_populates='common_name'
+    )
+    cultivars = db.relationship(
+        'Cultivar',
+        order_by='Cultivar.cn_pos',
+        collection_class=ordering_list('cn_pos', count_from=1),
+        back_populates='common_name'
+    )
+    synonyms = db.relationship('Synonym', back_populates='common_name')
 
     def __init__(self,
                  name=None,
@@ -1061,8 +1073,15 @@ class BotanicalName(SynonymsMixin, db.Model):
     common_names = db.relationship(
         'CommonName',
         secondary=botanical_names_to_common_names,
-        backref='botanical_names'
+        back_populates='botanical_names'
     )
+    sections = db.relationship(
+        'Section',
+        secondary=botanical_names_to_sections,
+        back_populates='botanical_names'
+    )
+    cultivars = db.relationship('Cultivar', back_populates='botanical_name')
+    synonyms = db.relationship('Synonym', back_populates='botanical_name')
 
     def __init__(self, name=None, common_names=None, synonyms=None):
         """Construct an instance of BotanicalName.
@@ -1275,27 +1294,31 @@ class Section(db.Model):
     # Data Required
     name = db.Column(db.String(64))
     common_name_id = db.Column(db.Integer, db.ForeignKey('common_names.id'))
-    common_name = db.relationship(
-        'CommonName',
-        backref=db.backref(
-            'sections',
-            order_by='Section.cn_pos',
-            collection_class=ordering_list('cn_pos', count_from=1)
-        )
-    )
+    common_name = db.relationship('CommonName', back_populates='sections')
 
     # Data Optional
-    botanical_names = db.relationship('BotanicalName',
-                                      secondary=botanical_names_to_sections,
-                                      backref='sections')
+    botanical_names = db.relationship(
+        'BotanicalName',
+        secondary=botanical_names_to_sections,
+        back_populates='sections'
+    )
     subtitle = db.Column(db.String(64))
     description = db.Column(db.Text)
     parent_id = db.Column(db.Integer, db.ForeignKey('sections.id'))
+    parent = db.relationship(
+        'Section', remote_side=[id], back_populates='children'
+    )
     children = db.relationship(
         'Section',
         order_by='Section.parent_pos',
         collection_class=ordering_list('parent_pos', count_from=1),
-        backref=db.backref('parent', remote_side=[id])
+        back_populates='parent'
+    )
+    cultivars = db.relationship(
+        'Cultivar',
+        order_by='Cultivar.sec_pos',
+        collection_class=ordering_list('sec_pos', count_from=1),
+        back_populates='section'
     )
 
     def __init__(self,
@@ -1442,30 +1465,20 @@ class Cultivar(SynonymsMixin, db.Model):
     name = db.Column(db.String(64))
     slug = db.Column(db.String(64))
     common_name_id = db.Column(db.Integer, db.ForeignKey('common_names.id'))
-    common_name = db.relationship(
-        'CommonName',
-        backref=db.backref(
-            'cultivars',
-            order_by='Cultivar.cn_pos',
-            collection_class=ordering_list('cn_pos', count_from=1)
-        )
-    )
+    common_name = db.relationship('CommonName', back_populates='cultivars')
 
     # Data Optional
     subtitle = db.Column(db.String(64))
     section_id = db.Column(db.Integer, db.ForeignKey('sections.id'))
-    section = db.relationship(
-        'Section',
-        backref=db.backref(
-            'cultivars',
-            order_by='Cultivar.sec_pos',
-            collection_class=ordering_list('sec_pos', count_from=1)
-        )
+    section = db.relationship('Section', back_populates='cultivars')
+    botanical_name_id = db.Column(
+        db.Integer,
+        db.ForeignKey('botanical_names.id')
     )
-    botanical_name_id = db.Column(db.Integer,
-                                  db.ForeignKey('botanical_names.id'))
-    botanical_name = db.relationship('BotanicalName',
-                                     backref='cultivars')
+    botanical_name = db.relationship(
+        'BotanicalName',
+        back_populates='cultivars'
+    )
     description = db.Column(db.Text)
     new_until = db.Column(db.Date)
     featured = db.Column(db.Boolean, default=False)
@@ -1473,17 +1486,35 @@ class Cultivar(SynonymsMixin, db.Model):
     in_stock = db.Column(db.Boolean)
     visible = db.Column(db.Boolean)
     thumbnail_id = db.Column(db.Integer, db.ForeignKey('images.id'))
-    thumbnail = db.relationship('Image',
-                                foreign_keys=thumbnail_id,
-                                backref=db.backref('cultivar', uselist=False))
-    images = db.relationship('Image',
-                             secondary=cultivars_to_images,
-                             backref='cultivars')
-    vegetable_data_id = db.Column(db.Integer,
-                                  db.ForeignKey('vegetable_data.id'))
-    vegetable_data = db.relationship('VegetableData',
-                                     backref=db.backref('cultivar',
-                                                        uselist=False))
+    thumbnail = db.relationship(
+        'Image',
+        foreign_keys=thumbnail_id,
+        back_populates='cultivar'
+    )
+    images = db.relationship(
+        'Image',
+        secondary=cultivars_to_images,
+        back_populates='cultivars'
+    )
+    vegetable_data_id = db.Column(
+        db.Integer,
+        db.ForeignKey('vegetable_data.id')
+    )
+    vegetable_data = db.relationship(
+        'VegetableData',
+        back_populates='cultivar'
+    )
+    packets = db.relationship(
+        'Packet',
+        cascade='all, delete-orphan',
+        back_populates='cultivar'
+    )
+    synonyms = db.relationship('Synonym', back_populates='cultivar')
+    custom_pages = db.relationship(
+        'CustomPage',
+        secondary=cultivars_to_custom_pages,
+        back_populates='cultivars'
+    )
 
     def __init__(self,
                  name=None,
@@ -1676,12 +1707,9 @@ class Packet(db.Model):
     sku = db.Column(db.String(32), unique=True)
     price = db.Column(USDollar)
     quantity_id = db.Column(db.Integer, db.ForeignKey('quantities.id'))
-    quantity = db.relationship('Quantity', backref='packets')
+    quantity = db.relationship('Quantity', back_populates='packets')
     cultivar_id = db.Column(db.Integer, db.ForeignKey('cultivars.id'))
-    cultivar = db.relationship(
-        'Cultivar',
-        backref=db.backref('packets', cascade='all, delete-orphan')
-    )
+    cultivar = db.relationship('Cultivar', back_populates='packets')
 
     def __repr__(self):
         return '<{0} SKU #{1}>'.format(self.__class__.__name__, self.sku)
@@ -1767,6 +1795,7 @@ class Quantity(db.Model):
     _float = db.Column(db.Float)
     is_decimal = db.Column(db.Boolean, default=False)
     units = db.Column(db.String(32))
+    packets = db.relationship('Packet', back_populates='quantity')
 
     def __init__(self, value=None, units=None):
         if value:
@@ -2080,12 +2109,17 @@ class Synonym(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64))
     common_name_id = db.Column(db.Integer, db.ForeignKey('common_names.id'))
-    common_name = db.relationship('CommonName', backref='synonyms')
-    botanical_name_id = db.Column(db.Integer,
-                                  db.ForeignKey('botanical_names.id'))
-    botanical_name = db.relationship('BotanicalName', backref='synonyms')
+    common_name = db.relationship('CommonName', back_populates='synonyms')
+    botanical_name_id = db.Column(
+        db.Integer,
+        db.ForeignKey('botanical_names.id')
+    )
+    botanical_name = db.relationship(
+        'BotanicalName',
+        back_populates='synonyms'
+    )
     cultivar_id = db.Column(db.Integer, db.ForeignKey('cultivars.id'))
-    cultivar = db.relationship('Cultivar', backref='synonyms')
+    cultivar = db.relationship('Cultivar', back_populates='synonyms')
 
     def __init__(self, name=None):
         self.name = name
@@ -2164,9 +2198,11 @@ class CustomPage(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(64), unique=True)
     content = db.Column(db.Text)
-    cultivars = db.relationship('Cultivar',
-                                secondary=cultivars_to_custom_pages,
-                                backref='custom_pages')
+    cultivars = db.relationship(
+        'Cultivar',
+        secondary=cultivars_to_custom_pages,
+        back_populates='custom_pages'
+    )
 
 
 class Image(db.Model):
@@ -2186,6 +2222,24 @@ class Image(db.Model):
     filename = db.Column(db.String(32), unique=True)
     width = db.Column(db.Integer)
     height = db.Column(db.Integer)
+
+    # relationships
+    index = db.relationship('Index', uselist=False, back_populates='thumbnail')
+    common_name = db.relationship(
+        'CommonName',
+        uselist=False,
+        back_populates='thumbnail'
+    )
+    cultivar = db.relationship(
+        'Cultivar',
+        uselist=False,
+        back_populates='thumbnail'
+    )
+    cultivars = db.relationship(
+        'Cultivar',
+        secondary=cultivars_to_images,
+        back_populates='images'
+    )
 
     def __init__(self, filename=None, make_unique=False):
         if filename:
@@ -2316,6 +2370,11 @@ class VegetableData(db.Model):
     hybrid = db.Column(db.Boolean)
     # TODO: Make custom comparator for days_to_maturity.
     days_to_maturity = db.Column(db.String(64))
+    cultivar = db.relationship(
+        'Cultivar',
+        uselist=False,
+        back_populates='vegetable_data'
+    )
 
     def __init__(self, open_pollinated=False, days_to_maturity=None):
         self.open_pollinated = open_pollinated

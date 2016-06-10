@@ -241,6 +241,10 @@ def cultivar_div_to_dict(cv_div):
         raise RuntimeError('Could not parse a cultivar name from {0}'
                            .format(cv_div))
     cv['cultivar name'] = dbify(' '.join(cv_name.split()))  # Fix whitespace.
+    try:
+        cv['anchor'] = cv_div.h3['id']
+    except KeyError:
+        pass
     if cv_div.h3.em:
         cv['subtitle'] = dbify(cv_div.h3.em.text.strip())
     if 'new for 2016' in cv_div.text.lower():
@@ -590,6 +594,8 @@ class Page(object):
             ipage = 'http://www.swallowtailgardenseeds.com/herbsaz.html'
             cn['index'] = 'Herb'
 
+        cn['url'] = self.url
+
         # Get thumbnail from ipage.
         r = requests.get(ipage)
         soup = BeautifulSoup(r.text, self.parser)
@@ -695,6 +701,7 @@ class Page(object):
         ordered_keys = [
             'common name',
             'index',
+            'url',
             'thumbnail',
             'synonyms',
             'botanical names',
@@ -995,8 +1002,11 @@ class PageAdder(object):
     def save(self, stream=sys.stdout):
         """Save all information to the database."""
         cn_name = self.tree['common name']
+        cn_url = self.tree['url']
         if 'thumbnail' in self.tree:
             cn_thumb = self.tree['thumbnail']
+        else:
+            cn_thumb = None
         if 'synonyms' in self.tree:
             cn_synonyms = self.tree['synonyms']
         else:

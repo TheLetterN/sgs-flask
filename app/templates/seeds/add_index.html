@@ -49,17 +49,7 @@
         </ol>
       </form>
 {% endblock %}
-      {% block scripts %}
-      <script type="text/javascript">
-        $(function() {
-          $('button#dbify').bind('click', function() {
-            $.getJSON('{{ url_for('seeds._dbify') }}', {
-              text: $('input[name="name"]').val()
-            }, function(data) {
-              $('input[name="name"]').val(data.result);
-            });
-            return false;
-          });
-        });
-      </script>
-      {% endblock %}
+{% block scripts %}
+{% from "includes/dbify_input.html" import dbify_input %}
+{{ dbify_input(button_id='dbify', input_name='name')|safe }}
+{% endblock %}

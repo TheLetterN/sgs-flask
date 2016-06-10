@@ -1403,26 +1403,23 @@ class Cultivar(SynonymsMixin, db.Model):
         fetch only one cultivar.
 
     Attributes:
+        cn_pos: Position relative to parent `CommonName`.
+        sec_pos: Position relative to parent `Section`.
+
         name: The name of the cultivar, without common name. e.g. 'Sparkler
             White' for Sparkler White Cleome.
-        slug: A URL-friendly version of _name. The slug for a `Cultivar` is
+        slug: A URL-friendly version of `name`. The slug for a `Cultivar` is
             not necessarily unique, as it is always used in conjunction with
             a `CommonName` slug, so the unique constraint between `name` and
             `common_name_id` prevents clashes.
-        common_name: MtO relationship with `CommonName`; the common name a
-            cultivar falls under.
-            Backref: `CommonName.cultivars`
+        common_name: The `CommonName` a `Cultivar` belongs to.
 
         subtitle: An optional subtitle for cases in which the subtitle under
             a `Cultivar` on a page should be something other than
             '<`Cultivar.common_name.name`> Seeds', as in Fuseables, e.g.
             'Bacopa/Petunia Multi-Species Seeds'.
-        section: MtO relationship with `Section`; the (optional) section a
-            cultivar belongs to.
-            Backref: `Section.cultivars`
-        botanical_name: MtO relationship with `BotanicalName`; the botanical
-            name of this cultivar.
-            Backref: `BotanicalName.cultivars`
+        section: Optional `Section` a `Cultivar` belongs to.
+        botanical_name: The `BotanicalName` of given `Cultivar`.
         description: An optional HTML description of a cultivar.
         new_until: An optional date to mark a `Cultivar` as new until.
         featured: Whether or not `Cultivar` should be featured on its common
@@ -1433,16 +1430,14 @@ class Cultivar(SynonymsMixin, db.Model):
         visible: Whether or not this cultivar should be shown on automatically
             generated pages. Cultivars with `visible` set to `False` can still
             be shown on custom pages.
-        thumbnail: OtO relationship with `Image`; thumbnail data for this
-            cultivar.
-            Backref: `Image.cultivar`
-        images: MtM relationship with `Image`; images which include this
-            cultivar.
-            Backref: `Image.cultivars`
-
-        synonyms: Backref from `Synonym.cultivar`.
-        packets: Backref from `Packet.cultivar`.
-        custom_pages: Backref from `CustomPage.cultivar`.
+        thumbnail: An optional thumbnail `Image` for a `Cultivar`.
+        images: `Image` instances which are not thumbnails, but which are
+            associated with a `Cultivar`.
+        vegetable_data: Optional additional information to be used if given
+            `Cultivar` is a "vegetable". (Really, food plant in general.)
+        packets: The seed `Packet` instances belonging to given `Cultivar`.
+        synonyms: Synonyms for a `Cultivar`.
+        custom_pages: `CustomPage` instances that include given `Cultivar`.
     """
     __tablename__ = 'cultivars'
     id = db.Column(db.Integer, primary_key=True)
@@ -1688,12 +1683,9 @@ class Packet(db.Model):
     Attributes:
         sku: Product SKU for the packet.
         price: Price (in US dollars) for this packet.
-        quantity: MtO relationship with `Quantity`; the quantity (including
-            units of measurement) of seeds in a `Packet`.
-            Backref: `Quantity.packets`
-        cultivar: MtO relationship with `Cultivar`; the cultivar a `Packet`
-            belongs to.
-            Backref: `Cultivar.packets`
+        quantity: The `Quantity` of seeds in a `Packet`, including units of
+            measurement.
+        cultivar: The `Cultivar` a `Packet` belongs to.
     """
     __tablename__ = 'packets'
     id = db.Column(db.Integer, primary_key=True)
@@ -1774,8 +1766,7 @@ class Quantity(db.Model):
         is_decimal: Whether or not the stored quantity represents a
             decimal number, as opposed to fraction or integer.
         units: Unit of measurement of a quantity. (seeds, grams, etc.)
-
-        packets: Backref from `Packet.quantity`.
+        packets: `Packet` instances which share a `Quantity`.
     """
     __tablename__ = 'quantities'
     id = db.Column(db.Integer, primary_key=True)
@@ -2088,15 +2079,9 @@ class Synonym(db.Model):
 
     Attributes:
         name: The synonym itself.
-        common_name: MtO relationship with `CommonName`; a common name this is
-            a synonym of.
-            Backref: `CommonName.synonyms`
-        botanical_name: MtO relationship with `BotanicalName`; a botanical name
-            this is a synonym of.
-            Backref: `BotanicalName.synonyms`
-        cultivar: MtO relationship with `Cultivar`; the cultivar this is a
-            synonym of.
-            Backref: `Cultivar.synonyms`
+        common_name: A `CommonName` a `Synonym` belongs to.
+        botanical_name: A `BotanicalName` a `Synonym` belongs to.
+        cultivar: A `Cultivar` a `Synonym` belongs to.
     """
     __tablename__ = 'synonyms'
     id = db.Column(db.Integer, primary_key=True)
@@ -2183,9 +2168,7 @@ class CustomPage(db.Model):
     Attributes:
         title: Page title to be used in <title> and for queries.
         content: The HTML content of the page, including parseable tokens.
-        cultivars: MtM relationship with `Cultivar`; cultivars that should be
-            listed on the custom page.
-            Backref: `Cultivar.custom_pages`
+        cultivars: `Cultivar` instances to be listed on a `CustomPage`.
     """
     __tablename__ = 'custom_pages'
     id = db.Column(db.Integer, primary_key=True)
@@ -2206,9 +2189,15 @@ class Image(db.Model):
 
     Attributes:
         filename: File name of an image.
+        width: Width of an image in pixels.
+        height: Height of an image in pixels.
 
-        cultivar: Backref from `Cultivar.thumbnail`.
-        cultivars: Backref from `Cultivar.images`.
+        index: The `Index` an `Image` is thumbnail for.
+        common_name: The `CommonName` an `Image` is thumbnail for.
+        cultivar: The `Cultivar` an `Image` is thumbnail for.
+        cultivars: `Cultivar` instances an image is not thumbnail for, but
+            still associated with.
+
     """
     __tablename__ = 'images'
     id = db.Column(db.Integer, primary_key=True)
@@ -2356,6 +2345,7 @@ class VegetableData(db.Model):
         days_to_maturity: A string containing the number of days (or a range
             of the number of days) it is estimated to take for the plant to be
             ready to harvest.
+        cultivar: The `Cultivar` that the given `VegetableData` belongs to.
     """
     __tablename__ = 'vegetable_data'
     id = db.Column(db.Integer, primary_key=True)

@@ -82,6 +82,42 @@ class TestIndexRelatedEventHandlers:
         assert not m_snj.called
 
 
+class TestPositionableMixinWithDB:
+    """Test methods of `PositionableMixin` that use the db.
+
+    Note:
+        These tests use `Index` instead of `PositionableMixin` because
+        `PositionableMixin` is not a model with a corresponding table.
+    """
+    def test__step_forward(self, db):
+        """Get the next instance in the sequence."""
+        idx1 = Index()
+        idx2 = Index()
+        idx3 = Index()
+        idx1.position = 1
+        idx2.position = 3
+        idx3.position = 4
+        db.session.add_all([idx1, idx2, idx3])
+        db.session.commit()
+        assert idx1._step() is idx2
+        assert idx2._step() is idx3
+        assert idx3._step() is None
+
+    def test__step_backward(self, db):
+        """Get the previous instance in the sequence."""
+        idx1 = Index()
+        idx2 = Index()
+        idx3 = Index()
+        idx1.position = 1
+        idx2.position = 3
+        idx3.position = 4
+        db.session.add_all([idx1, idx2, idx3])
+        db.session.commit()
+        assert idx3._step(forward=False) is idx2
+        assert idx2._step(forward=False) is idx1
+        assert idx1._step(forward=False) is None
+
+
 class TestIndexWithDB:
     """Test methods of `Index` which use the db."""
     def test_get_or_create_get(self, db):

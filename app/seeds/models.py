@@ -132,6 +132,14 @@ cultivars_to_images = db.Table(
 )
 
 
+common_names_to_grows_with = db.Table(
+    'common_names_to_grows_with',
+    db.Model.metadata,
+    db.Column('parent_id', db.Integer, db.ForeignKey('common_names.id')),
+    db.Column('child_id', db.Integer, db.ForeignKey('common_names.id'))
+)
+
+
 def dump_db_to_json(filename):
     """Save all data needed to copy the database into a JSON file."""
     d = dict()
@@ -796,8 +804,13 @@ class CommonName(SynonymsMixin, db.Model):
     thumbnail = db.relationship('Image', back_populates='common_name')
     description = db.Column(db.Text)
     instructions = db.Column(db.Text)
-    grows_with_id = db.Column(db.Integer, db.ForeignKey('common_names.id'))
-    grows_with = db.relationship('CommonName')
+    grows_with = db.relationship(
+        'CommonName',
+        secondary=common_names_to_grows_with,
+        primaryjoin=id==common_names_to_grows_with.c.parent_id,
+        secondaryjoin=id==common_names_to_grows_with.c.child_id,
+        backref='_gw_parents'  # Won't be used outside of testing.
+    )
     visible = db.Column(db.Boolean)
     botanical_names = db.relationship(
         'BotanicalName',

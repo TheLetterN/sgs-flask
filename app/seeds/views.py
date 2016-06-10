@@ -21,6 +21,7 @@ from flask import (
     abort,
     current_app,
     flash,
+    jsonify,
     redirect,
     render_template,
     request,
@@ -36,6 +37,7 @@ from . import seeds
 from ..lastcommit import LastCommit
 from .models import (
     BotanicalName,
+    dbify,
     Section,
     CommonName,
     Cultivar,
@@ -407,6 +409,13 @@ def edit_thumbnail(field, obj, messages):
             obj.thumbnail = Image.from_form_field(field)
             messages.append('Uploading new thumbnail as \'{0}\'.'
                             .format(obj.thumbnail.filename))
+
+
+@seeds.route('/_dbify')
+def _dbify():
+    text = request.args.get('text', '', type=str)
+    print(text)
+    return jsonify(result=dbify(text))
 
 
 @seeds.route('/add_index', methods=['GET', 'POST'])

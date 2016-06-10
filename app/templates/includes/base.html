@@ -58,8 +58,9 @@ Copyright Swallowtail Garden Seeds, Inc
 			<p class="Footer_copyright_p Footer_copyright_p2">Copyright pertains to all images, none of which may be reproduced in any form without<br class="no-mobile-display"> the expressed written consent of Swallowtail Garden Seeds.
 			</p>
 			<a href="https://seal.godaddy.com/verifySeal?sealID=FgdBKY27IIpHp2q5LkxzgzlbX27e0tqGEF9J5PgG2j7VUTmpgtsRrz" onclick="return popitup('https://seal.godaddy.com/verifySeal?sealID=FgdBKY27IIpHp2q5LkxzgzlbX27e0tqGEF9J5PgG2j7VUTmpgtsRrz')"><img class="Footer_siteseal" src="http://www.swallowtailgardenseeds.com/image-assets/site-seal.gif" alt="Go Daddy Site Seal"></a>
-		</div>
-<script src="http://www.swallowtailgardenseeds.com/scripts/scripts.js"></script>
-<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.3/jquery.min.js"></script>
+    </div>
+<script src="{{ url_for('static', filename='scripts/jquery.min.js') }}"></script>
+<script src="{{ url_for('static', filename='scripts/scripts.js') }}"></script>
+{% block scripts %}{% endblock %}
 	</body>
 </html>

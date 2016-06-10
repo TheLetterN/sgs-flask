@@ -53,6 +53,7 @@ class TestModuleFunctions:
         assert dbify(
             'BENARY\'S GIANT FORMULA MIX (Blue Point)'
         ) == 'Benary\'s Giant Formula Mix (Blue Point)'
+        assert dbify('ONE TWO THREE (four)') == 'One Two Three (Four)'
 
 
 class TestPositionableMixin:

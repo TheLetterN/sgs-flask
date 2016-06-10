@@ -33,7 +33,7 @@
         {{ form.hidden_tag() }}
         <ol>
           <li>
-            {{ form_field(form.name)|indent(12)|safe }}
+            {{ form_field(form.name)|indent(12)|safe }}<button type="button" id="dbify">dbify!</button>
           </li>
           <li>
             {{ form_field(form.thumbnail)|indent(12)|safe }}
@@ -49,3 +49,17 @@
         </ol>
       </form>
 {% endblock %}
+      {% block scripts %}
+      <script type="text/javascript">
+        $(function() {
+          $('button#dbify').bind('click', function() {
+            $.getJSON('{{ url_for('seeds._dbify') }}', {
+              text: $('input[name="name"]').val()
+            }, function(data) {
+              $('input[name="name"]').val(data.result);
+            });
+            return false;
+          });
+        });
+      </script>
+      {% endblock %}

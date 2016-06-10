@@ -199,31 +199,28 @@ def dbify(string):
             return word[0].upper() + word[1:].lower()
         elif word.upper() in ALLCAPS:
             return word.upper()
-        elif re.search(r'[0-9][A-Z]', word):
-            return word
-        elif word == 'W/':
+        elif re.search(r'[0-9][A-Za-z]', word):
+            return word.upper()
+        elif word.lower() == 'w/':
             return 'w/'
-        elif re.search(r'[dD]\'[A-Z]+', word):  # d'Avignon
+        elif re.search(r'[dD]\'[A-Za-z]+', word):  # d'Avignon
             parts = word.split('\'')
             parts[0] = parts[0].lower()
             parts[1] = parts[1].title()
             return '\''.join(parts)
-        elif re.search(r'[oO]\'[A-Z]+', word):  # O'Hara
+        elif re.search(r'[oO]\'[A-Za-z]+', word):  # O'Hara
             parts = word.split('\'')
             parts[0] = parts[0].upper()
             parts[1] = parts[1].title()
             return '\''.join(parts)
 
     if string:
-        string = string.strip()
+        # lower() string in addition to stripping it because titlecase()
+        # leaves capital words capitalized in mixed case lines.
+        # we don't want that because we want a line like:
+        # 'RED FLOWER (white bee)' to become 'Red Flower (White Bee)'.
+        string = string.strip().lower()
         dbified = titlecase(string, callback=cb)
-
-        # titlecase skips lines with some but not all words in all-caps.
-        # While this makes sense for most use cases, it doesn't for ours.
-        # e.g. BENARY'S GIANT FORMULA MIX (Blue Point) should become:
-        # Benary's Giant Formula Mix (Blue Point).
-        if dbified == string:
-            dbified = titlecase(string.lower(), callback=cb)
         return dbified
     else:
         return None
@@ -566,13 +563,15 @@ class Index(db.Model, PositionableMixin):
             of `Index` instances. Inherited from `PositionableMixin`.
 
         name: The name for the `Index` itself, such as 'Herb'  or 'Perennial'.
-        slug: A URL-safe version of _name.
-        description: An optional HTML description of the `Index`.
+        slug: A URL-safe version of `name`.
 
-        common_names: Backref from `CommonName.index`.
+        thumbnail: An optional `Image` used as a thumbnail for a common name.
+        description: An optional HTML description of the `Index`.
+        common_names: Optional `CommonName` instances belonging to an `Index`.
     """
     __tablename__ = 'indexes'
     id = db.Column(db.Integer, primary_key=True)
+    # position - db.Column(db.Integer) inherited from PositionableMixin
 
     # Data Required
     name = db.Column(db.String(64), unique=True)
@@ -752,28 +751,27 @@ class CommonName(SynonymsMixin, db.Model):
     belongs to.
 
     Attributes:
-        position: An integer representing order in which `CommonName` should be
-            listed.
-        index: MtO relationship with `Index`; the `Index` this `CommonName`
-            falls under.
-            Backref: `Index.common_names`
+        idx_pos: The position an instance of `CommonName` has relative to other
+            `CommonName` instances belonging to the same `Index`. Automatically
+             set by the relationship `Index.common_names`.
+
+        index: The `Index` a `CommonName` instance belongs to.
         name: The common name of a seed. Examples: Coleus, Tomato,
             Lettuce, Zinnia.
-        slug: The URL-friendly version of this common name.
+        slug: URL-friendly version `name`.
 
-        description: An optional HTML description for this CommonName.
+        thumbnail: An optional thumbnail `Image`.
+        description: An optional HTML description.
         instructions: Optional planting instructions for seeds with the
             specified CommonName.
-        grows_with: OtM relationship with self; other common names a given
-            `CommonName` instance grows well with.
-        visible: True if the specified `CommonName` is to be shown on auto-
-            generated pages, False if it should only be shown on custom pages
-            that explicitly include it. Default value: True.
-
-        botanical_names: Backref from `BotanicalName.common_names`.
-        sections: Backref from `Section.common_name`.
-        cultivars: Backref from `Cultivar.common_name`.
-        synonyms: Backref from `Synonym.common_name`.
+        grows_with: Other `CommonName` instances that grow well with the
+            given instance.
+        visible: Whether or not to list given `CommonName` on non-custom pages.
+            Default value: True.
+        botanical_names: `BotanicalName` belonging to given `CommonName`.
+        sections: `Section` instances belonging to given `CommonName`.
+        cultivars: `Cultivar` instances belonging to given `CommonName`.
+        synonyms: `Synonym` instances which are synonyms of given `CommonName`.
     """
     __tablename__ = 'common_names'
     __table_args__ = (db.UniqueConstraint('name',
@@ -801,7 +799,6 @@ class CommonName(SynonymsMixin, db.Model):
     grows_with_id = db.Column(db.Integer, db.ForeignKey('common_names.id'))
     grows_with = db.relationship('CommonName')
     visible = db.Column(db.Boolean)
-
     botanical_names = db.relationship(
         'BotanicalName',
         secondary=botanical_names_to_common_names,
@@ -1054,18 +1051,11 @@ class BotanicalName(SynonymsMixin, db.Model):
     comment.
 
     Attributes:
-        name: A botanical name associated with one or more seeds. Get
-            and set via the name property.
-        common_names: MtM relationship with `CommonName`; The CommonNames this
-            botanical name belongs to. A botanical name can have multiple
-            common names because sometimes there are multiple common names for
-            a species of plant, or there could be a species that falls under
-            multiple indexes, which results in multiple common names with the
-            same name but different indexes.
-            Backref: `CommonName.botanical_names`
-
-        synonyms: Backref from `Synonyms.botanical_name`.
-        cultivars: Backref from `Cultivar.botanical_name`.
+        name: The botanical name given istance of `BotanicalName` represents.
+        common_names: `CommonName` instances a `BotanicalName` belongs to.
+        sections: `Section` instances a `BotanicalName` belongs to.
+        cultivars: `Cultivar` instances a `BotanicalName` belongs to.
+        synonyms: `Synonym` instances representing synonyms of `BotanicalName`.
     """
     __tablename__ = 'botanical_names'
     id = db.Column(db.Integer, primary_key=True)
@@ -1266,20 +1256,23 @@ class Section(db.Model):
 
 
     Attributes:
+        cn_pos: The position of the `Section' relative to its parent
+            `CommonName` instance.
+        parent_pos: The position of the `Section` relative to its parent
+            `Section`.
+
         name: The name of the section.
-        common_name: MtO relationship with `CommonName`; the common name a
-            `Section` belongs to.
-            Backref: `CommonName.sections`
+        common_name: The `CommonName` the `Section` belongs to.
 
-        botanical_names: MtO relationship with `BotanicalName`; optional
-            botanical names to associate with `Section`.
-            Backref: `BotanicalName.sections`
-        subtitle: An optional subtitle to use if not just using '<common name>
-            ' Seeds' as the subtitle.
-        description: An HTML description of the `Section`.
-        children: Optional subsections belonging to `Section`.
-
-        cultivars: Backref from `Cultivar.section`.
+        botanical_names: Optional `BotanicalName` instances belonging to the
+            `Section`.
+        subtitle: Optional subtitle for `Section`.
+        description: HTML description/intro for `Section`.
+        parent: Optional parent `Section` the given `Section` is a subsection
+            of.
+        children: Optional child `Section` instances that are subsections of
+            given `Section`.
+        cultivars: `Cultivar` instances in given `Section`.
     """
     __tablename__ = 'sections'
     __table_args__ = (db.UniqueConstraint('name',

@@ -35,7 +35,7 @@
             <fieldset>
               <legend>Add Common Name</legend>
               <li>
-                {{ form_field(form.name)|indent(16)|safe }}
+                {{ form_field(form.name)|indent(16)|safe }}<button type="button" id="dbify">dbify!</button>
               </li>
               <li>
                 {{ form_field(form.thumbnail)|indent(16)|safe }}
@@ -64,4 +64,8 @@
             </li>
           </ol>
         </form>
+{% endblock %}
+{% block scripts %}
+{% from "includes/dbify_input.html" import dbify_input %}
+{{ dbify_input(button_id='dbify', input_name='name')|safe }}
 {% endblock %}

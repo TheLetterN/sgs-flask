@@ -37,7 +37,6 @@ from wtforms.validators import DataRequired, Length, Optional
 from app.redirects import RedirectsFile
 from .models import (
     BotanicalName,
-    dbify,
     Section,
     CommonName,
     Image,
@@ -204,19 +203,6 @@ class USDollar(object):
 
 
 # Custom fields
-class DBifiedStringField(StringField):
-    """A StringField that has its data run through dbify().
-
-    Note:
-        This is the only place in this module `dbify` needs to be run, as
-        `process_formdata` runs before validation, so <field>.data will always
-        be dbified before it is actually used.
-    """
-    def process_formdata(self, value):
-        super().process_formdata(value)
-        self.data = dbify(self.data)
-
-
 class SecureFileField(FileField):
     """A FileField that automatically secures its filename."""
     def process_formdata(self, value):
@@ -238,8 +224,7 @@ class AddIndexForm(Form):
         description: Text field for the description of an`Index`.
         pos: Select field for where this `Index` belongs in relation to others.
     """
-    name = DBifiedStringField('Index Name',
-                              validators=[Length(1, 64), NotSpace()])
+    name = StringField('Index Name', validators=[Length(1, 64), NotSpace()])
     thumbnail = SecureFileField('Thumbnail Image',
                                 validators=[FileAllowed(IMAGE_EXTENSIONS,
                                                         'Images only!')])
@@ -284,8 +269,7 @@ class AddCommonNameForm(Form):
 
         index: The `Index` added `CommonName` will be under.
     """
-    name = DBifiedStringField('Common Name',
-                              validators=[Length(1, 64), NotSpace()])
+    name = StringField('Common Name', validators=[Length(1, 64), NotSpace()])
     thumbnail = SecureFileField('Thumbnail Image',
                                 validators=[FileAllowed(IMAGE_EXTENSIONS,
                                                         'Images only!')])
@@ -408,8 +392,7 @@ class AddSectionForm(Form):
 
         cn: The `CommonName` this `Section` will belong to.
     """
-    name = DBifiedStringField('Section Name',
-                              validators=[Length(1, 64), NotSpace()])
+    name = StringField('Section Name', validators=[Length(1, 64), NotSpace()])
     description = TextAreaField('Description', validators=[NotSpace()])
     submit = SubmitField('Add Section')
 
@@ -429,7 +412,7 @@ class AddSectionForm(Form):
             ValidationError: If the section already exists in the database.
         """
         for section in self.cn.sections:
-            if section.name == dbify(field.data):
+            if section.name == field.data:
                 raise ValidationError(Markup(
                     'The common name \'{0}\' already has a section named '
                     '\'{1}\'! Click <a href="{2}">here</a> if you wish to '
@@ -466,9 +449,8 @@ class AddCultivarForm(Form):
 
         cn: The `CommonName` added `Cultivar` belongs to.
     """
-    name = DBifiedStringField('Cultivar Name',
-                              validators=[Length(1, 64), NotSpace()])
-    subtitle = DBifiedStringField(
+    name = StringField('Cultivar Name', validators=[Length(1, 64), NotSpace()])
+    subtitle = StringField(
         'Subtitle (Leave blank for default.)',
         validators=[Length(1, 64), NotSpace(), Optional()]
     )
@@ -691,7 +673,7 @@ class EditIndexForm(Form):
         description: String field for description.
     """
     id = HiddenField()
-    name = DBifiedStringField('Index', validators=[Length(1, 64), NotSpace()])
+    name = StringField('Index', validators=[Length(1, 64), NotSpace()])
     thumbnail = SecureFileField(
         'New Thumbnail',
         validators=[FileAllowed(IMAGE_EXTENSIONS, 'Images only!')]
@@ -740,8 +722,7 @@ class EditCommonNameForm(Form):
     index_id = SelectField('Index',
                            coerce=int,
                            validators=[DataRequired()])
-    name = DBifiedStringField('Common Name',
-                              validators=[Length(1, 64), NotSpace()])
+    name = StringField('Common Name', validators=[Length(1, 64), NotSpace()])
     thumbnail = SecureFileField(
         'New Thumbnail',
         validators=[FileAllowed(IMAGE_EXTENSIONS, 'Images only!')]
@@ -789,7 +770,7 @@ class EditCommonNameForm(Form):
     def validate_name(self, field):
         """Raise ValidationError if conflict would be created."""
         cn = CommonName.query.filter(
-            CommonName.name == dbify(field.data),
+            CommonName.name == field.data,
             CommonName.index_id == self.index_id.data,
             CommonName.id != int(self.id.data)
         ).one_or_none()
@@ -895,8 +876,7 @@ class EditSectionForm(Form):
     """
     id = HiddenField()
     common_name_id = SelectField('Select Common Name', coerce=int)
-    name = DBifiedStringField('Section Name',
-                              validators=[Length(1, 64), NotSpace()])
+    name = StringField('Section Name', validators=[Length(1, 64), NotSpace()])
     description = TextAreaField('Description', validators=[NotSpace()])
     submit = SubmitField('Edit Section')
 
@@ -958,12 +938,11 @@ class EditCultivarForm(Form):
                                  validators=[DataRequired()])
     botanical_name_id = SelectField('Botanical Name', coerce=int)
     section_id = SelectField('Select Section', coerce=int)
-    name = DBifiedStringField('Cultivar Name',
-                              validators=[Length(1, 64), NotSpace()])
-    subtitle = DBifiedStringField('Subtitle (Leave blank for default.)',
-                                  validators=[Length(1, 64),
-                                              NotSpace(),
-                                              Optional()])
+    name = StringField('Cultivar Name', validators=[Length(1, 64), NotSpace()])
+    subtitle = StringField('Subtitle (Leave blank for default.)',
+                           validators=[Length(1, 64),
+                                       NotSpace(),
+                                       Optional()])
     description = TextAreaField('Description', validators=[NotSpace()])
     thumbnail = SecureFileField(
         'New Thumbnail',
@@ -1005,7 +984,7 @@ class EditCultivarForm(Form):
         cn_id = self.common_name_id.data
         sec_id = self.section_id.data if self.section_id.data else None
         cv = Cultivar.query.filter(
-            Cultivar.name == dbify(field.data),
+            Cultivar.name == field.data,
             Cultivar.common_name_id == cn_id,
             Cultivar.section_id == sec_id,
             Cultivar.id != self.id.data

@@ -588,7 +588,7 @@ class Index(db.Model, PositionableMixin):
 
     # Data Optional
     thumbnail_id = db.Column(db.Integer, db.ForeignKey('images.id'))
-    thumbnail = db.relationship('Image', back_populates='index')
+    thumbnail = db.relationship('Image', back_populates='indexes_with_thumb')
     description = db.Column(db.Text)
     common_names = db.relationship(
         'CommonName',
@@ -802,7 +802,10 @@ class CommonName(SynonymsMixin, db.Model):
 
     # Data Optional
     thumbnail_id = db.Column(db.Integer, db.ForeignKey('images.id'))
-    thumbnail = db.relationship('Image', back_populates='common_name')
+    thumbnail = db.relationship(
+        'Image',
+        back_populates='common_names_with_thumb'
+    )
     description = db.Column(db.Text)
     instructions = db.Column(db.Text)
     grows_with = db.relationship(
@@ -2219,10 +2222,11 @@ class Image(db.Model):
     height = db.Column(db.Integer)
 
     # relationships
-    index = db.relationship('Index', uselist=False, back_populates='thumbnail')
-    common_name = db.relationship(
+    indexes_with_thumb = db.relationship(
+        'Index',
+        back_populates='thumbnail')
+    common_names_with_thumb = db.relationship(
         'CommonName',
-        uselist=False,
         back_populates='thumbnail'
     )
     cultivars_with_thumb = db.relationship(

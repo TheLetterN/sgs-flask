@@ -35,10 +35,10 @@
           <fieldset>
             <legend>Data:</legend>
             <li>
-              {{ form_field(form.name)|indent(14)|safe }}<button type="button" id="dbify">dbify!</button>
+              {{ form_field(form.name)|indent(14)|safe }}<button type="button" id="dbify_name">dbify!</button>
             </li>
             <li>
-              {{ form_field(form.subtitle)|indent(14)|safe }}
+              {{ form_field(form.subtitle)|indent(14)|safe }}<button type="button" id="dbify_subtitle">dbify!</button>
               <div>Default subtitle: '{{ form.cn.name }} Seeds'</div>
             </li>
             <li>
@@ -83,5 +83,6 @@
 {% endblock %}
 {% block scripts %}
 {% from "includes/dbify_input.html" import dbify_input %}
-{{ dbify_input(button_id='dbify', input_name='name')|safe }}
+{{ dbify_input(button_id='dbify_name', input_name='name')|safe }}
+{{ dbify_input(button_id='dbify_subtitle', input_name='subtitle')|safe }}
 {% endblock %}

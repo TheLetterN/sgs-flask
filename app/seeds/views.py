@@ -1028,14 +1028,15 @@ def edit_section(section_id=None):
             edited = True
             section.name = form.name.data
             messages.append('Name changed to: \'{0}\''.format(section.name))
+        if not form.subtitle.data:
+            form.subtitle.data = None
         if form.subtitle.data != section.subtitle:
             edited = True
+            section.subtitle = form.subtitle.data
             if form.subtitle.data:
-                section.subtitle = form.subtitle.data
                 messages.append('Subtitle changed to: \'{0}\''
                             .format(section.subtitle))
             else:
-                section.subtitle = None
                 messages.append('Subtitle cleared. (Default will be used.)')
         if not form.description.data:
             form.description.data = None

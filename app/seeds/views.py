@@ -568,6 +568,10 @@ def add_section(cn_id=None):
         db.session.add(section)
         messages.append('Creating section \'{0}\' for common name \'{1}\':'
                         .format(section.name, cn.name))
+        if form.subtitle.data:
+            section.subtitle = form.subtitle.data
+            messages.append('Subtitle set to: \'{0}\''
+                            .format(section.subtitle))
         if form.description.data:
             section.description = form.description.data
             messages.append('Description set to: <p>{0}</p>.'
@@ -603,8 +607,7 @@ def add_cultivar(cn_id=None):
                         'name \'{1}\':'.format(cv.name, cn.name))
         if form.subtitle.data:
             cv.subtitle = form.subtitle.data
-            messages.append('Subtitle for \'{0}\' set to: {1}'
-                            .format(cv.fullname, cv.subtitle))
+            messages.append('Subtitle set to: \'{0}\''.format(cv.subtitle))
         if form.botanical_name.data:
             cv.botanical_name = BotanicalName.query\
                 .get(form.botanical_name.data)
@@ -1024,7 +1027,16 @@ def edit_section(section_id=None):
         if form.name.data != section.name:
             edited = True
             section.name = form.name.data
-            messages.append('Name changed to: {0}'.format(section.name))
+            messages.append('Name changed to: \'{0}\''.format(section.name))
+        if form.subtitle.data != section.subtitle:
+            edited = True
+            if form.subtitle.data:
+                section.subtitle = form.subtitle.data
+                messages.append('Subtitle changed to: \'{0}\''
+                            .format(section.subtitle))
+            else:
+                section.subtitle = None
+                messages.append('Subtitle cleared. (Default will be used.)')
         if not form.description.data:
             form.description.data = None
         if form.description.data != section.description:
@@ -1132,12 +1144,12 @@ def edit_cultivar(cv_id=None):
             if form.subtitle.data:
                 edited = True
                 cv.subtitle = form.subtitle.data
-                messages.append('Subtitle changed to: \'{0}\.'
+                messages.append('Subtitle changed to: \'{0}\''
                                 .format(cv.subtitle))
             elif cv.subtitle:
                 edited = True
                 cv.subtitle = None
-                messages.append('Subtitle set to default.')
+                messages.append('Subtitle cleared. (Default will be used.)')
         if cv.name != form.name.data:
             edited = True
             cv.name = form.name.data

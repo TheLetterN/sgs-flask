@@ -393,6 +393,10 @@ class AddSectionForm(Form):
         cn: The `CommonName` this `Section` will belong to.
     """
     name = StringField('Section Name', validators=[Length(1, 64), NotSpace()])
+    subtitle = StringField(
+        'Subtitle (Leave blank for default.)',
+        validators=[Length(1, 64), NotSpace(), Optional()]
+    )
     description = TextAreaField('Description', validators=[NotSpace()])
     submit = SubmitField('Add Section')
 
@@ -877,6 +881,10 @@ class EditSectionForm(Form):
     id = HiddenField()
     common_name_id = SelectField('Select Common Name', coerce=int)
     name = StringField('Section Name', validators=[Length(1, 64), NotSpace()])
+    subtitle = StringField('Subtitle (Leave blank for default.)',
+                           validators=[Length(1, 64),
+                                       NotSpace(),
+                                       Optional()])
     description = TextAreaField('Description', validators=[NotSpace()])
     submit = SubmitField('Edit Section')
 

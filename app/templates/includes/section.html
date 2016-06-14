@@ -16,7 +16,7 @@ Copyright Swallowtail Garden Seeds, Inc
 {% macro section(sec, ind=2, sub=false) %}
 {% if sub %}{% set class_prefix = 'Series' %}{% else %}{% set class_prefix = 'Section' %}{% endif %}
 <section class="{{ class_prefix|lower }}-{{ slugify(sec.name) }}">
-	<div class="{{ class_prefix }}" id="{{ slugify(sec.name) }}">
+  <div class="{{ class_prefix }}" id="{{ slugify(sec.name) }}">
 		<h2 class="{{ class_prefix }}_h2">{{ sec.name }}
 			<em class="{{ class_prefix }}_em">{% if sec.subtitle %}{{ sec.subtitle }}{% else %}{{ sec.common_name.header }}{% endif %}</em>
 			{% if sec.botanical_name %}
@@ -24,6 +24,11 @@ Copyright Swallowtail Garden Seeds, Inc
 			{% endif %}
 		</h2>
 		{% if sec.description %}
+  {% if current_user.can(Permission.MANAGE_SEEDS) %}
+  <div class="admin">
+    <a href="{{ url_for('seeds.edit_section', section_id=sec.id) }}">Edit {{ sec.name }}</a> | <a href="{{ url_for('seeds.remove_section', section_id=sec.id) }}">Remove {{ sec.name }}</a>
+  </div>
+  {% endif %}
 		<p class="{{ class_prefix }}_p">{{ sec.description|safe }}</p>
 		{% endif %}
 	</div>

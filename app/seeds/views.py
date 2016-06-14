@@ -1624,7 +1624,8 @@ def remove_cultivar(cv_id=None):
                                         'other cultivars.')
                 if cv.images:
                     for img in cv.images:
-                        if img.cultivars == [cv] and img.cultivar is None:
+                        if (img.cultivars == [cv] and 
+                                cv not in img.cultivars_with_thumb):
                             messages.append('Image file \'{0}\' associated '
                                             'with \'{1}\' has been deleted. '
                                             .format(img.filename, cv.fullname))

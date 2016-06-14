@@ -37,7 +37,7 @@
               {{ form_field(form.common_name_id)|indent(14)|safe }}
             </li>
             <li>
-              {{ form_field(form.name)|indent(14)|safe }}
+              {{ form_field(form.name)|indent(14)|safe }}<button type="button" id="dbify">dbify!</button>
             </li>
             <li>
               {{ form_field(form.description)|indent(14)|safe }}
@@ -48,4 +48,8 @@
           </li>
         </ol>
       </form>
+{% endblock %}
+{% block scripts %}
+{% from "includes/dbify_input.html" import dbify_input %}
+{{ dbify_input(button_id='dbify', input_name='name')|safe }}
 {% endblock %}

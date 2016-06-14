@@ -102,8 +102,8 @@ def load_all(index):
     else:
         idx = 'herb'
     directory = os.path.join('pages', idx)
-    pages = sorted([os.path.join(directory, p) for p in os.listdir(directory)
-                    if '.json' in p])
+    pages = sorted(os.path.join(directory, p) for p in os.listdir(directory)
+                   if '.json' in  p and p[0] != '.')
     for page in pages:
         try:
             pa = PageAdder.from_json_file(page)

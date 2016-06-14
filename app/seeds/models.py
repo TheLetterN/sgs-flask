@@ -1490,7 +1490,7 @@ class Cultivar(SynonymsMixin, db.Model):
     thumbnail = db.relationship(
         'Image',
         foreign_keys=thumbnail_id,
-        back_populates='cultivar'
+        back_populates='cultivars_with_thumb'
     )
     images = db.relationship(
         'Image',
@@ -2225,9 +2225,8 @@ class Image(db.Model):
         uselist=False,
         back_populates='thumbnail'
     )
-    cultivar = db.relationship(
+    cultivars_with_thumb = db.relationship(
         'Cultivar',
-        uselist=False,
         back_populates='thumbnail'
     )
     cultivars = db.relationship(

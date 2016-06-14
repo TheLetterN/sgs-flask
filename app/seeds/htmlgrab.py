@@ -112,6 +112,11 @@ def clean(text, unwanted=None):
         '&frac18;': '1/8',
         '&#8539;': '1/8',
         '&#8531;': '1/3',
+        '\u00bc': '1/4',
+        '\u00bd': '1/2',
+        '\u00be': '3/4',
+        '\u215b': '1/8',
+        '\u2153': '1/3',
         # Unicode weirdness
         '\xa0': ' ',
         '\u2019': '\'',
@@ -404,7 +409,7 @@ def str_to_packet(pkt_str):
     Returns:
         dict: The price, quantity, and units of the packet.
     """
-    parts = pkt_str.split(' ')
+    parts = pkt_str.replace(':', '').split(' ')
     words = []
     nums = []
     for part in parts:
@@ -424,8 +429,17 @@ def str_to_packet(pkt_str):
                                .format(pkt_str))
     nums.remove(price)
     price = ''.join(c for c in price if c.isdigit() or c == '.')
+    if not price:
+        raise ValueError('Could not parse price from: {0}'
+                         .format(pkt_str))
     qty = ' '.join(nums).replace(',', '')  # Get rid of , in 1,000 etc.
-    units = ' '.join(words).lower()
+    if not qty:
+        raise ValueError('Could not parse quantity from: {0}'
+                         .format(pkt_str))
+    units = ' '.join(words).lower().strip('-')
+    if not units:
+        raise ValueError('Could not parse unit of measure from: {0}'
+                         .format(pkt_str))
     pkt = OrderedDict()
     pkt['price'] = price
     pkt['quantity'] = qty

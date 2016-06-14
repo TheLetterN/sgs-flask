@@ -32,7 +32,7 @@
         {{ form.hidden_tag() }}
         <ol>
           <li>
-            {{ form_field(form.name)|indent(10)|safe }}
+            {{ form_field(form.name)|indent(10)|safe }}<button type="button" id="dbify">dbify!</button>
           </li>
           <li>
             {{ form_field(form.description)|indent(10)|safe }}
@@ -42,4 +42,8 @@
           </li>
         </ol>
       </form>
+{% endblock %}
+{% block scripts %}
+{% from "includes/dbify_input.html" import dbify_input %}
+{{ dbify_input(button_id='dbify', input_name='name')|safe }}
 {% endblock %}

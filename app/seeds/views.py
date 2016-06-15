@@ -491,7 +491,7 @@ def add_common_name(idx_id=None):
             messages.append('Will be listed before other common names.')
         else:
             after = CommonName.query.get(form.pos.data)
-            idx.common_names.insert(after.idx_pos, cn)
+            idx.common_names.insert(idx.common_names.index(after) + 1, cn)
             messages.append('Will be listed after \'{0}\'.'
                             .format(after.name))
         if form.visible.data:
@@ -891,22 +891,18 @@ def edit_common_name(cn_id=None):
                 cn.synonyms_string = None
                 messages.append('Synonyms cleared.')
         if idx is cn.index:
-            if form.pos.data == -1 and cn.idx_pos != 1:
+            cns = idx.common_names
+            cn_index = cns.index(cn)
+            if form.pos.data == -1 and cn_index != 0:
                 edited = True
-                idx.common_names.remove(cn)
-                idx.common_names.insert(0, cn)
+                cns.insert(0, cns.pop(cn_index))
                 messages.append('Will now be listed first.')
-            else:
-                # Index.common_names is sorted by CommonName.idx_pos
-                prev = idx.common_names[idx.common_names.index(cn) - 1]
-            if form.pos.data != -1 and (cn.idx_pos == 1 or
-                                        form.pos.data != prev.id):
+            elif form.pos.data != -1 and form.pos.data != cns[cn_index - 1]:
                 edited = True
-                after = CommonName.query.get(form.pos.data)
-                idx.common_names.remove(cn)
-                idx.common_names.insert(after.idx_pos, cn)
+                prev = next(c for c in cns if c.id == form.pos.data)
+                cns.insert(cns.index(prev) + 1, cns.pop(cn_index))
                 messages.append('Will now be listed after \'{0}\'.'
-                                .format(after.name))
+                                .format(prev.name))
         else:
             dest = url_for('seeds.edit_common_name', cn_id=cn.id)
             warnings.append(
@@ -2023,6 +2019,7 @@ def flip_visible(cv_id):
               .format(cv.fullname))
     db.session.commit()
     return redirect(request.args.get('next') or url_for('seeds.manage'))
+
 
 @seeds.route('/move_common_name/<int:cn_id>/<delta>')
 def move_common_name(cn_id, delta):

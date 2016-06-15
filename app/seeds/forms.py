@@ -748,24 +748,12 @@ class EditCommonNameForm(Form):
                            None)
         self.pos.choices.pop(self.pos.choices.index(self_choice))
         if not self.pos.data:
-            if not cn.idx_pos:
-                self.pos.data = self.pos.choices[-1][0]
-            elif cn.idx_pos <= 1:
+            collection = cn.index.common_names
+            cn_index = collection.index(cn)
+            if cn_index == 0:
                 self.pos.data = -1
             else:
-                cur_pos = cn.idx_pos - 1
-                prev = None
-                while prev is None:
-                    if cur_pos < 1:
-                        self.pos.data = -1
-                        break
-                    prev = CommonName.query.filter(
-                        CommonName.index_id == cn.index_id
-                    ).filter(
-                        CommonName.idx_pos == cur_pos
-                    ).one_or_none()
-                    cur_pos -= 1
-                self.pos.data = prev.id
+                self.pos.data = collection[cn_index - 1].id
 
     def set_selects(self):
         """Populate indexes with Indexes from the database."""

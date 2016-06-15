@@ -1051,6 +1051,26 @@ class CommonName(SynonymsMixin, db.Model):
         """Generate the string to use in URLs for this `CommonName`."""
         return slugify(self.arranged_name) if self.name else None
 
+    def move(self, delta):
+        """Move position of `CommonName` w/ respect to `CommonName.index`.
+
+        Args:
+            delta: The number of positions to move. Positive for forward,
+                negative for backwards. No matter what delta is passed, no
+                `CommonName` will be moved below the lowest index or above
+                the highest index.
+        """
+        collection = self.index.common_names
+        from_index = collection.index(self)
+        to_index = from_index + delta
+        if to_index < 0:
+            to_index = 0
+        last_index = collection.index(collection[-1])
+        if to_index > last_index:
+            to_index = last_index
+        if from_index != to_index:
+            collection.insert(to_index, collection.pop(from_index))
+
 
 @event.listens_for(CommonName, 'before_insert')
 @event.listens_for(CommonName, 'before_update')

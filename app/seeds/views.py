@@ -2023,3 +2023,16 @@ def flip_visible(cv_id):
               .format(cv.fullname))
     db.session.commit()
     return redirect(request.args.get('next') or url_for('seeds.manage'))
+
+@seeds.route('/move_common_name/<int:cn_id>/<delta>')
+def move_common_name(cn_id, delta):
+    """Move a common name <delta> positions in its index."""
+    delta = int(delta)  # Flask's int converter doesn't handle negatives.
+    cn = CommonName.query.get(cn_id)
+    if cn is None:
+        abort(404)
+    cn.move(delta)
+    db.session.commit()
+    flash('\'{0}\' has been moved {1} {2} position(s).'
+          .format(cn.name, 'forward' if delta > 0 else 'backward', abs(delta)))
+    return redirect(request.args.get('next') or url_for('seeds.manage'))

@@ -669,6 +669,78 @@ class TestCommonName:
         cn.cultivars.append(cv3)
         assert cn.has_public_cultivars
 
+    def test_move_forward(self):
+        """Move a `CommonName` forward in `Index.common_names`."""
+        idx = Index()
+        cn1 = CommonName()
+        cn2 = CommonName()
+        cn3 = CommonName()
+        idx.common_names = [cn1, cn2, cn3]
+        cn1.move(1)
+        assert idx.common_names == [cn2, cn1, cn3]
+        cn2.move(2)
+        assert idx.common_names == [cn1, cn3, cn2]
+
+    def test_move_past_last(self):
+        """Move a `CommonName` to last position if delta > last position."""
+        idx = Index()
+        cn1 = CommonName()
+        cn2 = CommonName()
+        cn3 = CommonName()
+        idx.common_names = [cn1, cn2, cn3]
+        cn1.move(3)
+        assert idx.common_names == [cn2, cn3, cn1]
+        cn2.move(42)
+        assert idx.common_names == [cn3, cn1, cn2]
+
+    def test_move_last_forward(self):
+        """If a `CommonName` is already in the last position, don't move it."""
+        idx = Index()
+        cn1 = CommonName()
+        cn2 = CommonName()
+        cn3 = CommonName()
+        idx.common_names = [cn1, cn2, cn3]
+        cn3.move(1)
+        assert idx.common_names == [cn1, cn2, cn3]
+        cn3.move(42)
+        assert idx.common_names == [cn1, cn2, cn3]
+
+    def test_move_backward(self):
+        """Move a `CommonName` backward if delta is negative."""
+        idx = Index()
+        cn1 = CommonName()
+        cn2 = CommonName()
+        cn3 = CommonName()
+        idx.common_names = [cn1, cn2, cn3]
+        cn3.move(-1)
+        assert idx.common_names == [cn1, cn3, cn2]
+        cn2.move(-2)
+        assert idx.common_names == [cn2, cn1, cn3]
+
+    def test_move_before_beginning(self):
+        """Move a `CommonName` to first position if delta < first position."""
+        idx = Index()
+        cn1 = CommonName()
+        cn2 = CommonName()
+        cn3 = CommonName()
+        idx.common_names = [cn1, cn2, cn3]
+        cn3.move(-3)
+        assert idx.common_names == [cn3, cn1, cn2]
+        cn2.move(-42)
+        assert idx.common_names == [cn2, cn3, cn1]
+
+    def test_move_first_backward(self):
+        """If a `CommonName` is first, don't move it backwards."""
+        idx = Index()
+        cn1 = CommonName()
+        cn2 = CommonName()
+        cn3 = CommonName()
+        idx.common_names = [cn1, cn2, cn3]
+        cn1.move(-1)
+        assert idx.common_names == [cn1, cn2, cn3]
+        cn1.move(-42)
+        assert idx.common_names == [cn1, cn2, cn3]
+
 
 class TestBotanicalName:
     """Test methods of BotanicalName in the seeds model."""

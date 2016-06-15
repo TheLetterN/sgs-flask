@@ -52,7 +52,7 @@ Copyright Swallowtail Garden Seeds, Inc
 <div class="Index_pages-image-links-wrapper">
 	{% if index.common_names %}
 	{% for cn in index.common_names %}
-  {% if current_user.can(Permission.MANAGE_SEEDS) %}<a class="move_button" href="{{ url_for('seeds.move_common_name', cn_id=cn.id, delta=-1, next=request.path) }}">&lt</a>{% endif %}<a href="{{ url_for('seeds.common_name', idx_slug=index.slug, cn_slug=cn.slug) }}"><figure><img src="{% if cn.thumbnail %}{{ url_for('static', filename=cn.thumbnail.path) }}{% else %}{{ url_for('static', filename='images/assets/default_thumb.jpg') }}{% endif %}" alt="{{ cn.name }}"><figcaption>{{ cn.name }} <span>seeds</span></figcaption></figure></a>{% if current_user.can(Permission.MANAGE_SEEDS) %}<a class="move_button" href="{{ url_for('seeds.move_common_name', cn_id=cn.id, delta=1, next=request.path) }}">&gt;</a>{% endif %}
+  {% if current_user.can(Permission.MANAGE_SEEDS) %}<a class="move_button" title="move backward" href="{{ url_for('seeds.move_common_name', cn_id=cn.id, delta=-1, next=request.path) }}">&#9664;</a>{% endif %}<a href="{{ url_for('seeds.common_name', idx_slug=index.slug, cn_slug=cn.slug) }}"><figure><img src="{% if cn.thumbnail %}{{ url_for('static', filename=cn.thumbnail.path) }}{% else %}{{ url_for('static', filename='images/assets/default_thumb.jpg') }}{% endif %}" alt="{{ cn.name }}"><figcaption>{{ cn.name }} <span>seeds</span></figcaption></figure></a>{% if current_user.can(Permission.MANAGE_SEEDS) %}<a class="move_button" title="move forward" href="{{ url_for('seeds.move_common_name', cn_id=cn.id, delta=1, next=request.path) }}">&#9654;</a>{% endif %}
 	{% endfor %}
 	{% endif %}
 </div>

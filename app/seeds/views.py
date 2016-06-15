@@ -455,7 +455,7 @@ def add_index():
 
 
 @seeds.route('/add_common_name', methods=['GET', 'POST'])
-@seeds.route('/add_common_name/<idx_id>', methods=['GET', 'POST'])
+@seeds.route('/add_common_name/<int:idx_id>', methods=['GET', 'POST'])
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
 def add_common_name(idx_id=None):
@@ -515,7 +515,7 @@ def add_common_name(idx_id=None):
 
 
 @seeds.route('/add_botanical_name', methods=['GET', 'POST'])
-@seeds.route('/add_botanical_name/<cn_id>', methods=['GET', 'POST'])
+@seeds.route('/add_botanical_name/<int:cn_id>', methods=['GET', 'POST'])
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
 def add_botanical_name(cn_id=None):
@@ -551,7 +551,7 @@ def add_botanical_name(cn_id=None):
 
 
 @seeds.route('/add_section', methods=['GET', 'POST'])
-@seeds.route('/add_section/<cn_id>', methods=['GET', 'POST'])
+@seeds.route('/add_section/<int:cn_id>', methods=['GET', 'POST'])
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
 def add_section(cn_id=None):
@@ -588,7 +588,7 @@ def add_section(cn_id=None):
 
 
 @seeds.route('/add_cultivar', methods=['GET', 'POST'])
-@seeds.route('/add_cultivar/<cn_id>', methods=['GET', 'POST'])
+@seeds.route('/add_cultivar/<int:cn_id>', methods=['GET', 'POST'])
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
 def add_cultivar(cn_id=None):
@@ -670,7 +670,7 @@ def add_cultivar(cn_id=None):
 
 
 @seeds.route('/add_packet', methods=['GET', 'POST'])
-@seeds.route('/add_packet/<cv_id>', methods=['GET', 'POST'])
+@seeds.route('/add_packet/<int:cv_id>', methods=['GET', 'POST'])
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
 def add_packet(cv_id=None):
@@ -747,7 +747,7 @@ def add_redirect():
 
 
 @seeds.route('/edit_index', methods=['GET', 'POST'])
-@seeds.route('/edit_index/<idx_id>', methods=['GET', 'POST'])
+@seeds.route('/edit_index/<int:idx_id>', methods=['GET', 'POST'])
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
 def edit_index(idx_id=None):
@@ -821,7 +821,7 @@ def edit_index(idx_id=None):
 
 
 @seeds.route('/edit_common_name', methods=['GET', 'POST'])
-@seeds.route('/edit_common_name/<cn_id>', methods=['GET', 'POST'])
+@seeds.route('/edit_common_name/<int:cn_id>', methods=['GET', 'POST'])
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
 def edit_common_name(cn_id=None):
@@ -945,7 +945,7 @@ def edit_common_name(cn_id=None):
 
 
 @seeds.route('/edit_botanical_name', methods=['GET', 'POST'])
-@seeds.route('/edit_botanical_name/<bn_id>', methods=['GET', 'POST'])
+@seeds.route('/edit_botanical_name/<int:bn_id>', methods=['GET', 'POST'])
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
 def edit_botanical_name(bn_id=None):
@@ -1001,7 +1001,7 @@ def edit_botanical_name(bn_id=None):
 
 
 @seeds.route('/edit_section', methods=['GET', 'POST'])
-@seeds.route('/edit_section/<section_id>', methods=['GET', 'POST'])
+@seeds.route('/edit_section/<int:section_id>', methods=['GET', 'POST'])
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
 def edit_section(section_id=None):
@@ -1035,7 +1035,7 @@ def edit_section(section_id=None):
             section.subtitle = form.subtitle.data
             if form.subtitle.data:
                 messages.append('Subtitle changed to: \'{0}\''
-                            .format(section.subtitle))
+                                .format(section.subtitle))
             else:
                 messages.append('Subtitle cleared. (Default will be used.)')
         if not form.description.data:
@@ -1094,7 +1094,7 @@ def edit_section(section_id=None):
 
 
 @seeds.route('/edit_cultivar', methods=['GET', 'POST'])
-@seeds.route('/edit_cultivar/<cv_id>', methods=['GET', 'POST'])
+@seeds.route('/edit_cultivar/<int:cv_id>', methods=['GET', 'POST'])
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
 def edit_cultivar(cv_id=None):
@@ -1265,7 +1265,7 @@ def edit_cultivar(cv_id=None):
 
 
 @seeds.route('/edit_packet', methods=['GET', 'POST'])
-@seeds.route('/edit_packet/<pkt_id>', methods=['GET', 'POST'])
+@seeds.route('/edit_packet/<int:pkt_id>', methods=['GET', 'POST'])
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
 def edit_packet(pkt_id=None):
@@ -1425,7 +1425,7 @@ def move_section(cn, other):
 
 
 @seeds.route('/remove_index', methods=['GET', 'POST'])
-@seeds.route('/remove_index/<idx_id>', methods=['GET', 'POST'])
+@seeds.route('/remove_index/<int:idx_id>', methods=['GET', 'POST'])
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
 def remove_index(idx_id=None):
@@ -1480,7 +1480,7 @@ def remove_index(idx_id=None):
 
 
 @seeds.route('/remove_common_name', methods=['GET', 'POST'])
-@seeds.route('/remove_common_name/<cn_id>', methods=['GET', 'POST'])
+@seeds.route('/remove_common_name/<int:cn_id>', methods=['GET', 'POST'])
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
 def remove_common_name(cn_id=None):
@@ -1533,7 +1533,7 @@ def remove_common_name(cn_id=None):
 
 
 @seeds.route('/remove_botanical_name', methods=['GET', 'POST'])
-@seeds.route('/remove_botanical_name/<bn_id>', methods=['GET', 'POST'])
+@seeds.route('/remove_botanical_name/<int:bn_id>', methods=['GET', 'POST'])
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
 def remove_botanical_name(bn_id=None):
@@ -1607,7 +1607,7 @@ def remove_section(section_id=None):
 
 
 @seeds.route('/remove_cultivar', methods=['GET', 'POST'])
-@seeds.route('/remove_cultivar/<cv_id>', methods=['GET', 'POST'])
+@seeds.route('/remove_cultivar/<int:cv_id>', methods=['GET', 'POST'])
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
 def remove_cultivar(cv_id=None):
@@ -1677,7 +1677,7 @@ def remove_cultivar(cv_id=None):
 
 
 @seeds.route('/remove_packet', methods=['GET', 'POST'])
-@seeds.route('/remove_packet/<pkt_id>', methods=['GET', 'POST'])
+@seeds.route('/remove_packet/<int:pkt_id>', methods=['GET', 'POST'])
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
 def remove_packet(pkt_id=None):
@@ -1950,7 +1950,7 @@ def cultivar(idx_slug=None, cn_slug=None, cv_slug=None):
     abort(404)
 
 
-@seeds.route('flip_featured/<cv_id>')
+@seeds.route('flip_featured/<int:cv_id>')
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
 def flip_featured(cv_id):
@@ -1970,7 +1970,7 @@ def flip_featured(cv_id):
     return redirect(request.args.get('next') or url_for('seeds.manage'))
 
 
-@seeds.route('/flip_in_stock/<cv_id>')
+@seeds.route('/flip_in_stock/<int:cv_id>')
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
 def flip_in_stock(cv_id):
@@ -1987,7 +1987,7 @@ def flip_in_stock(cv_id):
     return redirect(request.args.get('next') or url_for('seeds.manage'))
 
 
-@seeds.route('/flip_active/<cv_id>')
+@seeds.route('/flip_active/<int:cv_id>')
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
 def flip_active(cv_id):
@@ -2007,7 +2007,7 @@ def flip_active(cv_id):
     return redirect(request.args.get('next') or url_for('seeds.manage'))
 
 
-@seeds.route('/flip_visible/<cv_id>')
+@seeds.route('/flip_visible/<int:cv_id>')
 def flip_visible(cv_id):
     """Reverse visible status of given cultivar."""
     cv = Cultivar.query.get(cv_id)

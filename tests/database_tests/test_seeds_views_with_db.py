@@ -401,14 +401,6 @@ class TestCultivarRouteWithDB:
 
 class TestEditIndexRouteWithDB:
     """Test seeds.edit_index."""
-    def test_edit_index_bad_id(self, app, db):
-        """Redirect if idx_id is not an integer."""
-        with app.test_client() as tc:
-            rv = tc.get(url_for('seeds.edit_index', idx_id='frogs'))
-        assert rv.location == url_for('seeds.select_index',
-                                      dest='seeds.edit_index',
-                                      _external=True)
-
     def test_edit_index_does_not_exist(self, app, db):
         """Redirect if no Index.id corresponds with idx_id."""
         with app.test_client() as tc:
@@ -664,14 +656,6 @@ class TestManageRouteWithDB:
 
 class TestRemoveBotanicalNameRouteWithDB:
     """Test seeds.manage."""
-    def test_remove_botanical_name_bad_id(self, app, db):
-        """Redirect given a non-integer bn_id."""
-        with app.test_client() as tc:
-            rv = tc.get(url_for('seeds.remove_botanical_name', bn_id='frogs'))
-        assert rv.location == url_for('seeds.select_botanical_name',
-                                      dest='seeds.remove_botanical_name',
-                                      _external=True)
-
     def test_remove_botanical_name_does_not_exist(self, app, db):
         """Redirect if no BotanicalName corresponds to bn_id."""
         with app.test_client() as tc:
@@ -734,14 +718,6 @@ class TestRemoveBotanicalNameRouteWithDB:
 
 class TestRemoveIndexRouteWithDB:
     """Test seeds.remove_index."""
-    def test_remove_index_bad_id(self, app, db):
-        """Redirect given a non-integer idx_id."""
-        with app.test_client() as tc:
-            rv = tc.get(url_for('seeds.remove_index', idx_id='frogs'))
-        assert rv.location == url_for('seeds.select_index',
-                                      dest='seeds.remove_index',
-                                      _external=True)
-
     def test_remove_index_does_not_exist(self, app, db):
         """Redirect if no Index corresponds to idx_id."""
         with app.test_client() as tc:
@@ -807,14 +783,6 @@ class TestRemoveIndexRouteWithDB:
 
 class TestRemoveCommonNameRouteWithDB:
     """Test seeds.remove_common_name."""
-    def test_remove_common_name_bad_id(self, app, db):
-        """Redirect to select given a non-integer cn_id."""
-        with app.test_client() as tc:
-            rv = tc.get(url_for('seeds.remove_common_name', cn_id='frogs'))
-        assert rv.location == url_for('seeds.select_common_name',
-                                      dest='seeds.remove_common_name',
-                                      _external=True)
-
     def test_remove_common_name_does_not_exist(self, app, db):
         """Redirect to select if no CommonName corresponds to cn_id."""
         with app.test_client() as tc:

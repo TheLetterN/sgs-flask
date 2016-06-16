@@ -23,13 +23,21 @@ Copyright Swallowtail Garden Seeds, Inc
 #main .Index_pages-h1,.Index_pages-intro{text-align:center;}
 #main .Index_pages-intro{padding:0 1.2em;font-size:1.1em;}
 #main .Index_pages-image-links-wrapper{margin:1em auto;text-align:left;}
-#main .Index_pages-image-links-wrapper a{display:inline-block;vertical-align:top;;width:7.4em;margin:1em 0 1em 1.6em;}
-#main .Index_pages-image-links-wrapper a:link,#main .Index_pages-image-links-wrapper a:visited{background-color:#f0f1F9;color:#141414;}
-#main .Index_pages-image-links-wrapper a:hover{transition:.25s;background-color:#cbd6c1;}
+#main a.Index_pages-image-thumbs{display:inline-block;vertical-align:top;;width:7.4em;margin:1em 0 1em 1.6em;}
+#main a.Index_pages-image-thumbs:link,#main a.Index_pages-image-thumbs:visited{background-color:#f0f1F9;color:#141414;}
+#main a.Index_pages-image-thumbs:hover{transition:.25s;background-color:#cbd6c1;}
 #main .Index_pages-image-links-wrapper img{width:7.4em;height:7.4em;}
 #main .Index_pages-image-links-wrapper a:hover img{border:.08em solid #c14424;}
 #main .Index_pages-image-links-wrapper figcaption{font-size:.85em;padding-bottom:.3em;text-align:center;}
-#main .Index_pages-image-links-wrapper span{display:block;}
+#main .Index_pages-image-links-wrapper .fig-caption-seeds-block{display:block;}
+
+.move_button_wrapper{display:inline-block;margin-left:1.6em;}
+.move_button{position:relative;display:inline-block;z-index:22;width:1.5em;margin-top:3.7em;padding:.5em .25em;background:white;}
+.backward{margin-right:-3.1em;}
+.forward{margin-left:-1.5em;}
+a.move_button:link,a.move_button:visited{opacity:.8;background-color:#f7f7f7;}
+a.move_button:hover{opacity:1;transition:.25s;}
+
 @media all and (min-width:48em){
 #main .Index_pages-h1,#main .Index_pages-intro{text-align:left;}
 #main .Index_pages-intro{text-indent:2.5em;padding:0;}
@@ -39,7 +47,7 @@ Copyright Swallowtail Garden Seeds, Inc
 {% block main %}
 {% if current_user.can(Permission.MANAGE_SEEDS) %}
 <div class="admin">
-  <a href="{{ url_for('seeds.edit_index', idx_id=index.id) }}">Edit {{ index.name }}</a> | <a href="{{ url_for('seeds.remove_index', idx_id=index.id) }}">Remove {{ index.name }}</a> | <a href="{{ url_for('seeds.add_common_name', idx_id=index.id) }}">Add a Common Name to {{ index.name }}</a>
+	<a href="{{ url_for('seeds.edit_index', idx_id=index.id) }}">Edit {{ index.name }}</a> | <a href="{{ url_for('seeds.remove_index', idx_id=index.id) }}">Remove {{ index.name }}</a> | <a href="{{ url_for('seeds.add_common_name', idx_id=index.id) }}">Add a Common Name to {{ index.name }}</a>
 </div>
 {% endif %}
 <h1 class="Index_pages-h1">{{ index.header }}</h1>
@@ -52,7 +60,7 @@ Copyright Swallowtail Garden Seeds, Inc
 <div class="Index_pages-image-links-wrapper">
 	{% if index.common_names %}
 	{% for cn in index.common_names %}
-  {% if current_user.can(Permission.MANAGE_SEEDS) %}<a class="move_button" title="move backward" href="{{ url_for('seeds.move_common_name', cn_id=cn.id, delta=-1, next=request.path) }}">&#9664;</a>{% endif %}<a href="{{ url_for('seeds.common_name', idx_slug=index.slug, cn_slug=cn.slug) }}"><figure><img src="{% if cn.thumbnail %}{{ url_for('static', filename=cn.thumbnail.path) }}{% else %}{{ url_for('static', filename='images/assets/default_thumb.jpg') }}{% endif %}" alt="{{ cn.name }}"><figcaption>{{ cn.name }} <span>seeds</span></figcaption></figure></a>{% if current_user.can(Permission.MANAGE_SEEDS) %}<a class="move_button" title="move forward" href="{{ url_for('seeds.move_common_name', cn_id=cn.id, delta=1, next=request.path) }}">&#9654;</a>{% endif %}
+	{% if current_user.can(Permission.MANAGE_SEEDS) %}<span class="move_button_wrapper"><a class="move_button backward" title="move backward" href="{{ url_for('seeds.move_common_name', cn_id=cn.id, delta=-1, next=request.path) }}">&#9664;</a>{% endif %}<a class="Index_pages-image-thumbs" href="{{ url_for('seeds.common_name', idx_slug=index.slug, cn_slug=cn.slug) }}"><figure><img src="{% if cn.thumbnail %}{{ url_for('static', filename=cn.thumbnail.path) }}{% else %}{{ url_for('static', filename='images/assets/default_thumb.jpg') }}{% endif %}" alt="{{ cn.name }}"><figcaption>{{ cn.name }} <span class="fig-caption-seeds-block">seeds</span></figcaption></figure></a>{% if current_user.can(Permission.MANAGE_SEEDS) %}<a class="move_button forward" title="move forward" href="{{ url_for('seeds.move_common_name', cn_id=cn.id, delta=1, next=request.path) }}">&#9654;</a></span>{% endif %}
 	{% endfor %}
 	{% endif %}
 </div>

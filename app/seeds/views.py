@@ -900,7 +900,7 @@ def edit_common_name(cn_id=None):
             elif form.pos.data != -1 and form.pos.data != cns[cn_index - 1]:
                 edited = True
                 prev = next(c for c in cns if c.id == form.pos.data)
-                cns.insert(cns.index(prev) + 1, cns.pop(cn_index))
+                cn.move_after(prev)
                 messages.append('Will now be listed after \'{0}\'.'
                                 .format(prev.name))
         else:

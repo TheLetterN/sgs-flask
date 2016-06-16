@@ -413,6 +413,54 @@ class PositionableMixin(object):
                    default=None)
 
 
+class OrderingListMixin(object):
+    """A mixin for methods dealing with ordering_list positioning."""
+    @property
+    def parent_collection(self):
+        raise NotImplementedError(
+            'The parent_collection property for \'{0}\' has not been '
+            'implemented yet!'.format(self.__class__.__name___)
+        )
+
+    def move(self, delta):
+        """Move position of object w/ respect to its parent collection.
+
+        Args:
+            delta: The number of positions to move. Positive for forward,
+                negative for backwards. No matter what delta is passed, no
+                `CommonName` will be moved below the lowest index or above
+                the highest index.
+        """
+        collection = self.parent_collection
+        from_index = collection.index(self)
+        to_index = from_index + delta
+        if to_index < 0:
+            to_index = 0
+        last_index = collection.index(collection[-1])
+        if to_index > last_index:
+            to_index = last_index
+        if from_index != to_index:
+            collection.insert(to_index, collection.pop(from_index))
+
+    def move_after(self, other):
+        """Move self to position after other.
+
+        Args:
+            other: An instance of the same model to place `self` after.
+        """
+        self_index = self.parent_collection.index(self)
+        other_index = self.parent_collection.index(other)
+        # other's index will be decremented if other comes after self and
+        # self is popped, so other_index will be the index after other.
+        # Therefore, we only need to increment other_index if other is before
+        # self.
+        if other_index < self_index:
+            other_index += 1
+        self.parent_collection.insert(
+            other_index, self.parent_collection.pop(self_index)
+        )
+
+
 class SynonymsMixin(object):
     """A mixin class to easily interact with synonyms in child classes."""
     @property
@@ -752,7 +800,7 @@ def save_indexes_json_before_commit(session):
         Index.save_nav_json()
 
 
-class CommonName(SynonymsMixin, db.Model):
+class CommonName(OrderingListMixin, SynonymsMixin, db.Model):
     """Table for common names.
 
     A `CommonName` is the next subdivision below `Index` in how we sort seeds.
@@ -866,6 +914,11 @@ class CommonName(SynonymsMixin, db.Model):
 
     def __hash__(self):
         return hash(self.id)
+
+    @property
+    def parent_collection(self):
+        """Return the collection `CommonName` instances are ordered in."""
+        return self.index.common_names
 
     @property
     def dict_(self):
@@ -1050,26 +1103,6 @@ class CommonName(SynonymsMixin, db.Model):
     def generate_slug(self):
         """Generate the string to use in URLs for this `CommonName`."""
         return slugify(self.arranged_name) if self.name else None
-
-    def move(self, delta):
-        """Move position of `CommonName` w/ respect to `CommonName.index`.
-
-        Args:
-            delta: The number of positions to move. Positive for forward,
-                negative for backwards. No matter what delta is passed, no
-                `CommonName` will be moved below the lowest index or above
-                the highest index.
-        """
-        collection = self.index.common_names
-        from_index = collection.index(self)
-        to_index = from_index + delta
-        if to_index < 0:
-            to_index = 0
-        last_index = collection.index(collection[-1])
-        if to_index > last_index:
-            to_index = last_index
-        if from_index != to_index:
-            collection.insert(to_index, collection.pop(from_index))
 
 
 @event.listens_for(CommonName, 'before_insert')

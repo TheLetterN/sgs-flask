@@ -13,6 +13,7 @@ from app.seeds.models import (
     Image,
     Index,
     Cultivar,
+    OrderingListMixin,
     Packet,
     PositionableMixin,
     Quantity,
@@ -307,6 +308,145 @@ class TestPositionableMixin:
         m_pi.return_value = [p1, p2, p3]
         p = PositionableMixin()
         assert p.last is p3
+
+
+class TestOrderingListMixin:
+    """Test methods of OrderingListMixin."""
+    @mock.patch('app.seeds.models.OrderingListMixin.parent_collection',
+                new_callable=mock.PropertyMock)
+    def test_move_forward(self, m_pc):
+        """Move an object forward in its parent collection."""
+        o1 = OrderingListMixin()
+        o2 = OrderingListMixin()
+        o3 = OrderingListMixin()
+        l = [o1, o2, o3]
+        m_pc.return_value = l
+        o1.move(1)
+        assert l == [o2, o1, o3]
+        o2.move(2)
+        assert l == [o1, o3, o2]
+
+    @mock.patch('app.seeds.models.OrderingListMixin.parent_collection',
+                new_callable=mock.PropertyMock)
+    def test_move_past_last(self, m_pc):
+        """Move object to end position if it would otherwise go past."""
+        o1 = OrderingListMixin()
+        o2 = OrderingListMixin()
+        o3 = OrderingListMixin()
+        l = [o1, o2, o3]
+        m_pc.return_value = l
+        o1.move(3)
+        assert l == [o2, o3, o1]
+        o2.move(42)
+        assert l == [o3, o1, o2]
+
+    @mock.patch('app.seeds.models.OrderingListMixin.parent_collection',
+                new_callable=mock.PropertyMock)
+    def test_move_last_forward(self, m_pc):
+        """Don't move last object if attempting to move forward."""
+        o1 = OrderingListMixin()
+        o2 = OrderingListMixin()
+        o3 = OrderingListMixin()
+        l = [o1, o2, o3]
+        m_pc.return_value = l
+        o3.move(1)
+        assert l == [o1, o2, o3]
+        o3.move(42)
+        assert l == [o1, o2, o3]
+
+    @mock.patch('app.seeds.models.OrderingListMixin.parent_collection',
+                new_callable=mock.PropertyMock)
+    def test_move_backward(self, m_pc):
+        """Move an object backward if delta is negative."""
+        o1 = OrderingListMixin()
+        o2 = OrderingListMixin()
+        o3 = OrderingListMixin()
+        l = [o1, o2, o3]
+        m_pc.return_value = l
+        o3.move(-1)
+        assert l == [o1, o3, o2]
+        o2.move(-2)
+        assert l == [o2, o1, o3]
+
+    @mock.patch('app.seeds.models.OrderingListMixin.parent_collection',
+                new_callable=mock.PropertyMock)
+    def test_move_before_beginning(self, m_pc):
+        """Move object to first position if delta would put it before."""
+        o1 = OrderingListMixin()
+        o2 = OrderingListMixin()
+        o3 = OrderingListMixin()
+        l = [o1, o2, o3]
+        m_pc.return_value = l
+        o3.move(-3)
+        assert l == [o3, o1, o2]
+        o2.move(-42)
+        assert l == [o2, o3, o1]
+
+    @mock.patch('app.seeds.models.OrderingListMixin.parent_collection',
+                new_callable=mock.PropertyMock)
+    def test_move_first_backward(self, m_pc):
+        """Don't move object backward if it's first."""
+        o1 = OrderingListMixin()
+        o2 = OrderingListMixin()
+        o3 = OrderingListMixin()
+        l = [o1, o2, o3]
+        m_pc.return_value = l
+        o1.move(-1)
+        assert l == [o1, o2, o3]
+        o1.move(-42)
+        assert l == [o1, o2, o3]
+
+    @mock.patch('app.seeds.models.OrderingListMixin.parent_collection',
+                new_callable=mock.PropertyMock)
+    def test_move_after_forwards(self, m_pc):
+        """Move obj to position after other if other is after obj."""
+        o1 = OrderingListMixin()
+        o2 = OrderingListMixin()
+        o3 = OrderingListMixin()
+        l = [o1, o2, o3]
+        m_pc.return_value = l
+        o1.move_after(o2)
+        assert l == [o2, o1, o3]
+
+    @mock.patch('app.seeds.models.OrderingListMixin.parent_collection',
+                new_callable=mock.PropertyMock)
+    def test_move_after_backwards(self, m_pc):
+        """Move obj to position after other if other is before obj."""
+        o1 = OrderingListMixin()
+        o2 = OrderingListMixin()
+        o3 = OrderingListMixin()
+        l = [o1, o2, o3]
+        m_pc.return_value = l
+        o3.move_after(o1)
+        assert l == [o1, o3, o2]
+
+    @mock.patch('app.seeds.models.OrderingListMixin.parent_collection',
+                new_callable=mock.PropertyMock)
+    def test_move_after_last(self, m_pc):
+        """Move obj to last position if other is last."""
+        o1 = OrderingListMixin()
+        o2 = OrderingListMixin()
+        o3 = OrderingListMixin()
+        l = [o1, o2, o3]
+        m_pc.return_value = l
+        o1.move_after(o3)
+        assert l == [o2, o3, o1]
+
+    @mock.patch('app.seeds.models.OrderingListMixin.parent_collection',
+                new_callable=mock.PropertyMock)
+    def test_move_after_self(self, m_pc):
+        """Keep order the same if for some reason other is self."""
+        o1 = OrderingListMixin()
+        o2 = OrderingListMixin()
+        o3 = OrderingListMixin()
+        l = [o1, o2, o3]
+        m_pc.return_value = l
+        o1.move_after(o1)
+        assert l == [o1, o2, o3]
+        o2.move_after(o2)
+        assert l == [o1, o2, o3]
+        o3.move_after(o3)
+        assert l == [o1, o2, o3]
 
 
 class TestSynonymsMixin:
@@ -668,78 +808,6 @@ class TestCommonName:
         cv3.public = True
         cn.cultivars.append(cv3)
         assert cn.has_public_cultivars
-
-    def test_move_forward(self):
-        """Move a `CommonName` forward in `Index.common_names`."""
-        idx = Index()
-        cn1 = CommonName()
-        cn2 = CommonName()
-        cn3 = CommonName()
-        idx.common_names = [cn1, cn2, cn3]
-        cn1.move(1)
-        assert idx.common_names == [cn2, cn1, cn3]
-        cn2.move(2)
-        assert idx.common_names == [cn1, cn3, cn2]
-
-    def test_move_past_last(self):
-        """Move a `CommonName` to last position if delta > last position."""
-        idx = Index()
-        cn1 = CommonName()
-        cn2 = CommonName()
-        cn3 = CommonName()
-        idx.common_names = [cn1, cn2, cn3]
-        cn1.move(3)
-        assert idx.common_names == [cn2, cn3, cn1]
-        cn2.move(42)
-        assert idx.common_names == [cn3, cn1, cn2]
-
-    def test_move_last_forward(self):
-        """If a `CommonName` is already in the last position, don't move it."""
-        idx = Index()
-        cn1 = CommonName()
-        cn2 = CommonName()
-        cn3 = CommonName()
-        idx.common_names = [cn1, cn2, cn3]
-        cn3.move(1)
-        assert idx.common_names == [cn1, cn2, cn3]
-        cn3.move(42)
-        assert idx.common_names == [cn1, cn2, cn3]
-
-    def test_move_backward(self):
-        """Move a `CommonName` backward if delta is negative."""
-        idx = Index()
-        cn1 = CommonName()
-        cn2 = CommonName()
-        cn3 = CommonName()
-        idx.common_names = [cn1, cn2, cn3]
-        cn3.move(-1)
-        assert idx.common_names == [cn1, cn3, cn2]
-        cn2.move(-2)
-        assert idx.common_names == [cn2, cn1, cn3]
-
-    def test_move_before_beginning(self):
-        """Move a `CommonName` to first position if delta < first position."""
-        idx = Index()
-        cn1 = CommonName()
-        cn2 = CommonName()
-        cn3 = CommonName()
-        idx.common_names = [cn1, cn2, cn3]
-        cn3.move(-3)
-        assert idx.common_names == [cn3, cn1, cn2]
-        cn2.move(-42)
-        assert idx.common_names == [cn2, cn3, cn1]
-
-    def test_move_first_backward(self):
-        """If a `CommonName` is first, don't move it backwards."""
-        idx = Index()
-        cn1 = CommonName()
-        cn2 = CommonName()
-        cn3 = CommonName()
-        idx.common_names = [cn1, cn2, cn3]
-        cn1.move(-1)
-        assert idx.common_names == [cn1, cn2, cn3]
-        cn1.move(-42)
-        assert idx.common_names == [cn1, cn2, cn3]
 
 
 class TestBotanicalName:

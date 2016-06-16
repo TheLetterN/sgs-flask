@@ -398,6 +398,7 @@ class AddSectionForm(Form):
         validators=[Length(1, 64), NotSpace(), Optional()]
     )
     description = TextAreaField('Description', validators=[NotSpace()])
+    pos = SelectField('Position', coerce=int)
     submit = SubmitField('Add Section')
 
     def __init__(self, cn, *args, **kwargs):
@@ -408,6 +409,10 @@ class AddSectionForm(Form):
         """
         super().__init__(*args, **kwargs)
         self.cn = cn
+        self.pos.choices = position_choices(items=self.cn.sections,
+                                            order_by='cn_pos')
+        if not self.pos.data:
+            self.pos.data = self.pos.choices[-1][0]
 
     def validate_name(self, field):
         """Raise `ValidationError` if name  + common name already exists in db.

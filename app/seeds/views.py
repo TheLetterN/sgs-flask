@@ -564,7 +564,7 @@ def add_section(cn_id=None):
     form = AddSectionForm(cn=cn)
     if form.validate_on_submit():
         messages = []
-        section = Section(name=form.name.data, common_name=cn)
+        section = Section(name=form.name.data)
         db.session.add(section)
         messages.append('Creating section \'{0}\' for common name \'{1}\':'
                         .format(section.name, cn.name))
@@ -576,6 +576,15 @@ def add_section(cn_id=None):
             section.description = form.description.data
             messages.append('Description set to: <p>{0}</p>.'
                             .format(section.description))
+        if form.pos.data == -1:
+            cn.sections.insert(0, section)
+            messages.append('Will be listed before other sections in \'{0}\'.'
+                            .format(cn.name))
+        else:
+            after = Section.query.get(form.pos.data)
+            cn.sections.insert(cn.sections.index(after) + 1, section)
+            messages.append('Will be listed after \'{0}\' in \'{1}\'.'
+                            .format(after.name, cn.name))
         db.session.commit()
         messages.append('New section \'{0}\' added to the database.'
                         .format(section.fullname))

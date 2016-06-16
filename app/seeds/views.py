@@ -568,6 +568,11 @@ def add_section(cn_id=None):
         db.session.add(section)
         messages.append('Creating section \'{0}\' for common name \'{1}\':'
                         .format(section.name, cn.name))
+        if form.parent.data:
+            parent = next(s for s in cn.sections if s.id == form.parent.data)
+            parent.children.insert(len(parent.children), section)
+            messages.append('Will be a subsection of: \'{0}\''
+                            .format(parent.name))
         if form.subtitle.data:
             section.subtitle = form.subtitle.data
             messages.append('Subtitle set to: \'{0}\''

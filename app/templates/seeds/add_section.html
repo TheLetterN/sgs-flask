@@ -32,7 +32,10 @@
         {{ form.hidden_tag() }}
         <ol>
           <li>
-            {{ form_field(form.name)|indent(10)|safe }}<button type="button" id="dbify_name">dbify!</button>
+            {{ form_field(form.parent)|indent(10)|safe }}
+          </li>
+          <li>
+            {{ form_field(form.name)|indent(10)|safe }}<button type="button" class="dbify"  id="dbify_name">dbify!</button>
           </li>
           <li>
             {{ form_field(form.subtitle)|indent(10)|safe }}<button type="button" id="dbify_subtitle">dbify!</button>
@@ -41,7 +44,7 @@
             {{ form_field(form.description)|indent(10)|safe }}
           </li>
           <li>
-            {{ form_field(form.pos)|indent(10)|safe }}
+            {{ form_field(form.pos)|indent(10)|safe }}<span class="tooltip tooltip-warning"><span class="tooltip-text">If this section is a subsection of another, it will be positioned last in its parent section. You will need to edit it if you would like it in a different position.</span></span>
           </li>
           <li>
             {{ form.submit }}

@@ -389,9 +389,11 @@ class AddSectionForm(Form):
     Attributes:
         name: DBified string field for `Section` name.
         description: Text field for optional section description.
+        pos: Position within parent `CommonName.sections`.
 
         cn: The `CommonName` this `Section` will belong to.
     """
+    parent = SelectField('Subcategory Of (Optional)', coerce=int)
     name = StringField('Section Name', validators=[Length(1, 64), NotSpace()])
     subtitle = StringField(
         'Subtitle (Leave blank for default.)',
@@ -413,6 +415,11 @@ class AddSectionForm(Form):
                                             order_by='cn_pos')
         if not self.pos.data:
             self.pos.data = self.pos.choices[-1][0]
+        self.parent.choices = select_field_choices(items=self.cn.sections,
+                                                   order_by='id')
+        self.parent.choices.insert(0, (0, 'None'))
+#        if not self.parent.data:
+#            self.parent.data = 0
 
     def validate_name(self, field):
         """Raise `ValidationError` if name  + common name already exists in db.

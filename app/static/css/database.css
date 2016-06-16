@@ -68,24 +68,13 @@ form.admin input[type=radio] + label:after{content:None;}
 div.last_commit{text-align:center;}
 /* END last commit */
 /* BEGIN tooltips */
-.tooltip {
-    position: relative;
+.with-tooltip {
     display: inline;
+    position: relative;
 }
-.tooltip-warning:before {
-    content: "!";
-    padding: .2em .4em;
-    margin: .2em;
-    background-color: #fd0;
-    border-radius: 2px;
-}
-.tooltip-text {
-    visibility: hidden;
-    padding: .2em;
-    z-index: 1;
-}
-.tooltip:hover .tooltip-text {
-    visibility: visible;
+.with-tooltip:hover:after {
+    content: attr(data-tooltip);
+    margin: 0 .5em;
 }
 /* END tooltips */
 /* END database UI style *//* END database UI style *//* END database UI style *//* END database UI style *//* END database UI style */

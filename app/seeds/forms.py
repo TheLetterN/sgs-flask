@@ -411,8 +411,10 @@ class AddSectionForm(Form):
         """
         super().__init__(*args, **kwargs)
         self.cn = cn
-        self.pos.choices = position_choices(items=self.cn.sections,
-                                            order_by='cn_pos')
+        self.pos.choices = position_choices(
+            items=[s for s in self.cn.sections if not s.parent],
+            order_by='cn_pos'
+        )
         if not self.pos.data:
             self.pos.data = self.pos.choices[-1][0]
         self.parent.choices = select_field_choices(items=self.cn.sections,

@@ -1399,6 +1399,13 @@ class Section(db.Model):
         """Return a string representing a `Section` instance."""
         return '<{0} \'{1}\'>'.format(self.__class__.__name__, self.fullname)
 
+    @property
+    def parent_collection(self):
+        if self.parent:
+            return self.parent.children
+        else:
+            return self.common_name.sections
+
     @classmethod
     def get_or_create(cls, name, common_name, index, stream=sys.stdout):
         """Load a `Section` from the db, or create it if it doesn't exist.

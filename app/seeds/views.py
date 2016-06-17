@@ -2032,7 +2032,6 @@ def flip_in_stock(cv_id):
 
 
 @seeds.route('/flip_active/<int:cv_id>')
-@login_required
 @permission_required(Permission.MANAGE_SEEDS)
 def flip_active(cv_id):
     """Reverse active status of given cultivar."""
@@ -2052,6 +2051,7 @@ def flip_active(cv_id):
 
 
 @seeds.route('/flip_visible/<int:cv_id>')
+@permission_required(Permission.MANAGE_SEEDS)
 def flip_visible(cv_id):
     """Reverse visible status of given cultivar."""
     cv = Cultivar.query.get(cv_id)
@@ -2069,15 +2069,39 @@ def flip_visible(cv_id):
     return redirect(request.args.get('next') or url_for('seeds.manage'))
 
 
+# Functions and views for moving objects in ordering_list collections.
+def move_object(cls, obj_id, delta):
+    """Move a movable object (in an `ordering_list`) <delta> positions.
+
+    Args:
+        cls: The class (db model) of the object to move.
+        obj_id: The id (primary key) of the object to move.
+        delta: The number of positions to move; positive for forward, negative
+            for backward.
+    """
+    delta = int(delta)  # Flask's int converter doesn't handle negatives.
+    obj = cls.query.get(obj_id)
+    if obj is None:
+        abort(404)
+    obj.move(delta)
+    db.session.commit()
+    flash('\'{0}\' has been moved {1} {2} position{3}.'
+          .format(obj.name, 
+                  'forward' if delta > 0 else 'backward',
+                  abs(delta),
+                  's' if abs(delta) > 1 else ''))
+    return redirect(request.args.get('next') or url_for('seeds.manage'))
+
+
 @seeds.route('/move_common_name/<int:cn_id>/<delta>')
+@permission_required(Permission.MANAGE_SEEDS)
 def move_common_name(cn_id, delta):
     """Move a common name <delta> positions in its index."""
-    delta = int(delta)  # Flask's int converter doesn't handle negatives.
-    cn = CommonName.query.get(cn_id)
-    if cn is None:
-        abort(404)
-    cn.move(delta)
-    db.session.commit()
-    flash('\'{0}\' has been moved {1} {2} position(s).'
-          .format(cn.name, 'forward' if delta > 0 else 'backward', abs(delta)))
-    return redirect(request.args.get('next') or url_for('seeds.manage'))
+    return move_object(CommonName, cn_id, delta)
+
+
+@seeds.route('/move_section/<int:section_id>/<delta>')
+@permission_required(Permission.MANAGE_SEEDS)
+def move_section(section_id, delta):
+    """Move a section <delta> positions in its parent container."""
+    return move_object(Section, section_id, delta)

@@ -911,7 +911,8 @@ def edit_common_name(cn_id=None):
                 edited = True
                 cns.insert(0, cns.pop(cn_index))
                 messages.append('Will now be listed first.')
-            elif form.pos.data != -1 and form.pos.data != cns[cn_index - 1]:
+            elif (form.pos.data != -1 and
+                    (cn_index == 0 or form.pos.data != cns[cn_index - 1].id)):
                 edited = True
                 prev = next(c for c in cns if c.id == form.pos.data)
                 cn.move_after(prev)
@@ -1033,6 +1034,23 @@ def edit_section(section_id=None):
             )
             messages.append('Common name changed to: \'{0}\'.'
                             .format(section.common_name.name))
+        old_parent = section.parent
+        if form.parent_id.data == 0:
+            form.parent_id.data = None
+        if (old_cn is section.common_name and
+                form.parent_id.data != section.parent_id):
+            edited = True
+            if form.parent_id.data:
+                parent = next(
+                    s for s in section.common_name.sections if
+                    s.id == form.parent_id.data
+                )
+                parent.children.insert(len(parent.children), section)
+                messages.append('Will now be a subcategory of: \'{0}\''
+                                .format(section.parent.name))
+            else:
+                section.parent = None
+                messages.append('Will no longer be a subcategory.')
         old_name = section.name
         if form.name.data != section.name:
             edited = True
@@ -1059,6 +1077,22 @@ def edit_section(section_id=None):
             else:
                 section.description = None
                 messages.append('Description cleared.')
+        if section.common_name is old_cn and section.parent is old_parent:
+            secs = section.parent_collection
+            s_index = secs.index(section)
+            if form.pos.data == -1 and s_index != 0:
+                edited = True
+                secs.insert(0, secs.pop(s_index))
+                messages.append(
+                    'Will now be listed first in its parent container.'
+                )
+            elif (form.pos.data != -1 and
+                    (s_index == 0 or form.pos.data != secs[s_index - 1].id)):
+                edited = True
+                prev = next(s for s in secs if s.id == form.pos.data)
+                section.move_after(prev)
+                messages.append('Will now be listed after \'{0}\''
+                                .format(prev.name))
         if old_cn is not section.common_name:
             for cv in section.cultivars:
                 if cv.common_name is not section.common_name:

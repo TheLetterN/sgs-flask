@@ -420,8 +420,6 @@ class AddSectionForm(Form):
         self.parent.choices = select_field_choices(items=self.cn.sections,
                                                    order_by='id')
         self.parent.choices.insert(0, (0, 'None'))
-#        if not self.parent.data:
-#            self.parent.data = 0
 
     def validate_name(self, field):
         """Raise `ValidationError` if name  + common name already exists in db.
@@ -754,13 +752,12 @@ class EditCommonNameForm(Form):
 
     def __init__(self, *args, **kwargs):  # pragma: no cover
         super().__init__(*args, **kwargs)
-        self.set_selects()
         cn = kwargs['obj']
+        self.set_selects()
         self.pos.choices = position_choices(items=cn.index.common_names,
                                             order_by='idx_pos')
-        self_choice = next((c for c in self.pos.choices if c[0] == cn.id),
-                           None)
-        self.pos.choices.pop(self.pos.choices.index(self_choice))
+        self_choice = next(c for c in self.pos.choices if c[0] == cn.id)
+        self.pos.choices.remove(self_choice)
         if not self.pos.data:
             collection = cn.index.common_names
             cn_index = collection.index(cn)
@@ -881,6 +878,7 @@ class EditSectionForm(Form):
         description: Text field for `Section` description.
     """
     id = HiddenField()
+    parent_id = SelectField('Subsection Of (Optional)', coerce=int)
     common_name_id = SelectField('Select Common Name', coerce=int)
     name = StringField('Section Name', validators=[Length(1, 64), NotSpace()])
     subtitle = StringField('Subtitle (Leave blank for default.)',
@@ -888,10 +886,12 @@ class EditSectionForm(Form):
                                        NotSpace(),
                                        Optional()])
     description = TextAreaField('Description', validators=[NotSpace()])
+    pos = SelectField('Position', coerce=int)
     submit = SubmitField('Edit Section')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.obj = kwargs['obj']
         self.set_selects()
 
     def set_selects(self):
@@ -901,6 +901,21 @@ class EditSectionForm(Form):
             title_attribute='select_field_title',
             order_by='name'
         )
+        self.parent_id.choices = select_field_choices(
+            items=self.obj.common_name.sections,
+            order_by='cn_pos'
+        )
+        self.parent_id.choices.insert(0, (0, 'None'))
+        self.pos.choices = position_choices(items=self.obj.parent_collection)
+        self_choice = next(c for c in self.pos.choices if c[0] == self.obj.id)
+        self.pos.choices.remove(self_choice)
+        if not self.pos.data:
+            secs = self.obj.parent_collection
+            s_index = secs.index(self.obj)
+            if s_index == 0:
+                self.pos.data = -1
+            else:
+                self.pos.data = secs[s_index - 1].id
 
     def validate_name(self, field):
         """Raise if another `Section` exists with same name and CN."""

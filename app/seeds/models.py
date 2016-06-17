@@ -1314,7 +1314,7 @@ def before_botanical_name_insert_or_update(mapper, connection, target):
                          'whether or not a name is valid.')
 
 
-class Section(db.Model):
+class Section(OrderingListMixin, db.Model):
     """Table for sections cultivars may fall under.
 
     Sections are subdivisions of a common name which contain cultivars, such

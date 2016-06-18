@@ -875,6 +875,142 @@ class TestSection:
         assert ser.fullname == 'Dalmatian'
         ser.common_name = CommonName(name='Foxglove')
         assert ser.fullname == 'Dalmatian Foxglove'
+#
+#    def test_set_common_name_new(self):
+#        """Set common_name and parent_common_name."""
+#        cn = CommonName()
+#        sec = Section()
+#        sec.set_common_name(cn)
+#        assert sec.common_name is cn
+#        assert sec.parent_common_name is cn
+#
+#    def test_set_common_name_default_insert_at(self):
+#        """insert at the last position if not explicitly set."""
+#        cn = CommonName()
+#        s1 = Section()
+#        s1.set_common_name(cn)
+#        s2 = Section()
+#        s2.set_common_name(cn)
+#        assert cn.child_sections == [s1, s2]
+#        s3 = Section()
+#        s3.set_common_name(cn)
+#        assert cn.child_sections == [s1, s2, s3]
+#
+#    def test_set_common_name_too_high_insert_at(self):
+#        """If given insert_at greater than last index, insert at last index."""
+#        cn = CommonName()
+#        s1 = Section()
+#        s1.set_common_name(cn)
+#        s2 = Section()
+#        s2.set_common_name(cn, insert_at=42)
+#        assert cn.child_sections == [s1, s2]
+#
+#    def test_set_common_name_none(self):
+#        """Set common_name and parent_common_name to None if cn=None."""
+#        cn = CommonName()
+#        sec = Section()
+#        sec.common_name = cn
+#        sec.parent_common_name = cn
+#        sec.set_common_name(None)
+#        assert sec.common_name is None
+#        assert sec.parent_common_name is None
+#
+#    def test_set_common_name_clears_parent_new_cn(self):
+#        """If cn is new, clear parent."""
+#        cn1 = CommonName()
+#        cn2 = CommonName()
+#        sec = Section()
+#        psec = Section()
+#        sec.set_common_name(cn1)
+#        sec.parent = psec
+#        sec.set_common_name(cn2)
+#        assert sec.parent is None
+#
+#    def test_set_common_name_same_cn(self):
+#        """Remove parent and set parent_common_name anyway if given same cn."""
+#        cn = CommonName()
+#        sec = Section()
+#        sec.common_name = cn
+#        psec = Section()
+#        sec.parent = psec
+#        sec.set_common_name(cn)
+#        assert sec.common_name is cn
+#        assert sec.parent_common_name is cn
+#        assert sec.parent is None
+#
+#    def test_set_common_name_same_cn_new_position(self):
+#        """If cn is the same but insert_at is given, change its position."""
+#        cn = CommonName()
+#        s1 = Section()
+#        s2 = Section()
+#        s3 = Section()
+#        s1.set_common_name(cn)
+#        s2.set_common_name(cn)
+#        s3.set_common_name(cn)
+#        assert cn.child_sections == [s1, s2, s3]
+#        s3.set_common_name(cn, insert_at=0)
+#        assert cn.child_sections == [s3, s1, s2]
+#        s3.set_common_name(cn, insert_at=1)
+#        assert cn.child_sections == [s1, s3, s2]
+#
+#    def test_set_parent_same_as_self(self):
+#        """Raise a ValueError if trying to set a Section as its own parent."""
+#        sec = Section()
+#        with pytest.raises(ValueError):
+#            sec.set_parent(sec)
+#
+#    def test_set_parent_all_new(self):
+#        """Set parent to other."""
+#        sec = Section()
+#        psec = Section()
+#        sec.set_parent(psec)
+#        assert sec.parent is psec
+#
+#    def test_set_parent_with_cn(self):
+#        """Clear parent_common_name if setting parent."""
+#        cn = CommonName()
+#        sec = Section()
+#        psec = Section()
+#        sec.common_name = cn
+#        sec.parent_common_name = cn
+#        sec.set_parent(psec)
+#        assert sec.common_name is cn
+#        assert sec.parent_common_name is None
+#        assert sec.parent is psec
+#
+#    def test_set_parent_default_insert_at(self):
+#        """Insert at end of parent.children."""
+#        s1 = Section()
+#        s2 = Section()
+#        s3 = Section()
+#        psec = Section()
+#        s1.set_parent(psec)
+#        assert psec.children == [s1]
+#        s2.set_parent(psec)
+#        assert psec.children == [s1, s2]
+#        s3.set_parent(psec)
+#        assert psec.children == [s1, s2, s3]
+#
+#    def test_set_parent_too_high_insert_at(self):
+#        """Insert at end given insert_at beyond end."""
+#        s1 = Section()
+#        s2 = Section()
+#        psec = Section()
+#        s1.set_parent(psec)
+#        s2.set_parent(psec, insert_at=42)
+#        assert psec.children == [s1, s2]
+#
+#    def test_set_parent_same_parent_new_position(self):
+#        """Change position of section if setting to same parent."""
+#        s1 = Section()
+#        s2 = Section()
+#        s3 = Section()
+#        psec = Section()
+#        psec.children = [s1, s2, s3]
+#        s3.set_parent(psec, insert_at=0)
+#        assert psec.children == [s3, s1, s2]
+#        s2.set_parent(psec, insert_at=1)
+#        assert psec.children == [s3, s2, s1]
 
 
 class TestCultivar:

@@ -434,13 +434,16 @@ class OrderingListMixin(object):
         collection = self.parent_collection
         from_index = collection.index(self)
         to_index = from_index + delta
+        last_index = len(collection) - 1
         if to_index < 0:
             to_index = 0
-        last_index = collection.index(collection[-1])
         if to_index > last_index:
             to_index = last_index
         if from_index != to_index:
             collection.insert(to_index, collection.pop(from_index))
+            return True
+        else:
+            return False
 
     def move_after(self, other):
         """Move self to position after other.
@@ -869,11 +872,15 @@ class CommonName(OrderingListMixin, SynonymsMixin, db.Model):
         secondary=botanical_names_to_common_names,
         back_populates='common_names'
     )
-    sections = db.relationship(
+    sections = db.relationship('Section',
+            foreign_keys='Section.common_name_id',
+            back_populates='common_name')
+    child_sections = db.relationship(
         'Section',
         order_by='Section.cn_pos',
         collection_class=ordering_list('cn_pos', count_from=1),
-        back_populates='common_name'
+        foreign_keys='Section.parent_common_name_id',
+        back_populates='parent_common_name'
     )
     cultivars = db.relationship(
         'Cultivar',
@@ -918,7 +925,10 @@ class CommonName(OrderingListMixin, SynonymsMixin, db.Model):
     @property
     def parent_collection(self):
         """Return the collection `CommonName` instances are ordered in."""
-        return self.index.common_names
+        if self.index:
+            return self.index.common_names
+        else:
+            return None
 
     @property
     def dict_(self):
@@ -1351,14 +1361,26 @@ class Section(OrderingListMixin, db.Model):
 
     # Positions
     cn_pos = db.Column(db.Integer)
-    parent_pos = db.Column(db.Integer)
+    sec_pos = db.Column(db.Integer)
 
     # Data Required
     name = db.Column(db.String(64))
     common_name_id = db.Column(db.Integer, db.ForeignKey('common_names.id'))
-    common_name = db.relationship('CommonName', back_populates='sections')
+    common_name = db.relationship(
+        'CommonName',
+        foreign_keys=[common_name_id],
+        back_populates='sections'
+    )
 
     # Data Optional
+    parent_common_name_id = db.Column(
+        db.Integer, db.ForeignKey('common_names.id')
+    )
+    parent_common_name = db.relationship(
+        'CommonName',
+        foreign_keys=[parent_common_name_id],
+        back_populates='child_sections'
+    )
     botanical_names = db.relationship(
         'BotanicalName',
         secondary=botanical_names_to_sections,
@@ -1372,8 +1394,8 @@ class Section(OrderingListMixin, db.Model):
     )
     children = db.relationship(
         'Section',
-        order_by='Section.parent_pos',
-        collection_class=ordering_list('parent_pos', count_from=1),
+        order_by='Section.sec_pos',
+        collection_class=ordering_list('sec_pos', count_from=1),
         back_populates='parent'
     )
     cultivars = db.relationship(
@@ -1403,8 +1425,10 @@ class Section(OrderingListMixin, db.Model):
     def parent_collection(self):
         if self.parent:
             return self.parent.children
+        elif self.parent_common_name:
+            return self.parent_common_name.child_sections
         else:
-            return self.common_name.sections
+            return None
 
     @classmethod
     def get_or_create(cls, name, common_name, index, stream=sys.stdout):
@@ -1464,6 +1488,62 @@ class Section(OrderingListMixin, db.Model):
             if any(child.has_public_cultivars for child in self.children):
                 rv = True
         return rv
+
+    def set_common_name(self, cn, insert_at=None):
+        """Set common_name and deal with positioning.
+        
+        Args:
+            cn: The CommonName to set.
+        """
+        if cn is not None:
+            if insert_at is None or insert_at > len(cn.child_sections):
+                insert_at = len(cn.child_sections)
+            self.common_name = cn
+            self.parent = None
+            if self not in cn.child_sections:
+                cn.child_sections.insert(insert_at, self)
+            else:
+                csecs = cn.child_sections
+                csecs.insert(insert_at, csecs.pop(csecs.index(self)))
+        else:
+            self.common_name = None
+            self.parent_common_name = None
+
+    def set_parent(self, other, insert_at=None):
+        """Set other as parent, and deal with positioning."""
+        if other is not self:
+            if other is not None:
+                self.parent_common_name = None
+                if insert_at is None or insert_at > len(other.children):
+                    insert_at = len(other.children)
+                if self not in other.children:
+                    other.children.insert(insert_at, self)
+                else:
+                    oc = other.children
+                    oc.insert(insert_at, oc.pop(oc.index(self)))
+            else:
+                self.parent = None
+                self.parent_common_name = self.common_name
+        else:
+            raise ValueError('Cannot set section as its own parent!')
+
+
+@event.listens_for(CommonName.sections, 'append')
+def common_name_sections_appended(target, value, initiator):
+    if not value.parent:
+        value.parent_common_name = target
+
+@event.listens_for(CommonName.sections, 'remove')
+def common_name_sections_removed(target, value, initiator):
+    value.parent_common_name = None
+
+@event.listens_for(Section.children, 'append')
+def section_children_appended(target, value, intiator):
+    value.parent_common_name = None
+
+@event.listens_for(Section.children, 'remove')
+def section_children_removed(target, value, initiator):
+    value.parent_common_name = value.common_name
 
 
 class Cultivar(SynonymsMixin, db.Model):

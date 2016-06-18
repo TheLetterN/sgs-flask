@@ -1953,7 +1953,6 @@ def common_name(idx_slug=None, cn_slug=None):
             cblr.crumble('index', cn.index.header, idx_slug=idx_slug),
             cn.name
         )
-        sections = [s for s in cn.sections if not s.parent]
         featured = [c for c in cn.cultivars if c.featured]
         # TMP
         print(cn.name)
@@ -1964,7 +1963,6 @@ def common_name(idx_slug=None, cn_slug=None):
                                                      if c.in_stock)])))
         return render_template('seeds/common_name.html',
                                featured=featured,
-                               sections=sections,
                                individuals=individuals,
                                cn=cn,
                                count=count,
@@ -2083,13 +2081,19 @@ def move_object(cls, obj_id, delta):
     obj = cls.query.get(obj_id)
     if obj is None:
         abort(404)
-    obj.move(delta)
-    db.session.commit()
-    flash('\'{0}\' has been moved {1} {2} position{3}.'
-          .format(obj.name, 
-                  'forward' if delta > 0 else 'backward',
-                  abs(delta),
-                  's' if abs(delta) > 1 else ''))
+    old_index = obj.parent_collection.index(obj)
+    if obj.move(delta):
+        db.session.commit()
+        flash('\'{0}\' has been moved {1} {2} position{3}.'
+              .format(obj.name, 
+                      'forward' if delta > 0 else 'backward',
+                      abs(delta),
+                      's' if abs(delta) > 1 else ''))
+    else:
+        if delta < 0:
+            flash('\'{0}\' is already first.'.format(obj.name))
+        else:
+            flash('\'{0}\' is already last.'.format(obj.name))
     return redirect(request.args.get('next') or url_for('seeds.manage'))
 
 

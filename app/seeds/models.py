@@ -143,6 +143,14 @@ cultivars_to_images = db.Table(
 )
 
 
+cultivars_to_sections = db.Table(
+    'cultivars_to_sections',
+    db.Model.metadata,
+    db.Column('cultivar_id', db.Integer, db.ForeignKey('cultivars.id')),
+    db.Column('section_id', db.Integer, db.ForeignKey('sections.id'))
+)
+
+
 common_names_to_gw_common_names = db.Table(
     'common_names_to_gw_common_names',
     db.Model.metadata,
@@ -919,10 +927,15 @@ class CommonName(OrderingListMixin, SynonymsMixin, db.Model):
     )
     cultivars = db.relationship(
         'Cultivar',
-        order_by='Cultivar.cn_pos',
         foreign_keys='Cultivar.common_name_id',
-        collection_class=ordering_list('cn_pos', count_from=1),
         back_populates='common_name'
+    )
+    child_cultivars = db.relationship(
+        'Cultivar',
+        order_by='Cultivar.cn_pos',
+        foreign_keys='Cultivar.parent_common_name_id',
+        collection_class=ordering_list('cn_pos', count_from=1),
+        back_populates='parent_common_name'
     )
     synonyms = db.relationship('Synonym', back_populates='common_name')
 
@@ -1444,9 +1457,15 @@ class Section(OrderingListMixin, db.Model):
     )
     cultivars = db.relationship(
         'Cultivar',
+        secondary=cultivars_to_sections,
+        back_populates='sections'
+    )
+    child_cultivars = db.relationship(
+        'Cultivar',
+        foreign_keys='Cultivar.parent_section_id',
         order_by='Cultivar.sec_pos',
         collection_class=ordering_list('sec_pos', count_from=1),
-        back_populates='section'
+        back_populates='parent_section'
     )
 
     def __init__(self,
@@ -1661,7 +1680,11 @@ class Cultivar(OrderingListMixin, SynonymsMixin, db.Model):
     # Data Optional
     subtitle = db.Column(db.String(64))
     section_id = db.Column(db.Integer, db.ForeignKey('sections.id'))
-    section = db.relationship('Section', back_populates='cultivars')
+    sections = db.relationship(
+        'Section',
+        secondary=cultivars_to_sections,
+        back_populates='cultivars'
+    )
     botanical_name_id = db.Column(
         db.Integer,
         db.ForeignKey('botanical_names.id')
@@ -1715,6 +1738,21 @@ class Cultivar(OrderingListMixin, SynonymsMixin, db.Model):
         'CustomPage',
         secondary=cultivars_to_custom_pages,
         back_populates='cultivars'
+    )
+    parent_common_name_id = db.Column(
+        db.Integer,
+        db.ForeignKey('common_names.id')
+    )
+    parent_common_name = db.relationship(
+        'CommonName',
+        foreign_keys=parent_common_name_id,
+        back_populates='child_cultivars'
+    )
+    parent_section_id = db.Column(db.Integer, db.ForeignKey('sections.id'))
+    parent_section = db.relationship(
+        'Section',
+        foreign_keys=parent_section_id,
+        back_populates='child_cultivars'
     )
 
     def __init__(self,

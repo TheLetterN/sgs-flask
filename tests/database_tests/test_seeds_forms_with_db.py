@@ -203,9 +203,11 @@ class TestEditSectionFormWithDB:
         cn1 = CommonName(name='Foxglove')
         cn2 = CommonName(name='Butterfly Weed')
         cn3 = CommonName(name='Tomato')
+        sec = Section(name='Juicy')
+        sec.common_name = cn1
         db.session.add_all([cn1, cn2, cn3])
         db.session.commit()
-        form = EditSectionForm()
+        form = EditSectionForm(obj=sec)
         form.set_selects()
         assert (cn1.id, cn1.name) in form.common_name_id.choices
         assert (cn2.id, cn2.name) in form.common_name_id.choices

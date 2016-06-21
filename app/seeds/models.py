@@ -69,6 +69,17 @@ Notes:
     In MtM relationships, it will be specified in the appropriate association
     table.
 
+    Grows With:
+
+    Columns beginning with "gw_" represent that a CommonName or Cultivar grows
+    well with other CommonNames or Cultivars. These are unidirectional
+    relationships instead of bidirectional because they are used in generating
+    grows with links, and we don't necessarily want A grows with B to create
+    B grows with A, as it is often more important that customers know A grows
+    with B than that B grows with A, so rather than clutter up pages with
+    unnecessary grows with links that draw attention away from the important
+    grows with links, we only want the important links to be generated.
+
 """
 
 import datetime
@@ -132,13 +143,34 @@ cultivars_to_images = db.Table(
 )
 
 
-common_names_to_grows_with = db.Table(
-    'common_names_to_grows_with',
+common_names_to_gw_common_names = db.Table(
+    'common_names_to_gw_common_names',
     db.Model.metadata,
     db.Column('parent_id', db.Integer, db.ForeignKey('common_names.id')),
     db.Column('child_id', db.Integer, db.ForeignKey('common_names.id'))
 )
 
+
+common_names_to_gw_cultivars = db.Table(
+    'common_names_to_gw_cultivars',
+    db.Model.metadata,
+    db.Column('common_name_id', db.Integer, db.ForeignKey('common_names.id')),
+    db.Column('cultivar_id', db.Integer, db.ForeignKey('cultivars.id'))
+)
+
+cultivars_to_gw_common_names = db.Table(
+    'cultivars_to_gw_common_names',
+    db.Model.metadata,
+    db.Column('cultivar_id', db.Integer, db.ForeignKey('cultivars.id')),
+    db.Column('common_name_id', db.Integer, db.ForeignKey('common_names.id'))
+)
+
+cultivars_to_gw_cultivars = db.Table(
+    'cultivars_to_gw_cultivars',
+    db.Model.metadata,
+    db.Column('parent_id', db.Integer, db.ForeignKey('cultivars.id')),
+    db.Column('child_id', db.Integer, db.ForeignKey('cultivars.id'))
+)
 
 def dump_db_to_json(filename):
     """Save all data needed to copy the database into a JSON file."""
@@ -859,12 +891,15 @@ class CommonName(OrderingListMixin, SynonymsMixin, db.Model):
     )
     description = db.Column(db.Text)
     instructions = db.Column(db.Text)
-    grows_with = db.relationship(
+    gw_common_names = db.relationship(
         'CommonName',
-        secondary=common_names_to_grows_with,
-        primaryjoin=id == common_names_to_grows_with.c.parent_id,
-        secondaryjoin=id == common_names_to_grows_with.c.child_id,
-        backref='_gw_parents'  # Won't be used outside of testing.
+        secondary=common_names_to_gw_common_names,
+        primaryjoin=id == common_names_to_gw_common_names.c.parent_id,
+        secondaryjoin=id == common_names_to_gw_common_names.c.child_id
+    )
+    gw_cultivars = db.relationship(
+        'Cultivar',
+        secondary=common_names_to_gw_cultivars
     )
     visible = db.Column(db.Boolean)
     botanical_names = db.relationship(
@@ -885,6 +920,7 @@ class CommonName(OrderingListMixin, SynonymsMixin, db.Model):
     cultivars = db.relationship(
         'Cultivar',
         order_by='Cultivar.cn_pos',
+        foreign_keys='Cultivar.common_name_id',
         collection_class=ordering_list('cn_pos', count_from=1),
         back_populates='common_name'
     )
@@ -915,7 +951,8 @@ class CommonName(OrderingListMixin, SynonymsMixin, db.Model):
             self.slug == other.slug,
             self.description == other.description,
             self.instructions == other.instructions,
-            self.grows_with == other.grows_with,
+            self.gw_common_names == other.gw_common_names,
+            self.gw_cultivars == other.gw_cultivars,
             self.visible == other.visible
         )) if isinstance(other, CommonName) else False
 
@@ -940,7 +977,8 @@ class CommonName(OrderingListMixin, SynonymsMixin, db.Model):
             slug=self.slug,
             description=self.description,
             instructions=self.instructions,
-            grows_with=[g.id for g in self.grows_with],
+            gw_common_names=[cn.id for cn in self.gw_common_names],
+            gw_cultivars=[cv.id for cv in self.gw_cultivars],
             visible=self.visible
         )
 
@@ -977,12 +1015,18 @@ class CommonName(OrderingListMixin, SynonymsMixin, db.Model):
             This function should only be run after all CommonName instances
             have been loaded into the database!
         """
-        for gw_id in dict_['grows_with']:
-            gw = CommonName.query.get(gw_id)
+        for gwcn_id in dict_['gw_common_names']:
+            gw = CommonName.query.get(gwcn_id)
             if not gw:
                 raise RuntimeError('No CommonName exists with the id: {0}'
-                                   .format(gw_id))
-            self.grows_with.append(gw)
+                                   .format(gwcn_id))
+            self.gw_common_names.append(gw)
+        for gwcv_id in dict_['gw_cultivars']:
+            gw = Cultivar.query.get(gwcv_id)
+            if not gw:
+                raise RuntimeError('No Cultivar exists with the id: {0}'
+                                   .format(gwcv_id))
+            self.gw_cultivars.append(gw)
 
     @classmethod
     def from_queryable_values(cls, name, index):
@@ -1546,7 +1590,7 @@ def section_children_removed(target, value, initiator):
     value.parent_common_name = value.common_name
 
 
-class Cultivar(SynonymsMixin, db.Model):
+class Cultivar(OrderingListMixin, SynonymsMixin, db.Model):
     """Table for cultivar data.
 
     A cultivar is an individual variety of plant, and represents the most
@@ -1609,7 +1653,10 @@ class Cultivar(SynonymsMixin, db.Model):
     name = db.Column(db.String(64))
     slug = db.Column(db.String(64))
     common_name_id = db.Column(db.Integer, db.ForeignKey('common_names.id'))
-    common_name = db.relationship('CommonName', back_populates='cultivars')
+    common_name = db.relationship(
+        'CommonName',
+        foreign_keys=common_name_id,
+        back_populates='cultivars')
 
     # Data Optional
     subtitle = db.Column(db.String(64))
@@ -1654,6 +1701,16 @@ class Cultivar(SynonymsMixin, db.Model):
         back_populates='cultivar'
     )
     synonyms = db.relationship('Synonym', back_populates='cultivar')
+    gw_common_names = db.relationship(
+        'CommonName',
+        secondary=cultivars_to_gw_common_names
+    )
+    gw_cultivars = db.relationship(
+        'Cultivar',
+        secondary=cultivars_to_gw_cultivars,
+        primaryjoin=id == cultivars_to_gw_cultivars.c.parent_id,
+        secondaryjoin=id == cultivars_to_gw_cultivars.c.child_id
+    )
     custom_pages = db.relationship(
         'CustomPage',
         secondary=cultivars_to_custom_pages,

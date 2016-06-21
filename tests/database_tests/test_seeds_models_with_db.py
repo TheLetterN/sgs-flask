@@ -145,23 +145,23 @@ class TestCommonNameWithDB:
         db.session.add_all([a, b, c])
         db.session.flush()
         cn = CommonName(name='Test')
-        cn.grows_with = [a, b, c]
+        cn.gw_common_names = [a, b, c]
         d = cn.dict_
         cn2 = CommonName(name='Test2')
         cn2.gw_from_dict_(d)
-        assert cn.grows_with == cn2.grows_with
+        assert cn.gw_common_names == cn2.gw_common_names
 
     def test_gw_from_dict_missing_cns(self, db):
-        """Raise a KeyError if any needed CNs are missing."""
+        """Raise a RuntimeError if any needed CNs are missing."""
         a = CommonName(name='a')
         b = CommonName(name='b')
         c = CommonName(name='c')
         db.session.add_all([a, b, c])
         db.session.flush()
         cn = CommonName(name='Test')
-        cn.grows_with = [a, b, c]
+        cn.gw_common_names = [a, b, c]
         d = cn.dict_
-        d['grows_with'].append(42)
+        d['gw_common_names'].append(42)
         cn2 = CommonName(name='Test2')
         with pytest.raises(RuntimeError):
             cn2.gw_from_dict_(d)

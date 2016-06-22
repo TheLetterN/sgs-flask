@@ -1591,6 +1591,26 @@ class Section(OrderingListMixin, db.Model):
             raise ValueError('Cannot set section as its own parent!')
 
 
+@event.listens_for(Section.parent, 'set')
+def section_parent_no_loop(target, value, oldvalue, initiator):
+    """Do not allow a parent-child loop to be created.
+
+    If a `Section` parent-child loop is created, it will cause endless loops
+    when iterating through parent-child relationships.
+    """
+    parents = [target]
+    p = value
+    while p is not None:
+        if value in parents:
+            raise RuntimeError(
+                'Setting {0} as parent to {1} would create a parent-child '
+                'loop!'.format(value, target)
+            )
+        else:
+            parents.append(p)
+            p = p.parent
+
+
 @event.listens_for(CommonName.sections, 'append')
 def common_name_sections_appended(target, value, initiator):
     if not value.parent:
@@ -1953,8 +1973,32 @@ def section_child_cultivars_appended(target, value, intiator):
 
 @event.listens_for(Section.child_cultivars, 'remove')
 def section_child_cultivars_removed(target, value, initiator):
-    print('child_cultivars removed')#TMP
     if not value.sections:
+        value.parent_common_name = value.common_name
+
+@event.listens_for(Section.cultivars, 'append')
+def section_cultivars_appended(target, value, initiator):
+    if target.parent and value not in target.parent.cultivars:
+        target.parent.cultivars.append(value)
+    if not target.children or set(target.children).isdisjoint(value.sections):
+        value.parent_section = target
+
+@event.listens_for(Section.cultivars, 'remove')
+def section_cultivars_removed(target, value, initiator):
+    print('removing parent {0} from {1}'.format(value, target))
+    try:
+        for c in target.children:
+            try:
+                c.cultivars.remove(value)
+            except ValueError:
+                pass
+    except TypeError:
+        pass
+    if target.parent:
+        value.parent_section = target.parent
+        print(value.parent_section)
+    else:
+        value.parent_section = None
         value.parent_common_name = value.common_name
 
 

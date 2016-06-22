@@ -48,7 +48,6 @@ form.admin input[type=radio] + label:after{content:None;}
 /* BEGIN cultivar admin */
 .cultivar-admin{background:#fff;border:1px solid #aaa;margin-top:.5em;padding:.5em;}
 .cultivar-admin li{margin:.5em .2em;}
-.cultivar-admin a+a:before{content:' | ';}
 .packet-admin{border-top:1px solid #aaa;margin-top:.5em;padding-top:.5em;}
 /* END cultivar admin */
 /* BEGIN status */

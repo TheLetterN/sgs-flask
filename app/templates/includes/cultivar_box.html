@@ -56,7 +56,8 @@ Copyright Swallowtail Garden Seeds, Inc
 		<tr><th class="Cultivar_table_out_of_stock">OUT OF STOCK</th></tr>
 		{% endif %}
 	</table>
-	{% endif %}
+  {% endif %}
+  {# Cultivar admin below #}
 	{% if current_user.can(Permission.MANAGE_SEEDS) %}
 	<div class="cultivar-admin">
 		<h3>ADMIN - Options for {{ cultivar.fullname }}:</h3>
@@ -90,8 +91,7 @@ Copyright Swallowtail Garden Seeds, Inc
 				{% endif %}
 			</li>
 		</ul>
-		<a href="{{ url_for('seeds.edit_cultivar', cv_id=cultivar.id) }}">Edit {{ cultivar.fullname }}</a>
-		<a href="{{ url_for('seeds.remove_cultivar', cv_id=cultivar.id) }}">Remove {{ cultivar.fullname }}</a>
+    <a title="move up/backward" href="{{ url_for('seeds.move_cultivar', cv_id=cultivar.id, delta=-1, next=request.path + '#{}'.format(cultivar.slug)) }}">&#9650;</a> | <a href="{{ url_for('seeds.edit_cultivar', cv_id=cultivar.id) }}">Edit {{ cultivar.fullname }}</a> | <a href="{{ url_for('seeds.remove_cultivar', cv_id=cultivar.id) }}">Remove {{ cultivar.fullname }}</a> | <a title="move down/forward" href="{{ url_for('seeds.move_cultivar', cv_id=cultivar.id, delta=1, next=request.path + '#{}'.format(cultivar.slug)) }}">&#9660;</a>
 		<div class="packet-admin">
 			<h4>Packets for {{ cultivar.fullname }}:</h4>
 			{% if cultivar.packets %}

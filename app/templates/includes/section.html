@@ -33,7 +33,7 @@ Copyright Swallowtail Garden Seeds, Inc
 		{% endif %}
 	</div>
 	<div class="{{ class_prefix }}_cultivars">
-		{% for cv in sec.cultivars %}
+		{% for cv in sec.child_cultivars %}
 		{% if not cv.featured %}
 		{{ cultivar_box(cv)|indent(ind + 2)|safe }}
 		{% endif %}

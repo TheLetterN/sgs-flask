@@ -628,9 +628,10 @@ def add_cultivar(cn_id=None):
             messages.append('Botanical name set to: \'{0}\'.'
                             .format(cv.botanical_name.name))
         if form.section.data:
-            cv.section = Section.query.get(form.section.data)
+            sec = Section.query.get(form.section.data)
+            cv.sections = [sec]
             messages.append('Section set to: \'{0}\'.'
-                            .format(cv.section.name))
+                            .format(sec.name))
         if form.thumbnail.data:
             add_thumbnail(form.thumbnail, cv, messages)
         if form.description.data:
@@ -1179,11 +1180,12 @@ def edit_cultivar(cv_id=None):
         if form.section_id.data != cv.section_id:
             edited = True
             if form.section_id.data:
-                cv.section = Section.query.get(form.section_id.data)
+                sec = Section.query.get(form.section_id.data)
+                cv.sections = [sec]
                 messages.append('Section changed to: \'{0}\'.'
-                                .format(cv.section.name))
+                                .format(sec.name))
             else:
-                cv.section = None
+                cv.sections = []
                 messages.append('Section cleared.')
         if form.subtitle.data != cv.subtitle:
             if form.subtitle.data:
@@ -1946,7 +1948,7 @@ def common_name(idx_slug=None, cn_slug=None):
         .filter(CommonName.slug == cn_slug, Index.slug == idx_slug)\
         .one_or_none()
     if cn is not None:
-        individuals = [cv for cv in cn.cultivars if not cv.section]
+        individuals = cn.child_cultivars
         count = len([cv for cv in cn.cultivars if cv.public])
         crumbs = (
             cblr.crumble('home', 'Home'),
@@ -2109,3 +2111,9 @@ def move_common_name(cn_id, delta):
 def move_section(section_id, delta):
     """Move a section <delta> positions in its parent container."""
     return move_object(Section, section_id, delta)
+
+@seeds.route('/move_cultivar/<int:cv_id>/<delta>')
+@permission_required(Permission.MANAGE_SEEDS)
+def move_cultivar(cv_id, delta):
+    """Move a cultivar <delta> positions in its parent container."""
+    return move_object(Cultivar, cv_id, delta)

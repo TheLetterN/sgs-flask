@@ -1596,13 +1596,16 @@ def common_name_sections_appended(target, value, initiator):
     if not value.parent:
         value.parent_common_name = target
 
+
 @event.listens_for(CommonName.sections, 'remove')
 def common_name_sections_removed(target, value, initiator):
     value.parent_common_name = None
 
+
 @event.listens_for(Section.children, 'append')
 def section_children_appended(target, value, intiator):
     value.parent_common_name = None
+
 
 @event.listens_for(Section.children, 'remove')
 def section_children_removed(target, value, initiator):
@@ -1789,6 +1792,15 @@ class Cultivar(OrderingListMixin, SynonymsMixin, db.Model):
         return '<{0} \'{1}\'>'.format(self.__class__.__name__,
                                       self.fullname)
 
+    @property
+    def parent_collection(self):
+        if self.parent_section:
+            return self.parent_section.child_cultivars
+        elif self.parent_common_name:
+            return self.parent_common_name.child_cultivars
+        else:
+            return None
+
     @classmethod
     def from_queryable_values(cls, name, common_name, index):
         """Query a `Cultivar` from the database given its core values.
@@ -1921,6 +1933,29 @@ class Cultivar(OrderingListMixin, SynonymsMixin, db.Model):
 def before_cultivar_insert_or_update(mapper, connection, target):
     """Update a `Cultivar` before flushing changes to the database."""
     target.slug = target.generate_slug()
+
+
+@event.listens_for(CommonName.cultivars, 'append')
+def common_name_cultivars_appended(target, value, initiator):
+    if not value.parent_section:
+        value.parent_common_name = target
+
+
+@event.listens_for(CommonName.cultivars, 'remove')
+def common_name_cultivars_removed(target, value, initiator):
+    value.parent_common_name = None
+
+
+@event.listens_for(Section.child_cultivars, 'append')
+def section_child_cultivars_appended(target, value, intiator):
+    value.parent_common_name = None
+
+
+@event.listens_for(Section.child_cultivars, 'remove')
+def section_child_cultivars_removed(target, value, initiator):
+    print('child_cultivars removed')#TMP
+    if not value.sections:
+        value.parent_common_name = value.common_name
 
 
 class Packet(db.Model):

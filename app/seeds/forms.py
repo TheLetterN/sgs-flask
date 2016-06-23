@@ -79,14 +79,14 @@ def select_field_choices(model=None,
             from the attribute specified by `title_attribute`. If model is not
             set and items is falsey, return an empty list.
     """
-    if not order_by:
-        order_by = 'position' if hasattr(model, 'position') else 'id'
     if not items:
+        if not order_by:
+            order_by = 'position' if hasattr(model, 'position') else 'id'
         if model:
             items = model.query.order_by(order_by).all()
         else:
             return []
-    else:
+    elif order_by:  # Use default order of items if order_by not specified.
         items = sorted(items, key=lambda x: getattr(x, order_by))
     return [(item.id, getattr(item, title_attribute)) for item in items]
 
@@ -476,6 +476,7 @@ class AddCultivarForm(Form):
         validators=[FileAllowed(IMAGE_EXTENSIONS, 'Images only!')]
     )
     description = TextAreaField('Description', validators=[NotSpace()])
+    pos = SelectField('Position', coerce=int)
     synonyms = StringField('Synonyms', validators=[SynonymLength(1, 64),
                                                    NotSpace()])
     new_until = DateField('New until (leave as-is if not new)',
@@ -540,6 +541,9 @@ class AddCultivarForm(Form):
         self.section.choices = select_field_choices(items=self.cn.sections,
                                                     order_by='name')
         self.section.choices.insert(0, (0, 'None'))
+        self.pos.choices = position_choices(items=self.cn.child_cultivars)
+        if not self.pos.data:
+            self.pos.data = self.pos.choices[-1][0]
 
 
 class AddPacketForm(Form):
@@ -968,6 +972,7 @@ class EditCultivarForm(Form):
                                        NotSpace(),
                                        Optional()])
     description = TextAreaField('Description', validators=[NotSpace()])
+    pos = SelectField('Position', coerce=int)
     thumbnail = SecureFileField(
         'New Thumbnail',
         validators=[FileAllowed(IMAGE_EXTENSIONS, 'Images only!')]
@@ -985,6 +990,7 @@ class EditCultivarForm(Form):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.obj = kwargs['obj']
         self.set_selects()
 
     def set_selects(self):
@@ -1002,6 +1008,16 @@ class EditCultivarForm(Form):
         self.section_id.choices = select_field_choices(model=Section,
                                                        order_by='name')
         self.section_id.choices.insert(0, (0, 'N/A'))
+        self.pos.choices = position_choices(items=self.obj.parent_collection)
+        self_choice = next(c for c in self.pos.choices if c[0] == self.obj.id)
+        self.pos.choices.remove(self_choice)
+        if not self.pos.data:
+            cvs = self.obj.parent_collection
+            cv_index = cvs.index(self.obj)
+            if cv_index == 0:
+                self.pos.data = -1
+            else:
+                self.pos.data = cvs[cv_index - 1].id
 
     def validate_name(self, field):
         """Raise ValidationError if changes would create duplicate cultivar."""

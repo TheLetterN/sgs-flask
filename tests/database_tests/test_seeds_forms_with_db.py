@@ -168,24 +168,6 @@ class TestAddCultivarFormWithDB:
             form3.validate_name(form3.name)
 
 
-class TestEditCultivarFormWithDB:
-    """Test custom methods of EditCultivarForm."""
-    def test_set_selects(self, db):
-        """Set selects with values loaded from database."""
-        bn = BotanicalName()
-        cn = CommonName()
-        idx = Index()
-        db.session.add_all([bn, cn, idx])
-        bn.name = 'Digitalis purpurea'
-        cn.name = 'Foxglove'
-        idx.name = 'Foxy'
-        db.session.commit()
-        form = EditCultivarForm()
-        form.set_selects()
-        assert (bn.id, bn.name) in form.botanical_name_id.choices
-        assert (cn.id, cn.name) in form.common_name_id.choices
-
-
 class TestEditPacketFormWithDB:
     """Test custom methods of EditPacketForm."""
     def test_validate_qty_val(self, db):

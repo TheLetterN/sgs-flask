@@ -503,6 +503,16 @@ class OrderingListMixin(object):
             other_index, self.parent_collection.pop(self_index)
         )
 
+    def insert_after(self, other):
+        """Insert at index after `other`.
+
+        Args:
+            other: An instance of the same model to place `self` after.
+        """
+        self.parent_collection.insert(
+            self.parent_collection.index(other) + 1, self
+        )
+
 
 class SynonymsMixin(object):
     """A mixin class to easily interact with synonyms in child classes."""
@@ -1488,8 +1498,8 @@ class Section(OrderingListMixin, db.Model):
     def parent_collection(self):
         if self.parent:
             return self.parent.children
-        elif self.parent_common_name:
-            return self.parent_common_name.child_sections
+        elif self.common_name:
+            return self.common_name.child_sections
         else:
             return None
 
@@ -1816,8 +1826,8 @@ class Cultivar(OrderingListMixin, SynonymsMixin, db.Model):
     def parent_collection(self):
         if self.parent_section:
             return self.parent_section.child_cultivars
-        elif self.parent_common_name:
-            return self.parent_common_name.child_cultivars
+        elif self.common_name:
+            return self.common_name.child_cultivars
         else:
             return None
 
@@ -1958,7 +1968,7 @@ def before_cultivar_insert_or_update(mapper, connection, target):
 @event.listens_for(CommonName.cultivars, 'append')
 def common_name_cultivars_appended(target, value, initiator):
     if not value.parent_section:
-        value.parent_common_name = target
+        target.child_cultivars.insert(len(target.child_cultivars), value)
 
 
 @event.listens_for(CommonName.cultivars, 'remove')
@@ -1981,7 +1991,7 @@ def section_cultivars_appended(target, value, initiator):
     if target.parent and value not in target.parent.cultivars:
         target.parent.cultivars.append(value)
     if not target.children or set(target.children).isdisjoint(value.sections):
-        value.parent_section = target
+        target.child_cultivars.insert(len(target.child_cultivars), value)
 
 @event.listens_for(Section.cultivars, 'remove')
 def section_cultivars_removed(target, value, initiator):

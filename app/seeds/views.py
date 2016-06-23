@@ -638,6 +638,23 @@ def add_cultivar(cn_id=None):
             cv.description = form.description.data
             messages.append('Description set to: <p>{0}</p>'
                             .format(cv.description))
+        if not cv.sections:
+            try:
+                cn.child_cultivars.remove(cv)
+            except ValueError:
+                pass
+            if form.pos.data == -1:
+                cn.child_cultivars.insert(0, cv)
+                messages.append(
+                    'Will be listed before other individual cultivars '
+                    'belonging to \'{0}\'.'.format(cn.name)
+                )
+            else:
+                after = Cultivar.query.get(form.pos.data)
+                cv.insert_after(after)
+                messages.append(
+                    'Will be listed after \'{0}\'.'.format(after.fullname)
+                )
         if form.synonyms.data:
             cv.synonyms_string = form.synonyms.data
             messages.append('Synonyms set to: \'{0}\'.'
@@ -1157,6 +1174,7 @@ def edit_cultivar(cv_id=None):
         old_slugs = {'cv': cv.slug,
                      'cn': cv.common_name.slug,
                      'idx': cv.common_name.index.slug}
+        old_cn = cv.common_name
         if form.common_name_id.data != cv.common_name_id:
             edited = True
             cv.common_name = CommonName.query.get(form.common_name_id.data)
@@ -1175,6 +1193,7 @@ def edit_cultivar(cv_id=None):
             else:
                 cv.botanical_name = None
                 messages.append('Botanical name cleared.')
+        old_parent_sec = cv.parent_section
         if not form.section_id.data:
             form.section_id.data = None
         if form.section_id.data != cv.section_id:
@@ -1224,6 +1243,23 @@ def edit_cultivar(cv_id=None):
                                 .format(cv.synonyms_string))
             else:
                 messages.append('Synonyms cleared.')
+        if old_cn is cv.common_name and old_parent_sec is cv.parent_section:
+            pc = cv.parent_collection
+            cv_index = pc.index(cv)
+            if form.pos.data == -1 and cv_index != 0:
+                edited = True
+                pc.insert(0, pc.pop(cv_index))
+                messages.append(
+                    'Will now be listed first in its parent container.'
+                )
+            elif (form.pos.data != -1 and
+                    (cv_index == 0 or form.pos.data != pc[cv_index - 1].id)):
+                edited = True
+                prev = next(cv for cv in pc if cv.id == form.pos.data)
+                cv.move_after(prev)
+                messages.append('Will now be listed after \'{0}\'.'
+                                .format(prev.fullname))
+            
         if (not form.new_until.data or
                 form.new_until.data <= datetime.date.today()):
             form.new_until.data = None

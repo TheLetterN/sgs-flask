@@ -15,10 +15,10 @@
  
    Copyright Swallowtail Garden Seeds, Inc 
 #}
-{% macro dbify_input(button_id, input_name) %}
+{% macro dbify_input(input_name) %}
       <script type="text/javascript">
         $(function() {
-          $('button#{{ button_id }}').bind('click', function() {
+          $('button#dbify-{{ input_name }}').bind('click', function() {
             $.getJSON('{{ url_for('seeds._dbify') }}', {
               text: $('input[name="{{ input_name }}"]').val()
             }, function(data) {

@@ -35,10 +35,10 @@
             {{ form_field(form.parent)|indent(10)|safe }}
           </li>
           <li>
-            {{ form_field(form.name)|indent(10)|safe }}<button type="button" class="dbify"  id="dbify_name">dbify!</button>
+            {{ form_field(form.name, dbifiable=True)|indent(10)|safe }}
           </li>
           <li>
-            {{ form_field(form.subtitle)|indent(10)|safe }}<button type="button" id="dbify_subtitle">dbify!</button>
+            {{ form_field(form.subtitle, dbifiable=True)|indent(10)|safe }}
           </li>
           <li>
             {{ form_field(form.description)|indent(10)|safe }}
@@ -54,6 +54,6 @@
 {% endblock %}
 {% block scripts %}
 {% from "includes/dbify_input.html" import dbify_input %}
-{{ dbify_input(button_id='dbify_name', input_name='name')|safe }}
-{{ dbify_input(button_id='dbify_subtitle', input_name='subtitle')|safe }}
+{{ dbify_input(input_name=form.name.name)|safe }}
+{{ dbify_input(input_name=form.subtitle.name)|safe }}
 {% endblock %}

@@ -76,6 +76,10 @@ div.last_commit{text-align:center;}
     margin: 0 .5em;
 }
 /* END tooltips */
+.dbify-button {
+    margin: 0 .5em;
+    vertical-align: text-bottom;
+}
 /* END database UI style *//* END database UI style *//* END database UI style *//* END database UI style *//* END database UI style */
 /* END database UI style *//* END database UI style *//* END database UI style *//* END database UI style *//* END database UI style */
 /* END database UI style *//* END database UI style *//* END database UI style *//* END database UI style *//* END database UI style */

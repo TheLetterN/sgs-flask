@@ -138,31 +138,20 @@ def flash_all(messages, category='message'):
             flash(message, category)
 
 
-def list_to_or_string(lst):
-    """Return a comma-separated list with 'or' before the last element.
+def list_to_english(items, last_delimiter=', and '):
+    """Return a string listing items with an appropriate last delimiter.
 
     Args:
-        lst (list): A list of strings to convert to a single string.
-
-    Examples:
-        >>> list_to_or_string(['frogs'])
-        'frogs'
-
-        >>> list_to_or_string(['frogs', 'toads'])
-        'frogs or toads'
-
-        >>> list_to_or_string(['frogs', 'toads', 'salamanders'])
-        'frogs, toads, or salamanders'
+        items: A list of strings to convert to a single string.
     """
-    if len(lst) > 1:
-        if len(lst) == 2:
-            return ' or '.join(lst)
-        else:
-            lstc = list(lst)  # Don't change values of original list
-            lstc[-1] = 'or ' + lstc[-1]
-            return ', '.join(lstc)
+    items = [str(i) for i in items]
+    if len(items) == 2:
+        return last_delimiter.replace(',', '').join(items)
+    elif len(items) > 1:
+        items.append(last_delimiter.join([items.pop(-2), items.pop()]))
+        return ', '.join(items)
     else:
-        return lst[0]
+        return lst.pop()
 
 
 def redirect_warning(old_path, links):
@@ -411,6 +400,7 @@ def edit_thumbnail(field, obj, messages):
                             .format(obj.thumbnail.filename))
 
 
+# Routes
 @seeds.route('/_dbify')
 def _dbify():
     text = request.args.get('text', '', type=str)
@@ -494,6 +484,22 @@ def add_common_name(idx_id=None):
             idx.common_names.insert(idx.common_names.index(after) + 1, cn)
             messages.append('Will be listed after \'{0}\'.'
                             .format(after.name))
+        if form.gw_common_names_ids.data:
+            cn.gw_common_names = CommonName.from_ids(
+                form.gw_common_names_ids.data
+            )
+            messages.append(
+                'Grows with common names: {}.'
+                .format(list_to_english([c.name for c in cn.gw_common_names]))
+            )
+        if form.gw_cultivars_ids.data:
+            cn.gw_cultivars = Cultivar.from_ids(
+                form.gw_cultivars_ids.data
+            )
+            messages.append(
+                'Grows with cultivars: {}.'
+                .format(list_to_english([c.name for c in cn.gw_cultivars]))
+            )
         if form.visible.data:
             cn.visible = True
             messages.append('\'{0}\' is visible on auto-generated pages.'

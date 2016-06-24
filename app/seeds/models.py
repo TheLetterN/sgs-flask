@@ -991,6 +991,16 @@ class CommonName(OrderingListMixin, SynonymsMixin, db.Model):
             return None
 
     @property
+    def gw_common_names_ids(self):
+        """Return list of ids of `gw_common_names`."""
+        return [gwcn.id for gwcn in self.gw_common_names]
+
+    @property
+    def gw_cultivars_ids(self):
+        """Return list of ids of `gw_cultivars`."""
+        return [gwcv.id for gwcv in self.gw_cultivars]
+
+    @property
     def dict_(self):
         """Return a dictionary of values needed to duplicate `CommonName`."""
         return dict(
@@ -1050,6 +1060,18 @@ class CommonName(OrderingListMixin, SynonymsMixin, db.Model):
                 raise RuntimeError('No Cultivar exists with the id: {0}'
                                    .format(gwcv_id))
             self.gw_cultivars.append(gw)
+
+    @classmethod
+    def from_ids(cls, ids):
+        """Return a list of `CommonName` instances with `ids`.
+
+        Args:
+            ids: A collection of `CommonName.id` values to query for.
+        
+        Returns:
+            list: A list of `CommonName` instances each with an id in `ids`.
+        """
+        return [cls.query.get(id) for id in ids]
 
     @classmethod
     def from_queryable_values(cls, name, index):
@@ -1830,6 +1852,18 @@ class Cultivar(OrderingListMixin, SynonymsMixin, db.Model):
             return self.common_name.child_cultivars
         else:
             return None
+
+    @classmethod
+    def from_ids(cls, ids):
+        """Get `Cultivar` instances corresponding to `ids`.
+
+        Args:
+            ids: A collection of `Cultivar.id` to query.
+
+        Returns:
+            list: A list of `Cultivar` instances with given ids.
+        """
+        return [cls.query.get(id) for id in ids]
 
     @classmethod
     def from_queryable_values(cls, name, common_name, index):

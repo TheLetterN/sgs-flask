@@ -280,12 +280,12 @@ class AddCommonNameForm(Form):
                            validators=[NotSpace(), SynonymLength(0, 64)])
     pos = SelectField('Position', coerce=int)
     visible = BooleanField('Show on auto-generated pages', default='checked')
-    gw_common_names = SelectMultipleField(
+    gw_common_names_ids = SelectMultipleField(
         'Other Common Names',
         render_kw={'size':10},
         coerce=int
     )
-    gw_cultivars = SelectMultipleField(
+    gw_cultivars_ids = SelectMultipleField(
         'Cultivars',
         render_kw={'size':10},
         coerce=int
@@ -314,8 +314,11 @@ class AddCommonNameForm(Form):
                                             order_by='idx_pos')
         if not self.pos.data:
             self.pos.data = self.pos.choices[-1][0]
-        self.gw_common_names.choices = select_field_choices(model=CommonName)
-        self.gw_cultivars.choices = select_field_choices(
+        self.gw_common_names_ids.choices = select_field_choices(
+            model=CommonName,
+            order_by='name'
+        )
+        self.gw_cultivars_ids.choices = select_field_choices(
             model=Cultivar,
             order_by='name',
             title_attribute='fullname'

@@ -774,12 +774,40 @@ class EditCommonNameForm(Form):
                                  validators=[NotSpace()])
     synonyms_string = StringField('Synonyms', validators=[NotSpace()])
     pos = SelectField('Position', coerce=int)
+    gw_common_names_ids = SelectMultipleField(
+        'Other Common Names',
+        render_kw={'size':10},
+        coerce=int
+    )
+    gw_cultivars_ids = SelectMultipleField(
+        'Cultivars',
+        render_kw={'size':10},
+        coerce=int
+    )
     submit = SubmitField('Edit Common Name')
 
     def __init__(self, *args, **kwargs):  # pragma: no cover
         super().__init__(*args, **kwargs)
-        cn = kwargs['obj']
+        self.obj = kwargs['obj']
         self.set_selects()
+
+    def set_selects(self):
+        """Populate indexes with Indexes from the database."""
+        cn = self.obj
+        self.index_id.choices = select_field_choices(model=Index)
+        self.gw_common_names_ids.choices = select_field_choices(
+            model=CommonName,
+            order_by='name'
+        )
+        self_cn_choice = next(
+            c for c in self.gw_common_names_ids.choices if c[0] == cn.id
+        )
+        self.gw_common_names_ids.choices.remove(self_cn_choice)
+        self.gw_cultivars_ids.choices = select_field_choices(
+            model=Cultivar,
+            order_by='name',
+            title_attribute='fullname'
+        )
         self.pos.choices = position_choices(items=cn.index.common_names,
                                             order_by='idx_pos')
         self_choice = next(c for c in self.pos.choices if c[0] == cn.id)
@@ -791,10 +819,6 @@ class EditCommonNameForm(Form):
                 self.pos.data = -1
             else:
                 self.pos.data = collection[cn_index - 1].id
-
-    def set_selects(self):
-        """Populate indexes with Indexes from the database."""
-        self.index_id.choices = select_field_choices(model=Index)
 
     def validate_name(self, field):
         """Raise ValidationError if conflict would be created."""

@@ -490,7 +490,7 @@ def add_common_name(idx_id=None):
             )
             messages.append(
                 'Grows with common names: {}.'
-                .format(list_to_english([c.name for c in cn.gw_common_names]))
+                .format(list_to_english(c.name for c in cn.gw_common_names))
             )
         if form.gw_cultivars_ids.data:
             cn.gw_cultivars = Cultivar.from_ids(
@@ -498,7 +498,7 @@ def add_common_name(idx_id=None):
             )
             messages.append(
                 'Grows with cultivars: {}.'
-                .format(list_to_english([c.name for c in cn.gw_cultivars]))
+                .format(list_to_english(c.fullname for c in cn.gw_cultivars))
             )
         if form.visible.data:
             cn.visible = True
@@ -949,6 +949,22 @@ def edit_common_name(cn_id=None):
                 'last under that index. You will need to edit it again if you '
                 'want it in a different position.'
                 .format(cn.name, cn.index.name)
+            )
+        if set(form.gw_common_names_ids.data) != set(cn.gw_common_names_ids):
+            edited = True
+            cn.gw_common_names = CommonName.from_ids(
+                form.gw_common_names_ids.data
+            )
+            messages.append(
+                'Grows with common names: {}.'
+                .format(list_to_english(c.name for c in cn.gw_common_names))
+            )
+        if set(form.gw_cultivars_ids.data) != set(cn.gw_cultivars_ids):
+            edited = True
+            cn.gw_cultivars = Cultivar.from_ids(form.gw_cultivars_ids.data)
+            messages.append(
+                'Grows with cultivars: {}.'
+                .format(list_to_english(c.fullname for c in cn.gw_cultivars))
             )
         if edited:
             messages.append('Changes to \'{0}\' committed to the database.'

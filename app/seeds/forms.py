@@ -502,6 +502,16 @@ class AddCultivarForm(Form):
     pos = SelectField('Position', coerce=int)
     synonyms = StringField('Synonyms', validators=[SynonymLength(1, 64),
                                                    NotSpace()])
+    gw_common_names_ids = SelectMultipleField(
+        'Common Names',
+        render_kw={'size':10},
+        coerce=int
+    )
+    gw_cultivars_ids = SelectMultipleField(
+        'Other Cultivars',
+        render_kw={'size':10},
+        coerce=int
+    )
     new_until = DateField('New until (leave as-is if not new)',
                           format='%m/%d/%Y',
                           default=datetime.date.today())
@@ -516,6 +526,29 @@ class AddCultivarForm(Form):
         super().__init__(*args, **kwargs)
         self.cn = cn
         self.set_selects()
+
+    def set_selects(self):
+        """Sets botanical_names, indexes, and common_names from db."""
+        self.botanical_name.choices = select_field_choices(
+            items=self.cn.botanical_names,
+            order_by='name'
+        )
+        self.botanical_name.choices.insert(0, (0, 'None'))
+        self.section.choices = select_field_choices(items=self.cn.sections,
+                                                    order_by='name')
+        self.section.choices.insert(0, (0, 'None'))
+        self.gw_common_names_ids.choices = select_field_choices(
+            model=CommonName,
+            order_by='name'
+        )
+        self.gw_cultivars_ids.choices = select_field_choices(
+            model=Cultivar,
+            order_by='name',
+            title_attribute='fullname'
+        )
+        self.pos.choices = position_choices(items=self.cn.child_cultivars)
+        if not self.pos.data:
+            self.pos.data = self.pos.choices[-1][0]
 
     def validate_name(self, field):
         """Raise `ValidationError` if `Cultivar` already exists.
@@ -553,20 +586,6 @@ class AddCultivarForm(Form):
                 raise ValidationError('An image named \'{0}\' already exists! '
                                       'Please choose a different name.'
                                       .format(image.filename))
-
-    def set_selects(self):
-        """Sets botanical_names, indexes, and common_names from db."""
-        self.botanical_name.choices = select_field_choices(
-            items=self.cn.botanical_names,
-            order_by='name'
-        )
-        self.botanical_name.choices.insert(0, (0, 'None'))
-        self.section.choices = select_field_choices(items=self.cn.sections,
-                                                    order_by='name')
-        self.section.choices.insert(0, (0, 'None'))
-        self.pos.choices = position_choices(items=self.cn.child_cultivars)
-        if not self.pos.data:
-            self.pos.data = self.pos.choices[-1][0]
 
 
 class AddPacketForm(Form):
@@ -1025,6 +1044,16 @@ class EditCultivarForm(Form):
         validators=[FileAllowed(IMAGE_EXTENSIONS, 'Images only!')]
     )
     synonyms_string = StringField('Synonyms', validators=[NotSpace()])
+    gw_common_names_ids = SelectMultipleField(
+        'Common Names',
+        render_kw={'size':10},
+        coerce=int
+    )
+    gw_cultivars_ids = SelectMultipleField(
+        'Other Cultivars',
+        render_kw={'size':10},
+        coerce=int
+    )
     new_until = DateField('New until (leave as-is if not new)',
                           format='%m/%d/%Y',
                           default=datetime.date.today(),
@@ -1055,6 +1084,19 @@ class EditCultivarForm(Form):
         self.section_id.choices = select_field_choices(model=Section,
                                                        order_by='name')
         self.section_id.choices.insert(0, (0, 'N/A'))
+        self.gw_common_names_ids.choices = select_field_choices(
+            model=CommonName,
+            order_by='name'
+        )
+        self.gw_cultivars_ids.choices = select_field_choices(
+            model=Cultivar,
+            order_by='name',
+            title_attribute='fullname'
+        )
+        self_cv_choice = next(
+            c for c in self.gw_cultivars_ids.choices if c[0] == self.obj.id
+        )
+        self.gw_cultivars_ids.choices.remove(self_cv_choice)
         self.pos.choices = position_choices(items=self.obj.parent_collection)
         self_choice = next(c for c in self.pos.choices if c[0] == self.obj.id)
         self.pos.choices.remove(self_choice)

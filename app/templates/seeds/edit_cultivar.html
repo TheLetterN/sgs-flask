@@ -32,7 +32,7 @@
         {{ form.hidden_tag() }}
         <ol>
           <fieldset>
-            <legend>Groups:</legend>
+            <legend>Cultivar Information</legend>
             <li>
               {{ form_field(form.common_name_id)|indent(14)|safe }}
             </li>
@@ -42,14 +42,11 @@
             <li>
               {{ form_field(form.section_id)|indent(14)|safe }}
             </li>
-          </fieldset>
-          <fieldset>
-            <legend>Data:</legend>
             <li>
               {{ form_field(form.name, dbifiable=True)|indent(14)|safe }}
             </li>
             <li>
-              {{ form_field(form.subtitle)|indent(14)|safe }}
+              {{ form_field(form.subtitle, dbifiable=True)|indent(14)|safe }}
               <div>Default will be '&lt;common name&gt; Seeds'</div>
             </li>
             <div>Current thumbnail:</div>
@@ -65,6 +62,15 @@
             </li>
             <li>
               <span class="with-tooltip" data-tooltip="Warning: Position is relative to other cultivars in the lowest-level container this cultivar belongs to (common name is the highest container, followed by section/subsection this cultivar is in) so if common name or section are changed, this cultivar will be listed last in whatever its new parent container is, and will need to be edited again if it needs to be repositioned.">{{ form_field(form.pos)|indent(14)|safe }}</span>
+            </li>
+          </fieldset>
+          <fieldset>
+            <legend>Grows With</legend>
+            <li>
+              {{ form_field(form.gw_common_names_ids)|indent(14)|safe }}
+            </li>
+            <li>
+              {{ form_field(form.gw_cultivars_ids)|indent(14)|safe }}
             </li>
           </fieldset>
           <fieldset>
@@ -94,4 +100,5 @@
 {% block scripts %}
 {% from "includes/dbify_input.html" import dbify_input %}
 {{ dbify_input(input_name=form.name.name)|safe }}
+{{ dbify_input(input_name=form.subtitle.name)|safe }}
 {% endblock %}

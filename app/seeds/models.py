@@ -1853,6 +1853,16 @@ class Cultivar(OrderingListMixin, SynonymsMixin, db.Model):
         else:
             return None
 
+    @property
+    def gw_common_names_ids(self):
+        """Return list of ids of `gw_common_names`."""
+        return [gwcn.id for gwcn in self.gw_common_names]
+
+    @property
+    def gw_cultivars_ids(self):
+        """Return list of ids of `gw_cultivars`."""
+        return [gwcv.id for gwcv in self.gw_cultivars]
+
     @classmethod
     def from_ids(cls, ids):
         """Get `Cultivar` instances corresponding to `ids`.

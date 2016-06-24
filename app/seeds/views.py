@@ -125,11 +125,16 @@ class NotEnabledError(RuntimeError):
 def flash_all(messages, category='message'):
     if category == 'message':
         if len(messages) > 2:
-            message = messages[0] + '\n<ul class="flashed_list">\n'
-            for msg in messages[1:-1]:
-                message += '    <li>' + msg + '</li>\n'
-            message += '</ul>\n' + messages[-1]
-            flash(message, category)
+            start = messages.pop(0)
+            end = messages.pop()
+            start = '<span>{}</span>'.format(start)
+            end = '<span>{}</span>'.format(end)
+            msgs = ['  <li>{}</li>'.format(m) for m in messages]
+            msgs.insert(0, start)
+            msgs.insert(1, '<ul class="flashed_list">')
+            msgs.append('</ul>')
+            msgs.append(end)
+            flash('\n'.join(msgs), category)
         else:
             for message in messages:
                 flash(message, category)
@@ -151,7 +156,7 @@ def list_to_english(items, last_delimiter=', and '):
         items.append(last_delimiter.join([items.pop(-2), items.pop()]))
         return ', '.join(items)
     else:
-        return lst.pop()
+        return items.pop()
 
 
 def redirect_warning(old_path, links):
@@ -665,6 +670,22 @@ def add_cultivar(cn_id=None):
             cv.synonyms_string = form.synonyms.data
             messages.append('Synonyms set to: \'{0}\'.'
                             .format(cv.synonyms_string))
+        if form.gw_common_names_ids.data:
+            cv.gw_common_names = CommonName.from_ids(
+                form.gw_common_names_ids.data
+            )
+            messages.append(
+                'Grows with common names: {}.'
+                .format(list_to_english(c.name for c in cv.gw_common_names))
+            )
+        if form.gw_cultivars_ids.data:
+            cv.gw_cultivars = Cultivar.from_ids(
+                form.gw_cultivars_ids.data
+            )
+            messages.append(
+                'Grows with cultivars: {}.'
+                .format(list_to_english(c.fullname for c in cv.gw_cultivars))
+            )
         if form.new_until.data and form.new_until.data > datetime.date.today():
             cv.new_until = form.new_until.data
             messages.append('\'{0}\' will be marked as new until: {1}'
@@ -1265,6 +1286,22 @@ def edit_cultivar(cv_id=None):
                                 .format(cv.synonyms_string))
             else:
                 messages.append('Synonyms cleared.')
+        if set(form.gw_common_names_ids.data) != set(cv.gw_common_names_ids):
+            edited = True
+            cv.gw_common_names = CommonName.from_ids(
+                form.gw_common_names_ids.data
+            )
+            messages.append(
+                'Grows with common names: {}.'
+                .format(list_to_english(c.name for c in cv.gw_common_names))
+            )
+        if set(form.gw_cultivars_ids.data) != set(cv.gw_cultivars_ids):
+            edited = True
+            cv.gw_cultivars = Cultivar.from_ids(form.gw_cultivars_ids.data)
+            messages.append(
+                'Grows with cultivars: {}.'
+                .format(list_to_english(c.fullname for c in cv.gw_cultivars))
+            )
         if old_cn is cv.common_name and old_parent_sec is cv.parent_section:
             pc = cv.parent_collection
             cv_index = pc.index(cv)

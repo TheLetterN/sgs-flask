@@ -280,6 +280,16 @@ class AddCommonNameForm(Form):
                            validators=[NotSpace(), SynonymLength(0, 64)])
     pos = SelectField('Position', coerce=int)
     visible = BooleanField('Show on auto-generated pages', default='checked')
+    gw_common_names = SelectMultipleField(
+        'Other Common Names',
+        render_kw={'size':10},
+        coerce=int
+    )
+    gw_cultivars = SelectMultipleField(
+        'Cultivars',
+        render_kw={'size':10},
+        coerce=int
+    )
     next_page = RadioField(
         'After submission, go to',
         choices=[('add_botanical_name', 'Add Botanical Name (optional)'),
@@ -297,10 +307,20 @@ class AddCommonNameForm(Form):
         """
         super().__init__(*args, **kwargs)
         self.index = index
+        self.set_selects()
+    
+    def set_selects(self):
         self.pos.choices = position_choices(items=self.index.common_names,
                                             order_by='idx_pos')
         if not self.pos.data:
             self.pos.data = self.pos.choices[-1][0]
+        self.gw_common_names.choices = select_field_choices(model=CommonName)
+        self.gw_cultivars.choices = select_field_choices(
+            model=Cultivar,
+            order_by='name',
+            title_attribute='fullname'
+        )
+
 
     def validate_name(self, field):
         """Raise `ValidationError` if `CommonName` instance already exists.

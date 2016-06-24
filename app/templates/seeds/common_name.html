@@ -97,6 +97,20 @@ Copyright Swallowtail Garden Seeds, Inc
 	{% endfor %}
 </div>
 {% endif %}
+{% if cn.gw_common_names or cn.gw_cultivars %}
+<div class="RelatedLinks">
+  {% for gwcn in cn.gw_common_names %}
+  <a class="RelatedLinks_a" href="{{ url_for('seeds.common_name', cn_slug=gwcn.slug, idx_slug=gwcn.index.slug) }}">
+    <figure class="RelatedLinks_figure">
+      {% if gwcn.thumbnail %}
+      <img src="{{ url_for('static', filename=gwcn.thumbnail.path) }}" style="height:100px;width:100px;">
+      {% endif %}
+      <figcaption class="RelatedLinks_figcaption">{{ gwcn.name }}</figcaption>
+    </figure>
+   </a>
+  {% endfor %}
+</div>
+{% endif %}
 {% if cn.instructions %}
 <div id="{{ cn.slug }}-instructions" class="Growing">
 	<h2 class="Growing_h2">How to Plant {{ cn.arranged_name }} Seeds</h2>

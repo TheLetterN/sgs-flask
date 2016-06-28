@@ -28,7 +28,7 @@ from flask import (
     url_for
 )
 from flask_login import login_required
-from app import db, Permission
+from app import db, list_to_english, Permission
 from app.breadcrumbs import Crumbler
 from app.decorators import permission_required
 from app.pending import Pending
@@ -141,22 +141,6 @@ def flash_all(messages, category='message'):
     else:
         for message in messages:
             flash(message, category)
-
-
-def list_to_english(items, last_delimiter=', and '):
-    """Return a string listing items with an appropriate last delimiter.
-
-    Args:
-        items: A list of strings to convert to a single string.
-    """
-    items = [str(i) for i in items]
-    if len(items) == 2:
-        return last_delimiter.replace(',', '').join(items)
-    elif len(items) > 1:
-        items.append(last_delimiter.join([items.pop(-2), items.pop()]))
-        return ', '.join(items)
-    else:
-        return items.pop()
 
 
 def redirect_warning(old_path, links):

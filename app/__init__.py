@@ -50,6 +50,22 @@ def hyphenate(text):
         return text
 
 
+def list_to_english(items, last_delimiter=', and '):
+    """Return a string listing items with an appropriate last delimiter.
+
+    Args:
+        items: A list of strings to convert to a single string.
+    """
+    items = [str(i) for i in items]
+    if len(items) == 2:
+        return last_delimiter.replace(',', '').join(items)
+    elif len(items) > 1:
+        items.append(last_delimiter.join([items.pop(-2), items.pop()]))
+        return ', '.join(items)
+    else:
+        return items.pop()
+
+
 def get_index_nav(filename=None):
     """Return a dict of tuples used for showing links to Indexes in the nav."""
     if not filename:

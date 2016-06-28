@@ -15,7 +15,7 @@ Copyright Swallowtail Garden Seeds, Inc
 {% macro cultivar_box(cultivar) %}
 {% if cultivar.active and cultivar.visible or current_user.can(Permission.MANAGE_SEEDS) %}
 <div class="Cultivar">
-	<img alt="{{ cultivar.fullname }}" class="Cultivar_img" src="{% if cultivar.thumbnail %}{{ url_for('static', filename=cultivar.thumbnail.path) }}{% else %}{{ url_for('static', filename='images/assets/default_thumb.jpg') }}{% endif %}">
+	<img alt="{{ cultivar.fullname }}" class="Cultivar_img" src="{% if cultivar.thumbnail %}{{ cultivar.thumbnail.url }}{% else %}{{ url_for('static', filename='images/assets/default_thumb.jpg') }}{% endif %}">
 	{% if not idx_slug %}{% set idx_slug = cultivar.common_name.index.slug %}{% endif %}
 	{% if not cn_slug %}{% set cn_slug = cultivar.common_name.slug %}{% endif %}
 	{% if cultivar.new_for %}<span class="Cultivar_span_new">New for {{ cultivar.new_for }}</span>{% endif %}

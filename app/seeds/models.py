@@ -103,7 +103,7 @@ from sqlalchemy.ext.orderinglist import ordering_list
 from sqlalchemy.sql.expression import and_
 from flask_sqlalchemy import SignallingSession
 
-from app import db
+from app import db, list_to_english
 
 
 # Association Tables
@@ -725,6 +725,11 @@ class Index(db.Model, PositionableMixin):
         return hash(self.id)
 
     @property
+    def url(self):
+        """Return the URL for the main page for a given `Index`."""
+        return url_for('seeds.index', idx_slug=self.slug, _external=True)
+
+    @property
     def dict_(self):
         """Return a dictionary of values needed to instantiate an `Index`.
 
@@ -989,6 +994,15 @@ class CommonName(OrderingListMixin, SynonymsMixin, db.Model):
             return self.index.common_names
         else:
             return None
+
+    @property
+    def url(self):
+        return url_for(
+            'seeds.common_name',
+            cn_slug=self.slug,
+            idx_slug=self.index.slug,
+            _external=True
+        )
 
     @property
     def gw_common_names_ids(self):
@@ -1517,6 +1531,21 @@ class Section(OrderingListMixin, db.Model):
         return '<{0} \'{1}\'>'.format(self.__class__.__name__, self.fullname)
 
     @property
+    def html_id(self):
+        """Return the text to use in HTML id= for a `Section`."""
+        return slugify(self.name)
+
+    @property
+    def url(self):
+        return url_for(
+            'seeds.common_name',
+            cn_slug=self.common_name.slug,
+            idx_slug=self.common_name.index.slug,
+            _anchor=self.html_id,
+            _external=True
+        )
+
+    @property
     def parent_collection(self):
         if self.parent:
             return self.parent.children
@@ -1843,6 +1872,17 @@ class Cultivar(OrderingListMixin, SynonymsMixin, db.Model):
         """Return representation of Cultivar in human-readable format."""
         return '<{0} \'{1}\'>'.format(self.__class__.__name__,
                                       self.fullname)
+
+    @property
+    def url(self):
+        # TODO: Integrate option for if cultivar pages are active.
+        return url_for(
+            'seeds.common_name',
+            cn_slug=self.common_name.slug,
+            idx_slug=self.common_name.index.slug,
+            _anchor=self.slug,
+            _external=True
+        )
 
     @property
     def parent_collection(self):
@@ -2616,6 +2656,10 @@ class Image(db.Model):
     def __repr__(self):
         return '<{0} filename: \'{1}\'>'.format(self.__class__.__name__,
                                                 self.filename)
+
+    @property
+    def url(self):
+        return url_for('static', filename=self.path, _external=True)
 
     @property
     def dict_(self):

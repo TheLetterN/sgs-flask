@@ -108,7 +108,15 @@ Copyright Swallowtail Garden Seeds, Inc
       <figcaption class="RelatedLinks_figcaption">{{ gwcn.name }}</figcaption>
     </figure>
    </a>
-  {% endfor %}
+   {% endfor %}
+   {% for gwcv in cn.gw_cultivars %}
+   <figure class="RelatedLinks_figure">
+     {% if gwcv.thumbnail %}
+     <img src="{{ url_for('static', filename=gwcv.thumbnail.path) }}" style="height:100px;width:100px;">
+     {% endif %}
+     <figcaption class="RelatedLinks_figcaption">{{ gwcv.fullname }}</figcaption>
+   </figure>
+   {% endfor %}
 </div>
 {% endif %}
 {% if cn.instructions %}

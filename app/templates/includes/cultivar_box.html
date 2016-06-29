@@ -34,6 +34,11 @@ Copyright Swallowtail Garden Seeds, Inc
 	<p class="Cultivar_p">
 		{{ cultivar.description|safe }}
 		{% endif %}
+    {% if cultivar.gw_common_names or cultivar.gw_cultivars %}
+  <p class="Cultivar_p">
+    Grows nicely with {{ cultivar.gw_links|safe }}.
+  </p>
+    {% endif %}
 		{% if not cultivar.in_stock %}
 	</p>
 	{% endif %}

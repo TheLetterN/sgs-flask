@@ -1005,6 +1005,10 @@ class CommonName(OrderingListMixin, SynonymsMixin, db.Model):
         )
 
     @property
+    def link_html(self):
+        return '<a href="{0}">{1}</a>'.format(self.url, self.name)
+
+    @property
     def gw_common_names_ids(self):
         """Return list of ids of `gw_common_names`."""
         return [gwcn.id for gwcn in self.gw_common_names]
@@ -1884,6 +1888,10 @@ class Cultivar(OrderingListMixin, SynonymsMixin, db.Model):
         )
 
     @property
+    def link_html(self):
+        return '<a href="{0}">{1}</a>'.format(self.url, self.fullname)
+
+    @property
     def parent_collection(self):
         if self.parent_section:
             return self.parent_section.child_cultivars
@@ -1901,6 +1909,11 @@ class Cultivar(OrderingListMixin, SynonymsMixin, db.Model):
     def gw_cultivars_ids(self):
         """Return list of ids of `gw_cultivars`."""
         return [gwcv.id for gwcv in self.gw_cultivars]
+
+    @property
+    def gw_links(self):
+        gws = self.gw_common_names + self.gw_cultivars
+        return list_to_english((gw.link_html for gw in gws))
 
     @classmethod
     def from_ids(cls, ids):

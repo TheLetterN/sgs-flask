@@ -1531,8 +1531,7 @@ class Section(OrderingListMixin, db.Model):
         return '<{0} \'{1}\'>'.format(self.__class__.__name__, self.fullname)
 
     @property
-    def html_id(self):
-        """Return the text to use in HTML id= for a `Section`."""
+    def slug(self):
         return slugify(self.name)
 
     @property
@@ -1541,7 +1540,7 @@ class Section(OrderingListMixin, db.Model):
             'seeds.common_name',
             cn_slug=self.common_name.slug,
             idx_slug=self.common_name.index.slug,
-            _anchor=self.html_id,
+            _anchor=self.slug,
             _external=True
         )
 

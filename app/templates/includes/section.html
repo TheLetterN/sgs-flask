@@ -15,8 +15,8 @@ Copyright Swallowtail Garden Seeds, Inc
 {% from 'includes/cultivar_box.html' import cultivar_box with context %}
 {% macro section(sec, ind=2, sub=false) %}
 {% if sub %}{% set class_prefix = 'Series' %}{% else %}{% set class_prefix = 'Section' %}{% endif %}
-<section class="{{ class_prefix|lower }}-{{ slugify(sec.name) }}">
-  <div class="{{ class_prefix }}" id="{{ slugify(sec.name) }}">
+<section class="{{ class_prefix|lower }}-{{ sec.slug }}">
+  <div class="{{ class_prefix }}" id="{{ sec.slug }}">
 		<h2 class="{{ class_prefix }}_h2">{{ sec.name }}
 			<em class="{{ class_prefix }}_em">{% if sec.subtitle %}{{ sec.subtitle }}{% else %}{{ sec.common_name.header }}{% endif %}</em>
 			{% if sec.botanical_name %}

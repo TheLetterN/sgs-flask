@@ -548,7 +548,16 @@ def save_grows_with():
             obj = Cultivar.query.get(id)
         for url in gw_map[key]:
             if url not in link_map:
-                url = url.split('#')[0]
+                try:
+                    u, a = url.split('#')
+                    # In most cases (hopefully all) if a link is pointing to
+                    # a cultivar it has some capital letters in the cultivar
+                    # name. This method is not perfect, but it should cover the
+                    # vast majorty of cases.
+                    if a.islower():
+                        url = u
+                except ValueError:
+                    url = url.split('#')[0]
             try:
                 m, i = link_map[url]
                 if m == 'CommonName':

@@ -27,7 +27,7 @@ from app import create_app, db, mail, Permission
 from app.auth.models import User
 from app.seeds.excel import SeedsWorkbook
 from app.seeds.models import Cultivar
-from app.seeds.htmlgrab import Page, PageAdder, save_batch
+from app.seeds.htmlgrab import Page, PageAdder, save_batch, save_grows_with
 
 app = create_app(os.getenv('SGS_CONFIG') or 'default')
 manager = Manager(app)
@@ -62,6 +62,12 @@ def make_cultivars_visible():
         cv.visible = True
     db.session.commit()
     print('All cultivars are now visible.')
+
+
+@manager.command
+def set_grows_with():
+    """Save grows with relationships to database."""
+    save_grows_with()
 
 
 @manager.command

@@ -1170,6 +1170,16 @@ class CommonName(OrderingListMixin, SynonymsMixin, db.Model):
             return None
 
     @property
+    def fullname(self):
+        """str: The name of the `CommonName`.
+
+        Note: This is a convenience property so that when mixing `CommonName`
+        instances with `Cultivar` instances we can just use the `fullname`
+        property to get the correct name for either.
+        """
+        return self.name
+
+    @property
     def header(self):
         """str: `name` formatted for headers and titles."""
         if self.name:

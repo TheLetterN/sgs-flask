@@ -103,7 +103,7 @@ Copyright Swallowtail Garden Seeds, Inc
 			<ul class="packet-options">
 				{% for packet in cultivar.packets %}
 				<li>
-					{{ packet.info }}: <a href="{{ url_for('seeds.edit_packet', pkt_id=packet.id) }}">Edit</a><a href="{{ url_for('seeds.remove_packet', pkt_id=packet.id) }}">Remove</a>
+					{{ packet.info }}: <a href="{{ url_for('seeds.edit_packet', pkt_id=packet.id) }}">Edit</a> | <a href="{{ url_for('seeds.remove_packet', pkt_id=packet.id) }}">Remove</a>
 				</li>
 				{% endfor %}
 			</ul>

@@ -98,25 +98,16 @@ Copyright Swallowtail Garden Seeds, Inc
 </div>
 {% endif %}
 {% if cn.gw_common_names or cn.gw_cultivars %}
+{% set gws = cn.gw_common_names + cn.gw_cultivars %}
 <div class="RelatedLinks">
-  {% for gwcn in cn.gw_common_names %}
-  <a class="RelatedLinks_a" href="{{ gwcn.url }}">
+  {% for gw in gws %}
+  <a class="RelatedLinks_a" href="{{ gw.url }}">
     <figure class="RelatedLinks_figure">
-      {% if gwcn.thumbnail %}
-      <img src="{{ gwcn.thumbnail.url }}" style="height:100px;width:100px;">
+      {% if gw.thumbnail %}
+      <img src="{{ gw.thumbnail.url }}" style="height:100px;width:100px;">
       {% endif %}
-      <figcaption class="RelatedLinks_figcaption">{{ gwcn.name }}</figcaption>
+      <figcaption class="RelatedLinks_figcaption">{{ gw.fullname }}</figcaption>
     </figure>
-   </a>
-   {% endfor %}
-   {% for gwcv in cn.gw_cultivars %}
-   <a class="RelatedLinks_a" href="{{ gwcv.url }}">
-   <figure class="RelatedLinks_figure">
-     {% if gwcv.thumbnail %}
-     <img src="{{ gwcv.thumbnail.url }}" style="height:100px;width:100px;">
-     {% endif %}
-     <figcaption class="RelatedLinks_figcaption">{{ gwcv.fullname }}</figcaption>
-   </figure>
    </a>
    {% endfor %}
 </div>

@@ -310,6 +310,11 @@ def cultivar_div_to_dict(cv_div):
             ps = ps + spans
         desc = merge_p(ps)
         cv['description'] = desc.strip()
+    cv['grows with'] = []
+    for p in ps:
+        sgs = 'http://www.swallowtailgardenseeds.com'
+        cv['grows with'] += [a['href'] for a in p.find_all('a')]
+        cv['grows with'] = fixed_urls(cv['grows with'])
 
     button = cv_div.find(name='button')
     if not button:
@@ -330,7 +335,6 @@ def cultivar_div_to_dict(cv_div):
     cv['packet'] = str_to_packet(pkt_str)
     partno = cv_div.find('input', {'name': 'PartNo'})
     if partno:
-
         cv['packet']['sku'] = partno['value']
     else:
         small = cv_div.small
@@ -524,6 +528,52 @@ def split_botanical_name_synonyms(bn):
         return (bn, [])
 
 
+def fixed_urls(urls):
+    sgs = 'http://www.swallowtailgardenseeds.com'
+    return [sgs + url if url[0] == '/' else url for url in urls]
+
+
+def save_grows_with():
+    """Save all grows with data stored in gw_map.json and link_map.json."""
+    with open ('pages/link_map.json', 'r') as ifile:
+        link_map = json.loads(ifile.read())
+    with open('pages/gw_map.json', 'r') as ifile:
+        gw_map = json.loads(ifile.read())
+    for key in gw_map:
+        model, id = key.split(' ')
+        id = int(id)
+        if model == 'CommonName':
+            obj = CommonName.query.get(id)
+        else:
+            obj = Cultivar.query.get(id)
+        for url in gw_map[key]:
+            if url not in link_map:
+                url = url.split('#')[0]
+            try:
+                m, i = link_map[url]
+                if m == 'CommonName':
+                    o = CommonName.query.get(i)
+                    if o not in obj.gw_common_names:
+                        obj.gw_common_names.append(o)
+                        print('Added CommonName {} to gw for {}'
+                              .format(o.name, obj.name))
+                    else:
+                        print('CommonName {} already in gw for {}'
+                              .format(o.name, obj.name))
+                else:
+                    o = Cultivar.query.get(i)
+                    if o not in obj.gw_cultivars:
+                        obj.gw_cultivars.append(o)
+                        print('Added Cultivar {} to gw for {}'
+                              .format(o.name, obj.name))
+                    else:
+                        print('Cultivar {} already in gw for {}'
+                              .format(o.fullname, obj.name))
+            except KeyError:
+                print('No corresponding item found for: {}'.format(url))
+    db.session.commit()
+
+
 class Page(object):
     """A crawled page to extract data from."""
     def __init__(self, url=None, filename=None, parser=None):
@@ -677,7 +727,8 @@ class Page(object):
             'div', class_=lambda x: x and 'relatedlinks' in x.lower()
         )
         if grows_with:
-            cn['grows with'] = ''.join(str(c) for c in grows_with.contents)
+            cn['grows with'] = [a['href'] for a in grows_with.find_all('a')]
+            cn['grows with'] = fixed_urls(cn['grows with'])
 
         return cn
 
@@ -884,6 +935,12 @@ class PageAdder(object):
         """
         for cvd in cv_dicts:
             cv_name = cvd['cultivar name']
+            try:
+                cv_url = cn.old_url + '#' + cvd['anchor']
+            except KeyError:
+                cv_url = None
+                print('WARNING: No URL could be generated for {}.'
+                      .format(cv_name), file=stream)
             cv_st = cvd['subtitle'] if 'subtitle' in cvd else None
             cv_nu = cvd['new until'] if 'new until' in cvd else None
             cv_thumb = cvd['thumbnail'] if 'thumbnail' in cvd else None
@@ -1011,12 +1068,13 @@ class PageAdder(object):
                         print('Packet \'{0}\' added to \'{1}\'.'
                               .format(pkt.info, cv.fullname), file=stream)
             cv.visible = False
+            cv.old_url = cv_url
+            cv.old_gw_links = cvd['grows with']
             yield cv
 
     def save(self, stream=sys.stdout):
         """Save all information to the database."""
         cn_name = self.tree['common name']
-        cn_url = self.tree['url']
         if 'thumbnail' in self.tree:
             cn_thumb = self.tree['thumbnail']
         else:
@@ -1036,6 +1094,7 @@ class PageAdder(object):
         cn = CommonName.get_or_create(name=cn_name,
                                       index=self.index.name,
                                       stream=stream)
+        cn.old_url = self.tree['url']
         if cn.created:
             db.session.add(cn)
         if cn_thumb:
@@ -1078,11 +1137,13 @@ class PageAdder(object):
                     cn.botanical_names.append(bn)
                     print('Botanical name \'{0}\' added to \'{1}\'.'
                           .format(bn.name, cn.name), file=stream)
+        cvs = []
         if 'sections' in self.tree:
             for sec in self.generate_sections(cn,
                                               self.tree['sections'],
                                               stream=stream):
                 cn.sections.append(sec)
+                cvs += sec.cultivars
                 print('Section \'{0}\' and its subsections added to \'{1}\'.'
                       .format(sec.name, cn.name), file=stream)
         if 'cultivars' in self.tree:
@@ -1091,7 +1152,36 @@ class PageAdder(object):
                                                stream=stream):
                 print('Cultivar \'{0}\' added to CommonName \'{1}\'.'
                       .format(cv.fullname, cn.name), file=stream)
+                cvs.append(cv)
         db.session.commit()
+        try:
+            with open('pages/link_map.json', 'r') as ifile:
+                link_map = json.loads(ifile.read())
+        except:
+            link_map = dict()
+        try:
+            with open('pages/gw_map.json', 'r') as ifile:
+                gw_map = json.loads(ifile.read())
+        except:
+            gw_map = dict()
+        link_map[cn.old_url] = ('CommonName', cn.id)
+        try:
+            gw_map['CommonName {}'.format(cn.id)] = self.tree['grows with']
+        except KeyError:
+            pass
+        for cv in cvs:
+            if cv.old_url:
+                link_map[cv.old_url] = ('Cultivar', cv.id)
+            else:
+                print(cv.fullname)
+            if cv.old_gw_links:
+                gw_map['Cultivar {}'.format(cv.id)] = cv.old_gw_links
+        with open('pages/link_map.json', 'w') as ofile:
+            ofile.write(json.dumps(link_map, indent=4))
+            print('writing link map to link_map.json', file=stream)
+        with open('pages/gw_map.json', 'w') as ofile:
+            ofile.write(json.dumps(gw_map, indent=4))
+            print('writing gw map to gw_map.json', file=stream)
 
     def generate_sections(self, cn, section_dicts, stream=sys.stdout):
         """Generate sections from section_dicts."""

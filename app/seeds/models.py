@@ -85,6 +85,7 @@ Notes:
 import datetime
 import json
 import os
+import random
 import re
 import shutil
 import sys
@@ -166,6 +167,15 @@ common_names_to_gw_cultivars = db.Table(
     db.Column('cultivar_id', db.Integer, db.ForeignKey('cultivars.id'))
 )
 
+
+common_names_to_gw_sections = db.Table(
+    'common_names_to_gw_sections',
+    db.Model.metadata,
+    db.Column('common_name_id', db.Integer, db.ForeignKey('common_names.id')),
+    db.Column('section_id', db.Integer, db.ForeignKey('sections.id'))
+)
+
+
 cultivars_to_gw_common_names = db.Table(
     'cultivars_to_gw_common_names',
     db.Model.metadata,
@@ -173,11 +183,20 @@ cultivars_to_gw_common_names = db.Table(
     db.Column('common_name_id', db.Integer, db.ForeignKey('common_names.id'))
 )
 
+
 cultivars_to_gw_cultivars = db.Table(
     'cultivars_to_gw_cultivars',
     db.Model.metadata,
     db.Column('parent_id', db.Integer, db.ForeignKey('cultivars.id')),
     db.Column('child_id', db.Integer, db.ForeignKey('cultivars.id'))
+)
+
+
+cultivars_to_gw_sections = db.Table(
+    'cultivars_to_gw_sections',
+    db.Model.metadata,
+    db.Column('cultivar_id', db.Integer, db.ForeignKey('cultivars.id')),
+    db.Column('section_id', db.Integer, db.ForeignKey('sections.id'))
 )
 
 def dump_db_to_json(filename):
@@ -920,6 +939,10 @@ class CommonName(OrderingListMixin, SynonymsMixin, db.Model):
         primaryjoin=id == common_names_to_gw_common_names.c.parent_id,
         secondaryjoin=id == common_names_to_gw_common_names.c.child_id
     )
+    gw_sections = db.relationship(
+        'Section',
+        secondary=common_names_to_gw_sections
+    )
     gw_cultivars = db.relationship(
         'Cultivar',
         secondary=common_names_to_gw_cultivars
@@ -1017,6 +1040,11 @@ class CommonName(OrderingListMixin, SynonymsMixin, db.Model):
     def gw_cultivars_ids(self):
         """Return list of ids of `gw_cultivars`."""
         return [gwcv.id for gwcv in self.gw_cultivars]
+
+    @property
+    def gw_sections_ids(self):
+        """Return list of ids of `gw_sections`."""
+        return [gws.id for gws in self.gw_sections]
 
     @property
     def dict_(self):
@@ -1544,28 +1572,17 @@ class Section(OrderingListMixin, db.Model):
         """Return a string representing a `Section` instance."""
         return '<{0} \'{1}\'>'.format(self.__class__.__name__, self.fullname)
 
-    @property
-    def slug(self):
-        return slugify(self.name)
+    @classmethod
+    def from_ids(cls, ids):
+        """Return a list of `Section` instances with `ids`.
 
-    @property
-    def url(self):
-        return url_for(
-            'seeds.common_name',
-            cn_slug=self.common_name.slug,
-            idx_slug=self.common_name.index.slug,
-            _anchor=self.slug,
-            _external=True
-        )
-
-    @property
-    def parent_collection(self):
-        if self.parent:
-            return self.parent.children
-        elif self.common_name:
-            return self.common_name.child_sections
-        else:
-            return None
+        Args:
+            ids: A collection of `Section.id` values to query for.
+        
+        Returns:
+            list: A list of `Section` instances each with an id in `ids`.
+        """
+        return [cls.query.get(id) for id in ids]
 
     @classmethod
     def get_or_create(cls, name, common_name, index, stream=sys.stdout):
@@ -1598,6 +1615,38 @@ class Section(OrderingListMixin, db.Model):
             print('The Section \'{0}\' does not yet exist in the database, '
                   'so it has been created'.format(sec.fullname), file=stream)
         return sec
+
+    @property
+    def slug(self):
+        return slugify(self.name)
+
+    @property
+    def url(self):
+        return url_for(
+            'seeds.common_name',
+            cn_slug=self.common_name.slug,
+            idx_slug=self.common_name.index.slug,
+            _anchor=self.slug,
+            _external=True
+        )
+
+    @property
+    def thumbnail(self):
+        """Return a random thumbnail from cultivars belonging to `Section`."""
+        if self.cultivars:
+            choices = [c for c in self.cultivars if c.thumbnail]
+            if choices:
+                return random.choice(choices).thumbnail
+        return None
+
+    @property
+    def parent_collection(self):
+        if self.parent:
+            return self.parent.children
+        elif self.common_name:
+            return self.common_name.child_sections
+        else:
+            return None
 
     @property
     def fullname(self):
@@ -1831,6 +1880,10 @@ class Cultivar(OrderingListMixin, SynonymsMixin, db.Model):
         primaryjoin=id == cultivars_to_gw_cultivars.c.parent_id,
         secondaryjoin=id == cultivars_to_gw_cultivars.c.child_id
     )
+    gw_sections = db.relationship(
+        'Section',
+        secondary=cultivars_to_gw_sections
+    )
     custom_pages = db.relationship(
         'CustomPage',
         secondary=cultivars_to_custom_pages,
@@ -1914,6 +1967,11 @@ class Cultivar(OrderingListMixin, SynonymsMixin, db.Model):
     def gw_common_names_ids(self):
         """Return list of ids of `gw_common_names`."""
         return [gwcn.id for gwcn in self.gw_common_names]
+
+    @property
+    def gw_sections_ids(self):
+        """Return list of ids of `gw_sections`."""
+        return [gws.id for gws in self.gw_sections]
 
     @property
     def gw_cultivars_ids(self):

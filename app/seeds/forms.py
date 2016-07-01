@@ -285,6 +285,11 @@ class AddCommonNameForm(Form):
         render_kw={'size':10},
         coerce=int
     )
+    gw_sections_ids = SelectMultipleField(
+        'Sections/Series',
+        render_kw={'size':10},
+        coerce=int
+    )
     gw_cultivars_ids = SelectMultipleField(
         'Cultivars',
         render_kw={'size':10},
@@ -318,12 +323,16 @@ class AddCommonNameForm(Form):
             model=CommonName,
             order_by='name'
         )
+        self.gw_sections_ids.choices = select_field_choices(
+            model=Section,
+            order_by='name',
+            title_attribute='fullname'
+        )
         self.gw_cultivars_ids.choices = select_field_choices(
             model=Cultivar,
             order_by='name',
             title_attribute='fullname'
         )
-
 
     def validate_name(self, field):
         """Raise `ValidationError` if `CommonName` instance already exists.
@@ -507,6 +516,11 @@ class AddCultivarForm(Form):
         render_kw={'size':10},
         coerce=int
     )
+    gw_sections_ids = SelectMultipleField(
+        'Sections/Series',
+        render_kw={'size':10},
+        coerce=int
+    )
     gw_cultivars_ids = SelectMultipleField(
         'Other Cultivars',
         render_kw={'size':10},
@@ -540,6 +554,11 @@ class AddCultivarForm(Form):
         self.gw_common_names_ids.choices = select_field_choices(
             model=CommonName,
             order_by='name'
+        )
+        self.gw_sections_ids.choices = select_field_choices(
+            model=Section,
+            order_by='name',
+            title_attribute='fullname'
         )
         self.gw_cultivars_ids.choices = select_field_choices(
             model=Cultivar,
@@ -798,6 +817,11 @@ class EditCommonNameForm(Form):
         render_kw={'size':10},
         coerce=int
     )
+    gw_sections_ids = SelectMultipleField(
+        'Sections/Series',
+        render_kw={'size':10},
+        coerce=int
+    )
     gw_cultivars_ids = SelectMultipleField(
         'Cultivars',
         render_kw={'size':10},
@@ -822,6 +846,11 @@ class EditCommonNameForm(Form):
             c for c in self.gw_common_names_ids.choices if c[0] == cn.id
         )
         self.gw_common_names_ids.choices.remove(self_cn_choice)
+        self.gw_sections_ids.choices = select_field_choices(
+            model=Section,
+            order_by='name',
+            title_attribute='fullname'
+        )
         self.gw_cultivars_ids.choices = select_field_choices(
             model=Cultivar,
             order_by='name',
@@ -1049,6 +1078,11 @@ class EditCultivarForm(Form):
         render_kw={'size':10},
         coerce=int
     )
+    gw_sections_ids = SelectMultipleField(
+        'Sections/Series',
+        render_kw={'size':10},
+        coerce=int
+    )
     gw_cultivars_ids = SelectMultipleField(
         'Other Cultivars',
         render_kw={'size':10},
@@ -1087,6 +1121,11 @@ class EditCultivarForm(Form):
         self.gw_common_names_ids.choices = select_field_choices(
             model=CommonName,
             order_by='name'
+        )
+        self.gw_sections_ids.choices = select_field_choices(
+            model=Section,
+            order_by='name',
+            title_attribute='fullname'
         )
         self.gw_cultivars_ids.choices = select_field_choices(
             model=Cultivar,

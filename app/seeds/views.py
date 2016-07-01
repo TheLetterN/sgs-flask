@@ -489,6 +489,12 @@ def add_common_name(idx_id=None):
                 'Grows with cultivars: {}.'
                 .format(list_to_english(c.fullname for c in cn.gw_cultivars))
             )
+        if form.gw_sections_ids.data:
+            cn.gw_sections = Section.from_ids(form.gw_sections_ids.data)
+            messages.append(
+                'Grows with sections: {}.'
+                .format(list_to_english(s.fullname for s in cn.gw_sections))
+            )
         if form.visible.data:
             cn.visible = True
             messages.append('\'{0}\' is visible on auto-generated pages.'
@@ -669,6 +675,12 @@ def add_cultivar(cn_id=None):
             messages.append(
                 'Grows with cultivars: {}.'
                 .format(list_to_english(c.fullname for c in cv.gw_cultivars))
+            )
+        if form.gw_sections_ids.data:
+            cv.gw_sections = Section.from_ids(form.gw_sections_ids.data)
+            messages.append(
+                'Grows with sections/series: {}.'
+                .format(list_to_english(s.fullname for s in cv.gw_sections))
             )
         if form.new_until.data and form.new_until.data > datetime.date.today():
             cv.new_until = form.new_until.data
@@ -960,17 +972,39 @@ def edit_common_name(cn_id=None):
             cn.gw_common_names = CommonName.from_ids(
                 form.gw_common_names_ids.data
             )
-            messages.append(
-                'Grows with common names: {}.'
-                .format(list_to_english(c.name for c in cn.gw_common_names))
-            )
+            if cn.gw_common_names:
+                messages.append(
+                    'Grows with common names: {}.'
+                    .format(
+                        list_to_english(c.name for c in cn.gw_common_names)
+                    )
+                )
+            else:
+                messages.append('Grows with common names cleared.')
+        if set(form.gw_sections_ids.data) != set(cn.gw_sections_ids):
+            edited = True
+            cn.gw_sections = Section.from_ids(form.gw_sections_ids.data)
+            if cn.gw_sections:
+                messages.append(
+                    'Grows with sections/series: {}.'
+                    .format(
+                        list_to_english(s.fullname for s in cn.gw_sections)
+                    )
+                )
+            else:
+                messages.append('Grows with sections/series cleared.')
         if set(form.gw_cultivars_ids.data) != set(cn.gw_cultivars_ids):
             edited = True
             cn.gw_cultivars = Cultivar.from_ids(form.gw_cultivars_ids.data)
-            messages.append(
-                'Grows with cultivars: {}.'
-                .format(list_to_english(c.fullname for c in cn.gw_cultivars))
-            )
+            if cn.gw_cultivars:
+                messages.append(
+                    'Grows with cultivars: {}.'
+                    .format(
+                        list_to_english(c.fullname for c in cn.gw_cultivars)
+                    )
+                )
+            else:
+                messages.append('Grows with cultivars cleared.')
         if edited:
             messages.append('Changes to \'{0}\' committed to the database.'
                             .format(cn.name))
@@ -1275,17 +1309,39 @@ def edit_cultivar(cv_id=None):
             cv.gw_common_names = CommonName.from_ids(
                 form.gw_common_names_ids.data
             )
-            messages.append(
-                'Grows with common names: {}.'
-                .format(list_to_english(c.name for c in cv.gw_common_names))
+            if cv.gw_common_names:
+                messages.append(
+                    'Grows with common names: {}.'
+                    .format(
+                        list_to_english(c.name for c in cv.gw_common_names)
+                    )
+                )
+            else:
+                messages.append('Grows with common names cleared.')
+        if set(form.gw_sections_ids.data) != set(cv.gw_sections_ids):
+            edited = True
+            cv.gw_sections = Section.from_ids(
+                form.gw_sections_ids.data
             )
+            if cv.gw_sections:
+                messages.append(
+                    'Grows with sections/series: {}.'
+                    .format(list_to_english(s.name for s in cv.gw_sections))
+                )
+            else:
+                messages.append('Grows with sections/series cleared.')
         if set(form.gw_cultivars_ids.data) != set(cv.gw_cultivars_ids):
             edited = True
             cv.gw_cultivars = Cultivar.from_ids(form.gw_cultivars_ids.data)
-            messages.append(
-                'Grows with cultivars: {}.'
-                .format(list_to_english(c.fullname for c in cv.gw_cultivars))
-            )
+            if cv.gw_cultivars:
+                messages.append(
+                    'Grows with cultivars: {}.'
+                    .format(
+                        list_to_english(c.fullname for c in cv.gw_cultivars)
+                    )
+                )
+            else:
+                messages.append('Grows with cultivars cleared.')
         if old_cn is cv.common_name and old_parent_sec is cv.parent_section:
             pc = cv.parent_collection
             cv_index = pc.index(cv)

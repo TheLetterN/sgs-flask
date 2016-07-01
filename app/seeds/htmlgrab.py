@@ -249,7 +249,11 @@ def cultivar_div_to_dict(cv_div):
     try:
         cv['anchor'] = cv_div.h3['id']
     except KeyError:
-        pass
+        if cv_div.img:
+            try:
+                cv['anchor'] = cv_div.img['id']
+            except KeyError:
+                pass
     if cv_div.h3.em:
         cv['subtitle'] = dbify(cv_div.h3.em.text.strip())
     if 'new for 2016' in cv_div.text.lower():
@@ -530,7 +534,9 @@ def split_botanical_name_synonyms(bn):
 
 def fixed_urls(urls):
     sgs = 'http://www.swallowtailgardenseeds.com'
-    return [sgs + url if url[0] == '/' else url for url in urls]
+    return [
+        (sgs + url if url[0] == '/' else url).replace(' ', '-') for url in urls
+    ]
 
 
 def save_grows_with():
@@ -544,8 +550,10 @@ def save_grows_with():
         id = int(id)
         if model == 'CommonName':
             obj = CommonName.query.get(id)
-        else:
+        elif model == 'Cultivar':
             obj = Cultivar.query.get(id)
+        elif model == 'Section':
+            obj = Section.query.get(id)
         for url in gw_map[key]:
             if url not in link_map:
                 try:
@@ -565,19 +573,28 @@ def save_grows_with():
                     if o not in obj.gw_common_names:
                         obj.gw_common_names.append(o)
                         print('Added CommonName {} to gw for {}'
-                              .format(o.name, obj.name))
+                              .format(o.fullname, obj.fullname))
                     else:
                         print('CommonName {} already in gw for {}'
-                              .format(o.name, obj.name))
-                else:
+                              .format(o.fullname, obj.fullname))
+                elif m == 'Cultivar':
                     o = Cultivar.query.get(i)
                     if o not in obj.gw_cultivars:
                         obj.gw_cultivars.append(o)
                         print('Added Cultivar {} to gw for {}'
-                              .format(o.name, obj.name))
+                              .format(o.fullname, obj.fullname))
                     else:
                         print('Cultivar {} already in gw for {}'
-                              .format(o.fullname, obj.name))
+                              .format(o.fullname, obj.fullname))
+                elif m == 'Section':
+                    o = Section.query.get(i)
+                    if o not in obj.gw_sections:
+                        obj.gw_sections.append(o)
+                        print('Added Section {} to gw for {}'
+                              .format(o.fullname, obj.fullname))
+                    else:
+                        print('Section {} already in gw for {}'
+                              .format(o.fullname, obj.fullname))
             except KeyError:
                 print('No corresponding item found for: {}'.format(url))
     db.session.commit()
@@ -835,6 +852,10 @@ class Page(object):
         sd['section name'] = dbify(sec_name)
 
         if sdiv:
+            try:
+                sd['anchor'] = sdiv['id']
+            except KeyError:
+                pass
             bns = None
             if sdiv.h2:
                 ems = sdiv.h2.find_all(name='em', recursive=False)
@@ -1147,12 +1168,17 @@ class PageAdder(object):
                     print('Botanical name \'{0}\' added to \'{1}\'.'
                           .format(bn.name, cn.name), file=stream)
         cvs = []
+        secs = []  # Get your mind out of the gutter!
         if 'sections' in self.tree:
             for sec in self.generate_sections(cn,
                                               self.tree['sections'],
                                               stream=stream):
                 cn.sections.append(sec)
                 cvs += sec.cultivars
+                secs.append(sec)
+                secs += sec.children
+                for sc in sec.children:
+                    cvs += sc.cultivars
                 print('Section \'{0}\' and its subsections added to \'{1}\'.'
                       .format(sec.name, cn.name), file=stream)
         if 'cultivars' in self.tree:
@@ -1185,6 +1211,9 @@ class PageAdder(object):
                 print(cv.fullname)
             if cv.old_gw_links:
                 gw_map['Cultivar {}'.format(cv.id)] = cv.old_gw_links
+        for sec in secs:
+            if sec.old_url:
+                link_map[sec.old_url] = ('Section', sec.id)
         with open('pages/link_map.json', 'w') as ofile:
             ofile.write(json.dumps(link_map, indent=4))
             print('writing link map to link_map.json', file=stream)
@@ -1250,6 +1279,10 @@ class PageAdder(object):
                 sec.children = list(self.generate_sections(cn,
                                                            secd['sections'],
                                                            stream=stream))
+            try:
+                sec.old_url = cn.old_url + '#' + secd['anchor']
+            except:
+                sec.old_url = None
 
             yield sec
 

@@ -1636,6 +1636,10 @@ class Section(OrderingListMixin, db.Model):
         )
 
     @property
+    def link_html(self):
+        return '<a href="{0}">{1}</a>'.format(self.url, self.fullname)
+
+    @property
     def thumbnail(self):
         """Return a random thumbnail from cultivars belonging to `Section`."""
         if self.cultivars:
@@ -1990,8 +1994,7 @@ class Cultivar(OrderingListMixin, SynonymsMixin, db.Model):
 
     @property
     def gw_links(self):
-        gws = self.gw_common_names + self.gw_cultivars
-        return list_to_english((gw.link_html for gw in gws))
+        return list_to_english((gw.link_html for gw in self.grows_with))
 
     @classmethod
     def from_ids(cls, ids):

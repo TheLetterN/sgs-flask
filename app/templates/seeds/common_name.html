@@ -97,8 +97,8 @@ Copyright Swallowtail Garden Seeds, Inc
 	{% endfor %}
 </div>
 {% endif %}
-{% if cn.gw_common_names or cn.gw_cultivars %}
-{% set gws = cn.gw_common_names + cn.gw_cultivars %}
+{% set gws = cn.grows_with %}
+{% if gws %}
 <div class="RelatedLinks">
   {% for gw in gws %}
   <a class="RelatedLinks_a" href="{{ gw.url }}">

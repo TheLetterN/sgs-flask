@@ -1032,6 +1032,11 @@ class CommonName(OrderingListMixin, SynonymsMixin, db.Model):
         return '<a href="{0}">{1}</a>'.format(self.url, self.name)
 
     @property
+    def grows_with(self):
+        """Return all objects a `CommonName` grows with."""
+        return self.gw_common_names + self.gw_sections + self.gw_cultivars
+
+    @property
     def gw_common_names_ids(self):
         """Return list of ids of `gw_common_names`."""
         return [gwcn.id for gwcn in self.gw_common_names]
@@ -1962,6 +1967,11 @@ class Cultivar(OrderingListMixin, SynonymsMixin, db.Model):
             return self.common_name.child_cultivars
         else:
             return None
+
+    @property
+    def grows_with(self):
+        """Return all objects a `Cultivar` grows with."""
+        return self.gw_common_names + self.gw_sections + self.gw_cultivars
 
     @property
     def gw_common_names_ids(self):

@@ -230,7 +230,7 @@ class AddIndexForm(Form):
                                                         'Images only!')])
     description = TextAreaField('Description', validators=[NotSpace()])
     pos = SelectField('Position', coerce=int)
-    submit = SubmitField('Add Index')
+    submit = SubmitField('Save Index')
 
     def validate_name(self, field):
         """Raise a ValidationError if an `Index` exists with given name.
@@ -302,7 +302,7 @@ class AddCommonNameForm(Form):
                  ('add_cultivar', 'Add Cultivar')],
         default='add_cultivar'
     )
-    submit = SubmitField('Add Common Name')
+    submit = SubmitField('Save Common Name')
 
     def __init__(self, index, *args, **kwargs):
         """Initialize `AddCommonNameForm`.
@@ -380,7 +380,7 @@ class AddBotanicalNameForm(Form):
                  ('add_cultivar', 'Add Cultivar')],
         default='add_cultivar'
     )
-    submit = SubmitField('Add Botanical Name')
+    submit = SubmitField('Save Botanical Name')
 
     def __init__(self, cn, *args, **kwargs):
         """Initialize `AddBotanicalNameForm`.
@@ -433,7 +433,7 @@ class AddSectionForm(Form):
     )
     description = TextAreaField('Description', validators=[NotSpace()])
     pos = SelectField('Position', coerce=int)
-    submit = SubmitField('Add Section')
+    submit = SubmitField('Save Section')
 
     def __init__(self, cn, *args, **kwargs):
         """Initialize `AddSectionForm`.
@@ -534,7 +534,7 @@ class AddCultivarForm(Form):
     active = BooleanField('Actively replenished', default='checked')
     visible = BooleanField('Visible on auto-generated pages',
                            default='checked')
-    submit = SubmitField('Add Cultivar')
+    submit = SubmitField('Save Cultivar')
 
     def __init__(self, cn, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -627,7 +627,7 @@ class AddPacketForm(Form):
     units = StringField('Unit of measurement',
                         validators=[Length(1, 32), NotSpace()])
     again = BooleanField('Add another packet after this.')
-    submit = SubmitField('Add Packet')
+    submit = SubmitField('Save Packet')
 
     def __init__(self, cultivar, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -694,7 +694,7 @@ class AddRedirectForm(Form):
                                        (307, '307 Temporary Redirect'),
                                        (308, '308 Permanent Redirect')],
                               default=302)
-    submit = SubmitField('Add Redirect')
+    submit = SubmitField('Save Redirect')
 
     def __init__(self,
                  old_path=None,
@@ -760,7 +760,7 @@ class EditIndexForm(Form):
     )
     description = TextAreaField('Description', validators=[NotSpace()])
     pos = SelectField('Position', coerce=int)
-    submit = SubmitField('Edit Index')
+    submit = SubmitField('Save Index')
 
     def validate_name(self, field):
         """Raise ValidationError if changing name would result in clash."""
@@ -827,7 +827,7 @@ class EditCommonNameForm(Form):
         render_kw={'size':10},
         coerce=int
     )
-    submit = SubmitField('Edit Common Name')
+    submit = SubmitField('Save Common Name')
 
     def __init__(self, *args, **kwargs):  # pragma: no cover
         super().__init__(*args, **kwargs)
@@ -916,7 +916,7 @@ class EditBotanicalNameForm(Form):
                                    NotSpace()])
     common_names = SelectMultipleField('Select Common Names', coerce=int)
     synonyms_string = StringField('Synonyms', validators=[NotSpace()])
-    submit = SubmitField('Edit Botanical Name')
+    submit = SubmitField('Save Botanical Name')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -985,7 +985,7 @@ class EditSectionForm(Form):
                                        Optional()])
     description = TextAreaField('Description', validators=[NotSpace()])
     pos = SelectField('Position', coerce=int)
-    submit = SubmitField('Edit Section')
+    submit = SubmitField('Save Section')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1096,7 +1096,7 @@ class EditCultivarForm(Form):
     active = BooleanField('Actively replenished')
     visible = BooleanField('Visible on auto-generated pages')
     in_stock = BooleanField('In Stock')
-    submit = SubmitField('Edit Cultivar')
+    submit = SubmitField('Save Cultivar')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1230,7 +1230,7 @@ class EditPacketForm(Form):
     qty_val = StringField('Quantity', validators=[DataRequired(), NotSpace()])
     units = StringField('Unit of measurement',
                         validators=[Length(1, 32), NotSpace()])
-    submit = SubmitField('Edit Packet')
+    submit = SubmitField('Save Packet')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

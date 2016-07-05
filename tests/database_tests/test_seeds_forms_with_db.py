@@ -10,7 +10,6 @@ from app.seeds.forms import (
     AddPacketForm,
     AddCultivarForm,
     EditSectionForm,
-    EditCultivarForm,
     EditPacketForm,
     select_field_choices
 )

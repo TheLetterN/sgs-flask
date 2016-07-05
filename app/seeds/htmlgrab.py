@@ -316,7 +316,6 @@ def cultivar_div_to_dict(cv_div):
         cv['description'] = desc.strip()
     cv['grows with'] = []
     for p in ps:
-        sgs = 'http://www.swallowtailgardenseeds.com'
         cv['grows with'] += [a['href'] for a in p.find_all('a')]
         cv['grows with'] = fixed_urls(cv['grows with'])
 
@@ -541,7 +540,7 @@ def fixed_urls(urls):
 
 def save_grows_with():
     """Save all grows with data stored in gw_map.json and link_map.json."""
-    with open ('pages/link_map.json', 'r') as ifile:
+    with open('pages/link_map.json', 'r') as ifile:
         link_map = json.loads(ifile.read())
     with open('pages/gw_map.json', 'r') as ifile:
         gw_map = json.loads(ifile.read())
@@ -789,7 +788,7 @@ class Page(object):
         if cultivar_dicts:
             tree['cultivars'] = cultivar_dicts
 
-        ordered_keys = [
+        ordered_keys = (
             'common name',
             'index',
             'url',
@@ -802,7 +801,7 @@ class Page(object):
             'grows with',
             'harvesting',
             'instructions'
-        ]
+        )
         for key in tree.keys():
             if key not in ordered_keys:
                 raise RuntimeError(

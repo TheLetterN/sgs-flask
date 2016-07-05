@@ -199,6 +199,7 @@ cultivars_to_gw_sections = db.Table(
     db.Column('section_id', db.Integer, db.ForeignKey('sections.id'))
 )
 
+
 def dump_db_to_json(filename):
     """Save all data needed to copy the database into a JSON file."""
     d = dict()
@@ -953,9 +954,11 @@ class CommonName(OrderingListMixin, SynonymsMixin, db.Model):
         secondary=botanical_names_to_common_names,
         back_populates='common_names'
     )
-    sections = db.relationship('Section',
-            foreign_keys='Section.common_name_id',
-            back_populates='common_name')
+    sections = db.relationship(
+        'Section',
+        foreign_keys='Section.common_name_id',
+        back_populates='common_name'
+    )
     child_sections = db.relationship(
         'Section',
         order_by='Section.cn_pos',
@@ -1118,7 +1121,7 @@ class CommonName(OrderingListMixin, SynonymsMixin, db.Model):
 
         Args:
             ids: A collection of `CommonName.id` values to query for.
-        
+
         Returns:
             list: A list of `CommonName` instances each with an id in `ids`.
         """
@@ -1583,7 +1586,7 @@ class Section(OrderingListMixin, db.Model):
 
         Args:
             ids: A collection of `Section.id` values to query for.
-        
+
         Returns:
             list: A list of `Section` instances each with an id in `ids`.
         """
@@ -1686,7 +1689,7 @@ class Section(OrderingListMixin, db.Model):
 
     def set_common_name(self, cn, insert_at=None):
         """Set common_name and deal with positioning.
-        
+
         Args:
             cn: The CommonName to set.
         """
@@ -2163,12 +2166,14 @@ def section_child_cultivars_removed(target, value, initiator):
     if not value.sections:
         value.parent_common_name = value.common_name
 
+
 @event.listens_for(Section.cultivars, 'append')
 def section_cultivars_appended(target, value, initiator):
     if target.parent and value not in target.parent.cultivars:
         target.parent.cultivars.append(value)
     if not target.children or set(target.children).isdisjoint(value.sections):
         target.child_cultivars.insert(len(target.child_cultivars), value)
+
 
 @event.listens_for(Section.cultivars, 'remove')
 def section_cultivars_removed(target, value, initiator):
@@ -2784,10 +2789,6 @@ class Image(db.Model):
         """Save an image via a wtforms FileField."""
         field.data.save(self.full_path)
         self.set_dimensions()
-
-    @property
-    def url(self):
-        return url_for('static', filename=self.path, _external=True)
 
     @property
     def path(self):

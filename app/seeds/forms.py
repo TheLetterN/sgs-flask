@@ -282,17 +282,17 @@ class AddCommonNameForm(Form):
     visible = BooleanField('Show on auto-generated pages', default='checked')
     gw_common_names_ids = SelectMultipleField(
         'Other Common Names',
-        render_kw={'size':10},
+        render_kw={'size': 10},
         coerce=int
     )
     gw_sections_ids = SelectMultipleField(
         'Sections/Series',
-        render_kw={'size':10},
+        render_kw={'size': 10},
         coerce=int
     )
     gw_cultivars_ids = SelectMultipleField(
         'Cultivars',
-        render_kw={'size':10},
+        render_kw={'size': 10},
         coerce=int
     )
     next_page = RadioField(
@@ -313,7 +313,7 @@ class AddCommonNameForm(Form):
         super().__init__(*args, **kwargs)
         self.index = index
         self.set_selects()
-    
+
     def set_selects(self):
         self.pos.choices = position_choices(items=self.index.common_names,
                                             order_by='idx_pos')
@@ -513,17 +513,17 @@ class AddCultivarForm(Form):
                                                    NotSpace()])
     gw_common_names_ids = SelectMultipleField(
         'Common Names',
-        render_kw={'size':10},
+        render_kw={'size': 10},
         coerce=int
     )
     gw_sections_ids = SelectMultipleField(
         'Sections/Series',
-        render_kw={'size':10},
+        render_kw={'size': 10},
         coerce=int
     )
     gw_cultivars_ids = SelectMultipleField(
         'Other Cultivars',
-        render_kw={'size':10},
+        render_kw={'size': 10},
         coerce=int
     )
     new_until = DateField('New until (leave as-is if not new)',
@@ -814,17 +814,17 @@ class EditCommonNameForm(Form):
     pos = SelectField('Position', coerce=int)
     gw_common_names_ids = SelectMultipleField(
         'Other Common Names',
-        render_kw={'size':10},
+        render_kw={'size': 10},
         coerce=int
     )
     gw_sections_ids = SelectMultipleField(
         'Sections/Series',
-        render_kw={'size':10},
+        render_kw={'size': 10},
         coerce=int
     )
     gw_cultivars_ids = SelectMultipleField(
         'Cultivars',
-        render_kw={'size':10},
+        render_kw={'size': 10},
         coerce=int
     )
     submit = SubmitField('Save Common Name')
@@ -1075,17 +1075,17 @@ class EditCultivarForm(Form):
     synonyms_string = StringField('Synonyms', validators=[NotSpace()])
     gw_common_names_ids = SelectMultipleField(
         'Common Names',
-        render_kw={'size':10},
+        render_kw={'size': 10},
         coerce=int
     )
     gw_sections_ids = SelectMultipleField(
         'Sections/Series',
-        render_kw={'size':10},
+        render_kw={'size': 10},
         coerce=int
     )
     gw_cultivars_ids = SelectMultipleField(
         'Other Cultivars',
-        render_kw={'size':10},
+        render_kw={'size': 10},
         coerce=int
     )
     new_until = DateField('New until (leave as-is if not new)',

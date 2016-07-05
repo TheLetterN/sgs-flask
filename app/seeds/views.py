@@ -1358,7 +1358,7 @@ def edit_cultivar(cv_id=None):
                 cv.move_after(prev)
                 messages.append('Will now be listed after \'{0}\'.'
                                 .format(prev.fullname))
-            
+
         if (not form.new_until.data or
                 form.new_until.data <= datetime.date.today()):
             form.new_until.data = None
@@ -1511,7 +1511,7 @@ def edit_packet(pkt_id=None):
                            form=form)
 
 
-def move_cultivars(cn, other):
+def migrate_cultivars(cn, other):
     """Move all instances of `Cultivar` from one `CommonName` to another.
 
     Note:
@@ -1551,7 +1551,7 @@ def move_botanical_names(cn, other):
             other.botanical_names.append(bn)
 
 
-def move_common_names(idx, other):
+def migrate_common_names(idx, other):
     """Move all instances of `CommonName` from one `Index` to another.
 
     Attributes:
@@ -1575,12 +1575,12 @@ def move_common_names(idx, other):
                 c for c in other.common_names if c.name == cn.name), None
             )
             move_botanical_names(cn, other_cn)
-            warnings += move_section(cn, other_cn)
-            warnings += move_cultivars(cn, other_cn)
+            warnings += migrate_sections(cn, other_cn)
+            warnings += migrate_cultivars(cn, other_cn)
     return warnings
 
 
-def move_section(cn, other):
+def migrate_sections(cn, other):
     """Move all instances of `Section` from one `CommonName` to another.
 
     Attributes:
@@ -1636,7 +1636,7 @@ def remove_index(idx_id=None):
             # appending them to the new `Index`.
             # TODO: See if there are any bugs in this due to things moving
             # after redirect warnings are given.
-            warnings += move_common_names(index, new_index)
+            warnings += migrate_common_names(index, new_index)
             if index.thumbnail:
                 db.session.delete(index.thumbnail)
             index.clean_positions(remove_self=True)
@@ -1690,7 +1690,7 @@ def remove_common_name(cn_id=None):
                     ))
             except NotEnabledError:
                 pass
-            warnings += move_cultivars(cn, new_cn)
+            warnings += migrate_cultivars(cn, new_cn)
             if cn.thumbnail:
                 db.session.delete(cn.thumbnail)
             cn.index.common_names.remove(cn)  # Sets idx_pos for remaining.
@@ -2218,11 +2218,10 @@ def move_object(cls, obj_id, delta):
     obj = cls.query.get(obj_id)
     if obj is None:
         abort(404)
-    old_index = obj.parent_collection.index(obj)
     if obj.move(delta):
         db.session.commit()
         flash('\'{0}\' has been moved {1} {2} position{3}.'
-              .format(obj.name, 
+              .format(obj.name,
                       'forward' if delta > 0 else 'backward',
                       abs(delta),
                       's' if abs(delta) > 1 else ''))
@@ -2246,6 +2245,7 @@ def move_common_name(cn_id, delta):
 def move_section(section_id, delta):
     """Move a section <delta> positions in its parent container."""
     return move_object(Section, section_id, delta)
+
 
 @seeds.route('/move_cultivar/<int:cv_id>/<delta>')
 @permission_required(Permission.MANAGE_SEEDS)

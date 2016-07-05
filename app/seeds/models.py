@@ -309,6 +309,18 @@ def row_exists(col, value):
 
 
 # Helper Classes
+
+class TimestampMixin(object):
+    """A mixin for classes that would benefit from tracking modifications.
+
+    Attributes:
+
+    created_on: The date and time an instance was created.
+    updated_on: The date and time an instance was last updated.
+    """
+    created_on = db.Column(db.DateTime, server_default=db.func.now())
+    updated_on = db.Column(db.DateTime, onupdate=db.func.now())
+
 class PositionableMixin(object):
     """A mixin class to provide position functionality to models.
 
@@ -681,7 +693,7 @@ class USDollar(db.TypeDecorator):
 
 
 # Models
-class Index(db.Model, PositionableMixin):
+class Index(db.Model, TimestampMixin, PositionableMixin):
     """Table for seed indexes.
 
     Indexes are the first/broadest divisions we use to sort seeds. The
@@ -878,7 +890,7 @@ def save_indexes_json_before_commit(session):
         Index.save_nav_json()
 
 
-class CommonName(OrderingListMixin, SynonymsMixin, db.Model):
+class CommonName(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
     """Table for common names.
 
     A `CommonName` is the next subdivision below `Index` in how we sort seeds.
@@ -1275,7 +1287,7 @@ def before_common_name_insert_or_update(mapper, connection, target):
     target.slug = target.generate_slug()
 
 
-class BotanicalName(SynonymsMixin, db.Model):
+class BotanicalName(db.Model, TimestampMixin, SynonymsMixin):
     """Table for botanical (scientific) names of seeds.
 
     The botanical name is the scientific name of the species a seed belongs
@@ -1477,7 +1489,7 @@ def before_botanical_name_insert_or_update(mapper, connection, target):
                          'whether or not a name is valid.')
 
 
-class Section(OrderingListMixin, db.Model):
+class Section(db.Model, TimestampMixin, OrderingListMixin):
     """Table for sections cultivars may fall under.
 
     Sections are subdivisions of a common name which contain cultivars, such
@@ -1767,7 +1779,7 @@ def section_children_removed(target, value, initiator):
     value.parent_common_name = value.common_name
 
 
-class Cultivar(OrderingListMixin, SynonymsMixin, db.Model):
+class Cultivar(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
     """Table for cultivar data.
 
     A cultivar is an individual variety of plant, and represents the most
@@ -2194,7 +2206,7 @@ def section_cultivars_removed(target, value, initiator):
         value.parent_common_name = value.common_name
 
 
-class Packet(db.Model):
+class Packet(db.Model, TimestampMixin):
     """Table for seed packet information.
 
     Packet information includes data for each individual type of packet we
@@ -2679,7 +2691,7 @@ def before_synonym_insert_or_update(mapper, connection, target):
     target.parent
 
 
-class CustomPage(db.Model):
+class CustomPage(db.Model, TimestampMixin):
     """Table for custom pages that cover edge cases.
 
     Since there will always be some edge cases in which we may want to create
@@ -2703,7 +2715,7 @@ class CustomPage(db.Model):
     )
 
 
-class Image(db.Model):
+class Image(db.Model, TimestampMixin):
     """Table for image information.
 
     Any image uploaded to be used with the cultivar model should utilize this

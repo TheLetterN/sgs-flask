@@ -290,16 +290,6 @@ class TestEditIndexForm:
 
 class TestEditCommonNameForm:
     """Test methods of EditCommonNameForm."""
-    @mock.patch('app.seeds.forms.select_field_choices')
-    def test_set_selects(self, m_sfc):
-        """Call select_field_choices with model=Index."""
-        choices = [(1, 'One'), (2, 'Two')]
-        m_sfc.return_value = choices
-        self = mock.MagicMock()
-        EditCommonNameForm.set_selects(self=self)
-        assert self.index_id.choices == choices
-        m_sfc.assert_called_with(model=Index)
-
     @mock.patch('app.seeds.models.CommonName.query')
     def test_validate_name(self, m_cnq):
         m_cnq.return_value = 'CN Exists.'

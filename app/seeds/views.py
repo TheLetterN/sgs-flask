@@ -17,6 +17,7 @@
 
 
 import datetime
+
 from flask import (
     abort,
     current_app,
@@ -28,6 +29,7 @@ from flask import (
     url_for
 )
 from flask_login import login_required
+
 from app import db, list_to_english, Permission
 from app.breadcrumbs import Crumbler
 from app.decorators import permission_required

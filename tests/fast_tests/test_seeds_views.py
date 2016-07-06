@@ -1,19 +1,10 @@
 from flask import url_for
 from unittest import mock
-from app.seeds.views import list_to_or_string, redirect_warning
+from app.seeds.views import redirect_warning
 
 
 class TestModuleFunctions:
     """Test helper functions used within the module."""
-    def test_list_to_or_string(self):
-        """Return a string list delineated by commas with or between last 2."""
-        assert list_to_or_string(['one']) == 'one'
-        assert list_to_or_string(['one', 'two']) == 'one or two'
-        assert list_to_or_string(['one', 'two', 'three']) ==\
-            'one, two, or three'
-        assert list_to_or_string(['one', 'two', 'three', 'four']) ==\
-            'one, two, three, or four'
-
     def test_redirect_warning(self):
         """Return a string warning that a redirect should probably be made."""
         assert redirect_warning('/old/path', '<link to new path>') ==\

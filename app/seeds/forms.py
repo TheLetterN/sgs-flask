@@ -98,6 +98,24 @@ def position_choices(**kwargs):
     choices.insert(0, (-1, 'First'))
     return choices
 
+def remove_from_choices(choices, obj):
+    """Remove the choice pointing to `obj` from a list of select choices.
+
+    Args:
+
+    choices: The select field choices to remove `obj` from.
+    obj: The database model instance to be removed from choices; typically this
+        is the object a form is editing.
+    """
+    obj_choice = next(
+        (c for c in choices if c[0] == obj.id),
+        None
+    )
+    try:
+        choices.remove(obj_choice)
+    except ValueError:
+        # No need to remove it if it's not there.
+        pass
 
 # Custom validators
 #
@@ -842,10 +860,7 @@ class EditCommonNameForm(Form):
             model=CommonName,
             order_by='name'
         )
-        self_cn_choice = next(
-            c for c in self.gw_common_names_ids.choices if c[0] == cn.id
-        )
-        self.gw_common_names_ids.choices.remove(self_cn_choice)
+        remove_from_choices(self.gw_gommon_names_ids.choices, cn)
         self.gw_sections_ids.choices = select_field_choices(
             model=Section,
             order_by='name',
@@ -858,8 +873,7 @@ class EditCommonNameForm(Form):
         )
         self.pos.choices = position_choices(items=cn.index.common_names,
                                             order_by='idx_pos')
-        self_choice = next(c for c in self.pos.choices if c[0] == cn.id)
-        self.pos.choices.remove(self_choice)
+        remove_from_choices(self.pos.choices, cn)
         if not self.pos.data:
             collection = cn.index.common_names
             cn_index = collection.index(cn)
@@ -1005,8 +1019,7 @@ class EditSectionForm(Form):
         )
         self.parent_id.choices.insert(0, (0, 'None'))
         self.pos.choices = position_choices(items=self.obj.parent_collection)
-        self_choice = next(c for c in self.pos.choices if c[0] == self.obj.id)
-        self.pos.choices.remove(self_choice)
+        remove_from_choices(self.pos.choices, self.obj)
         if not self.pos.data:
             secs = self.obj.parent_collection
             s_index = secs.index(self.obj)
@@ -1132,13 +1145,9 @@ class EditCultivarForm(Form):
             order_by='name',
             title_attribute='fullname'
         )
-        self_cv_choice = next(
-            c for c in self.gw_cultivars_ids.choices if c[0] == self.obj.id
-        )
-        self.gw_cultivars_ids.choices.remove(self_cv_choice)
+        remove_from_choices(self.gw_cultivars_ids.choices, self.obj)
         self.pos.choices = position_choices(items=self.obj.parent_collection)
-        self_choice = next(c for c in self.pos.choices if c[0] == self.obj.id)
-        self.pos.choices.remove(self_choice)
+        remove_from_choices(self.pos.choices, self.obj)
         if not self.pos.data:
             cvs = self.obj.parent_collection
             cv_index = cvs.index(self.obj)

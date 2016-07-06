@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 import os
+
 import pytest
 from decimal import Decimal
 from flask import current_app
 from fractions import Fraction
 from unittest import mock
+
 from app.seeds.models import (
     BotanicalName,
     dbify,
@@ -15,7 +17,6 @@ from app.seeds.models import (
     Cultivar,
     OrderingListMixin,
     Packet,
-    PositionableMixin,
     Quantity,
     Synonym,
     SynonymsMixin,
@@ -55,259 +56,6 @@ class TestModuleFunctions:
             'BENARY\'S GIANT FORMULA MIX (Blue Point)'
         ) == 'Benary\'s Giant Formula Mix (Blue Point)'
         assert dbify('ONE TWO THREE (four)') == 'One Two Three (Four)'
-
-
-class TestPositionableMixin:
-    """Test methods of the PositionableMixin class."""
-    @mock.patch('app.seeds.models.db')
-    def test_positionable_instances(self, m_db):
-        """Get all instances from db and db.session.new."""
-        p1 = PositionableMixin()
-        p2 = PositionableMixin()
-        p3 = PositionableMixin()
-        PositionableMixin.query = mock.MagicMock()
-        PositionableMixin.query.all.return_value = [p1, p2, p3]
-        p4 = PositionableMixin()
-        p5 = PositionableMixin()
-        p6 = PositionableMixin()
-        m_db.session.new = [p4, p5, p6]
-        assert p1.positionable_instances == [
-            p1, p2, p3, p4, p5, p6
-        ]
-
-    @mock.patch('app.seeds.models.PositionableMixin.positionable_instances')
-    def test_auto_position_first(self, m_gai):
-        """Set position to 1 if no other instances exist."""
-        m_gai.return_value = []
-        p1 = PositionableMixin()
-        # Since PositionableMixin is not a declarative model, but a mixin that
-        # adds a column to models, p1.position needs to be set to None before
-        # using auto_position to prevent a TypeError from being raised due to
-        # attempting to interpret an unbound column as a boolean.
-        p1.position = None
-        p1.auto_position()
-        assert p1.position == 1
-
-    @mock.patch('app.seeds.models.PositionableMixin.positionable_instances',
-                new_callable=mock.PropertyMock)
-    def test_auto_position_with_others(self, m_gai):
-        p1 = PositionableMixin()
-        p1.position = 1
-        p2 = PositionableMixin()
-        p2.position = 2
-        p3 = PositionableMixin()
-        p3.position = 3
-        m_gai.return_value = [p1, p2, p3]
-        p4 = PositionableMixin()
-        p4.position = None
-        p4.auto_position()
-        assert p4.position == 4
-
-    @mock.patch('app.seeds.models.PositionableMixin.positionable_instances',
-                new_callable=mock.PropertyMock)
-    def test_set_position_inserts(self, m_pi):
-        """Setting a position btwn first and last should insert there."""
-        p1 = PositionableMixin()
-        p2 = PositionableMixin()
-        p3 = PositionableMixin()
-        p1.position = 1
-        p2.position = 2
-        p3.position = 3
-        m_pi.return_value = [p1, p2, p3]
-        ptest = PositionableMixin()
-        ptest.position = None
-        ptest.set_position(2)
-        assert p1.position == 1
-        assert ptest.position == 2
-        assert p2.position == 3
-        assert p3.position == 4
-
-    @mock.patch('app.seeds.models.PositionableMixin.positionable_instances',
-                new_callable=mock.PropertyMock)
-    def test_set_position_insert_first(self, m_pi):
-        """Bump others up when inserting to start position."""
-        p1 = PositionableMixin()
-        p2 = PositionableMixin()
-        p3 = PositionableMixin()
-        p1.position = 1
-        p2.position = 2
-        p3.position = 3
-        m_pi.return_value = [p1, p2, p3]
-        ptest = PositionableMixin()
-        ptest.position = None
-        ptest.set_position(1)
-        assert ptest.position == 1
-        assert p1.position == 2
-        assert p2.position == 3
-        assert p3.position == 4
-
-    @mock.patch('app.seeds.models.PositionableMixin.positionable_instances',
-                new_callable=mock.PropertyMock)
-    def test_set_position_insert_before_first(self, m_pi):
-        """Insert at first position if given number below 1."""
-        p1 = PositionableMixin()
-        p2 = PositionableMixin()
-        p3 = PositionableMixin()
-        p1.position = 1
-        p2.position = 2
-        p3.position = 3
-        m_pi.return_value = [p1, p2, p3]
-        ptest = PositionableMixin()
-        ptest.position = None
-        ptest.set_position(0)
-        assert ptest.position == 1
-        assert p1.position == 2
-        assert p2.position == 3
-        assert p3.position == 4
-        m_pi.return_value = [p1, p2, p3, ptest]
-        ptest2 = PositionableMixin()
-        ptest2.position = None
-        ptest2.set_position(-1)
-        assert ptest2.position == 1
-        assert ptest.position == 2
-        assert p1.position == 3
-        assert p2.position == 4
-        assert p3.position == 5
-
-    @mock.patch('app.seeds.models.PositionableMixin.positionable_instances',
-                new_callable=mock.PropertyMock)
-    def test_set_position_insert_last(self, m_pi):
-        """Insert after last position if given last position + 1."""
-        p1 = PositionableMixin()
-        p2 = PositionableMixin()
-        p3 = PositionableMixin()
-        p1.position = 1
-        p2.position = 2
-        p3.position = 3
-        m_pi.return_value = [p1, p2, p3]
-        ptest = PositionableMixin()
-        ptest.position = None
-        ptest.set_position(4)
-        assert p1.position == 1
-        assert p2.position == 2
-        assert p3.position == 3
-        assert ptest.position == 4
-
-    @mock.patch('app.seeds.models.PositionableMixin.positionable_instances',
-                new_callable=mock.PropertyMock)
-    def test_set_position_insert_after_last(self, m_pi):
-        """Insert after last position if given arbitrarily larger position."""
-        p1 = PositionableMixin()
-        p2 = PositionableMixin()
-        p3 = PositionableMixin()
-        p1.position = 1
-        p2.position = 2
-        p3.position = 3
-        m_pi.return_value = [p1, p2, p3]
-        ptest = PositionableMixin()
-        ptest.position = None
-        ptest.set_position(42)
-        assert p1.position == 1
-        assert p2.position == 2
-        assert p3.position == 3
-        assert ptest.position == 4
-
-    @mock.patch('app.seeds.models.PositionableMixin.positionable_instances',
-                new_callable=mock.PropertyMock)
-    @mock.patch('app.seeds.models.PositionableMixin.auto_position')
-    def test_set_position_empty_rows(self, m_ap, m_pi):
-        """Auto-position if no other positioned objects exist."""
-        m_pi.return_value = []
-        ptest = PositionableMixin()
-        ptest.set_position(42)
-        assert m_ap.called
-
-    @mock.patch('app.seeds.models.PositionableMixin.positionable_instances',
-                new_callable=mock.PropertyMock)
-    def test_clean_positions_removes_gaps(self, m_pi):
-        """Remove gaps in position when cleaning."""
-        p1 = PositionableMixin()
-        p2 = PositionableMixin()
-        p3 = PositionableMixin()
-        p1.position = 1
-        p2.position = 5
-        p3.position = 9
-        m_pi.return_value = [p1, p2, p3]
-        p1.clean_positions()
-        assert p1.position == 1
-        assert p2.position == 2
-        assert p3.position == 3
-
-    @mock.patch('app.seeds.models.PositionableMixin.positionable_instances',
-                new_callable=mock.PropertyMock)
-    def test_clean_positions_removes_self(self, m_pi):
-        """Remove self from positioning if specified."""
-        p1 = PositionableMixin()
-        p2 = PositionableMixin()
-        p3 = PositionableMixin()
-        p1.position = 1
-        p2.position = 5
-        p3.position = 9
-        m_pi.return_value = [p1, p2, p3]
-        p1.clean_positions(remove_self=True)
-        assert p2.position == 1
-        assert p3.position == 2
-
-    @mock.patch('app.seeds.models.PositionableMixin.positionable_instances',
-                new_callable=mock.PropertyMock)
-    def test_clean_positions_sets_nulls(self, m_pi):
-        """Set positions for objects with no position set."""
-        p1 = PositionableMixin()
-        p2 = PositionableMixin()
-        p3 = PositionableMixin()
-        p4 = PositionableMixin()
-        p1.position = 1
-        p2.position = None
-        p3.position = 2
-        p4.position = None
-        m_pi.return_value = [p1, p2, p3, p4]
-        p1.clean_positions()
-        assert p1.position == 1
-        assert p3.position == 2
-        assert p2.position == 3
-        assert p4.position == 4
-
-    @mock.patch('app.seeds.models.PositionableMixin._step')
-    def test_previous(self, m_s):
-        """_step backwards."""
-        p1 = PositionableMixin()
-        p1.previous
-        m_s.assert_called_with(forward=False)
-
-    @mock.patch('app.seeds.models.PositionableMixin._step')
-    def test_next(self, m_s):
-        """_step forwards."""
-        p1 = PositionableMixin()
-        p1.next
-        m_s.assert_called_with(forward=True)
-
-    @mock.patch('app.seeds.models.PositionableMixin.positionable_instances',
-                new_callable=mock.PropertyMock)
-    def test_first(self, m_pi):
-        """Return the lowest positioned instance."""
-        p1 = PositionableMixin()
-        p2 = PositionableMixin()
-        p3 = PositionableMixin()
-        p1.position = 1
-        p2.position = 2
-        p3.position = 3
-        m_pi.return_value = [p1, p2, p3]
-        p = PositionableMixin()
-        assert p.first is p1
-
-    @mock.patch('app.seeds.models.PositionableMixin.positionable_instances',
-                new_callable=mock.PropertyMock)
-    def test_last(self, m_pi):
-        """Return the highest positioned instance."""
-        p1 = PositionableMixin()
-        p2 = PositionableMixin()
-        p3 = PositionableMixin()
-        p1.position = 1
-        p2.position = 2
-        p3.position = 3
-        m_pi.return_value = [p1, p2, p3]
-        p = PositionableMixin()
-        assert p.last is p3
 
 
 class TestOrderingListMixin:
@@ -635,6 +383,256 @@ class TestIndex:
         idx = Index()
         assert idx.generate_slug() is None
 
+    @mock.patch('app.seeds.models.db')
+    def test_positionable_instances(self, m_db):
+        """Get all instances from db and db.session.new."""
+        p1 = Index()
+        p2 = Index()
+        p3 = Index()
+        Index.query = mock.MagicMock()
+        Index.query.all.return_value = [p1, p2, p3]
+        p4 = Index()
+        p5 = Index()
+        p6 = Index()
+        m_db.session.new = [p4, p5, p6]
+        assert p1.positionable_instances == [
+            p1, p2, p3, p4, p5, p6
+        ]
+
+    @mock.patch('app.seeds.models.Index.positionable_instances')
+    def test_auto_position_first(self, m_gai):
+        """Set position to 1 if no other instances exist."""
+        m_gai.return_value = []
+        p1 = Index()
+        # Since Index is not a declarative model, but a mixin that
+        # adds a column to models, p1.position needs to be set to None before
+        # using auto_position to prevent a TypeError from being raised due to
+        # attempting to interpret an unbound column as a boolean.
+        p1.position = None
+        p1.auto_position()
+        assert p1.position == 1
+
+    @mock.patch('app.seeds.models.Index.positionable_instances',
+                new_callable=mock.PropertyMock)
+    def test_auto_position_with_others(self, m_gai):
+        p1 = Index()
+        p1.position = 1
+        p2 = Index()
+        p2.position = 2
+        p3 = Index()
+        p3.position = 3
+        m_gai.return_value = [p1, p2, p3]
+        p4 = Index()
+        p4.position = None
+        p4.auto_position()
+        assert p4.position == 4
+
+    @mock.patch('app.seeds.models.Index.positionable_instances',
+                new_callable=mock.PropertyMock)
+    def test_set_position_inserts(self, m_pi):
+        """Setting a position btwn first and last should insert there."""
+        p1 = Index()
+        p2 = Index()
+        p3 = Index()
+        p1.position = 1
+        p2.position = 2
+        p3.position = 3
+        m_pi.return_value = [p1, p2, p3]
+        ptest = Index()
+        ptest.position = None
+        ptest.set_position(2)
+        assert p1.position == 1
+        assert ptest.position == 2
+        assert p2.position == 3
+        assert p3.position == 4
+
+    @mock.patch('app.seeds.models.Index.positionable_instances',
+                new_callable=mock.PropertyMock)
+    def test_set_position_insert_first(self, m_pi):
+        """Bump others up when inserting to start position."""
+        p1 = Index()
+        p2 = Index()
+        p3 = Index()
+        p1.position = 1
+        p2.position = 2
+        p3.position = 3
+        m_pi.return_value = [p1, p2, p3]
+        ptest = Index()
+        ptest.position = None
+        ptest.set_position(1)
+        assert ptest.position == 1
+        assert p1.position == 2
+        assert p2.position == 3
+        assert p3.position == 4
+
+    @mock.patch('app.seeds.models.Index.positionable_instances',
+                new_callable=mock.PropertyMock)
+    def test_set_position_insert_before_first(self, m_pi):
+        """Insert at first position if given number below 1."""
+        p1 = Index()
+        p2 = Index()
+        p3 = Index()
+        p1.position = 1
+        p2.position = 2
+        p3.position = 3
+        m_pi.return_value = [p1, p2, p3]
+        ptest = Index()
+        ptest.position = None
+        ptest.set_position(0)
+        assert ptest.position == 1
+        assert p1.position == 2
+        assert p2.position == 3
+        assert p3.position == 4
+        m_pi.return_value = [p1, p2, p3, ptest]
+        ptest2 = Index()
+        ptest2.position = None
+        ptest2.set_position(-1)
+        assert ptest2.position == 1
+        assert ptest.position == 2
+        assert p1.position == 3
+        assert p2.position == 4
+        assert p3.position == 5
+
+    @mock.patch('app.seeds.models.Index.positionable_instances',
+                new_callable=mock.PropertyMock)
+    def test_set_position_insert_last(self, m_pi):
+        """Insert after last position if given last position + 1."""
+        p1 = Index()
+        p2 = Index()
+        p3 = Index()
+        p1.position = 1
+        p2.position = 2
+        p3.position = 3
+        m_pi.return_value = [p1, p2, p3]
+        ptest = Index()
+        ptest.position = None
+        ptest.set_position(4)
+        assert p1.position == 1
+        assert p2.position == 2
+        assert p3.position == 3
+        assert ptest.position == 4
+
+    @mock.patch('app.seeds.models.Index.positionable_instances',
+                new_callable=mock.PropertyMock)
+    def test_set_position_insert_after_last(self, m_pi):
+        """Insert after last position if given arbitrarily larger position."""
+        p1 = Index()
+        p2 = Index()
+        p3 = Index()
+        p1.position = 1
+        p2.position = 2
+        p3.position = 3
+        m_pi.return_value = [p1, p2, p3]
+        ptest = Index()
+        ptest.position = None
+        ptest.set_position(42)
+        assert p1.position == 1
+        assert p2.position == 2
+        assert p3.position == 3
+        assert ptest.position == 4
+
+    @mock.patch('app.seeds.models.Index.positionable_instances',
+                new_callable=mock.PropertyMock)
+    @mock.patch('app.seeds.models.Index.auto_position')
+    def test_set_position_empty_rows(self, m_ap, m_pi):
+        """Auto-position if no other positioned objects exist."""
+        m_pi.return_value = []
+        ptest = Index()
+        ptest.set_position(42)
+        assert m_ap.called
+
+    @mock.patch('app.seeds.models.Index.positionable_instances',
+                new_callable=mock.PropertyMock)
+    def test_clean_positions_removes_gaps(self, m_pi):
+        """Remove gaps in position when cleaning."""
+        p1 = Index()
+        p2 = Index()
+        p3 = Index()
+        p1.position = 1
+        p2.position = 5
+        p3.position = 9
+        m_pi.return_value = [p1, p2, p3]
+        p1.clean_positions()
+        assert p1.position == 1
+        assert p2.position == 2
+        assert p3.position == 3
+
+    @mock.patch('app.seeds.models.Index.positionable_instances',
+                new_callable=mock.PropertyMock)
+    def test_clean_positions_removes_self(self, m_pi):
+        """Remove self from positioning if specified."""
+        p1 = Index()
+        p2 = Index()
+        p3 = Index()
+        p1.position = 1
+        p2.position = 5
+        p3.position = 9
+        m_pi.return_value = [p1, p2, p3]
+        p1.clean_positions(remove_self=True)
+        assert p2.position == 1
+        assert p3.position == 2
+
+    @mock.patch('app.seeds.models.Index.positionable_instances',
+                new_callable=mock.PropertyMock)
+    def test_clean_positions_sets_nulls(self, m_pi):
+        """Set positions for objects with no position set."""
+        p1 = Index()
+        p2 = Index()
+        p3 = Index()
+        p4 = Index()
+        p1.position = 1
+        p2.position = None
+        p3.position = 2
+        p4.position = None
+        m_pi.return_value = [p1, p2, p3, p4]
+        p1.clean_positions()
+        assert p1.position == 1
+        assert p3.position == 2
+        assert p2.position == 3
+        assert p4.position == 4
+
+    @mock.patch('app.seeds.models.Index._step')
+    def test_previous(self, m_s):
+        """_step backwards."""
+        p1 = Index()
+        p1.previous
+        m_s.assert_called_with(forward=False)
+
+    @mock.patch('app.seeds.models.Index._step')
+    def test_next(self, m_s):
+        """_step forwards."""
+        p1 = Index()
+        p1.next
+        m_s.assert_called_with(forward=True)
+
+    @mock.patch('app.seeds.models.Index.positionable_instances',
+                new_callable=mock.PropertyMock)
+    def test_first(self, m_pi):
+        """Return the lowest positioned instance."""
+        p1 = Index()
+        p2 = Index()
+        p3 = Index()
+        p1.position = 1
+        p2.position = 2
+        p3.position = 3
+        m_pi.return_value = [p1, p2, p3]
+        p = Index()
+        assert p.first is p1
+
+    @mock.patch('app.seeds.models.Index.positionable_instances',
+                new_callable=mock.PropertyMock)
+    def test_last(self, m_pi):
+        """Return the highest positioned instance."""
+        p1 = Index()
+        p2 = Index()
+        p3 = Index()
+        p1.position = 1
+        p2.position = 2
+        p3.position = 3
+        m_pi.return_value = [p1, p2, p3]
+        p = Index()
+        assert p.last is p3
+
     # TODO: Test save_to_json_file
 
 
@@ -657,13 +655,15 @@ class TestCommonName:
         x.id = 24
         y.id = 25
         z.id = 26
+        cv1, cv2, cv3 = Cultivar(), Cultivar(), Cultivar()
         cn1.id = 42
         cn1.index = idx
         cn1.name = 'Annual'
         cn1.slug = 'annual'
         cn1.description = 'Not built to last.'
         cn1.instructions = 'Plant them.'
-        cn1.grows_with = [x, y, z]
+        cn1.gw_common_names = [x, y, z]
+        cn1.gw_cultivars = [cv1, cv2, cv3]
         cn1.visible = True
         assert cn1 != cn2
         cn2.id = 42
@@ -672,7 +672,8 @@ class TestCommonName:
         cn2.slug = 'annual'
         cn2.description = 'Not built to last.'
         cn2.instructions = 'Plant them.'
-        cn2.grows_with = [x, y, z]
+        cn2.gw_common_names = [x, y, z]
+        cn2.gw_cultivars = [cv1, cv2, cv3]
         cn2.visible = True
         assert cn1 == cn2
 

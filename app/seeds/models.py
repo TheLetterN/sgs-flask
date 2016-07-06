@@ -322,20 +322,6 @@ class TimestampMixin(object):
     updated_on = db.Column(db.DateTime, onupdate=db.func.now())
 
 
-class PositionableMixin(object):
-    """A mixin class to provide position functionality to models.
-
-    While positions are integer numbers, all users need to know about positions
-    is how they relate to each other, so the actual numbers are arbitrary. The
-    numbers can and will change as instances are added or moved around.
-
-    Attributes:
-        position: An integer column for an instance's position relative to the
-            other instances of that model.
-    """
-    position = db.Column(db.Integer)
-
-
 class OrderingListMixin(object):
     """A mixin for methods dealing with ordering_list positioning."""
     @property

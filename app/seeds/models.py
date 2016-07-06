@@ -321,6 +321,7 @@ class TimestampMixin(object):
     created_on = db.Column(db.DateTime, server_default=db.func.now())
     updated_on = db.Column(db.DateTime, onupdate=db.func.now())
 
+
 class PositionableMixin(object):
     """A mixin class to provide position functionality to models.
 
@@ -333,156 +334,6 @@ class PositionableMixin(object):
             other instances of that model.
     """
     position = db.Column(db.Integer)
-
-    @property
-    def positionable_instances(self):
-        """Return a list of all instances of model in both db and session.
-
-        Note:
-            This method should be overridden in child models that should be
-            positioned relative to a parent instead of all instances of the
-            child model. e.g. in `CommonName`, `positionable_instances` should
-            return all instances of `CommonName` with the same parent `Index`.
-
-        Returns:
-            list: All active instances of the model.
-        """
-        cls = self.__class__
-        rows = cls.query.all()
-        # This will not result in every instance of every class that inherits
-        # from this mixin being added to rows, as `cls` will evaluate to the
-        # child class, not `PositionableMixin`.
-        rows += [i for i in db.session.new if isinstance(i, cls)]
-        return rows
-
-    def clean_positions(self, remove_self=False):
-        """Re-number positions to account for gaps and inconsistencies.
-
-        Args:
-            remove_self: True if the instance `self` should be removed from
-                the list of active instances before cleaning. This should
-                only be set to True if `self` is being moved to a different
-                parent, or being deleted from the database.
-        """
-        rows = self.positionable_instances
-        if remove_self:
-            rows.pop(rows.index(self))
-        if rows:
-            for row in rows:
-                if row.position is None:
-                    row.auto_position()
-            sorted_rows = sorted(rows, key=lambda x: x.position)
-            for i, row in enumerate(sorted_rows, 1):
-                row.position = i
-
-    def auto_position(self):
-        """Automatically position this instance.
-
-        This should generally only be run when adding a new instance, otherwise
-        it should do nothing.
-        """
-        if not self.position:
-            last = self.last
-            if last:
-                self.position = last.position + 1
-            else:
-                self.position = 1
-
-    def set_position(self, position):
-        """Manually set position of instance, and change position of others."""
-        if self.position != position:
-            rows = self.positionable_instances
-            pruned_rows = [r for r in rows if r.position is not None]
-            if pruned_rows:
-                first = min(pruned_rows, key=lambda x: x.position)
-                last = max(pruned_rows, key=lambda x: x.position)
-                if position < first.position:
-                    position = first.position
-                if position > last.position + 1:
-                    position = last.position + 1
-                for r in pruned_rows:
-                    if r.position >= position:
-                        r.position += 1
-                self.position = position
-                if self not in pruned_rows:
-                    pruned_rows.append(self)
-                pruned_rows = sorted(pruned_rows, key=lambda x: x.position)
-                for i, r in enumerate(pruned_rows, 1):
-                    r.position = i
-            else:
-                self.auto_position()
-
-    # Navigation methods
-    def _step(self, forward=True):
-        """Return next or previous instance by position.
-
-        Args:
-            forward: True if getting next instance, False if previous.
-
-        Returns:
-            The next or previous instance, or None if there is no next or
-            previous instance.
-        """
-        model = self.__class__
-        cur_pos = self.position
-        if forward:
-            end_pos = self.last.position
-        else:
-            end_pos = self.first.position
-        inst = None
-        while inst is None:
-            if cur_pos == end_pos:
-                break
-
-            if forward:
-                cur_pos += 1
-            else:
-                cur_pos -= 1
-            inst = model.query.filter(model.position == cur_pos).first()
-
-        return inst
-
-    @property
-    def first(self):
-        """Get the first instance according to position.
-
-        Returns:
-            The lowest positioned instance of <parent class>.
-        """
-        return min(self.positionable_instances,
-                   key=lambda x: x.position,
-                   default=None)
-
-    @property
-    def previous(self):
-        """Get the previous instance according to position.
-
-        Returns:
-            The previous instance, or None if this instance is first.
-        """
-        return self._step(forward=False)
-
-    @property
-    def next(self):
-        """Get the next instance according to position.
-
-        Returns:
-            The next instance, or None if this instance is last.
-        """
-        return self._step(forward=True)
-
-    @property
-    def last(self):
-        """Get the last instance according to position.
-
-        Returns:
-            The highest positioned instance of <parent class>.
-        """
-        rows = self.positionable_instances
-        pruned_rows = [r for r in rows if r and r.position is not None]
-        return max(pruned_rows,
-                   key=lambda x: x.position,
-                   default=None)
 
 
 class OrderingListMixin(object):
@@ -693,7 +544,7 @@ class USDollar(db.TypeDecorator):
 
 
 # Models
-class Index(db.Model, TimestampMixin, PositionableMixin):
+class Index(db.Model, TimestampMixin):
     """Table for seed indexes.
 
     Indexes are the first/broadest divisions we use to sort seeds. The
@@ -713,7 +564,7 @@ class Index(db.Model, TimestampMixin, PositionableMixin):
     """
     __tablename__ = 'indexes'
     id = db.Column(db.Integer, primary_key=True)
-    # position - db.Column(db.Integer) inherited from PositionableMixin
+    position = db.Column(db.Integer)
 
     # Data Required
     name = db.Column(db.String(64), unique=True)
@@ -870,6 +721,149 @@ class Index(db.Model, TimestampMixin, PositionableMixin):
             }
         with json_file.open('w', encoding='utf-8') as ofile:
             ofile.write(json.dumps(dicts, indent=4))
+
+    # Positioning methods and properties.
+    #
+    # Since Indexes aren't part of any collection, unfortunately they can't be
+    # positioned using an ordering list.
+    @property
+    def positionable_instances(self):
+        """Return a list of all instances of `Index` in both db and session.
+
+        Returns:
+            list: All active instances of `Index`.
+        """
+        rows = Index.query.all()
+        rows += [i for i in db.session.new if isinstance(i, Index)]
+        return rows
+
+    def clean_positions(self, remove_self=False):
+        """Re-number positions to account for gaps and inconsistencies.
+
+        Args:
+            remove_self: True if the instance `self` should be removed from
+                the list of active instances before cleaning. This should
+                only be set to True if `self` is being moved to a different
+                parent, or being deleted from the database.
+        """
+        rows = self.positionable_instances
+        if remove_self:
+            rows.pop(rows.index(self))
+        if rows:
+            for row in rows:
+                if row.position is None:
+                    row.auto_position()
+            sorted_rows = sorted(rows, key=lambda x: x.position)
+            for i, row in enumerate(sorted_rows, 1):
+                row.position = i
+
+    def auto_position(self):
+        """Automatically position an instance.
+
+        This should generally only be run when adding a new instance, otherwise
+        it should do nothing.
+        """
+        if not self.position:
+            last = self.last
+            if last:
+                self.position = last.position + 1
+            else:
+                self.position = 1
+
+    def set_position(self, position):
+        """Manually set position of instance, and change position of others."""
+        if self.position != position:
+            rows = self.positionable_instances
+            pruned_rows = [r for r in rows if r.position is not None]
+            if pruned_rows:
+                first = min(pruned_rows, key=lambda x: x.position)
+                last = max(pruned_rows, key=lambda x: x.position)
+                if position < first.position:
+                    position = first.position
+                if position > last.position + 1:
+                    position = last.position + 1
+                for r in pruned_rows:
+                    if r.position >= position:
+                        r.position += 1
+                self.position = position
+                if self not in pruned_rows:
+                    pruned_rows.append(self)
+                pruned_rows = sorted(pruned_rows, key=lambda x: x.position)
+                for i, r in enumerate(pruned_rows, 1):
+                    r.position = i
+            else:
+                self.auto_position()
+
+    # Navigation methods
+    def _step(self, forward=True):
+        """Return next or previous instance by position.
+
+        Args:
+            forward: True if getting next instance, False if previous.
+
+        Returns:
+            The next or previous instance, or None if there is no next or
+            previous instance.
+        """
+        cur_pos = self.position
+        if forward:
+            end_pos = self.last.position
+        else:
+            end_pos = self.first.position
+        inst = None
+        while inst is None:
+            if cur_pos == end_pos:
+                break
+
+            if forward:
+                cur_pos += 1
+            else:
+                cur_pos -= 1
+            inst = Index.query.filter(Index.position == cur_pos).first()
+
+        return inst
+
+    @property
+    def first(self):
+        """Get the first instance according to position.
+
+        Returns:
+            The lowest positioned instance of <parent class>.
+        """
+        return min(self.positionable_instances,
+                   key=lambda x: x.position,
+                   default=None)
+
+    @property
+    def previous(self):
+        """Get the previous instance according to position.
+
+        Returns:
+            The previous instance, or None if this instance is first.
+        """
+        return self._step(forward=False)
+
+    @property
+    def next(self):
+        """Get the next instance according to position.
+
+        Returns:
+            The next instance, or None if this instance is last.
+        """
+        return self._step(forward=True)
+
+    @property
+    def last(self):
+        """Get the last instance according to position.
+
+        Returns:
+            The highest positioned instance of <parent class>.
+        """
+        rows = self.positionable_instances
+        pruned_rows = [r for r in rows if r and r.position is not None]
+        return max(pruned_rows,
+                   key=lambda x: x.position,
+                   default=None)
 
 
 @event.listens_for(Index, 'before_insert')

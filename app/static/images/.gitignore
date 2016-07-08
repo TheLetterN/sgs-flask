@@ -3,5 +3,6 @@
 !.gitignore
 
 # We do want the subdirectories in it, though.
-!assets
-!plants
+!assets/
+!assets/*
+!plants/

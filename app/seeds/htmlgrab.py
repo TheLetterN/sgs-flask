@@ -589,6 +589,17 @@ def save_grows_with():
         elif model == 'Section':
             obj = Section.query.get(id)
         for url in gw_map[key]:
+            # First fix some edge cases
+            if 'Globe-Gilia' in url:
+                url = url.split('#')[0]
+            if url == '#Little-Becka-sunflower-seeds':
+                url = ('http://www.swallowtailgardenseeds.com/annuals/'
+                       'sunflowers.html#Little-Becka-sunflower-seeds')
+            if url == '#Tidal-Wave-Silver-trailing-petunia-seeds':
+                url = ('http://www.swallowtailgardenseeds.com/annuals/'
+                       'petuniats.html#Tidal-Wave-Silver-trailing-petunia-'
+                       'seeds')
+
             if url not in link_map:
                 try:
                     u, a = url.split('#')
@@ -900,7 +911,10 @@ class Page(object):
             try:
                 sd['anchor'] = sdiv['id']
             except KeyError:
-                pass
+                try:
+                    sd['anchor'] = sdiv.h2['id']
+                except:
+                    pass
             bns = None
             if sdiv.h2:
                 ems = sdiv.h2.find_all(name='em', recursive=False)

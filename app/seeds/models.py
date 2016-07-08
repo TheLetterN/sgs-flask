@@ -327,7 +327,7 @@ class OrderingListMixin(object):
     @property
     def parent_collection(self):
         raise NotImplementedError(
-            'The parent_collection property for \'{0}\' has not been '
+            'The parent_collection property for "{0}" has not been '
             'implemented yet!'.format(self.__class__.__name___)
         )
 
@@ -578,7 +578,7 @@ class Index(db.Model, TimestampMixin):
         self.description = description
 
     def __repr__(self):
-        return '<{0} \'{1}\'>'.format(self.__class__.__name__,
+        return '<{0} "{1}">'.format(self.__class__.__name__,
                                       self.name)
 
     def __eq__(self, other):
@@ -630,7 +630,7 @@ class Index(db.Model, TimestampMixin):
         idx = cls.query.get(dict_['id'])
         if idx:
             raise ValueError(
-                'An Index with id {0} already exists as: \'{0}\''
+                'An Index with id {0} already exists as: "{0}"'
                 .format(idx.id, idx.name)
             )
         idx = cls()
@@ -659,12 +659,12 @@ class Index(db.Model, TimestampMixin):
         """
         idx = cls.query.filter(cls.name == name).one_or_none()
         if idx:
-            print('The Index \'{0}\' has been loaded from the database.'
+            print('The Index "{0}" has been loaded from the database.'
                   .format(idx.name), file=stream)
             idx.created = False
         else:
             idx = cls(name=name)
-            print('The Index \'{0}\' does not yet exist in the database, so '
+            print('The Index "{0}" does not yet exist in the database, so '
                   'it has been created.'.format(idx.name), file=stream)
             idx.created = True
         return idx
@@ -987,7 +987,7 @@ class CommonName(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
             self.visible = visible
 
     def __repr__(self):
-        return '<{0} \'{1}\'>'.format(self.__class__.__name__, self.name)
+        return '<{0} "{1}">'.format(self.__class__.__name__, self.name)
 
     def __eq__(self, other):
         return all((
@@ -1075,7 +1075,7 @@ class CommonName(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
         cn = cls.query.get(dict_['id'])
         if cn:
             raise ValueError(
-                'A CommonName with the id {0} already exists as: \'{1}\''
+                'A CommonName with the id {0} already exists as: "{1}"'
                 .format(cn.id, cn.name)
             )
 
@@ -1169,12 +1169,12 @@ class CommonName(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
         """
         cn = cls.from_queryable_values(name=name, index=index)
         if cn:
-            print('The CommonName \'{0}\' has been loaded from the database.'
+            print('The CommonName "{0}" has been loaded from the database.'
                   .format(cn.name), file=stream)
             cn.created = False
         else:
             cn = cls(name=name)
-            print('The CommonName \'{0}\' does not yet exist in the database, '
+            print('The CommonName "{0}" does not yet exist in the database, '
                   'so it has been created.'.format(cn.name), file=stream)
             cn.index = Index.get_or_create(name=index, stream=stream)
             cn.created = True
@@ -1318,7 +1318,7 @@ class BotanicalName(db.Model, TimestampMixin, SynonymsMixin):
             str: Representation formatted <BotanicalName '<.name>'> for
                  example: <BotanicalName 'Asclepias incarnata'>
         """
-        return '<{0} \'{1}\'>'.format(self.__class__.__name__,
+        return '<{0} "{1}">'.format(self.__class__.__name__,
                                       self.name)
 
     @property
@@ -1343,7 +1343,7 @@ class BotanicalName(db.Model, TimestampMixin, SynonymsMixin):
         bn = cls.query.get(dict_['id'])
         if bn:
             raise RuntimeError(
-                'A BotanicalName with id {0} already exists as: \'{0}\''
+                'A BotanicalName with id {0} already exists as: "{0}"'
                 .format(bn.id, bn.name)
             )
         bn = cls()
@@ -1376,17 +1376,17 @@ class BotanicalName(db.Model, TimestampMixin, SynonymsMixin):
                 parts = name.split(' ')
                 name = ' '.join([parts[0].title()] + parts[1:])
             else:
-                raise ValueError('\'{0}\' is not a valid botanical name!'
+                raise ValueError('"{0}" is not a valid botanical name!'
                                  .format(name))
         bn = cls.query.filter(cls.name == name).one_or_none()
         if bn:
             bn.created = False
-            print('The BotanicalName \'{0}\' has been loaded from the '
+            print('The BotanicalName "{0}" has been loaded from the '
                   'database.'.format(bn.name))
         else:
             bn = BotanicalName(name=name)
             bn.created = True
-            print('The BotanicalName \'{0}\' does not yet exist in the '
+            print('The BotanicalName "{0}" does not yet exist in the '
                   'database, so it has been created.'
                   .format(bn.name))
         return bn
@@ -1566,7 +1566,7 @@ class Section(db.Model, TimestampMixin, OrderingListMixin):
 
     def __repr__(self):
         """Return a string representing a `Section` instance."""
-        return '<{0} \'{1}\'>'.format(self.__class__.__name__, self.fullname)
+        return '<{0} "{1}">'.format(self.__class__.__name__, self.fullname)
 
     @classmethod
     def from_ids(cls, ids):
@@ -1602,13 +1602,13 @@ class Section(db.Model, TimestampMixin, OrderingListMixin):
             .one_or_none()
         if sec:
             sec.created = False
-            print('The Section \'{0}\' has been loaded from the database.'
+            print('The Section "{0}" has been loaded from the database.'
                   .format(sec.fullname), file=stream)
         else:
             cn = CommonName.get_or_create(common_name, index, stream=stream)
             sec = Section(name=name, common_name=cn)
             sec.created = True
-            print('The Section \'{0}\' does not yet exist in the database, '
+            print('The Section "{0}" does not yet exist in the database, '
                   'so it has been created'.format(sec.fullname), file=stream)
         return sec
 
@@ -1936,7 +1936,7 @@ class Cultivar(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
 
     def __repr__(self):
         """Return representation of Cultivar in human-readable format."""
-        return '<{0} \'{1}\'>'.format(self.__class__.__name__,
+        return '<{0} "{1}">'.format(self.__class__.__name__,
                                       self.fullname)
 
     @property
@@ -2064,7 +2064,7 @@ class Cultivar(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
                                        index=index)
         if cv:
             cv.created = False
-            print('The Cultivar \'{0}\' has been loaded from the database.'
+            print('The Cultivar "{0}" has been loaded from the database.'
                   .format(cv.fullname), file=stream)
         else:
             cv = cls(name=name)
@@ -2072,7 +2072,7 @@ class Cultivar(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
             cv.common_name = CommonName.get_or_create(name=common_name,
                                                       index=index,
                                                       stream=stream)
-            print('The Cultivar \'{0}\' does not yet exist in the database, '
+            print('The Cultivar "{0}" does not yet exist in the database, '
                   'so it has been created.'.format(cv.fullname), file=stream)
         return cv
 
@@ -2236,7 +2236,7 @@ class Packet(db.Model, TimestampMixin):
             ValueError: If given `sku` already exists.
         """
         if row_exists(cls.sku, sku):
-            raise ValueError('A packet already exists with the SKU \'{0}\'!'
+            raise ValueError('A packet already exists with the SKU "{0}"!'
                              .format(sku))
         qty = Quantity.query\
             .filter(Quantity.value == quantity, Quantity.units == units)\
@@ -2298,7 +2298,7 @@ class Quantity(db.Model):
             self.units = units
 
     def __repr__(self):
-        return '<{0} \'{1} {2}\'>'.format(self.__class__.__name__,
+        return '<{0} "{1} {2}">'.format(self.__class__.__name__,
                                           self.value,
                                           self.units)
 
@@ -2615,14 +2615,14 @@ class Synonym(db.Model):
     def __repr__(self):
         """Return string representing a synonym."""
         if self.parent:
-            return('<{0} \'{1}\' of {2}: \'{3}\'>'
+            return('<{0} "{1}" of {2}: "{3}">'
                    .format(self.__class__.__name__,
                            self.name,
                            None if not self.parent else
                            self.parent.__class__.__name__,
                            None if not self.parent else self.parent.name))
         else:
-            return('<{0} \'{1}\'>'.format(self.__class__.__name__, self.name))
+            return('<{0} "{1}">'.format(self.__class__.__name__, self.name))
 
     @property
     def parent(self):
@@ -2740,7 +2740,7 @@ class Image(db.Model, TimestampMixin):
             self.make_unique()
 
     def __repr__(self):
-        return '<{0} filename: \'{1}\'>'.format(self.__class__.__name__,
+        return '<{0} filename: "{1}">'.format(self.__class__.__name__,
                                                 self.filename)
 
     @property

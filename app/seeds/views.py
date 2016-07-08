@@ -155,7 +155,7 @@ def redirect_warning(old_path, links):
     Returns:
         Markup: A string containing a warning that a redirect should be added.
     """
-    return ('Warning: the path \'{0}\' is no longer valid. You may wish to '
+    return ('Warning: the path "{0}" is no longer valid. You may wish to '
             'redirect it to {1}.'.format(old_path, links))
 
 
@@ -358,7 +358,7 @@ def add_thumbnail(field, obj, messages):
         messages: The list to append messages to.
     """
     obj.thumbnail = Image.from_form_field(field)
-    messages.append('Thumbnail uploaded as: \'{0}\'.'
+    messages.append('Thumbnail uploaded as: "{0}".'
                     .format(obj.thumbnail.filename))
 
 
@@ -380,14 +380,14 @@ def edit_thumbnail(field, obj, messages):
             obj.thumbnail = None
             if hasattr(obj, 'images'):
                 obj.images.append(old)
-                messages.append('Old thumbnail \'{0}\' moved to images.'
+                messages.append('Old thumbnail "{0}" moved to images.'
                                 .format(old.filename))
             else:
-                messages.append('Old thumbnail \'{0}\' was deleted.'
+                messages.append('Old thumbnail "{0}" was deleted.'
                                 .format(old.filename))
                 db.session.delete(old)
             obj.thumbnail = Image.from_form_field(field)
-            messages.append('Uploading new thumbnail as \'{0}\'.'
+            messages.append('Uploading new thumbnail as "{0}".'
                             .format(obj.thumbnail.filename))
 
 
@@ -409,7 +409,7 @@ def add_index():
         messages = []
         index = Index(name=form.name.data)
         db.session.add(index)
-        messages.append('Creating new index \'{0}\':'
+        messages.append('Creating new index "{0}":'
                         .format(index.name))
         if form.thumbnail.data:
             add_thumbnail(form.thumbnail, index, messages)
@@ -425,9 +425,9 @@ def add_index():
             if other.position is None:
                 other.auto_position()
             index.set_position(other.position + 1)
-            messages.append('Will be listed after \'{0}\''.format(other.name))
+            messages.append('Will be listed after "{0}"'.format(other.name))
         db.session.commit()
-        messages.append('New index \'{0}\' added to the database.'
+        messages.append('New index "{0}" added to the database.'
                         .format(index.name))
         flash_all(messages)
         return redirect(url_for('seeds.add_common_name', idx_id=index.id))
@@ -451,8 +451,8 @@ def add_common_name(idx_id=None):
         messages = []
         cn = CommonName(name=form.name.data)
         db.session.add(cn)
-        messages.append('Creating new common name \'{0}\' and adding it to '
-                        'index \'{1}\':'.format(cn.name, idx.name))
+        messages.append('Creating new common name "{0}" and adding it to '
+                        'index "{1}":'.format(cn.name, idx.name))
         if form.thumbnail.data:
             add_thumbnail(form.thumbnail, cn, messages)
         if form.description.data:
@@ -465,7 +465,7 @@ def add_common_name(idx_id=None):
                             .format(cn.instructions))
         if form.synonyms.data:
             cn.synonyms_string = form.synonyms.data
-            messages.append('Synonyms set to: \'{0}\'.'
+            messages.append('Synonyms set to: "{0}".'
                             .format(cn.synonyms_string))
         if form.pos.data == -1:
             idx.common_names.insert(0, cn)
@@ -473,7 +473,7 @@ def add_common_name(idx_id=None):
         else:
             after = CommonName.query.get(form.pos.data)
             idx.common_names.insert(idx.common_names.index(after) + 1, cn)
-            messages.append('Will be listed after \'{0}\'.'
+            messages.append('Will be listed after "{0}".'
                             .format(after.name))
         if form.gw_common_names_ids.data:
             cn.gw_common_names = CommonName.from_ids(
@@ -499,14 +499,14 @@ def add_common_name(idx_id=None):
             )
         if form.visible.data:
             cn.visible = True
-            messages.append('\'{0}\' is visible on auto-generated pages.'
+            messages.append('"{0}" is visible on auto-generated pages.'
                             .format(cn.name))
         else:
             cn.visible = False
-            messages.append('\'{0}\' is not visible on auto-generated pages.'
+            messages.append('"{0}" is not visible on auto-generated pages.'
                             .format(cn.name))
         db.session.commit()
-        messages.append('New common name \'{0}\' added to the database.'
+        messages.append('New common name "{0}" added to the database.'
                         .format(cn.name))
         flash_all(messages)
         return redirect(url_for('seeds.{0}'.format(form.next_page.data),
@@ -534,14 +534,14 @@ def add_botanical_name(cn_id=None):
         bn = BotanicalName(name=form.name.data.strip())
         db.session.add(bn)
         bn.common_names.append(cn)
-        messages.append('Creating botanical name \'{0}\' for common name '
-                        '\'{1}\':'.format(bn.name, cn.name))
+        messages.append('Creating botanical name "{0}" for common name '
+                        '"{1}":'.format(bn.name, cn.name))
         if form.synonyms.data:
             bn.synonyms_string = form.synonyms.data
-            messages.append('Synonyms set to: \'{0}\'.'
+            messages.append('Synonyms set to: "{0}".'
                             .format(bn.synonyms_string))
         db.session.commit()
-        messages.append('New botanical name \'{0}\' added to the database.'
+        messages.append('New botanical name "{0}" added to the database.'
                         .format(bn.name))
         flash_all(messages)
         return redirect(url_for('seeds.{0}'.format(form.next_page.data),
@@ -569,16 +569,16 @@ def add_section(cn_id=None):
         messages = []
         section = Section(name=form.name.data)
         db.session.add(section)
-        messages.append('Creating section \'{0}\' for common name \'{1}\':'
+        messages.append('Creating section "{0}" for common name "{1}":'
                         .format(section.name, cn.name))
         if form.parent.data:
             parent = next(s for s in cn.sections if s.id == form.parent.data)
             parent.children.insert(len(parent.children), section)
-            messages.append('Will be a subsection of: \'{0}\''
+            messages.append('Will be a subsection of: "{0}"'
                             .format(parent.name))
         if form.subtitle.data:
             section.subtitle = form.subtitle.data
-            messages.append('Subtitle set to: \'{0}\''
+            messages.append('Subtitle set to: "{0}"'
                             .format(section.subtitle))
         if form.description.data:
             section.description = form.description.data
@@ -586,15 +586,15 @@ def add_section(cn_id=None):
                             .format(section.description))
         if form.pos.data == -1:
             cn.sections.insert(0, section)
-            messages.append('Will be listed before other sections in \'{0}\'.'
+            messages.append('Will be listed before other sections in "{0}".'
                             .format(cn.name))
         else:
             after = Section.query.get(form.pos.data)
             cn.sections.insert(cn.sections.index(after) + 1, section)
-            messages.append('Will be listed after \'{0}\' in \'{1}\'.'
+            messages.append('Will be listed after "{0}" in "{1}".'
                             .format(after.name, cn.name))
         db.session.commit()
-        messages.append('New section \'{0}\' added to the database.'
+        messages.append('New section "{0}" added to the database.'
                         .format(section.fullname))
         flash_all(messages)
         return redirect(url_for('seeds.add_cultivar', cn_id=cn.id))
@@ -620,20 +620,20 @@ def add_cultivar(cn_id=None):
         messages = []
         cv = Cultivar(name=form.name.data, common_name=cn)
         db.session.add(cv)
-        messages.append('Creating cultivar with short name \'{0}\' for common '
-                        'name \'{1}\':'.format(cv.name, cn.name))
+        messages.append('Creating cultivar with short name "{0}" for common '
+                        'name "{1}":'.format(cv.name, cn.name))
         if form.subtitle.data:
             cv.subtitle = form.subtitle.data
-            messages.append('Subtitle set to: \'{0}\''.format(cv.subtitle))
+            messages.append('Subtitle set to: "{0}"'.format(cv.subtitle))
         if form.botanical_name.data:
             cv.botanical_name = BotanicalName.query\
                 .get(form.botanical_name.data)
-            messages.append('Botanical name set to: \'{0}\'.'
+            messages.append('Botanical name set to: "{0}".'
                             .format(cv.botanical_name.name))
         if form.section.data:
             sec = Section.query.get(form.section.data)
             cv.sections = [sec]
-            messages.append('Section set to: \'{0}\'.'
+            messages.append('Section set to: "{0}".'
                             .format(sec.name))
         if form.thumbnail.data:
             add_thumbnail(form.thumbnail, cv, messages)
@@ -650,17 +650,17 @@ def add_cultivar(cn_id=None):
                 cn.child_cultivars.insert(0, cv)
                 messages.append(
                     'Will be listed before other individual cultivars '
-                    'belonging to \'{0}\'.'.format(cn.name)
+                    'belonging to "{0}".'.format(cn.name)
                 )
             else:
                 after = Cultivar.query.get(form.pos.data)
                 cv.insert_after(after)
                 messages.append(
-                    'Will be listed after \'{0}\'.'.format(after.fullname)
+                    'Will be listed after "{0}".'.format(after.fullname)
                 )
         if form.synonyms.data:
             cv.synonyms_string = form.synonyms.data
-            messages.append('Synonyms set to: \'{0}\'.'
+            messages.append('Synonyms set to: "{0}".'
                             .format(cv.synonyms_string))
         if form.gw_common_names_ids.data:
             cv.gw_common_names = CommonName.from_ids(
@@ -686,37 +686,37 @@ def add_cultivar(cn_id=None):
             )
         if form.new_until.data and form.new_until.data > datetime.date.today():
             cv.new_until = form.new_until.data
-            messages.append('\'{0}\' will be marked as new until: {1}'
+            messages.append('"{0}" will be marked as new until: {1}'
                             .format(cv.fullname,
                                     cv.new_until.strftime('%m/%d/%Y')))
         if form.featured.data:
             cv.featured = True
-            messages.append('\'{0}\' will be featured on its common '
+            messages.append('"{0}" will be featured on its common '
                             'name\'s page.'.format(cv.fullname))
         if form.in_stock.data:
             cv.in_stock = True
-            messages.append('\'{0}\' is in stock.'.format(cv.fullname))
+            messages.append('"{0}" is in stock.'.format(cv.fullname))
         else:
             cv.in_stock = False
-            messages.append('\'{0}\' is not in stock.'.format(cv.fullname))
+            messages.append('"{0}" is not in stock.'.format(cv.fullname))
         if form.active.data:
             cv.active = True
-            messages.append('\'{0}\' is currently active.'.format(cv.fullname))
+            messages.append('"{0}" is currently active.'.format(cv.fullname))
         else:
             cv.active = False
-            messages.append('\'{0}\' is currently inactive.'
+            messages.append('"{0}" is currently inactive.'
                             .format(cv.fullname))
         if form.visible.data:
             cv.visible = True
-            messages.append('\'{0}\' will be visible in auto-generated pages.'
+            messages.append('"{0}" will be visible in auto-generated pages.'
                             .format(cv.fullname))
         else:
             cv.visible = False
-            messages.append('\'{0}\' will not be visible in auto-generated '
+            messages.append('"{0}" will not be visible in auto-generated '
                             'pages, but it can still be used in custom pages.'
                             .format(cv.fullname))
         db.session.commit()
-        messages.append('New cultivar \'{0}\' added to the database.'
+        messages.append('New cultivar "{0}" added to the database.'
                         .format(cv.fullname))
         flash_all(messages)
         return redirect(url_for('seeds.add_packet', cv_id=cv.id))
@@ -741,7 +741,7 @@ def add_packet(cv_id=None):
         messages = []
         packet = Packet(sku=form.sku.data.strip(), cultivar=cv)
         db.session.add(packet)
-        messages.append('Creating packet with SKU #{0} for cultivar \'{1}\':'
+        messages.append('Creating packet with SKU #{0} for cultivar "{1}":'
                         .format(packet.sku, cv.fullname))
         packet.price = form.price.data
         messages.append('Price set to: ${0}.'.format(packet.price))
@@ -756,7 +756,7 @@ def add_packet(cv_id=None):
             packet.quantity = qty
         else:
             packet.quantity = Quantity(value=fq, units=fu)
-        messages.append('Quantity set to: \'{0} {1}\'.'
+        messages.append('Quantity set to: "{0} {1}".'
                         .format(packet.quantity.value, packet.quantity.units))
         db.session.commit()
         messages.append('New packet with SKU #{0} added to the database.'
@@ -818,11 +818,11 @@ def edit_index(idx_id=None):
         edited = False
         messages = []
         old_slug = index.slug
-        messages.append('Editing index \'{0}\':'.format(index.name))
+        messages.append('Editing index "{0}":'.format(index.name))
         if form.name.data != index.name:
             edited = True
             index.name = form.name.data
-            messages.append('Name changed to: \'{0}\'.'.format(index.name))
+            messages.append('Name changed to: "{0}".'.format(index.name))
         if form.thumbnail.data:
             edited = True
             edit_thumbnail(form.thumbnail, index, messages)
@@ -847,10 +847,10 @@ def edit_index(idx_id=None):
             if not other.position:
                 other.auto_position()
             index.set_position(other.position + 1)
-            messages.append('Will be listed after \'{0}\'.'.format(other.name))
+            messages.append('Will be listed after "{0}".'.format(other.name))
         if edited:
             db.session.commit()
-            messages.append('Changes to \'{0}\' committed to the database.'
+            messages.append('Changes to "{0}" committed to the database.'
                             .format(index.name))
             flash_all(messages)
 
@@ -866,7 +866,7 @@ def edit_index(idx_id=None):
 
             return redirect(url_for('seeds.manage'))
         else:
-            messages.append('No changes to \'{0}\' were made.'
+            messages.append('No changes to "{0}" were made.'
                             .format(index.name))
             flash_all(messages)
             return redirect(url_for('seeds.edit_index', idx_id=idx_id))
@@ -899,7 +899,7 @@ def edit_common_name(cn_id=None):
         warnings = []
         old_slugs = {'cn': cn.slug, 'idx': cn.index.slug}
         idx = cn.index
-        messages.append('Editing common name \'{0}\':'.format(cn.name))
+        messages.append('Editing common name "{0}":'.format(cn.name))
         if form.index_id.data != cn.index.id:
             edited = True
             new_idx = Index.query.get(form.index_id.data)
@@ -908,11 +908,11 @@ def edit_common_name(cn_id=None):
             # This is done instead of appending to ensure cn.idx_pos is set
             # correctly.
             new_idx.common_names.insert(len(new_idx.common_names), cn)
-            messages.append('Index changed to: \'{0}\'.'.format(cn.index.name))
+            messages.append('Index changed to: "{0}".'.format(cn.index.name))
         if form.name.data != cn.name:
             edited = True
             cn.name = form.name.data
-            messages.append('Name changed to: \'{0}\'.'.format(cn.name))
+            messages.append('Name changed to: "{0}".'.format(cn.name))
         if form.thumbnail.data:
             edited = True
             edit_thumbnail(form.thumbnail, cn, messages)
@@ -942,7 +942,7 @@ def edit_common_name(cn_id=None):
             edited = True
             if form.synonyms_string.data:
                 cn.synonyms_string = form.synonyms_string.data
-                messages.append('Synonyms changed to: \'{0}\'.'
+                messages.append('Synonyms changed to: "{0}".'
                                 .format(cn.synonyms_string))
             else:
                 cn.synonyms_string = None
@@ -959,12 +959,12 @@ def edit_common_name(cn_id=None):
                 edited = True
                 prev = next(c for c in cns if c.id == form.pos.data)
                 cn.move_after(prev)
-                messages.append('Will now be listed after \'{0}\'.'
+                messages.append('Will now be listed after "{0}".'
                                 .format(prev.name))
         else:
             dest = url_for('seeds.edit_common_name', cn_id=cn.id)
             warnings.append(
-                'Due to changing {0}\'s index to \'{1}\', it will be listed '
+                'Due to changing {0}\'s index to "{1}", it will be listed '
                 'last under that index. You will need to edit it again if you '
                 'want it in a different position.'
                 .format(cn.name, cn.index.name)
@@ -1008,7 +1008,7 @@ def edit_common_name(cn_id=None):
             else:
                 messages.append('Grows with cultivars cleared.')
         if edited:
-            messages.append('Changes to \'{0}\' committed to the database.'
+            messages.append('Changes to "{0}" committed to the database.'
                             .format(cn.name))
             db.session.commit()
             flash_all(messages)
@@ -1026,7 +1026,7 @@ def edit_common_name(cn_id=None):
 
             return redirect(dest)
         else:
-            messages.append('No changes to \'{0}\' were made.'.format(cn.name))
+            messages.append('No changes to "{0}" were made.'.format(cn.name))
             flash_all(messages)
             return redirect(url_for('seeds.edit_common_name', cn_id=cn.id))
     crumbs = cblr.crumble_route_group('edit_common_name', EDIT_ROUTES)
@@ -1049,41 +1049,41 @@ def edit_botanical_name(bn_id=None):
     if form.validate_on_submit():
         edited = False
         messages = []
-        messages.append('Editing botanical name \'{0}\'.'.format(bn.name))
+        messages.append('Editing botanical name "{0}".'.format(bn.name))
         form.name.data = form.name.data.strip()
         if form.name.data != bn.name:
                 edited = True
                 bn.name = form.name.data
-                messages.append('Name changed to: \'{0}\'.'.format(bn.name))
+                messages.append('Name changed to: "{0}".'.format(bn.name))
         for cn in list(bn.common_names):
             if cn.id not in form.common_names.data:
                 edited = True
                 bn.common_names.remove(cn)
-                messages.append('Removed common name \'{0}\'.'.format(cn.name))
+                messages.append('Removed common name "{0}".'.format(cn.name))
         cnids = [cona.id for cona in bn.common_names]
         for cnid in form.common_names.data:
             if cnid not in cnids:
                 edited = True
                 cn = CommonName.query.get(cnid)
                 bn.common_names.append(cn)
-                messages.append('Added common name \'{0}\'.'.format(cn.name))
+                messages.append('Added common name "{0}".'.format(cn.name))
         if form.synonyms_string.data != bn.synonyms_string:
             edited = True
             if form.synonyms_string.data:
                 bn.synonyms_string = form.synonyms_string.data
-                messages.append('Synonyms changed to: \'{0}\'.'
+                messages.append('Synonyms changed to: "{0}".'
                                 .format(bn.synonyms_string))
             else:
                 bn.synonyms_string = None
                 messages.append('Synonyms cleared.')
         if edited:
             db.session.commit()
-            messages.append('Changes to \'{0}\' committed to the database.'
+            messages.append('Changes to "{0}" committed to the database.'
                             .format(bn.name))
             flash_all(messages)
             return redirect(url_for('seeds.manage'))
         else:
-            messages.append('No changes to \'{0}\' were made.'.format(bn.name))
+            messages.append('No changes to "{0}" were made.'.format(bn.name))
             flash_all(messages)
             return redirect(url_for('seeds.edit_botanical_name', bn_id=bn_id))
     crumbs = cblr.crumble_route_group('edit_botanical_name', EDIT_ROUTES)
@@ -1106,14 +1106,14 @@ def edit_section(section_id=None):
     if form.validate_on_submit():
         edited = False
         messages = []
-        messages.append('Editing section \'{0}\':'.format(section.name))
+        messages.append('Editing section "{0}":'.format(section.name))
         old_cn = section.common_name
         if form.common_name_id.data != section.common_name.id:
             edited = True
             section.common_name = CommonName.query.get(
                 form.common_name_id.data
             )
-            messages.append('Common name changed to: \'{0}\'.'
+            messages.append('Common name changed to: "{0}".'
                             .format(section.common_name.name))
         old_parent = section.parent
         if form.parent_id.data == 0:
@@ -1127,7 +1127,7 @@ def edit_section(section_id=None):
                     s.id == form.parent_id.data
                 )
                 parent.children.insert(len(parent.children), section)
-                messages.append('Will now be a subcategory of: \'{0}\''
+                messages.append('Will now be a subcategory of: "{0}"'
                                 .format(section.parent.name))
             else:
                 section.parent = None
@@ -1136,14 +1136,14 @@ def edit_section(section_id=None):
         if form.name.data != section.name:
             edited = True
             section.name = form.name.data
-            messages.append('Name changed to: \'{0}\''.format(section.name))
+            messages.append('Name changed to: "{0}"'.format(section.name))
         if not form.subtitle.data:
             form.subtitle.data = None
         if form.subtitle.data != section.subtitle:
             edited = True
             section.subtitle = form.subtitle.data
             if form.subtitle.data:
-                messages.append('Subtitle changed to: \'{0}\''
+                messages.append('Subtitle changed to: "{0}"'
                                 .format(section.subtitle))
             else:
                 messages.append('Subtitle cleared. (Default will be used.)')
@@ -1172,19 +1172,19 @@ def edit_section(section_id=None):
                 edited = True
                 prev = next(s for s in secs if s.id == form.pos.data)
                 section.move_after(prev)
-                messages.append('Will now be listed after \'{0}\''
+                messages.append('Will now be listed after "{0}"'
                                 .format(prev.name))
         if old_cn is not section.common_name:
             for cv in section.cultivars:
                 if cv.common_name is not section.common_name:
                     old_cvname = cv.fullname
                     cv.common_name = section.common_name
-                    messages.append('Common name for the cultivar \'{0}\' has '
-                                    'been changed to: \'{1}\'.'
+                    messages.append('Common name for the cultivar "{0}" has '
+                                    'been changed to: "{1}".'
                                     .format(old_cvname, cv.common_name.name))
         if edited:
             db.session.commit()
-            messages.append('Changes to \'{0}\' committed to the database.'
+            messages.append('Changes to "{0}" committed to the database.'
                             .format(section.name))
             flash_all(messages)
 
@@ -1206,7 +1206,7 @@ def edit_section(section_id=None):
 
             return redirect(url_for('seeds.manage'))
         else:
-            messages.append('No changes to \'{0}\' were made.'
+            messages.append('No changes to "{0}" were made.'
                             .format(section.name))
             flash_all(messages)
             return redirect(url_for('seeds.edit_section',
@@ -1233,7 +1233,7 @@ def edit_cultivar(cv_id=None):
         edited = False
         messages = []
         warnings = []
-        messages.append('Editing cultivar \'{0}\':'.format(cv.fullname))
+        messages.append('Editing cultivar "{0}":'.format(cv.fullname))
         old_slugs = {'cv': cv.slug,
                      'cn': cv.common_name.slug,
                      'idx': cv.common_name.index.slug}
@@ -1241,7 +1241,7 @@ def edit_cultivar(cv_id=None):
         if form.common_name_id.data != cv.common_name_id:
             edited = True
             cv.common_name = CommonName.query.get(form.common_name_id.data)
-            messages.append('Common name changed to: \'{0}\'.'
+            messages.append('Common name changed to: "{0}".'
                             .format(cv.common_name.name))
         if not form.botanical_name_id.data:
             form.botanical_name_id.data = None
@@ -1251,7 +1251,7 @@ def edit_cultivar(cv_id=None):
                 cv.botanical_name = BotanicalName.query.get(
                     form.botanical_name_id.data
                 )
-                messages.append('Botanical name changed to: \'{0}\'.'
+                messages.append('Botanical name changed to: "{0}".'
                                 .format(cv.botanical_name.name))
             else:
                 cv.botanical_name = None
@@ -1264,7 +1264,7 @@ def edit_cultivar(cv_id=None):
             if form.section_id.data:
                 sec = Section.query.get(form.section_id.data)
                 cv.sections = [sec]
-                messages.append('Section changed to: \'{0}\'.'
+                messages.append('Section changed to: "{0}".'
                                 .format(sec.name))
             else:
                 cv.sections = []
@@ -1273,7 +1273,7 @@ def edit_cultivar(cv_id=None):
             if form.subtitle.data:
                 edited = True
                 cv.subtitle = form.subtitle.data
-                messages.append('Subtitle changed to: \'{0}\''
+                messages.append('Subtitle changed to: "{0}"'
                                 .format(cv.subtitle))
             elif cv.subtitle:
                 edited = True
@@ -1282,7 +1282,7 @@ def edit_cultivar(cv_id=None):
         if cv.name != form.name.data:
             edited = True
             cv.name = form.name.data
-            messages.append('(Short) Name changed to: \'{0}\'.'
+            messages.append('(Short) Name changed to: "{0}".'
                             .format(cv.name))
         if form.thumbnail.data:
             edited = True
@@ -1302,7 +1302,7 @@ def edit_cultivar(cv_id=None):
             edited = True
             cv.synonyms_string = form.synonyms_string.data
             if form.synonyms_string.data:
-                messages.append('Synonyms set to: \'{0}\'.'
+                messages.append('Synonyms set to: "{0}".'
                                 .format(cv.synonyms_string))
             else:
                 messages.append('Synonyms cleared.')
@@ -1358,7 +1358,7 @@ def edit_cultivar(cv_id=None):
                 edited = True
                 prev = next(cv for cv in pc if cv.id == form.pos.data)
                 cv.move_after(prev)
-                messages.append('Will now be listed after \'{0}\'.'
+                messages.append('Will now be listed after "{0}".'
                                 .format(prev.fullname))
 
         if (not form.new_until.data or
@@ -1376,44 +1376,44 @@ def edit_cultivar(cv_id=None):
         if form.featured.data and not cv.featured:
             edited = True
             cv.featured = True
-            messages.append('\'{0}\' will now be featured on its common '
+            messages.append('"{0}" will now be featured on its common '
                             'name\'s page.'.format(cv.fullname))
         elif not form.featured.data and cv.featured:
             edited = True
             cv.featured = False
-            messages.append('\'{0}\' will no longer be featured on its common '
+            messages.append('"{0}" will no longer be featured on its common '
                             'name\'s page.'.format(cv.fullname))
 
         if form.in_stock.data and not cv.in_stock:
             edited = True
             cv.in_stock = True
-            messages.append('\'{0}\' is now in stock.'.format(cv.fullname))
+            messages.append('"{0}" is now in stock.'.format(cv.fullname))
         elif not form.in_stock.data and cv.in_stock:
             edited = True
             cv.in_stock = False
-            messages.append('\'{0}\' is now out of stock.'
+            messages.append('"{0}" is now out of stock.'
                             .format(cv.fullname))
         if form.active.data and not cv.active:
             edited = True
             cv.active = True
-            messages.append('\'{0}\' is now active.'.format(cv.fullname))
+            messages.append('"{0}" is now active.'.format(cv.fullname))
         elif not form.active.data and cv.active:
             edited = True
             cv.active = False
-            messages.append('\'{0}\' is no longer active.'
+            messages.append('"{0}" is no longer active.'
                             .format(cv.fullname))
         if form.visible.data and not cv.visible:
             edited = True
             cv.visible = True
-            messages.append('\'{0}\' will now be visible on '
+            messages.append('"{0}" will now be visible on '
                             'auto-generated pages.'.format(cv.fullname))
         elif not form.visible.data and cv.visible:
             edited = True
             cv.visible = False
-            messages.append('\'{0}\' will no longer be visible on '
+            messages.append('"{0}" will no longer be visible on '
                             'auto-generated pages.'.format(cv.fullname))
         if edited:
-            messages.append('Changes to \'{0}\' committed to the database.'
+            messages.append('Changes to "{0}" committed to the database.'
                             .format(cv.fullname))
             db.session.commit()
             flash_all(messages)
@@ -1436,7 +1436,7 @@ def edit_cultivar(cv_id=None):
                 flash_all(warnings)
             return redirect(url_for('seeds.manage'))
         else:
-            messages.append('No changes to \'{0}\' were made'
+            messages.append('No changes to "{0}" were made'
                             .format(cv.fullname))
             flash_all(messages)
             return redirect(url_for('seeds.edit_cultivar', cv_id=cv_id))
@@ -1460,22 +1460,22 @@ def edit_packet(pkt_id=None):
     if form.validate_on_submit():
         edited = False
         messages = []
-        messages.append('Editing packet \'{0}\'.'.format(packet.info))
+        messages.append('Editing packet "{0}".'.format(packet.info))
         if form.cultivar_id.data != packet.cultivar_id:
             edited = True
             packet.cultivar = Cultivar.query.get(form.cultivar_id.data)
-            messages.append('Cultivar changed to: \'{0}\'.'
+            messages.append('Cultivar changed to: "{0}".'
                             .format(packet.cultivar.fullname))
         form.sku.data = form.sku.data.strip()
         if form.sku.data != packet.sku:
             edited = True
             packet.sku = form.sku.data
-            messages.append('SKU changed to: \'{0}\'.'.format(packet.sku))
+            messages.append('SKU changed to: "{0}".'.format(packet.sku))
         dec_p = USDollar.usd_to_decimal(form.price.data)
         if dec_p != packet.price:
             edited = True
             packet.price = dec_p
-            messages.append('Price set to: \'${0}\'.'.format(packet.price))
+            messages.append('Price set to: "${0}".'.format(packet.price))
         fq = form.qty_val.data
         fu = form.units.data.strip()
         if (Quantity(value=fq).value != packet.quantity.value or
@@ -1493,17 +1493,17 @@ def edit_packet(pkt_id=None):
                 packet.quantity = Quantity(value=fq, units=fu)
             if not oldqty.packets:
                 db.session.delete(oldqty)
-            messages.append('Quantity set to: \'{0} {1}\'.'
+            messages.append('Quantity set to: "{0} {1}".'
                             .format(packet.quantity.value,
                                     packet.quantity.units))
         if edited:
             db.session.commit()
-            messages.append('Changes to \'{0}\' committed to the database.'
+            messages.append('Changes to "{0}" committed to the database.'
                             .format(packet.info))
             flash_all(messages)
             return redirect(url_for('seeds.manage'))
         else:
-            messages.append('No changes to \'{0}\' were made.'
+            messages.append('No changes to "{0}" were made.'
                             .format(packet.info))
             flash_all(messages)
             return redirect(url_for('seeds.edit_packet', pkt_id=pkt_id))
@@ -1530,7 +1530,7 @@ def migrate_cultivars(cn, other):
             other.cultivars.append(cv)
         else:
             warnings.append(
-                'Could not move \'{0}\' because a cultivar with the same name '
+                'Could not move "{0}" because a cultivar with the same name '
                 'and section already exists! Click <a href="{1}">here</a> if '
                 'you want to edit it, or <a href="{2}">here</a> if you want '
                 'to remove it.'
@@ -1567,10 +1567,10 @@ def migrate_common_names(idx, other):
             other.common_names.append(cn)
         else:
             warnings.append(
-                'Could not move \'{0}\' because a common name with the same '
-                'name already belongs to \'{1}\'. Instead of moving it, its '
+                'Could not move "{0}" because a common name with the same '
+                'name already belongs to "{1}". Instead of moving it, its '
                 'children (botanical names, section, and cultivars) will be '
-                'moved to the one belonging to \'{1}\' if possible.'
+                'moved to the one belonging to "{1}" if possible.'
                 .format(cn.name, other.name)
             )
             other_cn = next((
@@ -1595,9 +1595,9 @@ def migrate_sections(cn, other):
             other.section.append(sec)
         else:
             warnings.append(
-                'Could not move \'{0}\' because a section with the same name '
-                'already belongs to \'{1}\'. Click <a href="{2}">here</a> if '
-                'you would like to edit \'{0}\', or <a href="{3}">here</a> '
+                'Could not move "{0}" because a section with the same name '
+                'already belongs to "{1}". Click <a href="{2}">here</a> if '
+                'you would like to edit "{0}", or <a href="{3}">here</a> '
                 'if you would like to remove it.'
                 .format(sec.name,
                         other.name,
@@ -1618,7 +1618,7 @@ def remove_index(idx_id=None):
         return redirect(url_for('seeds.select_index',
                                 dest='seeds.remove_index'))
     if Index.query.count() == 1:
-        flash('Error: Cannot remove the index \'{0}\' without another index '
+        flash('Error: Cannot remove the index "{0}" without another index '
               'existing to move its children to! Please add an index so you '
               'can move {0}\'s children to it.'
               .format(index.name), 'error')
@@ -1628,7 +1628,7 @@ def remove_index(idx_id=None):
         messages = []
         warnings = []
         if form.verify_removal.data:
-            messages.append('Removing index \'{0}\':'.format(index.name))
+            messages.append('Removing index "{0}":'.format(index.name))
             new_index = Index.query.get(form.move_to.data)
             warnings += redirect_index_warnings(index,
                                                 old_idx_slug=index.slug,
@@ -1652,7 +1652,7 @@ def remove_index(idx_id=None):
         else:
             messages.append('Index was not removed, so no changes were made. '
                             'If you would like to remove it, please check the '
-                            'box labeled \'Yes\'.')
+                            'box labeled "Yes".')
             flash_all(messages)
             return redirect(url_for('seeds.remove_index',
                                     idx_id=idx_id))
@@ -1677,7 +1677,7 @@ def remove_common_name(cn_id=None):
         messages = []
         if form.verify_removal.data:
             warnings = []
-            messages.append('Removing common name \'{0}\':'.format(cn.name))
+            messages.append('Removing common name "{0}":'.format(cn.name))
             new_cn = CommonName.query.get(form.move_to.data)
             if cn.synonyms:
                 cn.synonyms_string = None
@@ -1706,7 +1706,7 @@ def remove_common_name(cn_id=None):
         else:
             messages.append('Common name was not removed, so no changes '
                             'were made. If you would like to remove it, '
-                            'please check the box labeled \'Yes\'.')
+                            'please check the box labeled "Yes".')
             flash_all(messages)
             return redirect(url_for('seeds.remove_common_name', cn_id=cn_id))
     crumbs = cblr.crumble_route_group('remove_common_name', REMOVE_ROUTES)
@@ -1729,7 +1729,7 @@ def remove_botanical_name(bn_id=None):
     if form.validate_on_submit():
         messages = []
         if form.verify_removal.data:
-            messages.append('Removing botanical name \'{0}\':'.format(bn.name))
+            messages.append('Removing botanical name "{0}":'.format(bn.name))
             if bn.synonyms:
                 bn.synonyms_string = None
                 messages.append('Synonyms have been cleared.')
@@ -1741,7 +1741,7 @@ def remove_botanical_name(bn_id=None):
         else:
             messages.append('Botanical name was not removed, so no changes '
                             'were made. If you would like to remove it, '
-                            'please check the box labeled \'Yes\'.')
+                            'please check the box labeled "Yes".')
             flash_all(messages)
             return redirect(url_for('seeds.remove_botanical_name',
                                     bn_id=bn_id))
@@ -1767,7 +1767,7 @@ def remove_section(section_id=None):
         messages = []
         if form.verify_removal.data:
             warnings = []
-            messages.append('Removing section \'{0}\':'.format(section.name))
+            messages.append('Removing section "{0}":'.format(section.name))
             db.session.delete(section)
             db.session.commit()
             messages.append('Section removed.')
@@ -1778,7 +1778,7 @@ def remove_section(section_id=None):
         else:
             messages.append('Section was not removed, so no changes were '
                             'made. If you would like to remove it, please '
-                            'check the box labeled \'Yes\'.')
+                            'check the box labeled "Yes".')
             flash_all(messages)
             return redirect(url_for('seeds.remove_section',
                                     section_id=section_id))
@@ -1803,7 +1803,7 @@ def remove_cultivar(cv_id=None):
         messages = []
         if form.verify_removal.data:
             warnings = []
-            messages.append('Removing cultivar \'{0}\':'.format(cv.fullname))
+            messages.append('Removing cultivar "{0}":'.format(cv.fullname))
             if cv.synonyms:
                 cv.synonyms_string = None
                 messages.append('Synonyms cleared.')
@@ -1811,19 +1811,19 @@ def remove_cultivar(cv_id=None):
                 if cv.thumbnail:
                     if (not cv.thumbnail.cultivars or
                             cv.thumbnail.cultivars == [cv]):
-                        messages.append('Thumbnail image file \'{0}\' deleted.'
+                        messages.append('Thumbnail image file "{0}" deleted.'
                                         .format(cv.thumbnail.filename))
                         db.session.delete(cv.thumbnail)
                     else:
-                        messages.append('Thumbnail image file \'{0}\' was not '
+                        messages.append('Thumbnail image file "{0}" was not '
                                         'deleted because it is in use by '
                                         'other cultivars.')
                 if cv.images:
                     for img in cv.images:
                         if (img.cultivars == [cv] and
                                 cv not in img.cultivars_with_thumb):
-                            messages.append('Image file \'{0}\' associated '
-                                            'with \'{1}\' has been deleted. '
+                            messages.append('Image file "{0}" associated '
+                                            'with "{1}" has been deleted. '
                                             .format(img.filename, cv.fullname))
                             db.session.delete(img)
             old_path = url_for('seeds.cultivar',
@@ -1831,7 +1831,7 @@ def remove_cultivar(cv_id=None):
                                cn_slug=cv.common_name.slug,
                                cv_slug=cv.slug)
             warnings.append(
-                'Warning: the path \'{0}\' is no longer valid. <a '
+                'Warning: the path "{0}" is no longer valid. <a '
                 'href="{1}" target="_blank">Click here</a> if you wish to'
                 'add a redirect for it.'
                 .format(old_path,
@@ -1849,7 +1849,7 @@ def remove_cultivar(cv_id=None):
         else:
             messages.append('Cultivar was not removed, so no changes '
                             'were made. If you would like to remove it, '
-                            'please check the box labeled \'Yes\'.')
+                            'please check the box labeled "Yes".')
             flash_all(messages)
             return redirect(url_for('seeds.remove_cultivar', cv_id=cv.id))
     crumbs = cblr.crumble_route_group('remove_cultivar', REMOVE_ROUTES)
@@ -1883,7 +1883,7 @@ def remove_packet(pkt_id=None):
         else:
             messages.append('Packet was not removed, so no changes '
                             'were made. If you would like to remove it, '
-                            'please check the box labeled \'Yes\'.')
+                            'please check the box labeled "Yes".')
             flash_all(messages)
             return redirect(url_for('seeds.remove_packet', pkt_id=pkt_id))
     crumbs = cblr.crumble_route_group('remove_packet', REMOVE_ROUTES)
@@ -2141,11 +2141,11 @@ def flip_featured(cv_id):
         abort(404)
     if cv.featured:
         cv.featured = False
-        flash('\'{0}\' will no longer be featured on its common name\'s page.'
+        flash('"{0}" will no longer be featured on its common name\'s page.'
               .format(cv.fullname))
     else:
         cv.featured = True
-        flash('\'{0}\' will now be featured on its common name\'s page.'
+        flash('"{0}" will now be featured on its common name\'s page.'
               .format(cv.fullname))
     db.session.commit()
     return redirect(request.args.get('next') or url_for('seeds.manage'))
@@ -2159,10 +2159,10 @@ def flip_in_stock(cv_id):
     if cv is None:
         abort(404)
     if cv.in_stock:
-        flash('\'{0}\' is now out of stock.'.format(cv.fullname))
+        flash('"{0}" is now out of stock.'.format(cv.fullname))
         cv.in_stock = False
     else:
-        flash('\'{0}\' is now in stock.'.format(cv.fullname))
+        flash('"{0}" is now in stock.'.format(cv.fullname))
         cv.in_stock = True
     db.session.commit()
     return redirect(request.args.get('next') or url_for('seeds.manage'))
@@ -2176,11 +2176,11 @@ def flip_active(cv_id):
     if cv is None:
         abort(404)
     if cv.active:
-        flash('\'{0}\' has been set as inactive.'.
+        flash('"{0}" has been set as inactive.'.
               format(cv.fullname))
         cv.active = False
     else:
-        flash('\'{0}\' has been set as active.'.
+        flash('"{0}" has been set as active.'.
               format(cv.fullname))
         cv.active = True
     db.session.commit()
@@ -2196,11 +2196,11 @@ def flip_visible(cv_id):
         abort(404)
     if cv.visible:
         cv.visible = False
-        flash('\'{0}\' is no longer visible on auto-generated pages.'
+        flash('"{0}" is no longer visible on auto-generated pages.'
               .format(cv.fullname))
     else:
         cv.visible = True
-        flash('\'{0}\' is now visible on auto-generated pages.'
+        flash('"{0}" is now visible on auto-generated pages.'
               .format(cv.fullname))
     db.session.commit()
     return redirect(request.args.get('next') or url_for('seeds.manage'))
@@ -2222,16 +2222,16 @@ def move_object(cls, obj_id, delta):
         abort(404)
     if obj.move(delta):
         db.session.commit()
-        flash('\'{0}\' has been moved {1} {2} position{3}.'
+        flash('"{0}" has been moved {1} {2} position{3}.'
               .format(obj.name,
                       'forward' if delta > 0 else 'backward',
                       abs(delta),
                       's' if abs(delta) > 1 else ''))
     else:
         if delta < 0:
-            flash('\'{0}\' is already first.'.format(obj.name))
+            flash('"{0}" is already first.'.format(obj.name))
         else:
-            flash('\'{0}\' is already last.'.format(obj.name))
+            flash('"{0}" is already last.'.format(obj.name))
     return redirect(request.args.get('next') or url_for('seeds.manage'))
 
 

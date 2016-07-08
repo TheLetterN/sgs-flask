@@ -311,7 +311,7 @@ class TestIndex:
         """Return string formatted <Index '<index>'>"""
         index = Index()
         index.name = 'vegetable'
-        assert index.__repr__() == '<Index \'vegetable\'>'
+        assert index.__repr__() == '<Index "vegetable">'
 
     def test__eq__(self):
         """Return True if all columns are the same value."""
@@ -641,7 +641,7 @@ class TestCommonName:
     def test__repr__(self):
         """Return string formatted <CommonName '<name>'>"""
         cn = CommonName(name='Coleus')
-        assert cn.__repr__() == '<CommonName \'Coleus\'>'
+        assert cn.__repr__() == '<CommonName "Coleus">'
 
     def test__eq__(self):
         """A `CommonName` is equal to another if relevant columns match."""
@@ -828,7 +828,7 @@ class TestBotanicalName:
     def test_repr(self):
         """Return a string in format <BotanicalName '<botanical_name>'>"""
         bn = BotanicalName(name='Asclepias incarnata')
-        assert bn.__repr__() == '<BotanicalName \'Asclepias incarnata\'>'
+        assert bn.__repr__() == '<BotanicalName "Asclepias incarnata">'
 
     def test_genus(self):
         """Return the first word in the BotanicalName."""
@@ -866,7 +866,7 @@ class TestSection:
         """Return formatted string with full name."""
         sec = Section(name='Polkadot',
                       common_name=CommonName(name='Foxglove'))
-        assert sec.__repr__() == '<Section \'Polkadot Foxglove\'>'
+        assert sec.__repr__() == '<Section "Polkadot Foxglove">'
 
     def test_fullname(self):
         """Returns name of section along with common name."""
@@ -886,7 +886,7 @@ class TestCultivar:
         """Return a string formatted <Cultivar '<fullname>'>"""
         m_fn.return_value = 'Full Cultivar Name'
         cv = Cultivar()
-        assert cv.__repr__() == '<Cultivar \'Full Cultivar Name\'>'
+        assert cv.__repr__() == '<Cultivar "Full Cultivar Name">'
 
     def test_fullname_getter(self):
         """Return string with name and common_name."""
@@ -936,7 +936,7 @@ class TestQuantity:
     def test_repr(self):
         """Return a string representing a Quantity."""
         qty = Quantity(100, 'seeds')
-        assert qty.__repr__() == '<Quantity \'100 seeds\'>'
+        assert qty.__repr__() == '<Quantity "100 seeds">'
 
     def test_dec_check(self):
         """Dec check returns True if value looks like a decimal number."""
@@ -1115,7 +1115,7 @@ class TestImage:
     def test_repr(self):
         """Return string representing Image."""
         image = Image(filename='hello.jpg')
-        assert image.__repr__() == '<Image filename: \'hello.jpg\'>'
+        assert image.__repr__() == '<Image filename: "hello.jpg">'
 
     @mock.patch('app.seeds.models.os.remove')
     def test_delete_file(self, mock_remove):

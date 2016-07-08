@@ -361,7 +361,7 @@ class TestIndexesWorksheet:
         ).value == 'Built to last.'
         messages.seek(0)
         msgs = messages.read()
-        assert ('Adding data from <Index \'Perennial\'> to row #2 of indexes '
+        assert ('Adding data from <Index "Perennial"> to row #2 of indexes '
                 'worksheet.') in msgs
 
     def test_add_one_bad_type(self):
@@ -419,7 +419,7 @@ class TestCommonNamesWorksheet:
         assert cnws.cell(2, cnws.cols['Synonyms']).value is None
         messages.seek(0)
         msgs = messages.read()
-        assert ('Adding data from <CommonName \'Foxglove\'> to row #2 of '
+        assert ('Adding data from <CommonName "Foxglove"> to row #2 of '
                 'common names worksheet.') in msgs
 
     def test_add_one_with_optionals(self):
@@ -498,7 +498,7 @@ class TestBotanicalNamesWorksheet:
         assert bnws.cell(2, bnws.cols['Synonyms']).value is None
         messages.seek(0)
         msgs = messages.read()
-        assert ('Adding data from <BotanicalName \'Innagada davida\'> to row '
+        assert ('Adding data from <BotanicalName "Innagada davida"> to row '
                 '#2 of botanical names worksheet.') in msgs
 
     def test_add_one_with_synonyms(self):
@@ -568,7 +568,7 @@ class TestSectionsWorksheet:
         assert srws.cell(2, srws.cols['Description']).value is None
         messages.seek(0)
         msgs = messages.read()
-        assert ('Adding data from <Section \'Polkadot Foxglove\'> to row #2 '
+        assert ('Adding data from <Section "Polkadot Foxglove"> to row #2 '
                 'of sections worksheet') in msgs
 
     def test_add_one_with_description(self):
@@ -655,7 +655,7 @@ class TestCultivarsWorksheet:
         assert cvws.cell(2, cvws.cols['Active']).value == 'False'
         messages.seek(0)
         msgs = messages.read()
-        assert ('Adding data from <Cultivar \'Foxy Foxglove\'> to row #2 of '
+        assert ('Adding data from <Cultivar "Foxy Foxglove"> to row #2 of '
                 'cultivars worksheet.') in msgs
 
     def test_add_one_with_section(self):

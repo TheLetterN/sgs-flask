@@ -8,7 +8,7 @@ class TestModuleFunctions:
     def test_redirect_warning(self):
         """Return a string warning that a redirect should probably be made."""
         assert redirect_warning('/old/path', '<link to new path>') ==\
-            'Warning: the path \'/old/path\' is no longer valid. You may '\
+            'Warning: the path "/old/path" is no longer valid. You may '\
             'wish to redirect it to <link to new path>.'
 
 

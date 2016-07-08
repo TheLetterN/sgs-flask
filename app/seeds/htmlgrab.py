@@ -996,7 +996,7 @@ class PageAdder(object):
                 )
             elif 'herb' in self.index.name.lower():
                 r = requests.get(
-                    'www.swallowtailgardenseeds.com/herbsaz.html'
+                    'http://www.swallowtailgardenseeds.com/herbsaz.html'
                 )
             else:
                 raise ValueError('Could not parse index: {}'

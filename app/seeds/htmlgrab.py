@@ -130,7 +130,7 @@ def clean(text, unwanted=None):
     if not unwanted:
         unwanted = ['\r', '\t', '&shy;', '<br>', '<br \>', '</img>']
     for u in unwanted:
-        text = text.replace(u, '')
+        text = text.replace(u, ' ')
     # Deal with commented out product info.
     text = re.sub('--><!--.*--><!--', '', text)
     # Deal with multiple classes in sequence.
@@ -313,7 +313,7 @@ def cultivar_div_to_dict(cv_div):
         if spans:
             ps = ps + spans
         desc = merge_p(ps)
-        cv['description'] = desc.strip()
+        cv['description'] = ' '.join(desc.split())
     cv['grows with'] = []
     for p in ps:
         cv['grows with'] += [a['href'] for a in p.find_all('a')]
@@ -388,17 +388,21 @@ def generate_cultivar_dicts(parent):
 
 def generate_inactive_cultivar_dicts(parent):
     """Yield dicts of commented out cultivars to be added as inactive."""
-    cv_divs_raw = parent.find_all(
+    comments_with_cvs = parent.find_all(
         text=(lambda x: x
               and isinstance(x, Comment)
-              and 'class="cultivar"' in x.lower()),
+              and 'class="cultivar"' in x.lower()
+              and 'Gioconda' not in x),
         recursive=False
     )
-    cv_divs = [BeautifulSoup(d, 'html.parser').div for d in cv_divs_raw]
-    for cv_div in cv_divs:
-        cv_dict = cultivar_div_to_dict(cv_div)
-        cv_dict['active'] = False
-        yield(cv_dict)
+    if comments_with_cvs:
+        source = ''.join(comments_with_cvs)
+        soup = BeautifulSoup(source, 'html.parser')
+        cv_divs = soup.find_all('div', class_='Cultivar')
+        for cv_div in cv_divs:
+            cv_dict = cultivar_div_to_dict(cv_div)
+            cv_dict['active'] = False
+            yield(cv_dict)
 
 
 def str_to_packet(pkt_str):
@@ -469,38 +473,69 @@ def consolidate_sections(d):
     Args:
         d: The dict to check the sections in.
     """
-    sections = dict()
-    for s in list(d['sections']):
-        sn = s['section name']
-        if 'individual' in sn.lower() and 'variet' in sn.lower():
-            if 'cultivars' not in d:
-                d['cultivars'] = list()
-            d['cultivars'] += s['cultivars']
-            d['sections'].remove(s)
-        elif sn in sections:
-            sec = sections[sn]
-            if 'cultivars' not in s:
-                s['cultivars'] = list()
-            s['cultivars'] += sec['cultivars']
+    keys = []
+    for sec in list(d['sections']):
+        sname = sec['section name']
+        if ('individual ' in sname.lower() or 'no series' in sname.lower() or
+                'no section' in sname.lower()):
+            try:
+                d['cultivars'] += sec['cultivars']
+            except KeyError:
+                d['cultivars'] = sec['cultivars']
             d['sections'].remove(sec)
-        elif 'no section' in sn.lower() or 'no series' in sn.lower():
-            if 'cultivars' not in d:
-                d['cultivars'] = []
-            d['cultivars'] += s['cultivars']
-            d['sections'].remove(s)
-        else:
-            sections[s['section name']] = s
-            if 'sections' in s:
-                for ss in list(s['sections']):
-                    if ss['section name'] in sections:
-                        sec = sections[ss['section name']]
-                        try:
-                            ss['cultivars'] += sec['cultivars']
-                        except KeyError as k:
-                            raise RuntimeError(
-                                'Key {0} missing from {1}'.format(k, sec)
-                            ).with_traceback(sys.exc_info()[2])
-                        d['sections'].remove(sec)
+        elif sname not in keys:
+            keys.append(sname)
+    for key in keys:
+        secs = [ s for s in d['sections'] if s['section name'] == key]
+        if len(secs) > 1:
+            main = next((s for s in secs if len(s) > 2), None)
+            if main:
+                secs.remove(main)
+            else:
+                main = secs.pop()
+            for s in secs:
+                main['cultivars'] += s['cultivars']
+                d['sections'].remove(s)
+
+# Keep this until you are _damn_ sure the new method works; this seemed to
+# work for everything but petuniats.
+
+#    sections = dict()
+#    for s in list(d['sections']):
+#        sn = s['section name']
+#        if 'individual ' in sn.lower(): 
+#            if 'cultivars' not in d:
+#                d['cultivars'] = list()
+#            d['cultivars'] += s['cultivars']
+#            d['sections'].remove(s)
+#        elif sn in sections:
+#            sec = sections[sn]
+#            try:
+#                s['cultivars'] += sec['cultivars']
+#            except KeyError:
+#                print('s or sec have no cultivars. s: {} sec: {}'.format(s, sec))
+#            try:
+#                 d['sections'].remove(sec)
+#            except ValueError:
+#                print('failed to remove sec from d with sec named: {}'.format(sec['section name']))
+#        elif 'no section' in sn.lower() or 'no series' in sn.lower():
+#            if 'cultivars' not in d:
+#                d['cultivars'] = []
+#            d['cultivars'] += s['cultivars']
+#            d['sections'].remove(s)
+#        else:
+#            sections[s['section name']] = s
+#            if 'sections' in s:
+#                for ss in list(s['sections']):
+#                    if ss['section name'] in sections:
+#                        sec = sections[ss['section name']]
+#                        try:
+#                            ss['cultivars'] += sec['cultivars']
+#                        except KeyError as k:
+#                            raise RuntimeError(
+#                                'Key {0} missing from {1}'.format(k, sec)
+#                            ).with_traceback(sys.exc_info()[2])
+#                        d['sections'].remove(sec)
 
 
 def clean_cultivar_dicts(cultivar_dicts, cn):
@@ -662,9 +697,17 @@ class Page(object):
             header_div = BeautifulSoup(html, self.parser)
 
         name = get_h_title(header_div.h1).strip().lower().replace('seeds', '')
+        name = name.strip()
         for i in INDEXES:
             if i in name:
                 name = name.replace(i, '').strip()
+        # Change names that have a comma in them because it means they're in
+        # the 'wrong' order because they're a type of plant with multiple
+        # entries. For example, we want 'Petunia, Trailing' to become
+        # 'Trailing Petunia'.
+        if ',' in name:
+            parts = name.split(', ')
+            name = ' '.join(reversed(parts))
         cn['common name'] = dbify(name)
 
         if '/annuals/' in self.url:
@@ -727,7 +770,7 @@ class Page(object):
             if spans:
                 ps = ps + spans
         if ps:
-            cn['description'] = merge_p(ps)
+            cn['description'] = ' '.join(merge_p(ps).split())
 
         growing = self.main_div.find_all(
             name='div',
@@ -740,7 +783,9 @@ class Page(object):
                 planting = growing[1]
             else:
                 planting = growing[0]
-            cn['instructions'] = merge_p(planting.find_all('p'))
+            cn['instructions'] = ' '.join(
+                merge_p(planting.find_all('p')).split()
+            )
         if not harvest:
             harvest = self.main_div.find(
                 name='div', class_=lambda x: x and 'harvest' in x.lower()
@@ -848,7 +893,8 @@ class Page(object):
                 sec_name = sec_name.replace(cn_seeds, '')
             else:
                 sec_name = sec_name.replace('seeds', '')
-        sd['section name'] = dbify(sec_name)
+        sec_name = sec_name.replace('&', 'and')
+        sd['section name'] = dbify(sec_name).replace('Section', '').strip()
 
         if sdiv:
             try:
@@ -880,7 +926,7 @@ class Page(object):
             desc = merge_p(sdiv.find_all('p'))
             desc = desc.replace('<p></p>', '')
             if desc and not desc.isspace():
-                sd['description'] = desc
+                sd['description'] = ' '.join(desc.split())
 
         cultivar_dicts = list(generate_cultivar_dicts(section))
         cultivar_dicts += list(generate_inactive_cultivar_dicts(section))
@@ -931,6 +977,37 @@ class PageAdder(object):
             self.index = index
         else:
             self.index = Index.get_or_create(tree['index'])
+        if not self.index.description:
+            if 'annual' in self.index.name.lower():
+                r = requests.get(
+                    'http://www.swallowtailgardenseeds.com/annualsA-Z.html'
+                )
+            elif 'perennial' in self.index.name.lower():
+                r = requests.get(
+                    'http://www.swallowtailgardenseeds.com/perennialsA-Z.html'
+                )
+            elif 'vine' in self.index.name.lower():
+                r = requests.get(
+                    'http://www.swallowtailgardenseeds.com/vinesaz.html'
+                )
+            elif 'vegetable' in self.index.name.lower():
+                r = requests.get(
+                    'http://www.swallowtailgardenseeds.com/vegetablesaz.html'
+                )
+            elif 'herb' in self.index.name.lower():
+                r = requests.get(
+                    'www.swallowtailgardenseeds.com/herbsaz.html'
+                )
+            else:
+                raise ValueError('Could not parse index: {}'
+                                 .format(index.name))
+            r.encoding = 'utf-8'
+            soup = BeautifulSoup(r.text, 'html.parser')
+            p = soup.find(
+                'p',
+                class_=lambda x: x and 'index_pages-intro' in x.lower()
+            )
+            self.index.description = ' '.join(str(p).split())
 
     @classmethod
     def from_json(cls, json_data, **kwargs):

@@ -1461,12 +1461,8 @@ def before_botanical_name_insert_or_update(mapper, connection, target):
     #
     # This exception should **never** be raised in production code!
     if target.name and not BotanicalName.validate(target.name):
-        raise ValueError('An attempt to insert an invalid BotanicalName into '
-                         'the database has occurred! Please ensure the name '
-                         'of any new or edited BotanicalName is validated '
-                         'before attempting to flush it to the database. You '
-                         'can use BotanicalName.validate(name) to check '
-                         'whether or not a name is valid.')
+        raise ValueError('Failed attempt to add invalid botanical name {} '
+                         'to the database.'.format(target.name))
 
 
 class Section(db.Model, TimestampMixin, OrderingListMixin):

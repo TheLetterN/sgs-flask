@@ -43,6 +43,7 @@ class TestModuleFunctions:
         assert dbify('FORM 1040EZ') == 'Form 1040EZ'
         assert dbify('ROYALE W/ CHEESE') == 'Royale w/ Cheese'
         assert dbify('D\'AVIGNON RADISH') == 'd\'Avignon Radish'
+        assert dbify('BIRD\'S EYE') == 'Bird\'s Eye'
         assert dbify('O\'HARA') == 'O\'Hara'
 
     def test_dbify_null(self):

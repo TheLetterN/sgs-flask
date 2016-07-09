@@ -271,7 +271,7 @@ def dbify(string):
             return word.upper()
         elif word.lower() == 'w/':
             return 'w/'
-        elif re.search(r'[dD]\'[A-Za-z]+', word):  # d'Avignon
+        elif re.search(r'^[dD]\'[A-Za-z]+', word):  # d'Avignon
             parts = word.split('\'')
             parts[0] = parts[0].lower()
             parts[1] = parts[1].title()

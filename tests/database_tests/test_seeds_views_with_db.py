@@ -172,8 +172,8 @@ class TestAddCultivarRouteWithDB:
                                    thumbnail=(io.BytesIO(b'fawks'),
                                               'foxy.jpg')),
                          follow_redirects=True)
-        assert '\\\'Foxy Foxglove\\\' is not in stock' in str(rv.data)
-        assert '\\\'Foxy Foxglove\\\' is currently inactive' in\
+        assert '"Foxy Foxglove" is not in stock' in str(rv.data)
+        assert '"Foxy Foxglove" is currently inactive' in\
             str(rv.data)
 
 
@@ -420,7 +420,7 @@ class TestEditIndexRouteWithDB:
                                    name=idx.name,
                                    description=idx.description),
                          follow_redirects=True)
-        assert 'No changes to \\\'Annual Flower\\\' were made' in str(rv.data)
+        assert 'No changes to "Annual Flower" were made' in str(rv.data)
 
     def test_edit_index_no_id(self, app, db):
         """Redirect to seeds.select_index if no idx_id specified."""
@@ -626,11 +626,11 @@ class TestFlipInStockRouteWithDB:
         with app.test_client() as tc:
             rv = tc.get(url_for('seeds.flip_in_stock', cv_id=cultivar.id),
                         follow_redirects=True)
-        assert '\\\'Foxy Foxglove\\\' is now in stock' in str(rv.data)
+        assert '"Foxy Foxglove" is now in stock' in str(rv.data)
         with app.test_client() as tc:
             rv = tc.get(url_for('seeds.flip_in_stock', cv_id=cultivar.id),
                         follow_redirects=True)
-        assert '\\\'Foxy Foxglove\\\' is now out of stock.' in str(rv.data)
+        assert '"Foxy Foxglove" is now out of stock.' in str(rv.data)
 
 
 class TestHomeRouteWithDB:

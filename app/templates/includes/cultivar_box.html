@@ -29,7 +29,10 @@ Copyright Swallowtail Garden Seeds, Inc
 		<em class="Cultivar_em2">{% if cultivar.vegetable_data.open_pollinated %}<abbr title="Open Pollinated">(OP)</abbr> {% endif %}{% if cultivar.vegetable_data.days_to_maturity %}{{ cultivar.vegetable_data.days_to_maturity }}{% endif %}
 		</em>
 		{% endif %}
-	</h3>
+  </h3>
+  {% if cultivar.organic %}
+  <h4 class="Cultivar_organic">Organically grown.</h4>
+  {% endif %}
 	{% if cultivar.description %}
 	<p class="Cultivar_p">
 		{{ cultivar.description|safe }}

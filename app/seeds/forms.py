@@ -521,6 +521,7 @@ class AddCultivarForm(Form):
     )
     botanical_name = SelectField('Botanical Name', coerce=int)
     section = SelectField('Section', coerce=int)
+    organic = BooleanField('Organic')
     thumbnail = SecureFileField(
         'Thumbnail Image',
         validators=[FileAllowed(IMAGE_EXTENSIONS, 'Images only!')]
@@ -1073,7 +1074,8 @@ class EditCultivarForm(Form):
                                  coerce=int,
                                  validators=[DataRequired()])
     botanical_name_id = SelectField('Botanical Name', coerce=int)
-    section_id = SelectField('Select Section', coerce=int)
+    section_id = SelectField('Section', coerce=int)
+    organic = BooleanField('Organic')
     name = StringField('Cultivar Name', validators=[Length(1, 64), NotSpace()])
     subtitle = StringField('Subtitle (Leave blank for default.)',
                            validators=[Length(1, 64),

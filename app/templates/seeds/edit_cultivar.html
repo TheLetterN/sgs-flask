@@ -36,6 +36,12 @@
             <li>
               {{ form_field(form.common_name_id)|indent(14)|safe }}
             </li>
+              {{ form_field(form.name, dbifiable=True)|indent(14)|safe }}
+            </li>
+            <li>
+              {{ form_field(form.subtitle, dbifiable=True)|indent(14)|safe }}
+              <div>Default will be '&lt;common name&gt; Seeds'</div>
+            </li>
             <li>
               {{ form_field(form.botanical_name_id)|indent(14)|safe }}
             </li>
@@ -43,12 +49,9 @@
               {{ form_field(form.section_id)|indent(14)|safe }}
             </li>
             <li>
-              {{ form_field(form.name, dbifiable=True)|indent(14)|safe }}
+              {{ form_field(form.organic)|indent(14)|safe }}
             </li>
             <li>
-              {{ form_field(form.subtitle, dbifiable=True)|indent(14)|safe }}
-              <div>Default will be '&lt;common name&gt; Seeds'</div>
-            </li>
             <div>Current thumbnail:</div>
             <div><img src="{{ cultivar.thumbnail.url }}" class="existing_image"></div>
             <li>

@@ -1845,6 +1845,7 @@ class Cultivar(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
     active = db.Column(db.Boolean)
     in_stock = db.Column(db.Boolean)
     visible = db.Column(db.Boolean)
+    organic = db.Column(db.Boolean)
     thumbnail_id = db.Column(db.Integer, db.ForeignKey('images.id'))
     thumbnail = db.relationship(
         'Image',

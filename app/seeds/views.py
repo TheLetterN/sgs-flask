@@ -635,6 +635,11 @@ def add_cultivar(cn_id=None):
             cv.sections = [sec]
             messages.append('Section set to: "{0}".'
                             .format(sec.name))
+        if form.organic.data:
+            cv.organic = True
+            messages.append('Set as organic.')
+        else:
+            cv.organic = False
         if form.thumbnail.data:
             add_thumbnail(form.thumbnail, cv, messages)
         if form.description.data:
@@ -1269,6 +1274,14 @@ def edit_cultivar(cv_id=None):
             else:
                 cv.sections = []
                 messages.append('Section cleared.')
+        if form.organic.data != cv.organic:
+            edited = True
+            if form.organic.data:
+                cv.organic = True
+                messages.append('Set as organic.')
+            else:
+                cv.organic = False
+                messages.append('No longer set as organic.')
         if form.subtitle.data != cv.subtitle:
             if form.subtitle.data:
                 edited = True

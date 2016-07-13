@@ -67,30 +67,18 @@ def list_to_english(items, last_delimiter=', and '):
         return items.pop()
 
 
-def get_index_nav(filename=None):
-    """Return a dict of tuples used for showing links to Indexes in the nav."""
-    if not filename:
-        filename = os.path.join(
-            current_app.config.get('JSON_FOLDER'), 'nav', 'indexes.json'
-        )
-    if os.path.exists(filename):
-        with open(filename, 'r', encoding='utf-8') as ifile:
-            d = json.loads(ifile.read())
-            fixed = {int(k): d[k] for k in d}
-            return fixed
-    else:
-        return {}
-
-
-def load_detailed_nav_data(json_file=None):
+def load_nav_data(json_file=None):
     if not json_file:
         json_file = Path(
-            current_app.config.get('JSON_FOLDER'), 'nav', 'detailed.json'
+            current_app.config.get('JSON_FOLDER'), 'nav_data.json'
         )
     else:
         json_file = Path(json_file)
-    with json_file.open('r', encoding='utf-8') as ifile:
-        items = json.loads(ifile.read())
+    try:
+        with json_file.open('r', encoding='utf-8') as ifile:
+            items = json.loads(ifile.read())
+    except FileNotFoundError:
+        items = []
     return items
 
 
@@ -180,7 +168,6 @@ def create_app(config_name):
     app.add_template_global(slugify, 'slugify')
     app.add_template_global(Permission, 'Permission')
     app.add_template_global(hyphenate, 'hyphenate')
-    app.add_template_global(get_index_nav, 'get_index_nav')
-    app.add_template_global(load_detailed_nav_data, 'load_detailed_nav_data')
+    app.add_template_global(load_nav_data, 'load_nav_data')
 
     return app

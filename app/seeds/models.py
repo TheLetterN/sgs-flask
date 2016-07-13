@@ -308,10 +308,10 @@ def row_exists(col, value):
     return db.session.query(db.exists().where(col == value)).scalar()
 
 
-def save_detailed_nav_json(json_file=None):
+def save_nav_data_json(json_file=None):
     if not json_file:
         json_file = Path(
-            current_app.config.get('JSON_FOLDER'), 'nav', 'detailed.json'
+            current_app.config.get('JSON_FOLDER'), 'nav_data.json'
         )
         if not json_file.parent.exists():
             json_file.parent.mkdir(parents=True)
@@ -346,11 +346,11 @@ def save_detailed_nav_json(json_file=None):
 
 
 @event.listens_for(SignallingSession, 'before_commit')
-def save_detailed_nav_json_before_commit(session):
+def save_nav_data_json_before_commit(session):
     """Save nav data if a commit would change a nav url."""
     if (any(isinstance(obj, Index) for obj in db.session) or
             any(isinstance(obj, CommonName) for obj in db.session)):
-        save_detailed_nav_json()
+        save_nav_data_json()
 
 
 # Helper Classes
@@ -728,32 +728,6 @@ class Index(db.Model, TimestampMixin):
     def generate_slug(self):
         """Generate the string to use in URLs containing this `Index`."""
         return slugify(self.plural) if self.name is not None else None
-
-    @classmethod
-    def save_nav_json(cls, json_file=None):
-        """Save a JSON file with data for use in navs.
-
-        Args:
-            json_file: Optional filename to save JSON indexes to. If not given,
-                it will default to `config.JSON_FOLDER`/nav/indexes.json.
-        """
-        indexes = cls.query.all()
-        if not json_file:
-            json_file = Path(
-                current_app.config.get('JSON_FOLDER'), 'nav', 'indexes.json'
-            )
-            if not json_file.parent.exists():
-                json_file.parent.mkdir(parents=True)
-        else:
-            json_file = Path(json_file)
-        dicts = {
-            idx.position if idx.position is not None else idx.id: {
-                'header': idx.header,
-                'slug': idx.slug
-            } for idx in indexes
-        }
-        with json_file.open('w', encoding='utf-8') as ofile:
-            ofile.write(json.dumps(dicts, indent=4))
 
     # Positioning methods and properties.
     #

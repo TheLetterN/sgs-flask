@@ -11,6 +11,9 @@ copy_to_sgs_flask/
 # Ignore compiled .pyc files.
 *.pyc
 
+# Ignore zip files, they're just used for transferring data to testers.
+*.zip
+
 # Ignore vim swap files.
 *.swp
 

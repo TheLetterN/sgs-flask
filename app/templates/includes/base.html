@@ -54,12 +54,10 @@ Copyright Swallowtail Garden Seeds, Inc
 			{% endblock %}
     </div>
     <div class="Sidebar">
-      <div class="Sidebar_nav">
         {% from 'includes/make_detailed_nav.html' import make_detailed_nav %}
         {% block detailed_nav %}
         {{ make_detailed_nav(nav_data) }}
         {% endblock %}
-      </div>
     </div>
 		<div class="Footer">
 			<a class="Footer_site-map-link" href="{{ url_for('main.static_html', page='site-map',  _external=True) }}">Site Map</a>

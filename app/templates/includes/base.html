@@ -16,6 +16,7 @@ Copyright Swallowtail Garden Seeds, Inc
 {# It should only contain elements we want on all pages. #}
 {# The head block should be indented 4 spaces in derived pages. #}
 {# The main block should be indented 6 spaces in derived pages. #}
+{% set detailed_nav_data = load_detailed_nav_data() %}
 <!DOCTYPE html>
 <html>
 	<head>
@@ -51,7 +52,15 @@ Copyright Swallowtail Garden Seeds, Inc
 			{% include "includes/flashed.html" %}
 			{% block main %}
 			{% endblock %}
-		</div>
+    </div>
+    <div class="Sidebar">
+      <div class="Sidebar_nav">
+        {% from 'includes/make_detailed_nav.html' import make_detailed_nav %}
+        {% block detailed_nav %}
+        {{ make_detailed_nav(detailed_nav_data) }}
+        {% endblock %}
+      </div>
+    </div>
 		<div class="Footer">
 			<a class="Footer_site-map-link" href="{{ url_for('main.static_html', page='site-map',  _external=True) }}">Site Map</a>
 			<p class="Footer_copyright_p">Copyright&nbsp;&#169;&nbsp;2016 Swallowtail&nbsp;Garden&nbsp;Seeds - All&nbsp;Rights&nbsp;Reserved

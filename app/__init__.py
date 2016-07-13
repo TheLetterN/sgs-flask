@@ -27,6 +27,7 @@ of the website for Swallowtail Garden Seeds.
 
 import json
 import os
+from pathlib import Path
 import pyphen
 from flask import Flask, current_app
 from flask_login import AnonymousUserMixin, LoginManager
@@ -79,6 +80,18 @@ def get_index_nav(filename=None):
             return fixed
     else:
         return {}
+
+
+def load_detailed_nav_data(json_file=None):
+    if not json_file:
+        json_file = Path(
+            current_app.config.get('JSON_FOLDER'), 'nav', 'detailed.json'
+        )
+    else:
+        json_file = Path(json_file)
+    with json_file.open('r', encoding='utf-8') as ifile:
+        items = json.loads(ifile.read())
+    return items
 
 
 class Permission(object):
@@ -168,5 +181,6 @@ def create_app(config_name):
     app.add_template_global(Permission, 'Permission')
     app.add_template_global(hyphenate, 'hyphenate')
     app.add_template_global(get_index_nav, 'get_index_nav')
+    app.add_template_global(load_detailed_nav_data, 'load_detailed_nav_data')
 
     return app

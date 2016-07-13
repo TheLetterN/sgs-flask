@@ -94,6 +94,9 @@ class Config(object):
     else:
         SHOW_CULTIVAR_PAGES = False
 
+    # Set SERVER_NAME during dev. Unset if in production!
+    SERVER_NAME='localhost:5000'
+
     @staticmethod
     def init_app(app):
         app.jinja_env.trim_blocks = True

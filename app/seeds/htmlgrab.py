@@ -314,6 +314,13 @@ def cultivar_div_to_dict(cv_div):
             ps = ps + spans
         desc = merge_p(ps)
         cv['description'] = ' '.join(desc.split())
+    try:
+        if 'organic' in cv['description'].lower():
+            cv['organic'] = True
+        else:
+            cv['organic'] = False
+    except KeyError:
+        cv['organic'] = False
     cv['grows with'] = []
     for p in ps:
         cv['grows with'] += [a['href'] for a in p.find_all('a')]
@@ -1071,6 +1078,7 @@ class PageAdder(object):
             cv_dtm = cvd['days to maturity'] if 'days to maturity' in cvd \
                 else None
             cv_desc = cvd['description'] if 'description' in cvd else None
+            cv_org = cvd['organic']
             cv_in_stock = cvd['in stock'] if 'in stock' in cvd else None
             cv_active = cvd['active'] if 'active' in cvd else None
             cv_pkts = []
@@ -1141,6 +1149,12 @@ class PageAdder(object):
                 cv.description = cv_desc
                 print('Description for \'{0}\' set to: {1}'
                       .format(cv.fullname, cv.description), file=stream)
+            if cv_org and cv_org != cv.organic:
+                cv.organic = cv_org
+                if cv_org:
+                    print('"{}" set as organic.'.format(cv.fullname))
+                else:
+                    print('"{}" no longer set as organic.'.format(cv.fullname))
             if cv_in_stock is not None:
                 cv.in_stock = cv_in_stock
                 print('\'{0}\' is {1}.'

@@ -308,6 +308,51 @@ def row_exists(col, value):
     return db.session.query(db.exists().where(col == value)).scalar()
 
 
+def save_detailed_nav_json(json_file=None):
+    if not json_file:
+        json_file = Path(
+            current_app.config.get('JSON_FOLDER'), 'nav', 'detailed.json'
+        )
+        if not json_file.parent.exists():
+            json_file.parent.mkdir(parents=True)
+    else:
+        json_file = Path(json_file)
+    indexes = Index.query.order_by('position').all()
+    idx_list = []
+    for idx in indexes:
+        d = dict()
+        d['Position'] = idx.position
+        d['Header'] = idx.header
+        d['Slug'] = idx.slug
+        d['URL'] = idx.url
+        try:
+            d['Thumbnail'] = idx.thumbnail.url
+        except:
+            d['Thumbnail'] = None
+        d['Common Names'] = list()
+        for cn in idx.common_names:
+            cnd = dict()
+            cnd['Position'] = cn.idx_pos
+            cnd['Name'] = cn.name
+            cnd['URL'] = cn.url
+            try:
+                cnd['Thumbnail'] = cn.thumbnail.url
+            except:
+                cnd['Thumbnail'] = None
+            d['Common Names'].append(cnd)
+        idx_list.append(d)
+    with json_file.open('w', encoding='utf-8') as ofile:
+        ofile.write(json.dumps(idx_list, indent=4))
+
+
+@event.listens_for(SignallingSession, 'before_commit')
+def save_detailed_nav_json_before_commit(session):
+    """Save nav data if a commit would change a nav url."""
+    if (any(isinstance(obj, Index) for obj in db.session) or
+            any(isinstance(obj, CommonName) for obj in db.session)):
+        save_detailed_nav_json()
+
+
 # Helper Classes
 
 class TimestampMixin(object):
@@ -699,12 +744,14 @@ class Index(db.Model, TimestampMixin):
             )
             if not json_file.parent.exists():
                 json_file.parent.mkdir(parents=True)
-            dicts = {
-                idx.position if idx.position is not None else idx.id: {
-                    'header': idx.header,
-                    'slug': idx.slug
-                } for idx in indexes
-            }
+        else:
+            json_file = Path(json_file)
+        dicts = {
+            idx.position if idx.position is not None else idx.id: {
+                'header': idx.header,
+                'slug': idx.slug
+            } for idx in indexes
+        }
         with json_file.open('w', encoding='utf-8') as ofile:
             ofile.write(json.dumps(dicts, indent=4))
 
@@ -857,17 +904,6 @@ class Index(db.Model, TimestampMixin):
 def before_index_insert_or_update(mapper, connection, target):
     """Run tasks best done before flushing an `Index` to the database."""
     target.slug = target.generate_slug()
-
-
-@event.listens_for(SignallingSession, 'before_commit')
-def save_indexes_json_before_commit(session):
-    """Save Indexes if any have been added, edited, or deleted."""
-    if any(isinstance(obj, Index) for obj in db.session):
-        # It is appropriate to run `save_nav_json` even if there
-        # are deleted `Index` instances in the session, because the deleted
-        # instances will not be returned by `Index.query.all()`, so deleted
-        # indexes will be removed from the indexes JSON file.
-        Index.save_nav_json()
 
 
 class CommonName(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):

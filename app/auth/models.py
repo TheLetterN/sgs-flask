@@ -86,6 +86,8 @@ class User(UserMixin, db.Model):
     name = db.Column(db.String(64), unique=True)
     password_hash = db.Column(db.String(128))
     permissions = db.Column(db.Integer, default=0)
+    customer_data_id = db.Column(db.Integer, db.ForeignKey('customers.id'))
+    customer_data = db.relationship('Customer', back_populates='user')
 
     def __init__(self):
         self.permissions = 0

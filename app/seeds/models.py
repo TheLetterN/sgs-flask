@@ -105,6 +105,7 @@ from sqlalchemy.sql.expression import and_
 from flask_sqlalchemy import SignallingSession
 
 from app import db, list_to_english
+from app.shop.models import Product
 
 
 # Association Tables
@@ -2216,6 +2217,8 @@ class Packet(db.Model, TimestampMixin):
     quantity = db.relationship('Quantity', back_populates='packets')
     cultivar_id = db.Column(db.Integer, db.ForeignKey('cultivars.id'))
     cultivar = db.relationship('Cultivar', back_populates='packets')
+    product_id = db.Column(db.Integer, db.ForeignKey('products.id'))
+    product = db.relationship('Product')
 
     def __repr__(self):
         return '<{0} SKU #{1}>'.format(self.__class__.__name__, self.sku)
@@ -2229,6 +2232,11 @@ class Packet(db.Model, TimestampMixin):
             self.quantity = quantity
         if cultivar:
             self.cultivar = cultivar
+
+    @property
+    def amount(self):
+        """Return the amount of seeds in a packet."""
+        return self.quantity.html_value
 
     @classmethod
     def from_values(cls, sku, price, quantity, units):
@@ -2269,6 +2277,27 @@ class Packet(db.Model, TimestampMixin):
                                                    self.price,
                                                    qv,
                                                    qu)
+
+    @property
+    def label(self):
+        """A label for a packet as used in the shopping cart."""
+        if self.cultivar:
+            return '{0}, {1} - {2} {3}'.format(self.cultivar.common_name.name,
+                                               self.cultivar.name,
+                                               self.amount,
+                                               self.quantity.units)
+        else:
+            return ''
+
+
+@event.listens_for(SignallingSession, 'before_flush')
+def session_before_flush_event(session, flush_context, instances):
+    for packet in (p for p in db.session if isinstance(p, Packet)):
+        if not packet.product:
+            packet.product = Product.get_or_create(number=packet.sku)
+        packet.product.number = packet.sku
+        packet.product.price = packet.price
+        packet.product.label = packet.label
 
 
 class Quantity(db.Model):

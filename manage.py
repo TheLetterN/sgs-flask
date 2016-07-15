@@ -43,6 +43,9 @@ def create():
     
     This should only be used during development, never in production!
     """
+    from app.auth import models as auth_models
+    from app.seeds import models as seeds_models
+    from app.shop import models as shop_models
     db.create_all()
     admin = User()
     db.session.add(admin)

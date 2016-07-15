@@ -148,9 +148,11 @@ def create_app(config_name):
     from .auth import auth as auth_blueprint
     from .main import main as main_blueprint
     from .seeds import seeds as seeds_blueprint
+    from .shop import shop as shop_blueprint
     app.register_blueprint(auth_blueprint, url_prefix='/auth')
     app.register_blueprint(main_blueprint)
     app.register_blueprint(seeds_blueprint, url_prefix='/seeds')
+    app.register_blueprint(shop_blueprint, url_prefix='/shop')
 
     # Add redirects
     rdf = RedirectsFile(app.config.get('REDIRECTS_FILE'))

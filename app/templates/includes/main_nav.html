@@ -35,7 +35,16 @@ Copyright Swallowtail Garden Seeds, Inc
 	<ul>
 		{% for i in nav_data %}
 		<li>
-			<a href="{{ i['URL'] }}">{{ i['Header'] }}</a>
+      <a href="{{ i['URL'] }}">{{ i['Header'] }}</a>
+      {% if i['Common Names'] %}
+      <ul class="common-name-links">
+      {% for cn in i['Common Names'] %}
+        <li>
+          <a href="{{ cn['URL'] }}">{{ cn['Name'] }}</a>
+        </li>
+      {% endfor %}
+      </ul>
+      {% endif %}
 		</li>
 		{% endfor %}
 	</ul>

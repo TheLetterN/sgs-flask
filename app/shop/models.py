@@ -5,19 +5,8 @@ from sqlalchemy import event
 from flask_sqlalchemy import SignallingSession
 
 from app import current_app, db
+from app.db_helpers import TimestampMixin, USDollar
 from app.shop.forms import AddProductForm
-
-#TMP
-class TimestampMixin(object):
-    """A mixin for classes that would benefit from tracking modifications.
-
-    Attributes:
-
-    created_on: The date and time an instance was created.
-    updated_on: The date and time an instance was last updated.
-    """
-    created_on = db.Column(db.DateTime, server_default=db.func.now())
-    updated_on = db.Column(db.DateTime, onupdate=db.func.now())
 
 
 class TransactionExistsError(Exception):
@@ -203,7 +192,7 @@ class Product(db.Model, TimestampMixin):
     type_ = db.Column(db.Enum('packet', 'bulk'))
     number = db.Column(db.String(15), unique=True)
     label = db.Column(db.String(100))
-    price = db.Column(db.Numeric)
+    price = db.Column(USDollar)
     transaction_lines = db.relationship(
         'TransactionLine',
         back_populates='product'
@@ -214,7 +203,7 @@ class Product(db.Model, TimestampMixin):
         self.number = number
 
     def __repr__(self):
-        return '<{0} {1}: {2}$ for "{3}">'.format(self.__class__.__name__,
+        return '<{0} {1}: ${2} for "{3}">'.format(self.__class__.__name__,
                                                   self.number,
                                                   self.price,
                                                   self.label)
@@ -254,7 +243,7 @@ class TransactionLine(db.Model, TimestampMixin):
     # Copied Product columns.
     product_number = db.Column(db.String(15))
     label = db.Column(db.Text)
-    price = db.Column(db.Numeric)
+    price = db.Column(USDollar)
 
     def __init__(self, product=None, quantity=None):
         self.product = product

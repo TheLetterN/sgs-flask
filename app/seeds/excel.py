@@ -33,9 +33,9 @@ import warnings
 import openpyxl
 
 from app import db
+from app.db_helpers import dbify
 from app.seeds.models import (
     BotanicalName,
-    dbify,
     Section,
     CommonName,
     Cultivar,

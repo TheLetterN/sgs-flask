@@ -36,8 +36,8 @@ from flask import current_app
 from werkzeug import secure_filename
 
 from app import db
+from app.db_helpers import dbify
 from app.seeds.models import (
-    dbify,
     BotanicalName,
     Section,
     CommonName,

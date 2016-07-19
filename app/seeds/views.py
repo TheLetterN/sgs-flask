@@ -39,9 +39,9 @@ from app.pending import Pending
 from app.redirects import Redirect, RedirectsFile
 from . import seeds
 from ..lastcommit import LastCommit
+from app.db_helpers import dbify
 from .models import (
     BotanicalName,
-    dbify,
     Section,
     CommonName,
     Cultivar,

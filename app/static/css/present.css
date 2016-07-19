@@ -35,7 +35,7 @@ body{font-size:1.6em;line-height:1.5;color:#141414;margin:1.25em 0;background-at
 @media all and (min-width:20em){
 
 
-/*.Footer,.Page_header{position:relative;clear:both;}*/
+.Footer,.Page_header{position:relative;clear:both;}
 
 
 .fs90-{font-size:.9em;}
@@ -72,7 +72,7 @@ small{display:none;margin-bottom:0;}
 #main{font-family:"Droid sans","Lucida Sans Unicode",Helvetica,Arial,sans-serif;font-size:100%;margin:0;padding:0 .5em;text-align:center;}
 /*ADD THIS STUFF*//*ADD THIS STUFF*//*ADD THIS STUFF*/
 
-/*.Sidebar{display:none;}*/
+.Sidebar{display:none;}
 
 .Footer{background:#7F9A65;padding:.75em;border-top:solid .08em #141414;text-align:center;font-family:"Droid sans","Lucida Sans Unicode",Helvetica,Arial,sans-serif;}
 .Footer_site-map-link:link,.Footer_site-map-link:visited{display:block;color:#f7f7f7;font-weight:700;text-decoration:none;margin:.45em;}
@@ -207,8 +207,8 @@ a.RelatedLinks_a:link{border:none;}
 @media all and (min-width:48em){
 
 
-/*#main{text-align:left;margin-right:1.55em;margin-left:14.9em;float:right;}
-.clearfix:after{content:" ";display:block;height:0;clear:both;visibility:hidden;}*/
+#main{text-align:left;margin-right:1.55em;margin-left:14.9em;float:right;}
+/*.clearfix:after{content:" ";display:block;height:0;clear:both;visibility:hidden;}*/
 
 
 
@@ -244,13 +244,17 @@ li:nth-child(5).Main_nav-not-shown-links{width:26%}
 
 
 /*ADD THIS STUFF*//*ADD THIS STUFF*//*ADD THIS STUFF*/
-#main{text-align:left;padding:0 1.5em;}
+#main{text-align:left;}
 /*ADD THIS STUFF*//*ADD THIS STUFF*//*ADD THIS STUFF*/
 
 /*#container{background-image:url(http://www.swallowtailgardenseeds.com/images/sidebar-background.jpg);background-repeat:repeat-y;background-position:left top;}*/
 
+/*ADD THIS STUFF*//*ADD THIS STUFF*//*ADD THIS STUFF*/
+body{background-image:url(http://www.swallowtailgardenseeds.com/images/sidebar-background.jpg);background-repeat:repeat-y;background-position:left top;}
+/*ADD THIS STUFF*//*ADD THIS STUFF*//*ADD THIS STUFF*/
 
-/*.Sidebar{display:block;float:left;width:13.1em;margin-right:-13.1em;padding:.5em .3em;}
+
+.Sidebar{display:block;float:left;width:13.1em;margin-right:-13.1em;padding:.5em .3em;}
 .Sidebar_global-message-box{color:#832F2F;margin:.5em .35em;padding:.5em;text-align:center;font-size:.71em;}
 .Sidebar_global-message-box,.Sidebar_social{border:solid 1px #bbb;border-radius:.35em;background-color:#f7f7f7;}
 .Sidebar_new-seeds{display:block;background:#7f9A65;padding:.5em;margin:.5em .35em 1em .35em;border-radius:1em;border:.125em solid #832f2f;transition:.05s;box-shadow:inset 0 .0625em 0 #b2f17f, 0 .375em 0 #3d6f0d;font-weight:700;text-align:center;}
@@ -267,7 +271,7 @@ li:nth-child(5).Main_nav-not-shown-links{width:26%}
 .Sidebar_subnav{margin:.25em 0 .5em 1em;list-style:none;font-weight:400;}
 .Sidebar_subnav li{padding:.02em 0;}
 .Sidebar_nav a:link,.Sidebar_nav a:visited{color:#141414;text-decoration:none;}
-.Sidebar_nav a:hover{color:#b34141;}*/
+.Sidebar_nav a:hover{color:#b34141;}
 
 
 .Footer br{display:block;}

@@ -23,7 +23,7 @@ Copyright Swallowtail Garden Seeds, Inc
 		<meta charset="utf-8">
 		<link rel='stylesheet' href='http://fonts.googleapis.com/css?family=Droid+Serif:400,700,400italic,700italic |Droid+Sans:400,700'>
 		<meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="shortcut icon" href="{{ url_for('static', filename='images/assets/favicon.ico') }}">
+		<link rel="shortcut icon" href="{{ url_for('static', filename='images/assets/favicon.ico') }}">
 		{% if not ALLOW_CRAWLING %}
     <!-- ALLOW_CRAWLING is set to False. Please set it to True if you want pages to be crawled by robots! -->
 		<meta name="robots" content="noindex, nofollow">
@@ -52,13 +52,28 @@ Copyright Swallowtail Garden Seeds, Inc
 			{% include "includes/flashed.html" %}
 			{% block main %}
 			{% endblock %}
-    </div>
-    <div class="Sidebar">
-        {% from 'includes/make_detailed_nav.html' import make_detailed_nav %}
-        {% block detailed_nav %}
-        {{ make_detailed_nav(nav_data) }}
-        {% endblock %}
-    </div>
+		</div>
+		<div class="Sidebar">
+			<p class="Sidebar_global-message-box">
+				<b>Orders placed today will ship<br>on Wednesday, July 20th.</b>
+			</p>
+			<div class="Sidebar_social">
+				<a href="https://www.facebook.com/swallowtailgardenseeds" target="_blank">
+					<img class="Sidebar_social_image" src="{{ url_for('static', filename='images/assets/social/facebook.jpg') }}" alt="Like us on Facebook."></a>
+				<a href="https://www.pinterest.com/swallowtailseed/" target="_blank">
+					<img class="Sidebar_social_image" src="{{ url_for('static', filename='images/assets/social/pinterest.jpg') }}" alt="Check out our pins and boards on Pinterest."></a>
+				<a href="https://www.flickr.com/photos/swallowtailgardenseeds/" target="_blank">
+					<img class="Sidebar_social_image" src="{{ url_for('static', filename='images/assets/social/flickr.jpg') }}" alt="View our photos on Flickr."></a>
+				<a href="https://twitter.com/swallowtailg" target="_blank">
+					<img class="Sidebar_social_image" src="{{ url_for('static', filename='images/assets/social/twitter.jpg') }}" alt="Follow us on Twitter."></a>
+				<a href="https://www.instagram.com/swallowtailgardenseeds/" target="_blank">
+					<img class="Sidebar_social_image" src="{{ url_for('static', filename='images/assets/social/instagram.jpg') }}" alt="Follow us on Instagram."></a>
+			</div>
+			{% from 'includes/make_detailed_nav.html' import make_detailed_nav %}
+			{% block detailed_nav %}
+			{{ make_detailed_nav(nav_data) }}
+			{% endblock %}
+		</div>
 		<div class="Footer">
 			<a class="Footer_site-map-link" href="{{ url_for('main.static_html', page='site-map',  _external=True) }}">Site Map</a>
 			<p class="Footer_copyright_p">Copyright&nbsp;&#169;&nbsp;2016 Swallowtail&nbsp;Garden&nbsp;Seeds - All&nbsp;Rights&nbsp;Reserved
@@ -66,9 +81,9 @@ Copyright Swallowtail Garden Seeds, Inc
 			<p class="Footer_copyright_p Footer_copyright_p2">Copyright pertains to all images, none of which may be reproduced in any form without<br class="no-mobile-display"> the expressed written consent of Swallowtail Garden Seeds.
 			</p>
 			<a href="https://seal.godaddy.com/verifySeal?sealID=FgdBKY27IIpHp2q5LkxzgzlbX27e0tqGEF9J5PgG2j7VUTmpgtsRrz" onclick="return popitup('https://seal.godaddy.com/verifySeal?sealID=FgdBKY27IIpHp2q5LkxzgzlbX27e0tqGEF9J5PgG2j7VUTmpgtsRrz')"><img class="Footer_siteseal" src="http://www.swallowtailgardenseeds.com/image-assets/site-seal.gif" alt="Go Daddy Site Seal"></a>
-    </div>
+		</div>
 <script src="{{ url_for('static', filename='scripts/jquery.min.js') }}"></script>
 <script src="{{ url_for('static', filename='scripts/scripts.js') }}"></script>
-{% block scripts %}{% endblock %}
+		{% block scripts %}{% endblock %}
 	</body>
 </html>

@@ -26,45 +26,66 @@ def add_to_cart():
     if form.validate_on_submit:
         qty = form.quantity.data
         pn = form.number.data
-        product = Product.query.filter(Product.number==pn).one_or_none()
-        print(product)#TMP
         try:
-            session['cart']
-        except KeyError:
-            session['cart'] = []
-        product_dict = next(
-            (d for d in session['cart'] if d['product number'] == pn),
+            cur_trans = current_user.customer_data.current_transaction
+        except AttributeError:
+            cur_trans = None
+        if not cur_trans:
+            try:
+                cur_trans = Transaction.from_session_data(session['cart'])
+            except KeyError:
+                cur_trans = Transaction()
+        line = next(
+            (l for l in cur_trans.lines if l.product_number == pn),
             None
         )
-        if product_dict:
-            product_dict['quantity'] += qty
+        if line:
+            # Don't create multiple lines of the same product.
+            line.quantity += qty
+            product = line.product
         else:
-            product_dict = {'product number': pn, 'quantity': qty}
-            session['cart'].append(product_dict)
-        if not current_user.is_anonymous:
-            if not current_user.customer_data:
-                current_user.customer_data = Customer()
-            customer = current_user.customer_data
-            if not customer.current_transaction:
-                customer.current_transaction = Transaction()
-            line = next(
-                (l for l in customer.current_transaction.lines if
-                 l.product is product),
-                None
-            )
-            if line:
-                line.quantity += qty
-            else:
-                line = TransactionLine(product=product, quantity=qty)
-                customer.current_transaction.lines.append(line)
-            db.session.commit()
-        flash('{0} of {1}'.format(qty, product.label))
+            product = Product.query.filter(Product.number==pn).one_or_none()
+            line = TransactionLine(product=product, quantity=qty)
+            cur_trans.lines.append(line)
+        try:
+            if cur_trans is not current_user.customer_data.current_transaction:
+                current_user.customer_data.current_transaction = cur_trans
+        except AttributeError:
+            if not current_user.is_anonymous:
+                if not current_user.customer_data:
+                    current_user.customer_data = Customer()
+                current_user.customer_data.current_transaction = cur_trans
+        try:
+            if current_user.customer_data.current_transaction is cur_trans:
+                db.session.commit()
+        except AttributeError:
+            pass
+        session['cart'] = cur_trans.session_data
+        flash(
+            'Added {0} of "{1}" to shopping cart.'.format(qty, product.label)
+        )
         return redirect(request.args.get('origin'))
 
 
 @shop.route('/cart')
 def cart():
-    if session['cart']:
-        return str(session['cart'])
-    else:
-        return('No transaction')
+    ret_str = ''
+    try:
+        if session['cart']:
+            ret_str = 'Session cart: {}'.format(session['cart'])
+    except KeyError:
+        pass
+    if not current_user.is_anonymous:
+        try:
+            ret_str += '\nTransaction from db: {}'.format(
+                current_user.customer_data.current_transaction.text
+            )
+        except AttributeError:
+            pass
+    return ret_str if ret_str else 'No transaction.'
+
+@shop.route('clear_session')
+def clear_session():
+    """Clear the user session."""
+    #TMP - Remove this in production!
+    session['cart'] = []

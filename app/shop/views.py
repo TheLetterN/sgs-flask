@@ -3,7 +3,11 @@ from flask import flash, redirect, render_template, request, session
 from flask_login import current_user
 from . import shop
 from app import db
-from app.shop.forms import AddProductForm
+from app.shop.forms import (
+    AddProductForm,
+    ShoppingCartForm,
+    ShoppingCartLineForm
+)
 from app.shop.models import Customer, Product, Transaction, TransactionLine
 
 
@@ -67,8 +71,8 @@ def add_to_cart():
         return redirect(request.args.get('origin'))
 
 
-@shop.route('/cart')
-def cart():
+@shop.route('/cart_test')
+def cart_test():
     ret_str = ''
     try:
         if session['cart']:
@@ -83,6 +87,38 @@ def cart():
         except AttributeError:
             pass
     return ret_str if ret_str else 'No transaction.'
+
+
+@shop.route('/cart')
+def cart():
+    form = ShoppingCartForm()
+    cur_trans = None
+    empty = False
+    if form.validate_on_submit():
+        pass #TODO
+    else:
+        if not current_user.is_anonymous:
+            try:
+                cur_trans = current_user.customer_data.current_transaction
+            except AttributeError:
+                pass
+        if not cur_trans:
+            try:
+                cur_trans = Transaction.from_session_data(session['cart'])
+            except KeyError:
+                pass
+        if cur_trans:
+            form.lines.entries = [
+                ShoppingCartLineForm(
+                    quantity=l.quantity,
+                    product_number=l.product_number
+                ) for l in cur_trans.lines
+            ]
+        else:
+            empty = True
+    return render_template('shop/cart.html', empty=empty, form=form)
+
+
 
 @shop.route('clear_session')
 def clear_session():

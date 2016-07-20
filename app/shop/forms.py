@@ -17,7 +17,13 @@
 
 
 from flask_wtf import Form
-from wtforms import HiddenField, IntegerField, SubmitField
+from wtforms import (
+    FieldList,
+    FormField,
+    HiddenField,
+    IntegerField,
+    SubmitField
+)
 
 
 class AddProductForm(Form):
@@ -25,3 +31,15 @@ class AddProductForm(Form):
     quantity = IntegerField('Quantity', default=1)
     number = HiddenField()
     submit = SubmitField('Add to Cart')
+
+
+class ShoppingCartLineForm(Form):
+    """Form for a line in the shopping cart."""
+    quantity = IntegerField('Quantity')
+    product_number = HiddenField()
+
+
+class ShoppingCartForm(Form):
+    """Form for shopping cart data."""
+    lines = FieldList(FormField(ShoppingCartLineForm))
+    submit = SubmitField('Submit')

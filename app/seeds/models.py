@@ -256,7 +256,7 @@ def save_nav_data_json(json_file=None):
     for idx in indexes:
         d = dict()
         d['Position'] = idx.position
-        d['Header'] = idx.header
+        d['Header'] = idx.plural  # We were using header, but changed it.
         d['Slug'] = idx.slug
         d['URL'] = idx.url
         try:

@@ -22,7 +22,6 @@ input{line-height:normal}
 table{border-collapse:collapse;border-spacing:0}
 td,th{padding:0}
 
-
 /*ADD THIS STUFF*//*ADD THIS STUFF*//*ADD THIS STUFF*/
 html{background:linear-gradient(#fff,#e8bf68);background:-moz-linear-gradient(#fff,#e8bf68);background:-o-linear-gradient(#fff,#e8bf68);background:-webkit-linear-gradient(#fff,#e8bf68);background-attachment:fixed;height:100%;width:100%;font-size:62.5%}
 body{margin:1.25em auto;border:.08em solid #141414;background-color:#f7f7f7;color:#141414;font-size:1.6em;line-height:1.5;font-family:'Droid sans','Lucida Sans Unicode',Helvetica,Arial,sans-serif;}
@@ -32,119 +31,14 @@ body{margin:1.25em auto;border:.08em solid #141414;background-color:#f7f7f7;colo
 body{font-size:1.6em;line-height:1.5;color:#141414;margin:1.25em 0;background-attachment:fixed;background-image:url(http://www.swallowtailgardenseeds.com/images/fadedbar.png);background-size:100% 100%;overflow:auto;height:100%;}*/
 
 
-
-
-
-
-
-
-
-#nav
-{
-    /* container */
-}
-    #nav > a
-    {
-        display: none;
-    }
-    #nav li
-    {
-        position: relative;
-    }
- 
-    /* first level */
- 
-    #nav > ul
-    {
-        height: 3.75em;
-    }
-        #nav > ul > li
-        {
-            width: 25%;
-            height: 100%;
-            float: left;
-        }
- 
-    /* second level */
- 
-    #nav li ul
-    {
-        display: none;
-        position: absolute;
-        top: 100%;
-    }
-        #nav li:hover ul
-        {
-            display: block;
-        }
-
-
-@media only screen and ( max-width: 40em ) /* 640 */
-{
-    #nav
-    {
-        position: relative;
-    }
-        #nav > a
-        {
-        }
-        #nav:not( :target ) > a:first-of-type,
-        #nav:target > a:last-of-type
-        {
-            display: block;
-        }
- 
-    /* first level */
- 
-    #nav > ul
-    {
-        height: auto;
-        display: none;
-        position: absolute;
-        left: 0;
-        right: 0;
-    }
-        #nav:target > ul
-        {
-            display: block;
-        }
-        #nav > ul > li
-        {
-            width: 100%;
-            float: none;
-        }
- 
-    /* second level */
- 
-    #nav li ul
-    {
-        position: static;
-    }
-}
-
-
-
-
-
-
-
-
-
-
-
-
 @media all and (min-width:20em){
 
-
-.Footer,.Page_header{position:relative;clear:both;}
-
+/*.Footer,.Page_header{position:relative;clear:both;}*/
 
 .fs90-{font-size:.9em;}
 small{display:none;margin-bottom:0;}
 
-
 /*#container{margin:0 auto;border:.08em solid #141414;background-color:#f7f7f7;max-width:98%;}*/
-
 
 .Page_header{background:#7F9A65;font-family:"Droid Sans","Lucida Sans Unicode",Helvetica,Arial,sans-serif;}
 .Page_header-contact-bar{border-bottom:.08em solid #141414;color:#f7f7f7;text-align:center;}
@@ -154,9 +48,9 @@ small{display:none;margin-bottom:0;}
 .Page_header-banner{display:block;width:100%;height:auto;}
 .Page_header-banner-container{position:relative;}
 .Page_header-banner-home-link{position:absolute;left:0;top:0;z-index:33;height:92%;width:46%;}
-.Page_header-cart-link-button{;text-align:right;margin:-3.3em .75em 0 0;position:relative;z-index:22;height:3.3em;}
+/*.Page_header-cart-link-button{;text-align:right;margin:-3.3em .75em 0 0;position:relative;z-index:22;height:3.3em;}
 .Page_header-view-cart-link:link,.Page_header-view-cart-link:visited{display:inline-block;color:#141414;padding:.4em .35em .25em .4em;border-radius:.25em;border:.08em solid #141414;background:#dddbe1;text-decoration:none;font-weight:700;}
-.Page_header-view-cart-link:hover{background:#f3f3f5;}
+.Page_header-view-cart-link:hover{background:#f3f3f5;}*/
 .Main_nav{background:#7F9A65;text-align:center;border-top:.08em solid #141414;border-bottom:.08em solid #141414;font-weight:700;font-size:1.25em;font-family:"Droid Serif",Georgia,"Times New Roman",serif;}
 .Main_nav-show-hide-links,.Main_nav-not-shown-links{display:none;text-decoration:none;}
 .Main_nav:target .Main_nav-not-shown-links{display:block;}
@@ -169,11 +63,25 @@ small{display:none;margin-bottom:0;}
 .Google_search .gsc-cursor-page{padding:.3em;border-radius:.3em;}
 
 
+
+
+
+
+
+/*ADD THIS STUFF*//*ADD THIS STUFF*//*ADD THIS STUFF*/
+.Main_nav-links{position:relative;}
+.Main_nav-links ul{display:none;position:absolute;}
+/*ADD THIS STUFF*//*ADD THIS STUFF*//*ADD THIS STUFF*/
+
+
+
+
+
 /*ADD THIS STUFF*//*ADD THIS STUFF*//*ADD THIS STUFF*/
 #main{font-family:"Droid sans","Lucida Sans Unicode",Helvetica,Arial,sans-serif;font-size:100%;margin:0;padding:0 .5em;text-align:center;}
 /*ADD THIS STUFF*//*ADD THIS STUFF*//*ADD THIS STUFF*/
 
-.Sidebar{display:none;}
+/*.Sidebar{display:none;}*/
 
 .Footer{background:#7F9A65;padding:.75em;border-top:solid .08em #141414;text-align:center;font-family:"Droid sans","Lucida Sans Unicode",Helvetica,Arial,sans-serif;}
 .Footer_site-map-link:link,.Footer_site-map-link:visited{display:block;color:#f7f7f7;font-weight:700;text-decoration:none;margin:.45em;}
@@ -308,7 +216,7 @@ a.RelatedLinks_a:link{border:none;}
 @media all and (min-width:48em){
 
 
-#main{text-align:left;margin-right:1.55em;margin-left:14.9em;float:right;}
+/*#main{text-align:left;margin-right:1.55em;margin-left:14.9em;float:right;}*/
 /*.clearfix:after{content:" ";display:block;height:0;clear:both;visibility:hidden;}*/
 
 
@@ -336,12 +244,44 @@ li:nth-child(5).Main_nav-not-shown-links{width:26%}
 .Main_nav-veg-lnk,.Main_nav-her-lnk{vertical-align:top;margin-top:.25em;}
 .Main_nav:target > ul li.Main_nav-not-shown-links,.Main_nav-not-shown-links,.Main_nav-search{display:inline-block;}
 .Main_nav-show-hide-links,.Main_nav:not(:target) > a:first-of-type,.Main_nav:target > a:last-of-type{display:none}
-
-
-
 .Main_nav-not-shown-links a:link,.Main_nav-not-shown-links a:visited{background:#e0e5ea;border-bottom:none;padding:.45em 0;margin:.5em .1em 0 .1em;border-radius:.25em;}
 .Main_nav a:hover{background:#eff2f4;}
 .Google_search .gsc-results-wrapper-nooverlay,.Google_search .gsc-results-wrapper-visible{width:265%;margin-left:-165%;}
+
+
+
+
+
+
+
+
+
+/*ADD THIS STUFF*//*ADD THIS STUFF*//*ADD THIS STUFF*/
+.Main_nav-links li:hover > ul{display:block;}
+
+
+.Main_nav-drop-down-menu{background:gray;}
+li:nth-child(1) .Main_nav-drop-down-menu{margin-left:-.725em;width:100%;z-index:25;}
+li:nth-child(2) .Main_nav-drop-down-menu{margin-left:-16.1em;width:100%;z-index:25;}
+li:nth-child(3) .Main_nav-drop-down-menu{margin-left:-33.05em;width:100%;z-index:25;}
+li:nth-child(4) .Main_nav-drop-down-menu{margin-left:-.725em;width:100%;z-index:25;}
+li:nth-child(5) .Main_nav-drop-down-menu{margin-left:-16.65em;width:100%;z-index:25;}
+
+
+
+
+
+
+.Main_nav-drop-down-items{position:relative;display:inline-block;background-color:red;margin:0;padding:0;}
+/*ADD THIS STUFF*//*ADD THIS STUFF*//*ADD THIS STUFF*/
+
+
+
+
+
+
+
+
 
 
 /*ADD THIS STUFF*//*ADD THIS STUFF*//*ADD THIS STUFF*/
@@ -350,12 +290,10 @@ li:nth-child(5).Main_nav-not-shown-links{width:26%}
 
 /*#container{background-image:url(http://www.swallowtailgardenseeds.com/images/sidebar-background.jpg);background-repeat:repeat-y;background-position:left top;}*/
 
-/*ADD THIS STUFF*//*ADD THIS STUFF*//*ADD THIS STUFF*/
-body{background-image:url(http://www.swallowtailgardenseeds.com/images/sidebar-background.jpg);background-repeat:repeat-y;background-position:left top;}
-/*ADD THIS STUFF*//*ADD THIS STUFF*//*ADD THIS STUFF*/
 
 
-.Sidebar{display:block;float:left;width:13.1em;margin-right:-13.1em;padding:.5em .3em;}
+
+/*.Sidebar{display:block;float:left;width:13.1em;margin-right:-13.1em;padding:.5em .3em;}
 .Sidebar_global-message-box{color:#832F2F;margin:.5em .35em;padding:.5em;text-align:center;font-size:.71em;}
 .Sidebar_global-message-box,.Sidebar_social{border:solid 1px #bbb;border-radius:.35em;background-color:#f7f7f7;}
 .Sidebar_new-seeds{display:block;background:#7f9A65;padding:.5em;margin:.5em .35em 1em .35em;border-radius:1em;border:.125em solid #832f2f;transition:.05s;box-shadow:inset 0 .0625em 0 #b2f17f, 0 .375em 0 #3d6f0d;font-weight:700;text-align:center;}
@@ -372,7 +310,7 @@ body{background-image:url(http://www.swallowtailgardenseeds.com/images/sidebar-b
 .Sidebar_subnav{margin:.25em 0 .5em 1em;list-style:none;font-weight:400;}
 .Sidebar_subnav li{padding:.02em 0;}
 .Sidebar_nav a:link,.Sidebar_nav a:visited{color:#141414;text-decoration:none;}
-.Sidebar_nav a:hover{color:#b34141;}
+.Sidebar_nav a:hover{color:#b34141;}*/
 
 
 .Footer br{display:block;}

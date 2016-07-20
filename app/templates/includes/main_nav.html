@@ -29,23 +29,25 @@ Copyright Swallowtail Garden Seeds, Inc
 		</li>
 	</ul>
 </div>-->
-<nav id="nav" role="navigation">
-	<a href="#nav" title="Show navigation">Show navigation</a>
-	<a href="#" title="Hide navigation">Hide navigation</a>
-	<ul>
+<nav class="Main_nav" id="Main_nav">
+	<a class="Main_nav-show-hide-links" href="#Main_nav" title="Show Navigation"><span class="menu">&#9776;&nbsp;</span> Show Menu</a>
+	<a class="Main_nav-show-hide-links" id="hide" href="#hide" title="Hide Navigation"><span class="menu">&#9776;&nbsp;</span> Hide Menu</a>
+	<ul class="Main_nav-links">
 		{% for i in nav_data %}
-		<li>
-      <a href="{{ i['URL'] }}">{{ i['Header'] }}</a>
-      {% if i['Common Names'] %}
-      <ul class="common-name-links">
-      {% for cn in i['Common Names'] %}
-        <li>
-          <a href="{{ cn['URL'] }}">{{ cn['Name'] }}</a>
-        </li>
-      {% endfor %}
-      </ul>
-      {% endif %}
+		<li class="Main_nav-not-shown-links"><a href="{{ i['URL'] }}">{{ i['Header'] }}</a>
+			{% if i['Common Names'] %}
+			<ul class="Main_nav-drop-down-menu">
+				{% for cn in i['Common Names'] %}
+				<li class="Main_nav-drop-down-items"><a href="{{ cn['URL'] }}">{{ cn['Name'] }}</a></li>
+				{% endfor %}
+			</ul>
+			{% endif %}
 		</li>
 		{% endfor %}
+		<li class="Main_nav-search">
+			<div class="Google_search">
+				<div class="gcse-search"></div>
+			</div>
+		</li>
 	</ul>
 </nav>

@@ -207,11 +207,11 @@ def login():
     """Allow registered, confirmed users to log in.
 
     Request Args:
-        next (str): The location of the page to return to after logging in.
+        origin (str): The location of the page to return to after logging in.
 
     Returns:
-        function: On successful login, redirect to page specified by next, or
-                  main.index if no page is specified by next.
+        function: On successful login, redirect to page specified by origin, or
+                  main.index if no page is specified by origin.
         function: Redirect to auth.resend_confirmation if user not confirmed.
         function: Redirect to auth.login if username or password is incorrect.
         function: Render template auth/login.html if no form data is received.
@@ -227,7 +227,7 @@ def login():
                     remember = True
                 if(login_user(user, remember=remember)):
                     flash('You are now logged in, {0}.'.format(user.name))
-                    return redirect(request.args.get('next') or
+                    return redirect(request.args.get('origin') or
                                     url_for('main.index'))
             else:
                 flash('Error: Account not confirmed! Please check your email, '
@@ -239,7 +239,7 @@ def login():
                 '">Click here if you forgot your password</a>')
             flash('Error: Login information is incorrect! ' + reset_url + '.')
             return redirect(url_for('auth.login',
-                                    next=request.args.get('next')))
+                                    origin=request.args.get('origin')))
     return render_template('auth/login.html', form=form)
 
 
@@ -249,12 +249,12 @@ def logout():
     """Log out the user if they visit this view while logged in.
 
     Returns:
-        function: After logout, redirect to page specified by next, or
-                  main.index if no page specified by next.
+        function: After logout, redirect to page specified by origin, or
+                  main.index if no page specified by origin.
     """
     logout_user()
     flash('You have been logged out.')
-    return redirect(request.values.get('next') or url_for('main.index'))
+    return redirect(request.values.get('origin') or url_for('main.index'))
 
 
 @auth.route('/manage_user', methods=['GET', 'POST'])

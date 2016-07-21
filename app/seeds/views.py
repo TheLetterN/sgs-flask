@@ -2163,7 +2163,7 @@ def flip_featured(cv_id):
         flash('"{0}" will now be featured on its common name\'s page.'
               .format(cv.fullname))
     db.session.commit()
-    return redirect(request.args.get('next') or url_for('seeds.manage'))
+    return redirect(request.args.get('origin') or url_for('seeds.manage'))
 
 
 @seeds.route('/flip_in_stock/<int:cv_id>')
@@ -2180,7 +2180,7 @@ def flip_in_stock(cv_id):
         flash('"{0}" is now in stock.'.format(cv.fullname))
         cv.in_stock = True
     db.session.commit()
-    return redirect(request.args.get('next') or url_for('seeds.manage'))
+    return redirect(request.args.get('origin') or url_for('seeds.manage'))
 
 
 @seeds.route('/flip_active/<int:cv_id>')
@@ -2199,7 +2199,7 @@ def flip_active(cv_id):
               format(cv.fullname))
         cv.active = True
     db.session.commit()
-    return redirect(request.args.get('next') or url_for('seeds.manage'))
+    return redirect(request.args.get('origin') or url_for('seeds.manage'))
 
 
 @seeds.route('/flip_visible/<int:cv_id>')
@@ -2218,7 +2218,7 @@ def flip_visible(cv_id):
         flash('"{0}" is now visible on auto-generated pages.'
               .format(cv.fullname))
     db.session.commit()
-    return redirect(request.args.get('next') or url_for('seeds.manage'))
+    return redirect(request.args.get('origin') or url_for('seeds.manage'))
 
 
 # Functions and views for moving objects in ordering_list collections.
@@ -2247,7 +2247,7 @@ def move_object(cls, obj_id, delta):
             flash('"{0}" is already first.'.format(obj.name))
         else:
             flash('"{0}" is already last.'.format(obj.name))
-    return redirect(request.args.get('next') or url_for('seeds.manage'))
+    return redirect(request.args.get('origin') or url_for('seeds.manage'))
 
 
 @seeds.route('/move_common_name/<int:cn_id>/<delta>')

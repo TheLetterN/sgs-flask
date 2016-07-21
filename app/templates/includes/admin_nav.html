@@ -17,7 +17,7 @@ Copyright Swallowtail Garden Seeds, Inc
     <ul class="Account_nav-user">
       {% if current_user.is_anonymous %}
       <li>
-        <a href="{{ url_for('auth.login', next=request.path) }}">Log In</a>
+        <a href="{{ url_for('auth.login', origin=request.path) }}">Log In</a>
       </li>
       <li>
         <a href="{{ url_for('auth.register') }}">Create an Account</a>
@@ -27,7 +27,7 @@ Copyright Swallowtail Garden Seeds, Inc
         <a id="user-button" href="{{ url_for('auth.edit_user') }}">{{ current_user.name }}</a>
       </li>
       <li>
-        <a href="{{ url_for('auth.logout', next=request.path) }}">Log Out</a>
+        <a href="{{ url_for('auth.logout', origin=request.path) }}">Log Out</a>
       </li>
       {% endif %}
     </ul>
@@ -46,4 +46,3 @@ Copyright Swallowtail Garden Seeds, Inc
     </ul>
     {% endif %}
   </div>
-

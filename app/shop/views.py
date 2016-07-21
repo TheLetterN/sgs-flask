@@ -111,7 +111,8 @@ def cart():
             form.lines.entries = [
                 ShoppingCartLineForm(
                     quantity=l.quantity,
-                    product_number=l.product_number
+                    product_number=l.product_number,
+                    product_label=l.label
                 ) for l in cur_trans.lines
             ]
         else:

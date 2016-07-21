@@ -37,6 +37,7 @@ class ShoppingCartLineForm(Form):
     """Form for a line in the shopping cart."""
     quantity = IntegerField('Quantity')
     product_number = HiddenField()
+    product_label = HiddenField()
 
 
 class ShoppingCartForm(Form):

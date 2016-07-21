@@ -25,7 +25,7 @@
 <form action="POST">
   <ul>
   {% for line in form.lines %}
-  <li>{{ line.quantity }}{{ line.product_number }}{{ line.label }} TODO: Link to remove.</li>
+  <li>{{ line.quantity }}{{ line.product_number }}{{ line.product_label.data }} TODO: Link to remove.</li>
   {% endfor %}
   <ul>
   {{ form.submit() }}

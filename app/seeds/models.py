@@ -2515,7 +2515,7 @@ class Image(db.Model, TimestampMixin):
     """
     __tablename__ = 'images'
     id = db.Column(db.Integer, primary_key=True)
-    filename = db.Column(db.String(32), unique=True)
+    filename = db.Column(db.String(255), unique=True)
     width = db.Column(db.Integer)
     height = db.Column(db.Integer)
 

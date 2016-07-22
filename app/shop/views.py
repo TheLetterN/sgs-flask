@@ -1,27 +1,12 @@
-import random  #TMP
 from flask import flash, redirect, render_template, request, session, url_for
 from flask_login import current_user
 from . import shop
 from app import db
 from app.shop.forms import (
     AddProductForm,
-    ShoppingCartForm,
-    ShoppingCartLineForm
+    ShoppingCartForm
 )
 from app.shop.models import Customer, Product, Transaction, TransactionLine
-
-
-@shop.route('/')
-def index():
-    """Main shop page."""
-    choices = ['frogs', 'toads', 'salamanders']
-    try:
-        session['amphibian']
-    except KeyError:
-        session['amphibian'] = None
-    if not session['amphibian']:
-        session['amphibian'] = random.choice(choices)
-    return('Your amphibian: {}'.format(session['amphibian']))
 
 
 @shop.route('/add-to-cart', methods=('GET', 'POST'))
@@ -48,7 +33,7 @@ def add_to_cart():
             line.quantity += qty
             product = line.product
         else:
-            product = Product.query.filter(Product.number==pn).one_or_none()
+            product = Product.query.filter(Product.number == pn).one_or_none()
             line = TransactionLine(product=product, quantity=qty)
             cur_trans.lines.append(line)
         try:
@@ -71,24 +56,6 @@ def add_to_cart():
         return redirect(request.args.get('origin'))
 
 
-@shop.route('/cart_test')
-def cart_test():
-    ret_str = ''
-    try:
-        if session['cart']:
-            ret_str = 'Session cart: {}'.format(session['cart'])
-    except KeyError:
-        pass
-    if not current_user.is_anonymous:
-        try:
-            ret_str += '\nTransaction from db: {}'.format(
-                current_user.customer_data.current_transaction.text
-            )
-        except AttributeError:
-            pass
-    return ret_str if ret_str else 'No transaction.'
-
-
 @shop.route('/cart', methods=['GET', 'POST'])
 def cart():
     cur_trans = Transaction.load(current_user)
@@ -104,15 +71,7 @@ def cart():
             flash('Changes saved.')
         elif form.checkout.data:
             flash('Check this out.')
-        return redirect(url_for('shop.cart'))   
+        return redirect(url_for('shop.cart'))
     else:
         print(form.errors)
     return render_template('shop/cart.html', cur_trans=cur_trans, form=form)
-
-
-
-@shop.route('clear_session')
-def clear_session():
-    """Clear the user session."""
-    #TMP - Remove this in production!
-    session['cart'] = []

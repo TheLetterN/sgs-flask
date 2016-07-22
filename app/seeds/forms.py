@@ -98,6 +98,7 @@ def position_choices(**kwargs):
     choices.insert(0, (-1, 'First'))
     return choices
 
+
 def remove_from_choices(choices, obj):
     """Remove the choice pointing to `obj` from a list of select choices.
 
@@ -116,6 +117,7 @@ def remove_from_choices(choices, obj):
     except ValueError:
         # No need to remove it if it's not there.
         pass
+
 
 # Custom validators
 #

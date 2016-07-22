@@ -1,7 +1,7 @@
 import pytest
 from unittest import mock
 from flask import current_app
-from app import Anonymous, get_index_nav
+from app import Anonymous, load_nav_data
 
 
 @pytest.mark.usefixtures('app')
@@ -13,16 +13,15 @@ class TestApp:
     def test_is_testing(self):
         assert current_app.config['TESTING']
 
-    def test_get_index_nav_no_file(self):
-        """Return an empty dict if no file is loaded."""
-        assert get_index_nav('/tmp/some_nonexistent_file.blargh') == {}
+    def test_load_nav_data_no_file(self):
+        """Return an empty list if no file is loaded."""
+        assert load_nav_data('/tmp/some_nonexistent_file.blargh') == []
 
     @mock.patch('app.current_app.config.get')
-    @mock.patch('app.os.path.exists')
-    def test_get_index_nav_uses_default_file(self, m_exists, m_get):
+    def test_load_nav_data_uses_default_file(self, m_get):
         """Use the folder specified by config['JSON_FOLDER']"""
-        m_exists.return_value = False
-        get_index_nav()
+        m_get.return_value = 'nav_data.json'
+        load_nav_data()
         m_get.assert_called_with('JSON_FOLDER')
 
 

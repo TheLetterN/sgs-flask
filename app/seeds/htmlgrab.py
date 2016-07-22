@@ -493,7 +493,7 @@ def consolidate_sections(d):
         elif sname not in keys:
             keys.append(sname)
     for key in keys:
-        secs = [ s for s in d['sections'] if s['section name'] == key]
+        secs = [s for s in d['sections'] if s['section name'] == key]
         if len(secs) > 1:
             main = next((s for s in secs if len(s) > 2), None)
             if main:
@@ -503,46 +503,6 @@ def consolidate_sections(d):
             for s in secs:
                 main['cultivars'] += s['cultivars']
                 d['sections'].remove(s)
-
-# Keep this until you are _damn_ sure the new method works; this seemed to
-# work for everything but petuniats.
-
-#    sections = dict()
-#    for s in list(d['sections']):
-#        sn = s['section name']
-#        if 'individual ' in sn.lower(): 
-#            if 'cultivars' not in d:
-#                d['cultivars'] = list()
-#            d['cultivars'] += s['cultivars']
-#            d['sections'].remove(s)
-#        elif sn in sections:
-#            sec = sections[sn]
-#            try:
-#                s['cultivars'] += sec['cultivars']
-#            except KeyError:
-#                print('s or sec have no cultivars. s: {} sec: {}'.format(s, sec))
-#            try:
-#                 d['sections'].remove(sec)
-#            except ValueError:
-#                print('failed to remove sec from d with sec named: {}'.format(sec['section name']))
-#        elif 'no section' in sn.lower() or 'no series' in sn.lower():
-#            if 'cultivars' not in d:
-#                d['cultivars'] = []
-#            d['cultivars'] += s['cultivars']
-#            d['sections'].remove(s)
-#        else:
-#            sections[s['section name']] = s
-#            if 'sections' in s:
-#                for ss in list(s['sections']):
-#                    if ss['section name'] in sections:
-#                        sec = sections[ss['section name']]
-#                        try:
-#                            ss['cultivars'] += sec['cultivars']
-#                        except KeyError as k:
-#                            raise RuntimeError(
-#                                'Key {0} missing from {1}'.format(k, sec)
-#                            ).with_traceback(sys.exc_info()[2])
-#                        d['sections'].remove(sec)
 
 
 def clean_cultivar_dicts(cultivar_dicts, cn):

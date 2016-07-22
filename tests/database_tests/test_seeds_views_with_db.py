@@ -594,7 +594,7 @@ class TestFlipDroppedRouteWithDB:
         with app.test_client() as tc:
             rv = tc.get(url_for('seeds.flip_active',
                                 cv_id=cultivar.id,
-                                next=url_for('seeds.home')))
+                                origin=url_for('seeds.home')))
         assert rv.location == url_for('seeds.home', _external=True)
         assert not cultivar.active
 
@@ -620,7 +620,7 @@ class TestFlipInStockRouteWithDB:
         with app.test_client() as tc:
             rv = tc.get(url_for('seeds.flip_in_stock',
                                 cv_id=cultivar.id,
-                                next=url_for('seeds.home')))
+                                origin=url_for('seeds.home')))
         assert rv.location == url_for('seeds.home', _external=True)
         assert not cultivar.in_stock
         with app.test_client() as tc:

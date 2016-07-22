@@ -101,6 +101,7 @@ from sqlalchemy.ext.hybrid import Comparator, hybrid_property
 from sqlalchemy.ext.orderinglist import ordering_list
 from sqlalchemy.sql.expression import and_
 from flask_sqlalchemy import SignallingSession
+from werkzeug.routing import BuildError
 
 from app import db, list_to_english
 from app.db_helpers import (
@@ -376,7 +377,7 @@ class Index(db.Model, TimestampMixin):
 
     def __repr__(self):
         return '<{0} "{1}">'.format(self.__class__.__name__,
-                                      self.name)
+                                    self.name)
 
     def __eq__(self, other):
         return all((
@@ -393,7 +394,10 @@ class Index(db.Model, TimestampMixin):
     @property
     def url(self):
         """Return the URL for the main page for a given `Index`."""
-        return url_for('seeds.index', idx_slug=self.slug, _external=True)
+        try:
+            return url_for('seeds.index', idx_slug=self.slug, _external=True)
+        except BuildError:
+            return ''
 
     @property
     def dict_(self):
@@ -777,12 +781,15 @@ class CommonName(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
 
     @property
     def url(self):
-        return url_for(
-            'seeds.common_name',
-            cn_slug=self.slug,
-            idx_slug=self.index.slug,
-            _external=True
-        )
+        try:
+            return url_for(
+                'seeds.common_name',
+                cn_slug=self.slug,
+                idx_slug=self.index.slug,
+                _external=True
+            )
+        except BuildError:
+            return ''
 
     @property
     def link_html(self):
@@ -1081,7 +1088,7 @@ class BotanicalName(db.Model, TimestampMixin, SynonymsMixin):
                  example: <BotanicalName 'Asclepias incarnata'>
         """
         return '<{0} "{1}">'.format(self.__class__.__name__,
-                                      self.name)
+                                    self.name)
 
     @property
     def dict_(self):
@@ -1380,13 +1387,16 @@ class Section(db.Model, TimestampMixin, OrderingListMixin):
 
     @property
     def url(self):
-        return url_for(
-            'seeds.common_name',
-            cn_slug=self.common_name.slug,
-            idx_slug=self.common_name.index.slug,
-            _anchor=self.slug,
-            _external=True
-        )
+        try:
+            return url_for(
+                'seeds.common_name',
+                cn_slug=self.common_name.slug,
+                idx_slug=self.common_name.index.slug,
+                _anchor=self.slug,
+                _external=True
+            )
+        except BuildError:
+            return ''
 
     @property
     def link_html(self):
@@ -1700,18 +1710,21 @@ class Cultivar(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
     def __repr__(self):
         """Return representation of Cultivar in human-readable format."""
         return '<{0} "{1}">'.format(self.__class__.__name__,
-                                      self.fullname)
+                                    self.fullname)
 
     @property
     def url(self):
         # TODO: Integrate option for if cultivar pages are active.
-        return url_for(
-            'seeds.common_name',
-            cn_slug=self.common_name.slug,
-            idx_slug=self.common_name.index.slug,
-            _anchor=self.slug,
-            _external=True
-        )
+        try:
+            return url_for(
+                'seeds.common_name',
+                cn_slug=self.common_name.slug,
+                idx_slug=self.common_name.index.slug,
+                _anchor=self.slug,
+                _external=True
+            )
+        except BuildError:
+            return ''
 
     @property
     def link_html(self):
@@ -1987,7 +2000,7 @@ class Packet(db.Model, TimestampMixin):
     @property
     def amount(self):
         """Return the amount of seeds in a packet."""
-        return self.quantity.html_value
+        return self.quantity.html_value if self.quantity else None
 
     @classmethod
     def from_values(cls, sku, price, quantity, units):
@@ -2032,12 +2045,12 @@ class Packet(db.Model, TimestampMixin):
     @property
     def label(self):
         """A label for a packet as used in the shopping cart."""
-        if self.cultivar:
+        try:
             return '{0}, {1} - {2} {3}'.format(self.cultivar.common_name.name,
                                                self.cultivar.name,
                                                self.amount,
                                                self.quantity.units)
-        else:
+        except AttributeError:
             return ''
 
 
@@ -2090,8 +2103,8 @@ class Quantity(db.Model):
 
     def __repr__(self):
         return '<{0} "{1} {2}">'.format(self.__class__.__name__,
-                                          self.value,
-                                          self.units)
+                                        self.value,
+                                        self.units)
 
     @property
     def html_value(self):
@@ -2532,11 +2545,14 @@ class Image(db.Model, TimestampMixin):
 
     def __repr__(self):
         return '<{0} filename: "{1}">'.format(self.__class__.__name__,
-                                                self.filename)
+                                              self.filename)
 
     @property
     def url(self):
-        return url_for('static', filename=self.path, _external=True)
+        try:
+            return url_for('static', filename=self.path, _external=True)
+        except BuildError:
+            return ''
 
     @property
     def dict_(self):

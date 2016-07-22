@@ -23,8 +23,7 @@ from app.seeds.forms import (
 from app.seeds.models import (
     BotanicalName,
     Section,
-    CommonName,
-    Index
+    CommonName
 )
 from app.redirects import Redirect
 

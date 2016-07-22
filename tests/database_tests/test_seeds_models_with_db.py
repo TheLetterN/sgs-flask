@@ -35,52 +35,6 @@ class TestIndexRelatedEventHandlers:
         assert m_gs.called
         assert idx.slug == 'new-index'
 
-    # save_nav_json_before_commit
-    @mock.patch('app.seeds.models.Index.save_nav_json')
-    def test_save_nav_json_before_commit_new_index(self, m_snj, db):
-        """Run Index.save_nav_json() if any new Indexes in session."""
-        idx = Index(name='New Index')
-        db.session.add(idx)
-        db.session.commit()
-        assert m_snj.call_count == 1
-
-    @mock.patch('app.seeds.models.Index.save_nav_json')
-    def test_save_indexes_to_json_before_commit_edited_index(self,
-                                                             m_snj,
-                                                             db):
-        """Run if any edited Indexes are in the session."""
-        idx = Index(name='New Index')
-        db.session.add(idx)
-        db.session.commit()
-        db.session.expunge(idx)
-        assert idx not in db.session
-        idxq = Index.query.filter(Index.name == 'New Index').one_or_none()
-        idxq.name = 'Edited Index'
-        db.session.commit()
-        assert m_snj.call_count == 2
-
-    @mock.patch('app.seeds.models.Index.save_nav_json')
-    def test_save_indexes_to_json_before_commit_deleted_index(self,
-                                                              m_snj,
-                                                              db):
-        """Run if any deleted Indexes are in the session."""
-        idx = Index(name='New Index')
-        db.session.add(idx)
-        db.session.commit()
-        db.session.expunge(idx)
-        idxq = Index.query.filter(Index.name == 'New Index').one_or_none()
-        db.session.delete(idxq)
-        db.session.commit()
-        assert m_snj.call_count == 2
-
-    @mock.patch('app.seeds.models.Index.save_nav_json')
-    def test_save_indexes_to_json_before_commit_no_indexes(self, m_snj, db):
-        """Do not run if there are no Indexes in the session."""
-        cn = CommonName(name='John')
-        db.session.add(cn)
-        db.session.commit()
-        assert not m_snj.called
-
 
 class TestPositionableMixinWithDB:
     """Test methods of `PositionableMixin` that use the db.

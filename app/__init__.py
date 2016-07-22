@@ -26,7 +26,6 @@ of the website for Swallowtail Garden Seeds.
 """
 
 import json
-import os
 from pathlib import Path
 import pyphen
 from flask import Flask, current_app, session

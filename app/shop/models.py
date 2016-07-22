@@ -96,8 +96,12 @@ class Address(db.Model, TimestampMixin):
     address_line1 = db.Column(db.String(100))
     address_line2 = db.Column(db.String(100))
     city = db.Column(db.String(100))
-    us_postal_abbr = db.Column(db.Enum(*US_POSTAL_ABBRS.keys()))
-    country = db.Column(db.Enum(*(c.alpha3 for c in countries)))
+    us_postal_abbr = db.Column(
+        db.Enum(*US_POSTAL_ABBRS.keys(), name='us_postal_abbr')
+    )
+    country = db.Column(
+        db.Enum(*(c.alpha3 for c in countries), name='country')
+    )
     province_or_state = db.Column(db.String(40))
     email = db.Column(db.String(255))
     phone = db.Column(db.String(25))
@@ -188,7 +192,7 @@ class Product(db.Model, TimestampMixin):
     """A single product."""
     __tablename__ = 'products'
     id = db.Column(db.Integer, primary_key=True)
-    type_ = db.Column(db.Enum('packet', 'bulk'))
+    type_ = db.Column(db.Enum('packet', 'bulk', name='type_'))
     number = db.Column(db.String(15), unique=True)
     label = db.Column(db.String(100))
     price = db.Column(USDollar)
@@ -335,6 +339,7 @@ class Transaction(db.Model, TimestampMixin):
         'paid',
         'refunded',
         'shipped',
+	name='status',
     ))
     customer_id = db.Column(db.Integer, db.ForeignKey('customers.id'))
     customer = db.relationship(

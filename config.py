@@ -95,7 +95,7 @@ class Config(object):
         SHOW_CULTIVAR_PAGES = False
 
     # Set SERVER_NAME during dev. Unset if in production!
-    SERVER_NAME='localhost:5000'
+    SERVER_NAME= os.environ.get('SGS_SERVER_NAME') or 'localhost:5000'
 
     @staticmethod
     def init_app(app):

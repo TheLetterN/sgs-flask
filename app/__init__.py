@@ -29,7 +29,7 @@ import json
 import os
 from pathlib import Path
 import pyphen
-from flask import Flask, current_app
+from flask import Flask, current_app, session
 from flask_login import AnonymousUserMixin, LoginManager
 from flask_mail import Mail
 from flask_sqlalchemy import SQLAlchemy
@@ -80,6 +80,22 @@ def load_nav_data(json_file=None):
     except FileNotFoundError:
         items = []
     return items
+
+
+def sum_cart_items(session_key='cart', quantity_key='quantity'):
+    """Return the total quantity of items in a shopping cart in session.
+
+    Args:
+        session_key: The key to get items from in `session`.
+        quantity_key: The key in each item that represents the quantity.
+
+    Returns:
+        An integer total quantity of all products in session cart.
+    """
+    try:
+        return sum(i[quantity_key] for i in session[session_key])
+    except KeyError:
+        return 0
 
 
 class Permission(object):
@@ -171,5 +187,6 @@ def create_app(config_name):
     app.add_template_global(Permission, 'Permission')
     app.add_template_global(hyphenate, 'hyphenate')
     app.add_template_global(load_nav_data, 'load_nav_data')
+    app.add_template_global(sum_cart_items, 'sum_cart_items')
 
     return app

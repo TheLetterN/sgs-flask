@@ -1,8 +1,11 @@
 import json
 from pathlib import Path
+
+from flask import session
+from flask_login import current_user
+from flask_sqlalchemy import SignallingSession
 from pycountry import countries
 from sqlalchemy import event
-from flask_sqlalchemy import SignallingSession
 
 from app import current_app, db
 from app.db_helpers import TimestampMixin, USDollar
@@ -19,65 +22,65 @@ US_POSTAL_ABBRS = {
     'AA': 'Armed Forces Americas (except Canada)',
     'AE': 'Armed Forces (Africa, Canada, Europe, Middle East)',
     'AP': 'Armed Forces Pacific',
-	'AL': 'Alabama',
-	'AK': 'Alaska',
-	'AS': 'American Samoa',
-	'AZ': 'Arizona',
-	'AR': 'Arkansas',
-	'CA': 'California',
-	'CO': 'Colorado',
-	'CT': 'Connecticut',
-	'DE': 'Delaware',
-	'DC': 'District Of Columbia',
-	'FM': 'Federated States Of Micronesia',
-	'FL': 'Florida',
-	'GA': 'Georgia',
-	'GU': 'Guam',
-	'HI': 'Hawaii',
-	'ID': 'Idaho',
-	'IL': 'Illinois',
-	'IN': 'Indiana',
-	'IA': 'Iowa',
-	'KS': 'Kansas',
-	'KY': 'Kentucky',
-	'LA': 'Louisiana',
-	'ME': 'Maine',
-	'MH': 'Marshall Islands',
-	'MD': 'Maryland',
-	'MA': 'Massachusetts',
-	'MI': 'Michigan',
-	'MN': 'Minnesota',
-	'MS': 'Mississippi',
-	'MO': 'Missouri',
-	'MT': 'Montana',
-	'NE': 'Nebraska',
-	'NV': 'Nevada',
-	'NH': 'New Hampshire',
-	'NJ': 'New Jersey',
-	'NM': 'New Mexico',
-	'NY': 'New York',
-	'NC': 'North Carolina',
-	'ND': 'North Dakota',
-	'MP': 'Northern Mariana Islands',
-	'OH': 'Ohio',
-	'OK': 'Oklahoma',
-	'OR': 'Oregon',
-	'PW': 'Palau',
-	'PA': 'Pennsylvania',
-	'PR': 'Puerto Rico',
-	'RI': 'Rhode Island',
-	'SC': 'South Carolina',
-	'SD': 'South Dakota',
-	'TN': 'Tennessee',
-	'TX': 'Texas',
-	'UT': 'Utah',
-	'VT': 'Vermont',
-	'VI': 'Virgin Islands',
-	'VA': 'Virginia',
-	'WA': 'Washington',
-	'WV': 'West Virginia',
-	'WI': 'Wisconsin',
-	'WY': 'Wyoming'
+    'AL': 'Alabama',
+    'AK': 'Alaska',
+    'AS': 'American Samoa',
+    'AZ': 'Arizona',
+    'AR': 'Arkansas',
+    'CA': 'California',
+    'CO': 'Colorado',
+    'CT': 'Connecticut',
+    'DE': 'Delaware',
+    'DC': 'District Of Columbia',
+    'FM': 'Federated States Of Micronesia',
+    'FL': 'Florida',
+    'GA': 'Georgia',
+    'GU': 'Guam',
+    'HI': 'Hawaii',
+    'ID': 'Idaho',
+    'IL': 'Illinois',
+    'IN': 'Indiana',
+    'IA': 'Iowa',
+    'KS': 'Kansas',
+    'KY': 'Kentucky',
+    'LA': 'Louisiana',
+    'ME': 'Maine',
+    'MH': 'Marshall Islands',
+    'MD': 'Maryland',
+    'MA': 'Massachusetts',
+    'MI': 'Michigan',
+    'MN': 'Minnesota',
+    'MS': 'Mississippi',
+    'MO': 'Missouri',
+    'MT': 'Montana',
+    'NE': 'Nebraska',
+    'NV': 'Nevada',
+    'NH': 'New Hampshire',
+    'NJ': 'New Jersey',
+    'NM': 'New Mexico',
+    'NY': 'New York',
+    'NC': 'North Carolina',
+    'ND': 'North Dakota',
+    'MP': 'Northern Mariana Islands',
+    'OH': 'Ohio',
+    'OK': 'Oklahoma',
+    'OR': 'Oregon',
+    'PW': 'Palau',
+    'PA': 'Pennsylvania',
+    'PR': 'Puerto Rico',
+    'RI': 'Rhode Island',
+    'SC': 'South Carolina',
+    'SD': 'South Dakota',
+    'TN': 'Tennessee',
+    'TX': 'Texas',
+    'UT': 'Utah',
+    'VT': 'Vermont',
+    'VI': 'Virgin Islands',
+    'VA': 'Virginia',
+    'WA': 'Washington',
+    'WV': 'West Virginia',
+    'WI': 'Wisconsin',
+    'WY': 'Wyoming'
 }
 
 
@@ -245,7 +248,20 @@ class TransactionLine(db.Model, TimestampMixin):
     label = db.Column(db.Text)
     price = db.Column(USDollar)
 
-    def __init__(self, product=None, quantity=None):
+    def __init__(self, product=None, product_number=None, quantity=None):
+        if product and product_number and product.number != product_number:
+            raise ValueError(
+                'Attempted to initialize a Transaction with a product and a '
+                'product_number that corresponds to a different product!'
+            )
+        if not product and product_number is not None:
+            product = Product.query.filter(
+                Product.number == product_number
+            ).one_or_none()
+            if not product:
+                raise ValueError(
+                    'No product exists with number: {}'.format(product_number)
+                )
         self.product = product
         self.quantity = quantity
         if self.product:
@@ -254,9 +270,12 @@ class TransactionLine(db.Model, TimestampMixin):
             self.price = self.product.price
 
     def __repr__(self):
-        return '<{0}: {1} of "{2}">'.format(self.__class__.__name__,
-                                            self.quantity,
-                                            self.label)
+        return '<{0}: {1} of "{2}" at ${3} each>'.format(
+            self.__class__.__name__,
+            self.quantity,
+            self.label,
+            self.price
+        )
 
     @classmethod
     def from_session_data(self, data):
@@ -287,6 +306,11 @@ class TransactionLine(db.Model, TimestampMixin):
         return '{0} of product #{1}: "{2}"'.format(self.quantity,
                                                    self.product_number,
                                                    self.label)
+
+    @property
+    def total(self):
+        """Return the total cost of products on line."""
+        return self.quantity * self.price
 
 
 @event.listens_for(TransactionLine.quantity, 'set')
@@ -347,6 +371,19 @@ class Transaction(db.Model, TimestampMixin):
             ))
         return cls(lines=lines)
 
+    @classmethod
+    def from_session(cls, session_key='cart'):
+        """Create a transaction from session data.
+
+        Args:
+            session_key: A string to use as key in session to load session
+                data from. Defaults to 'cart'.
+        """
+        try:
+            return cls.from_session_data(session[session_key])
+        except KeyError:
+            return None
+
     @property
     def session_data(self):
         return [l.session_data for l in self.lines]
@@ -355,3 +392,81 @@ class Transaction(db.Model, TimestampMixin):
     def text(self):
         lines_text = '\n'.join(l.text for l in self.lines)
         return 'Transaction #{0} with lines:\n{1}'.format(self.id, lines_text)
+
+    @property
+    def total(self):
+        return sum(l.total for l in self.lines)
+
+    def get_line(self, product_number):
+        """Get `TransactionLine` with given `product_number`.
+
+        Args:
+            product_number: The product number of the line to return.
+
+        Returns:
+            A `TransactionLine` with given `product_number`, or None if not
+            present in `lines`.
+        """
+        return next(
+            (l for l in self.lines if l.product_number == product_number),
+            None
+        )
+
+    def change_line_quantity(self, product_number, quantity):
+        """Set quantity of a given `TransactionLine`.
+
+        Args:
+            product_number: The number of the `Product` on the line.
+            quantity: The new quantity of `Product` on the line.
+        """
+        self.get_line(product_number).quantity = quantity
+
+    def save_to_session(self, session_key='cart'):
+        """Save a `Transaction` to the session.
+
+        Args:
+            session_key: A string to use as key in session under which to
+                store transaction data.
+        """
+        session[session_key] = self.session_data
+
+    def save(self, session_key='cart'):
+        """Save a `Transaction` to the session and (if applicable) database.
+
+        The `Transaction` will be saved to the database if it belongs to a
+        logged in user, otherwise it will only be saved to the session.
+
+        Args:
+            session_key: A string to use as a key in session to save session
+                data to. Defaults to 'cart'.
+        """
+        if not current_user.is_anonymous:
+            if not current_user.customer_data:
+                current_user.customer_data = Customer()
+            if (self.customer and
+                    self.customer is not current_user.customer_data):
+                raise RuntimeError(
+                    'Cannot attach a new customer to a transaction that '
+                    'already has a customer associated with it!'
+                )
+            self.customer = current_user.customer_data
+            db.session.commit()
+
+        self.save_to_session(session_key)
+
+    @classmethod
+    def load(cls, user=None):
+        """Load a transaction.
+
+        Args:
+            user: An optional `User` whom the transaction belongs to.
+
+        Returns:
+            The `User`'s current_transaction if present, otherwise the
+            transaction from the session if present, otherwise `None`.
+        """
+        if (user and not user.is_anonymous and user.customer_data and
+                user.customer_data.current_transaction):
+            return user.customer_data.current_transaction
+        else:
+            return cls.from_session()

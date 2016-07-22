@@ -1,5 +1,5 @@
 import random  #TMP
-from flask import flash, redirect, render_template, request, session
+from flask import flash, redirect, render_template, request, session, url_for
 from flask_login import current_user
 from . import shop
 from app import db
@@ -89,35 +89,25 @@ def cart_test():
     return ret_str if ret_str else 'No transaction.'
 
 
-@shop.route('/cart')
+@shop.route('/cart', methods=['GET', 'POST'])
 def cart():
-    form = ShoppingCartForm()
-    cur_trans = None
-    empty = False
+    cur_trans = Transaction.load(current_user)
+    form = ShoppingCartForm(obj=cur_trans)
     if form.validate_on_submit():
-        pass #TODO
+        if form.save.data:
+            for line in form.lines.entries:
+                cur_trans.change_line_quantity(
+                    line.product_number.data,
+                    line.quantity.data
+                )
+            cur_trans.save()
+            flash('Changes saved.')
+        elif form.checkout.data:
+            flash('Check this out.')
+        return redirect(url_for('shop.cart'))   
     else:
-        if not current_user.is_anonymous:
-            try:
-                cur_trans = current_user.customer_data.current_transaction
-            except AttributeError:
-                pass
-        if not cur_trans:
-            try:
-                cur_trans = Transaction.from_session_data(session['cart'])
-            except KeyError:
-                pass
-        if cur_trans:
-            form.lines.entries = [
-                ShoppingCartLineForm(
-                    quantity=l.quantity,
-                    product_number=l.product_number,
-                    product_label=l.label
-                ) for l in cur_trans.lines
-            ]
-        else:
-            empty = True
-    return render_template('shop/cart.html', empty=empty, form=form)
+        print(form.errors)
+    return render_template('shop/cart.html', cur_trans=cur_trans, form=form)
 
 
 

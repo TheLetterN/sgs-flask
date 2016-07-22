@@ -43,4 +43,5 @@ class ShoppingCartLineForm(Form):
 class ShoppingCartForm(Form):
     """Form for shopping cart data."""
     lines = FieldList(FormField(ShoppingCartLineForm))
-    submit = SubmitField('Submit')
+    save = SubmitField('Save Changes')
+    checkout = SubmitField('Checkout')

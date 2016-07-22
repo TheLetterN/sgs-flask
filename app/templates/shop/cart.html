@@ -21,14 +21,18 @@
 <title>Cart</title>
 {% endblock %}
 {% block main %}
-{% if not empty %}
-<form action="POST">
-  <ul>
-  {% for line in form.lines %}
-  <li>{{ line.quantity }}{{ line.product_number }}{{ line.product_label.data }} TODO: Link to remove.</li>
+{% if cur_trans %}
+<form method="POST">
+  {{ form.hidden_tag() }}
+ <ul>
+    {% for line in form.lines %}
+    {{ line.hidden_tag() }}
+    {% set tline = cur_trans.get_line(line.product_number.data) %}
+    <li>{{ line.quantity() }}{{ line.product_number }}{{ tline.label|safe }} for ${{ tline.price }} each. Total: ${{ tline.total }}</li>
   {% endfor %}
-  <ul>
-  {{ form.submit() }}
+</ul>
+<div class='cart-total'>Total: ${{ cur_trans.total }}</div>
+    {{ form.save() }}{{ form.checkout() }}
 </form>
 {% else %}
 <div class="empty-cart">No items in cart.</div>

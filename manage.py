@@ -20,9 +20,12 @@
 
 
 import os, sys
+from getpass import getpass
+
 import pytest
 from flask_migrate import Migrate, MigrateCommand
 from flask_script import Manager, Shell
+
 from app import create_app, db, mail, Permission
 from app.auth.models import User
 from app.seeds.excel import SeedsWorkbook
@@ -39,23 +42,45 @@ def make_shell_context():
 
 @manager.command
 def create():
-    """Create a new database and add an admin user.
-    
-    This should only be used during development, never in production!
-    """
+    """Create a new database and add an admin user."""
     from app.auth import models as auth_models
     from app.seeds import models as seeds_models
     from app.shop import models as shop_models
-    db.create_all()
-    admin = User()
-    db.session.add(admin)
-    admin.name = 'admin'
-    admin.set_password('sgsadmin')
-    admin.email = 'admin@localhost'
-    admin.grant_permission(Permission.MANAGE_SEEDS)
-    admin.grant_permission(Permission.MANAGE_USERS)
-    admin.confirmed = True
-    db.session.commit()
+    resp = input(
+        'WARNNG: This will erase existing database and create a new one! '
+        'Proceed anyway? y/N: '
+    )
+    if 'y' in resp.lower():
+        print('Erasing existing database if present...')
+        db.session.rollback()
+        db.session.remove()
+        if db.engine.dialect.name == 'postgresql':
+            db.engine.execute('drop schema if exists public cascade')
+            db.engine.execute('create schema public')
+        db.drop_all()
+        print('Creating new database...')
+        db.create_all()
+        admin = User()
+        db.session.add(admin)
+        print('Creating first administrator account...')
+        admin.name = input('Enter name for admin account: ')
+        admin.email = input('Enter email address for admin account: ')
+        while True:
+            pw = getpass('Enter new password: ')
+            pwc = getpass('Confirm new password: ')
+            if pwc != pw:
+                print('Passwords do not match! Please try again.')
+            else:
+                break
+        admin.set_password(pw)
+        admin.grant_permission(Permission.MANAGE_SEEDS)
+        admin.grant_permission(Permission.MANAGE_USERS)
+        admin.confirmed = True
+        print('Admin account "{}" created!'.format(admin.name))
+        db.session.commit()
+        print('Database was successfully created!')
+    else:
+        print('Aborted.')
 
 
 @manager.command

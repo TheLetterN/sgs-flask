@@ -945,7 +945,13 @@ class CommonName(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
             cn = cls(name=name)
             print('The CommonName "{0}" does not yet exist in the database, '
                   'so it has been created.'.format(cn.name), file=stream)
-            cn.index = Index.get_or_create(name=index, stream=stream)
+            idx = Index.get_or_create(name=index, stream=stream)
+            # This should ensure idx_pos is generated correctly.
+            # If we do cn.index = Index(...) it always ends up being 1.
+            if not idx.common_names:
+                idx.common_names = [cn]
+            else:
+                idx.common_names.append(cn)
             cn.created = True
         return cn
 

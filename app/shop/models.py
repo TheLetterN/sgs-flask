@@ -331,7 +331,11 @@ class Transaction(db.Model, TimestampMixin):
     """A table for transactions."""
     __tablename__ = 'transactions'
     id = db.Column(db.Integer, primary_key=True)
-    lines = db.relationship('TransactionLine', back_populates='transaction')
+    lines = db.relationship(
+        'TransactionLine',
+        back_populates='transaction',
+        cascade='all, delete-orphan'
+    )
     status = db.Column(db.Enum(
         'in progress',
         'pending payment',

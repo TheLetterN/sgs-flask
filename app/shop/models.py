@@ -89,23 +89,23 @@ class Address(db.Model, TimestampMixin):
         'Customer',
         foreign_keys=customer_id,
         back_populates='addresses')
-    first_name = db.Column(db.String(40))
-    last_name = db.Column(db.String(40))
-    middle_initials = db.Column(db.String(5))
-    business_name = db.Column(db.String(100))
-    address_line1 = db.Column(db.String(100))
-    address_line2 = db.Column(db.String(100))
-    city = db.Column(db.String(100))
+    first_name = db.Column(db.Text)
+    last_name = db.Column(db.Text)
+    middle_initials = db.Column(db.Text)
+    business_name = db.Column(db.Text)
+    address_line1 = db.Column(db.Text)
+    address_line2 = db.Column(db.Text)
+    city = db.Column(db.Text)
     us_postal_abbr = db.Column(
         db.Enum(*US_POSTAL_ABBRS.keys(), name='us_postal_abbr')
     )
     country = db.Column(
         db.Enum(*(c.alpha3 for c in countries), name='country')
     )
-    province_or_state = db.Column(db.String(40))
-    email = db.Column(db.String(255))
-    phone = db.Column(db.String(25))
-    fax = db.Column(db.String(25))
+    province_or_state = db.Column(db.Text)
+    email = db.Column(db.Text)
+    phone = db.Column(db.Text)
+    fax = db.Column(db.Text)
 
     def __repr__(self):
         return '<{0} for: "{1}">'.format(self.__class__.__name__,
@@ -193,8 +193,8 @@ class Product(db.Model, TimestampMixin):
     __tablename__ = 'products'
     id = db.Column(db.Integer, primary_key=True)
     type_ = db.Column(db.Enum('packet', 'bulk', name='type_'))
-    number = db.Column(db.String(15), unique=True)
-    label = db.Column(db.String(100))
+    number = db.Column(db.Text, unique=True)
+    label = db.Column(db.Text)
     price = db.Column(USDollar)
     transaction_lines = db.relationship(
         'TransactionLine',
@@ -244,7 +244,7 @@ class TransactionLine(db.Model, TimestampMixin):
     product = db.relationship('Product', back_populates='transaction_lines')
     quantity = db.Column(db.Integer)
     # Copied Product columns.
-    product_number = db.Column(db.String(15))
+    product_number = db.Column(db.Text)
     label = db.Column(db.Text)
     price = db.Column(USDollar)
 

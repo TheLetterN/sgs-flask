@@ -41,7 +41,7 @@ class EmailRequest(db.Model):
     """
     __tablename__ = 'email_requests'
     id = db.Column(db.Integer, primary_key=True)
-    sender = db.Column(db.String(32))
+    sender = db.Column(db.Text)
     time = db.Column(db.DateTime)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
 
@@ -81,10 +81,10 @@ class User(UserMixin, db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     confirmed = db.Column(db.Boolean, default=False)
-    email = db.Column(db.String(254), unique=True)
+    email = db.Column(db.Text, unique=True)
     email_requests = db.relationship('EmailRequest', lazy='dynamic')
-    name = db.Column(db.String(64), unique=True)
-    password_hash = db.Column(db.String(128))
+    name = db.Column(db.Text, unique=True)
+    password_hash = db.Column(db.Text)
     permissions = db.Column(db.Integer, default=0)
     customer_data_id = db.Column(db.Integer, db.ForeignKey('customers.id'))
     customer_data = db.relationship('Customer', back_populates='user')

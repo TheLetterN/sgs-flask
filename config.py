@@ -137,8 +137,7 @@ class ProductionConfig(Config):
     web server via a Web Server Gateway Interface (WSGI) instead of via
     Flask's limited built-in server.
     """
-    SQLALCHEMY_DATABASE_URI = os.environ.get('SGS_DATABASE_URI') or \
-        'sqlite:///' + os.path.join(BASEDIR, 'sgs.db')
+    SQLALCHEMY_DATABASE_URI = os.environ.get('SGS_DATABASE_URI')
     ALLOW_CRAWLING = os.environ.get('SGS_ALLOW_CRAWLING') or True
 
 

@@ -32,7 +32,7 @@ from app.seeds.excel import SeedsWorkbook
 from app.seeds.models import Cultivar
 from app.seeds.htmlgrab import Page, PageAdder, save_batch, save_grows_with
 
-app = create_app(os.getenv('SGS_CONFIG') or 'default')
+app = create_app(os.getenv('SGS_MODE') or 'default')
 manager = Manager(app)
 migrate = Migrate(app, db)
 

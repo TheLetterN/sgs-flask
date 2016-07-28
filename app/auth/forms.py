@@ -28,7 +28,6 @@ from wtforms import (
 )
 from wtforms.validators import (
     AnyOf,
-    Email,
     EqualTo,
     InputRequired,
     Length,
@@ -75,7 +74,7 @@ class EditUserForm(Form):
     """
     email1 = StringField(
         'New Email Address',
-        validators=[Email(), Length(1, 254), Optional()])
+        validators=[Length(1, 254), Optional()])
     email2 = StringField(
         'Confirm New Email Address',
         validators=[EqualTo('email1', message="Email addresses must match!")])
@@ -143,7 +142,7 @@ class ManageUserForm(Form):
     confirmed = BooleanField('Confirmed')
     email1 = StringField(
         'New Email Address',
-        validators=[Email(), Length(1, 254), Optional()])
+        validators=[Length(1, 254), Optional()])
     email2 = StringField(
         'Confirm New Email Address',
         validators=[EqualTo('email1', message='Email addresses must match!')])
@@ -184,7 +183,7 @@ class RegistrationForm(Form):
     """
     email = StringField(
         'Email Address',
-        validators=[Email(), InputRequired(), Length(1, 254)])
+        validators=[InputRequired(), Length(1, 254)])
     email2 = StringField(
         'Confirm Email',
         validators=[EqualTo('email', message='Email addresses do not match!'),
@@ -237,7 +236,7 @@ class ResendConfirmationForm(Form):
     """
     email = StringField(
         'Email Address',
-        validators=[Email(), InputRequired(), Length(1, 254)])
+        validators=[InputRequired(), Length(1, 254)])
     submit = SubmitField('Send')
 
     def validate_email(self, field):
@@ -267,7 +266,7 @@ class ResetPasswordForm(Form):
     """
     email = StringField(
         'Email Address',
-        validators=[Email(), InputRequired(), Length(1, 254)])
+        validators=[InputRequired(), Length(1, 254)])
     password1 = PasswordField(
         'New Password',
         validators=[InputRequired(), Length(1, 64)])
@@ -286,7 +285,7 @@ class ResetPasswordRequestForm(Form):
     """
     email = StringField(
         'Email Address',
-        validators=[Email(), InputRequired(), Length(1, 254)])
+        validators=[InputRequired(), Length(1, 254)])
     submit = SubmitField('Request Password Reset')
 
     def validate_email(self, field):

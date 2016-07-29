@@ -1988,7 +1988,10 @@ class Packet(db.Model, TimestampMixin):
     cultivar_id = db.Column(db.Integer, db.ForeignKey('cultivars.id'))
     cultivar = db.relationship('Cultivar', back_populates='packets')
     product_id = db.Column(db.Integer, db.ForeignKey('products.id'))
-    product = db.relationship('Product')
+    product = db.relationship(
+        'Product',
+        backref=db.backref('packet', uselist=False)
+    )
 
     def __repr__(self):
         return '<{0} SKU #{1}>'.format(self.__class__.__name__, self.sku)

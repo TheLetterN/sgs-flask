@@ -2,6 +2,7 @@ from flask import session
 from flask_login import current_user
 from pycountry import countries
 from sqlalchemy import event
+from sqlalchemy.exc import InvalidRequestError
 
 from app import db
 from app.db_helpers import TimestampMixin, USDollar
@@ -200,6 +201,8 @@ class Product(db.Model, TimestampMixin):
         'TransactionLine',
         back_populates='product'
     )
+    # packet: backref from app.seeds.models.Packet
+
     _form = None
 
     def __init__(self, number=None):
@@ -227,6 +230,13 @@ class Product(db.Model, TimestampMixin):
             self._form = AddProductForm()
             self._form.number.data = self.number
         return self._form
+
+    @property
+    def cultivar(self):
+        try:
+            return self.packet.cultivar
+        except AttributeError:
+            return None
 
 
 class TransactionLine(db.Model, TimestampMixin):
@@ -310,7 +320,17 @@ class TransactionLine(db.Model, TimestampMixin):
     @property
     def total(self):
         """Return the total cost of products on line."""
-        return self.quantity * self.price
+        try:
+            return self.quantity * self.price
+        except TypeError:
+            return None
+
+    @property
+    def in_stock(self):
+        try:
+            return self.product.cultivar.in_stock
+        except AttributeError:
+            return False
 
 
 @event.listens_for(TransactionLine.quantity, 'set')
@@ -371,10 +391,11 @@ class Transaction(db.Model, TimestampMixin):
             product = Product.query.filter(
                 Product.number == d['product number']
             ).one_or_none()
-            lines.append(TransactionLine(
-                product=product,
-                quantity=d['quantity']
-            ))
+            if product:
+                lines.append(TransactionLine(
+                    product=product,
+                    quantity=d['quantity']
+                ))
         return cls(lines=lines)
 
     @classmethod
@@ -386,7 +407,17 @@ class Transaction(db.Model, TimestampMixin):
                 data from. Defaults to 'cart'.
         """
         try:
-            return cls.from_session_data(session[session_key])
+            transaction = cls.from_session_data(session[session_key])
+            if len(transaction.lines) != len(session[session_key]):
+                # TODO: Inform customer that items in their cart are gone.
+                pnos = [l.product_number for l in transaction.lines]
+                for sline in list(session[session_key]):
+                    if sline['product number'] not in pnos:
+                        session[session_key].remove(sline)
+            if transaction.lines:
+                return transaction
+            else:
+                return None
         except KeyError:
             return None
 
@@ -402,6 +433,36 @@ class Transaction(db.Model, TimestampMixin):
     @property
     def total(self):
         return sum(l.total for l in self.lines)
+
+    def add_line(self, product_number, quantity):
+        """Add a `TransactionLine`.
+
+        Note:
+            This creates a new `TransactionLine` instance regardless of whether
+            or not the product is already in the `Transaction` so that the
+            returned line reflects the quantity of product added rather than
+            the total. If the product already exists in the `Transaction`, the
+            created line will not be added to it, instead `quantity` will be
+            added to the existing line.
+
+        Args:
+            product_number: The identifier of the product to add.
+            quantity: The quantity of product to add.
+
+        Returns:
+            The created `TransactionLine` instance so its data can be used
+            by the caller of `add_line`.
+        """
+        line = TransactionLine(
+            product_number=product_number,
+            quantity=quantity
+        )
+        existing = self.get_line(product_number)
+        if existing:
+            existing.quantity += quantity
+        else:
+            self.lines.append(line)
+        return line
 
     def get_line(self, product_number):
         """Get `TransactionLine` with given `product_number`.
@@ -426,6 +487,29 @@ class Transaction(db.Model, TimestampMixin):
             quantity: The new quantity of `Product` on the line.
         """
         self.get_line(product_number).quantity = quantity
+
+    def delete_line(self, line):
+        """Remove a `TransactionLine` and ensure it's deleted.
+
+        Args:
+            line: The `TransactionLine` to delete.
+        """
+        self.lines.remove(line)
+        try:
+            db.session.delete(line)
+            db.session.flush()
+        except InvalidRequestError:
+            pass  # line was not persisted to the database.
+        if self.lines:
+            self.save()
+        else:
+            self.save_to_session()
+            # There is no reason to keep the transaction around if it's empty.
+            try:
+                db.session.delete(self)
+                db.session.commit()
+            except InvalidRequestError:
+                pass
 
     def save_to_session(self, session_key='cart'):
         """Save a `Transaction` to the session.
@@ -471,8 +555,10 @@ class Transaction(db.Model, TimestampMixin):
             The `User`'s current_transaction if present, otherwise the
             transaction from the session if present, otherwise `None`.
         """
-        if (user and not user.is_anonymous and user.customer_data and
-                user.customer_data.current_transaction):
-            return user.customer_data.current_transaction
+        if not user.is_anonymous:
+            if not user.current_transaction:
+                user.current_transaction = cls.from_session()
+                db.session.commit()
+            return user.current_transaction
         else:
             return cls.from_session()

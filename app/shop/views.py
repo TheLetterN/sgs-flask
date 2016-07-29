@@ -55,13 +55,45 @@ def cart():
 def remove_product(product_number):
     """Remove the line containing given product from the cart."""
     cur_trans = Transaction.load(current_user)
+    origin = request.args.get('origin')
     line = cur_trans.get_line(product_number)
-    flash ('Removed "{}" from cart.'.format(line.label))
+    flash (
+        'Removed {} of "{}" from cart. [<a href="{}">UNDO</a>]'.format(
+            line.quantity,
+            line.label,
+            url_for(
+                'shop.undo_remove_product',
+                product_number=line.product_number,
+                quantity=line.quantity,
+                origin=origin
+            )
+        )
+    )
     cur_trans.delete_line(line)
+    return redirect(origin or url_for('shop.cart'))
+
+
+@shop.route('/undo_remove_product/<product_number>/<int:quantity>')
+def undo_remove_product(product_number, quantity):
+    cur_trans = Transaction.load(current_user)
+    if not cur_trans:
+        cur_trans = Transaction()
+        if not current_user.is_anonymous:
+            current_user.current_transaction = cur_trans
+    line = cur_trans.add_line(product_number=product_number, quantity=quantity)
+    cur_trans.save()
+
+    flash('Returned {} of "{}" to cart.'.format(line.quantity, line.label))
     return redirect(request.args.get('origin') or url_for('shop.cart'))
 
 
+# TODO: Remove these views when no longer needed!
 @shop.route('/clear_cart')
 def clear_cart():
     session['cart'] = []
     return redirect(url_for('shop.cart'))
+
+
+@shop.route('/show_session')
+def show_session():
+    return str(session['cart'])

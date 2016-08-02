@@ -21,21 +21,31 @@ from wtforms import (
     FieldList,
     FormField,
     HiddenField,
-    IntegerField,
     SubmitField
 )
+from wtforms.fields.html5 import IntegerField
+from wtforms.validators import NumberRange
 
 
 class AddProductForm(Form):
     """Form for adding a product to a customer's shopping cart."""
-    quantity = IntegerField('Quantity', default=1)
+    quantity = IntegerField(
+        'Quantity',
+        default=1,
+        render_kw={'min': '1'},
+        validators=[NumberRange(min=1)]
+    )
     number = HiddenField()
     submit = SubmitField('Add to Cart')
 
 
 class ShoppingCartLineForm(Form):
     """Form for a line in the shopping cart."""
-    quantity = IntegerField('Quantity')
+    quantity = IntegerField(
+        'Quantity',
+        render_kw={'min': '1'},
+        validators=[NumberRange(min=1)]
+    )
     product_number = HiddenField()
     product_label = HiddenField()
 

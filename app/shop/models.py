@@ -15,70 +15,28 @@ class TransactionExistsError(Exception):
         self.message = message
 
 
-US_POSTAL_ABBRS = {
-    'AA': 'Armed Forces Americas (except Canada)',
-    'AE': 'Armed Forces (Africa, Canada, Europe, Middle East)',
-    'AP': 'Armed Forces Pacific',
-    'AL': 'Alabama',
-    'AK': 'Alaska',
-    'AS': 'American Samoa',
-    'AZ': 'Arizona',
-    'AR': 'Arkansas',
-    'CA': 'California',
-    'CO': 'Colorado',
-    'CT': 'Connecticut',
-    'DE': 'Delaware',
-    'DC': 'District Of Columbia',
-    'FM': 'Federated States Of Micronesia',
-    'FL': 'Florida',
-    'GA': 'Georgia',
-    'GU': 'Guam',
-    'HI': 'Hawaii',
-    'ID': 'Idaho',
-    'IL': 'Illinois',
-    'IN': 'Indiana',
-    'IA': 'Iowa',
-    'KS': 'Kansas',
-    'KY': 'Kentucky',
-    'LA': 'Louisiana',
-    'ME': 'Maine',
-    'MH': 'Marshall Islands',
-    'MD': 'Maryland',
-    'MA': 'Massachusetts',
-    'MI': 'Michigan',
-    'MN': 'Minnesota',
-    'MS': 'Mississippi',
-    'MO': 'Missouri',
-    'MT': 'Montana',
-    'NE': 'Nebraska',
-    'NV': 'Nevada',
-    'NH': 'New Hampshire',
-    'NJ': 'New Jersey',
-    'NM': 'New Mexico',
-    'NY': 'New York',
-    'NC': 'North Carolina',
-    'ND': 'North Dakota',
-    'MP': 'Northern Mariana Islands',
-    'OH': 'Ohio',
-    'OK': 'Oklahoma',
-    'OR': 'Oregon',
-    'PW': 'Palau',
-    'PA': 'Pennsylvania',
-    'PR': 'Puerto Rico',
-    'RI': 'Rhode Island',
-    'SC': 'South Carolina',
-    'SD': 'South Dakota',
-    'TN': 'Tennessee',
-    'TX': 'Texas',
-    'UT': 'Utah',
-    'VT': 'Vermont',
-    'VI': 'Virgin Islands',
-    'VA': 'Virginia',
-    'WA': 'Washington',
-    'WV': 'West Virginia',
-    'WI': 'Wisconsin',
-    'WY': 'Wyoming'
-}
+class USState(db.Model):
+    __tablename__ = 'us_states'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.Text, unique=True)
+    abbreviation = db.Column(db.Text, unique=True)
+    # noship_cultivars - backref from seeds.models.Cultivar
+
+    def __repr__(self):
+        return '<US State/Territory: "{}">'.format(self.name)
+
+    @classmethod
+    def generate_from_dict(cls, d):
+        """Generate `USState` instances from a dict.
+
+        The dict should countain abbreviations as keys and full names as
+        values, eg: {'AL': 'Alabama', 'AK': 'Alaska', ... }
+
+        Args:
+            d - the `dict` to get state data from.
+        """
+        for abbr in d:
+            yield cls(abbreviation=abbr, name=d[abbr])
 
 
 class Address(db.Model, TimestampMixin):
@@ -97,9 +55,8 @@ class Address(db.Model, TimestampMixin):
     address_line1 = db.Column(db.Text)
     address_line2 = db.Column(db.Text)
     city = db.Column(db.Text)
-    us_postal_abbr = db.Column(
-        db.Enum(*US_POSTAL_ABBRS.keys(), name='us_postal_abbr')
-    )
+    us_state_id = db.Column(db.ForeignKey('us_states.id'))
+    us_state = db.relationship('USState')
     country = db.Column(
         db.Enum(*(c.alpha3 for c in countries), name='country')
     )

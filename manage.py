@@ -19,7 +19,9 @@
 # Copyright Swallowtail Garden Seeds, Inc
 
 
-import os, sys
+import json
+import os
+import sys
 from getpass import getpass
 
 import pytest
@@ -46,6 +48,7 @@ def create():
     from app.auth import models as auth_models
     from app.seeds import models as seeds_models
     from app.shop import models as shop_models
+    from app.shop.models import USState
     resp = input(
         'WARNNG: This will erase existing database and create a new one! '
         'Proceed anyway? y/N: '
@@ -62,6 +65,24 @@ def create():
         db.create_all()
         admin = User()
         db.session.add(admin)
+        print('Populating us_states table...')
+        try:
+            with open('us_states.json', 'r', encoding='utf-8') as states_data:
+                states_dict = json.loads(states_data.read())
+                db.session.add_all(
+                    sorted(USState.generate_from_dict(states_dict),
+                    key=lambda x: x.name)
+                )
+                db.session.flush()
+        except FileNotFoundError:
+            db.session.rollback()
+            raise FileNotFoundError(
+                'Could not find file "us_states.json" in the base sgs-flask '
+                'directory! If it does not exist, it should be created and '
+                'contain a JSON object formatted {"<abbreviation>": "<full '
+                'state name>", ...} eg: {"AL": "Alabama", "AK": "Alaska", '
+                '... }'
+            )
         print('Creating first administrator account...')
         admin.name = input('Enter name for admin account: ')
         admin.email = input('Enter email address for admin account: ')

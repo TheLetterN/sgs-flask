@@ -110,7 +110,7 @@ from app.db_helpers import (
     TimestampMixin,
     USDollar
 )
-from app.shop.models import Product
+from app.shop.models import Product, USState
 
 
 # Association Tables
@@ -203,6 +203,13 @@ cultivars_to_gw_sections = db.Table(
     db.Model.metadata,
     db.Column('cultivar_id', db.Integer, db.ForeignKey('cultivars.id')),
     db.Column('section_id', db.Integer, db.ForeignKey('sections.id'))
+)
+
+cultivars_to_us_states = db.Table(
+    'cultivars_to_us_states',
+    db.Model.metadata,
+    db.Column('cultivar_id', db.Integer, db.ForeignKey('cultivars.id')),
+    db.Column('us_state_id', db.Integer, db.ForeignKey('us_states.id'))
 )
 
 
@@ -1682,6 +1689,11 @@ class Cultivar(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
         'Section',
         foreign_keys=parent_section_id,
         back_populates='child_cultivars'
+    )
+    noship_us_states = db.relationship(
+        'USState',
+        secondary=cultivars_to_us_states,
+        backref='noship_cultivars'
     )
 
     def __init__(self,

@@ -39,6 +39,16 @@ class Level1AdministrativeDivision(db.Model):
 
     These are the main subdivisions of countries, typically states, provinces,
     or regions.
+
+    Attributes:
+        name - The full name of the administrative division, e.g. "California"
+            or "British Columbia".
+        abbreviation - The abbreviation of the admin division, e.g. "CA" or
+            "BC".
+        country - The `Country` the admin division belongs to.
+        noship_cultivars - A list of `Cultivars` that can't be shipped to the
+            given admin division. For example, Baby's Breath can't be shipped
+            to California.
     """
     __tablename__ = 'l1_admin_divisions'
     id = db.Column(db.Integer, primary_key=True)
@@ -81,6 +91,18 @@ class Level1AdministrativeDivision(db.Model):
 
 
 class Country(db.Model):
+    """Table for countries.
+
+    Attributes:
+        alpha3 - The alpha3 code for a country, e.g. "USA", "CAN", or "AUS".
+        noship - Whether or not the `Country` can be shipped to.
+        at_own_risk - Whether or not shipping to the `Country` is considered
+            at the customer's own risk.
+        l1_admin_divisions - First-level administrative divisions belonging
+            to `Country`; For example, US states or Canadian provinces.
+        noship_cultivars - A list of `Cultivars` that can't be shipped to the
+            given `Country`.
+    """
     __tablename__ = 'countries'
     id = db.Column(db.Integer, primary_key=True)
     _cached = None
@@ -102,7 +124,14 @@ class Country(db.Model):
 
     @classmethod
     def get_with_alpha3(cls, alpha3):
-        """Load a `Country` with the given alpha3 from the database."""
+        """Load a `Country` with the given alpha3 from the database.
+
+        Args:
+            alpha3: The alpha3 code of the `Country` to load.
+
+        Returns:
+            The `Country` from the database with the given alpha3 code.
+        """
         return cls.query.filter(cls.alpha3 == alpha3.upper()).one_or_none()
 
     @classmethod
@@ -110,7 +139,6 @@ class Country(db.Model):
         """Generate a list of `Country` instances from list of alpha3 codes.
 
         Args:
-
             alpha3s - a list of alpha3 country codes.
         """
         for alpha3 in alpha3s:
@@ -118,24 +146,29 @@ class Country(db.Model):
 
     @property
     def _country(self):
+        """pycountry.db.Country: A cached object with country data."""
         if not self._cached:
             self._cached = countries.get(alpha3=self.alpha3)
         return self._cached
 
     @property
     def alpha2(self):
+        """str: The alpha2 code of `Country`."""
         return self._country.alpha2
 
     @property
     def name(self):
+        """str: The common name of `Country`."""
         return self._country.name
 
     @property
     def numeric(self):
+        """str: The numeric code of `Country`."""
         return self._country.numeric
 
     @property
     def official_name(self):
+        """str: The official (long form) name of `Country`."""
         return self._country.official_name
 
     def get_l1_admin_division_by_abbr(self, abbr):
@@ -148,7 +181,24 @@ class Country(db.Model):
 
 
 class Address(db.Model, TimestampMixin):
-    """An address."""
+    """Table for addresses.
+
+    Attributes:
+
+        customer - The `Customer` an `Address` belongs to.
+        first_name - The first name of the person the address belongs to.
+        last_name - The last name of the person the address belongs to.
+        business name - Optional business the address belongs to.
+        city - The city portion of the address.
+        country - The country the address is in.
+        l1_admin_division - The first-level administrative division the
+            address is in.
+        unlisted_l1_admin_division - A level1 admin division that doesn't
+            have a `Level1AdministrativeDivision` instance in the database.
+        email - The email address of the person the address belongs to.
+        phone - Phone number of person address belongs to.
+        fax - Optional fax number of person address belongs to.
+    """
     __tablename__ = 'addresses'
     id = db.Column(db.Integer, primary_key=True)
     customer_id = db.Column(db.Integer, db.ForeignKey('customers.id'))
@@ -177,18 +227,33 @@ class Address(db.Model, TimestampMixin):
 
     @property
     def fullname(self):
-        parts = (self.first_name, self.middle_initials, self.last_name)
+        """str: The full name of the person the address belongs to."""
+        parts = (self.first_name, self.last_name)
         return ' '.join(n for n in parts if n)
 
 
 class Customer(db.Model, TimestampMixin):
-    """A customer's data."""
+    """Table for customer data.
+
+    Attributes:
+
+    billing_address - The billing address of the customer.
+    shipping_address - The last-used shipping address of the customer.
+    addresses - All addresses belonging to the customer.
+    transactions - `Transaction` instances belonging to customer.
+    current_transaction - `Transaction` in progress.
+    """
     __tablename__ = 'customers'
     id = db.Column(db.Integer, primary_key=True)
     billing_address_id = db.Column(db.Integer, db.ForeignKey('addresses.id'))
     billing_address = db.relationship(
         'Address',
         foreign_keys=billing_address_id
+    )
+    shipping_address_id = db.Column(db.Integer, db.ForeignKey('addresses.id'))
+    shipping_address = db.relationship(
+        'Address',
+        foreign_keys=shipping_address_id
     )
     addresses = db.relationship(
         'Address',
@@ -221,6 +286,11 @@ class Customer(db.Model, TimestampMixin):
 
     @property
     def first_name(self):
+        """str: First name of customer from billing address.
+
+        Setter sets name in `billing_address`, creating `billing_address` if
+        it doesn't exist.
+        """
         if self.billing_address:
             return self.billing_address.first_name
         else:
@@ -235,12 +305,25 @@ class Customer(db.Model, TimestampMixin):
 
 @event.listens_for(Customer.billing_address, 'set')
 def add_billing_address_event(target, value, oldvalue, initiator):
+    """If a billing address is added to a `Customer`, add it to addresses."""
+    if value is not None and value not in target.addresses:
+        target.addresses.append(value)
+
+
+@event.listens_for(Customer.shipping_address, 'set')
+def add_shipping_address_event(target, value, oldvalue, initiator):
+    """If a shipping address is added to `Customer`, add to addresses."""
     if value is not None and value not in target.addresses:
         target.addresses.append(value)
 
 
 @event.listens_for(Customer.current_transaction, 'set')
 def add_current_transaction_event(target, value, oldvalue, initiator):
+    """Don't allow replacing `Customer.current_transaction` with another.
+
+    Raises:
+        TransactionExistsError - If a current transaction already exists.
+    """
     if value is not None:
         if target.current_transaction is not None:
             raise TransactionExistsError(
@@ -253,7 +336,16 @@ def add_current_transaction_event(target, value, oldvalue, initiator):
 
 
 class Product(db.Model, TimestampMixin):
-    """A single product."""
+    """Table for products.
+
+    Attributes:
+
+    number - The ID number (usually a SKU) of the `Product`.
+    label - The string used to label the `Product`.
+    price - The price for one unit of the `Product`.
+    transaction_lines - `TransactionLine` instances with a given `Product`.
+    packet - A `Packet` corresponding to a `Product`.
+    """
     __tablename__ = 'products'
     id = db.Column(db.Integer, primary_key=True)
     type_ = db.Column(db.Enum('packet', 'bulk', name='type_'))
@@ -279,6 +371,14 @@ class Product(db.Model, TimestampMixin):
 
     @classmethod
     def get_or_create(cls, number=None):
+        """Load a product from db if it exists, otherwise create it.
+
+        Args:
+            number - The ID number of the `Product` to load or create.
+
+        Returns:
+            Product - The loaded or created `Product`.
+        """
         if number:
             obj = cls.query.filter(cls.number == number).one_or_none()
             if not obj:
@@ -289,6 +389,7 @@ class Product(db.Model, TimestampMixin):
 
     @property
     def form(self):
+        """AddProductForm: A form for adding a `Product` to a transaction."""
         if not self._form:
             self._form = AddProductForm()
             self._form.number.data = self.number
@@ -296,10 +397,19 @@ class Product(db.Model, TimestampMixin):
 
     @property
     def cultivar(self):
+        """Cultivar: The `Cultivar` assiociated with `Product` if it exists."""
         try:
             return self.packet.cultivar
         except AttributeError:
             return None
+
+    @property
+    def in_stock(self):
+        """bool: Whether or not the `Product` is in stock."""
+        try:
+            return self.cultivar.in_stock
+        except AttributeError:
+            return False
 
 
 class TransactionLine(db.Model, TimestampMixin):
@@ -309,6 +419,14 @@ class TransactionLine(db.Model, TimestampMixin):
         The columns of `Product` are reproduced here because we want to keep
         the `Product` data as it was when the `TransactionLine` was last
         modified, regardless of changes to the `Product`.
+
+    Attributes:
+        transaction - The `Transaction` a `TransactionLine` belongs to.
+        product - The `Product` the `TransactionLine` is for.
+        quantity - The number of units of `Product`.
+        product_number - The ID number of `Product`.
+        label - The label of `Product`.
+        price - The price of `Product`.
     """
     id = db.Column(db.Integer, primary_key=True)
     transaction_id = db.Column(db.Integer, db.ForeignKey('transactions.id'))
@@ -376,13 +494,14 @@ class TransactionLine(db.Model, TimestampMixin):
 
     @property
     def text(self):
+        """str: A string representing a `TransactionLine`'s data."""
         return '{0} of product #{1}: "{2}"'.format(self.quantity,
                                                    self.product_number,
                                                    self.label)
 
     @property
     def total(self):
-        """Return the total cost of products on line."""
+        """Decimal: The total cost of products in a `TransactionLine`."""
         try:
             return self.quantity * self.price
         except TypeError:
@@ -390,20 +509,24 @@ class TransactionLine(db.Model, TimestampMixin):
 
     @property
     def in_stock(self):
+        """bool: Whether or not the product on the line is in stock."""
         try:
-            return self.product.cultivar.in_stock
+            return self.product.in_stock
         except AttributeError:
             return False
 
 
 @event.listens_for(TransactionLine.quantity, 'set')
 def transaction_line_set_quantity_event(target, value, oldvalue, initiator):
+    """Set the quantity of the associated product's form quantity."""
+    # TODO: Make sure this doesn't result in undefined behavior.
     if value is not None and target.product:
         target.product.form.quantity.data = value
 
 
 @event.listens_for(TransactionLine.product, 'set')
 def transaction_line_set_product_event(target, value, oldvalue, initiator):
+    """Copy relevant values when setting `TransactionLine.product`."""
     if value is not None:
         target.product_number = value.number
         target.label = value.label
@@ -411,7 +534,16 @@ def transaction_line_set_product_event(target, value, oldvalue, initiator):
 
 
 class Transaction(db.Model, TimestampMixin):
-    """A table for transactions."""
+    """Table for transactions.
+
+    Attributes:
+
+    lines - `TransactionLine` instances belonging to this `Transaction`.
+    status - The state the `Transaction` is in.
+    customer - The `Customer` the `Transaction` belongs to.
+    billed_to - The `Address` the `Transaction` was billed to.
+    shipped_to - The `Address` the `Transaction` was shipped to.
+    """
     __tablename__ = 'transactions'
     id = db.Column(db.Integer, primary_key=True)
     lines = db.relationship(
@@ -452,7 +584,15 @@ class Transaction(db.Model, TimestampMixin):
 
     @classmethod
     def from_session_data(cls, data):
-        """Create a transaction from session_data."""
+        """Create a transaction from session_data.
+
+        Args:
+            data: A `dict` containing the data needed to create a new
+            `Transaction`.
+
+        Returns:
+            Transaction - The created `Transaction`.
+        """
         lines = []
         for d in data:
             product = Product.query.filter(
@@ -472,6 +612,9 @@ class Transaction(db.Model, TimestampMixin):
         Args:
             session_key: A string to use as key in session to load session
                 data from. Defaults to 'cart'.
+
+        Returns:
+            Transaction - The `Transaction` created from data in the session.
         """
         try:
             transaction = cls.from_session_data(session[session_key])

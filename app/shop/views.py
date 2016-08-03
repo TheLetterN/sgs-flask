@@ -23,7 +23,6 @@ from flask_login import current_user
 from . import shop
 from app.shop.forms import (
     AddProductForm,
-    AddressForm,
     ShoppingCartForm
 )
 from app.shop.models import Transaction

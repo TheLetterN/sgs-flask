@@ -1,13 +1,31 @@
+# -*- coding: utf-8 -*-
+# This file is part of SGS-Flask.
+
+# SGS-Flask is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# SGS-Flask is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Copyright Swallowtail Garden Seeds, Inc
+
+
 from flask import flash, redirect, render_template, request, session, url_for
 from flask_login import current_user
 
 from . import shop
-from app import db
 from app.shop.forms import (
     AddProductForm,
     ShoppingCartForm
 )
-from app.shop.models import Customer, Product, Transaction, TransactionLine
+from app.shop.models import Transaction
 
 
 @shop.route('/add-to-cart', methods=('GET', 'POST'))
@@ -57,7 +75,7 @@ def remove_product(product_number):
     cur_trans = Transaction.load(current_user)
     origin = request.args.get('origin')
     line = cur_trans.get_line(product_number)
-    flash (
+    flash(
         'Removed {} of "{}" from cart. [<a href="{}">UNDO</a>]'.format(
             line.quantity,
             line.label,

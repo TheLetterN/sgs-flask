@@ -1,3 +1,22 @@
+# -*- coding: utf-8 -*-
+# This file is part of SGS-Flask.
+
+# SGS-Flask is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# SGS-Flask is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Copyright Swallowtail Garden Seeds, Inc
+
+
 from flask import session
 from flask_login import current_user
 from pycountry import countries
@@ -17,7 +36,7 @@ class TransactionExistsError(Exception):
 
 class Level1AdministrativeDivision(db.Model):
     """Table for first-level administration divisions of countries.
-    
+
     These are the main subdivisions of countries, typically states, provinces,
     or regions.
     """
@@ -106,7 +125,7 @@ class Country(db.Model):
     @property
     def alpha2(self):
         return self._country.alpha2
-    
+
     @property
     def name(self):
         return self._country.name
@@ -408,7 +427,7 @@ class Transaction(db.Model, TimestampMixin):
         'paid',
         'refunded',
         'shipped',
-	name='status',
+        name='status',
     ))
     customer_id = db.Column(db.Integer, db.ForeignKey('customers.id'))
     customer = db.relationship(

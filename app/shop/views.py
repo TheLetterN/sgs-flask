@@ -23,6 +23,7 @@ from flask_login import current_user
 from . import shop
 from app.shop.forms import (
     AddProductForm,
+    AddressForm,
     ShoppingCartForm
 )
 from app.shop.models import Transaction
@@ -103,6 +104,11 @@ def undo_remove_product(product_number, quantity):
 
     flash('Returned {} of "{}" to cart.'.format(line.quantity, line.label))
     return redirect(request.args.get('origin') or url_for('shop.cart'))
+
+
+@shop.route('/checkout')
+def checkout():
+    return 'Nothing to see here.'
 
 
 # TODO: Remove these views when no longer needed!

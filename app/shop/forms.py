@@ -21,6 +21,8 @@ from wtforms import (
     FieldList,
     FormField,
     HiddenField,
+    SelectField,
+    StringField,
     SubmitField
 )
 from wtforms.fields.html5 import IntegerField
@@ -55,3 +57,23 @@ class ShoppingCartForm(Form):
     lines = FieldList(FormField(ShoppingCartLineForm))
     save = SubmitField('Save Changes')
     checkout = SubmitField('Checkout')
+
+
+class AddressForm(Form):
+    first_name = StringField('First Name')
+    last_name = StringField('Last Name')
+    business_name = StringField('Business Name')
+    address_line1 = StringField('Address Line 1')
+    address_line2 = StringField('Address Line 2')
+    city = StringField('City')
+    country = SelectField('Country')
+    l1_admin_division = SelectField('State/Province/Region')
+    unlisted_l1_admin_division = StringField('Other State/Provice/Region')
+    email = StringField('Email Address')
+    phone = StringField('Phone Number')
+    fax = StringField('Fax Number')
+
+
+class CheckoutForm(Form):
+    billing_address = FormField(AddressForm)
+    shipping_address = FormField(AddressForm)

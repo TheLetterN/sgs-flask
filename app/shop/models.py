@@ -158,7 +158,6 @@ class Address(db.Model, TimestampMixin):
         back_populates='addresses')
     first_name = db.Column(db.Text)
     last_name = db.Column(db.Text)
-    middle_initials = db.Column(db.Text)
     business_name = db.Column(db.Text)
     address_line1 = db.Column(db.Text)
     address_line2 = db.Column(db.Text)
@@ -436,6 +435,10 @@ class Transaction(db.Model, TimestampMixin):
         post_update=True,
         back_populates='transactions'
     )
+    billed_to_id = db.Column(db.Integer, db.ForeignKey('addresses.id'))
+    billed_to = db.relationship('Address', foreign_keys=billed_to_id)
+    shipped_to_id = db.Column(db.Integer, db.ForeignKey('addresses.id'))
+    shipped_to = db.relationship('Address', foreign_keys=shipped_to_id)
 
     def __init__(self, lines=None, status=None, customer=None):
         self.lines = lines if lines else []

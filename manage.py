@@ -45,10 +45,11 @@ def make_shell_context():
 @manager.command
 def create():
     """Create a new database and add an admin user."""
+    from pycountry import countries
     from app.auth import models as auth_models
     from app.seeds import models as seeds_models
     from app.shop import models as shop_models
-    from app.shop.models import USState
+    from app.shop.models import Country, Level1AdministrativeDivision
     resp = input(
         'WARNNG: This will erase existing database and create a new one! '
         'Proceed anyway? y/N: '
@@ -65,13 +66,22 @@ def create():
         db.create_all()
         admin = User()
         db.session.add(admin)
-        print('Populating us_states table...')
+        print('Populating countries table...')
+        db.session.add_all(
+            sorted(
+                Country.generate_from_alpha3s(c.alpha3 for c in countries),
+                key=lambda x: x.name
+            )
+        )
+        db.session.flush()
+        print('Populating States/Provinces/etc...')
         try:
-            with open('us_states.json', 'r', encoding='utf-8') as states_data:
-                states_dict = json.loads(states_data.read())
+            with open('level1_admin_divisions.json',
+                      'r',
+                      encoding='utf-8') as ifile:
+                d = json.loads(ifile.read())
                 db.session.add_all(
-                    sorted(USState.generate_from_dict(states_dict),
-                    key=lambda x: x.name)
+                    Level1AdministrativeDivision.generate_from_dict(d)
                 )
                 db.session.flush()
         except FileNotFoundError:

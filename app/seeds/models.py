@@ -110,7 +110,7 @@ from app.db_helpers import (
     TimestampMixin,
     USDollar
 )
-from app.shop.models import Product, USState
+from app.shop.models import Product
 
 
 # Association Tables
@@ -205,11 +205,24 @@ cultivars_to_gw_sections = db.Table(
     db.Column('section_id', db.Integer, db.ForeignKey('sections.id'))
 )
 
-cultivars_to_us_states = db.Table(
-    'cultivars_to_us_states',
+
+cultivars_to_l1_admin_divisions = db.Table(
+    'cultivars_to_l1_admin_divisions',
     db.Model.metadata,
     db.Column('cultivar_id', db.Integer, db.ForeignKey('cultivars.id')),
-    db.Column('us_state_id', db.Integer, db.ForeignKey('us_states.id'))
+    db.Column(
+        'l1_admin_division_id',
+        db.Integer,
+        db.ForeignKey('l1_admin_divisions.id')
+    )
+)
+
+
+cultivars_to_countries = db.Table(
+    'cultivars_to_countries',
+    db.Model.metadata,
+    db.Column('cultivar_id', db.Integer, db.ForeignKey('cultivars.id')),
+    db.Column('country_id', db.Integer, db.ForeignKey('countries.id'))
 )
 
 
@@ -1690,9 +1703,14 @@ class Cultivar(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
         foreign_keys=parent_section_id,
         back_populates='child_cultivars'
     )
-    noship_us_states = db.relationship(
-        'USState',
-        secondary=cultivars_to_us_states,
+    noship_l1_admin_divisions = db.relationship(
+        'Level1AdministrativeDivision',
+        secondary=cultivars_to_l1_admin_divisions,
+        backref='noship_cultivars'
+    )
+    noship_countries = db.relationship(
+        'Country',
+        secondary=cultivars_to_countries,
         backref='noship_cultivars'
     )
 

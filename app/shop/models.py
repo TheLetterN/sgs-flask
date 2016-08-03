@@ -15,28 +15,117 @@ class TransactionExistsError(Exception):
         self.message = message
 
 
-class USState(db.Model):
-    __tablename__ = 'us_states'
+class Level1AdministrativeDivision(db.Model):
+    """Table for first-level administration divisions of countries.
+    
+    These are the main subdivisions of countries, typically states, provinces,
+    or regions.
+    """
+    __tablename__ = 'l1_admin_divisions'
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.Text, unique=True)
-    abbreviation = db.Column(db.Text, unique=True)
+    name = db.Column(db.Text)
+    abbreviation = db.Column(db.Text)
+    country_id = db.Column(db.Integer, db.ForeignKey('countries.id'))
+    country = db.relationship('Country', back_populates='l1_admin_divisions')
     # noship_cultivars - backref from seeds.models.Cultivar
 
     def __repr__(self):
-        return '<US State/Territory: "{}">'.format(self.name)
+        return '<First Level Administrative Division: "{}">'.format(self.name)
 
     @classmethod
     def generate_from_dict(cls, d):
-        """Generate `USState` instances from a dict.
+        """Generate `Level1AdministrativeDivision` instances from a dict.
 
-        The dict should countain abbreviations as keys and full names as
-        values, eg: {'AL': 'Alabama', 'AK': 'Alaska', ... }
+        The dict should contain alpha3 country codes as keys with dicts
+        containing admin districts. Example:
+
+        { 'USA': {'AL': 'Alabama', 'AK': 'Alaska', ... } ... }
 
         Args:
             d - the `dict` to get state data from.
         """
-        for abbr in d:
-            yield cls(abbreviation=abbr, name=d[abbr])
+        for alpha3 in d:
+            country = Country.get_with_alpha3(alpha3)
+            if not country:
+                raise RuntimeError(
+                    'Could not generate first level administration districts '
+                    'because no country with the alpha3 code "{}" was found '
+                    'in the database!'.format(alpha3)
+                )
+            divs = d[alpha3]
+            for abbr in sorted(divs, key=lambda x: divs[x]):
+                yield cls(
+                    abbreviation=abbr,
+                    name=divs[abbr],
+                    country=country
+                )
+
+
+class Country(db.Model):
+    __tablename__ = 'countries'
+    id = db.Column(db.Integer, primary_key=True)
+    _cached = None
+    alpha3 = db.Column(db.Text)
+    noship = db.Column(db.Boolean)
+    at_own_risk = db.Column(db.Boolean)
+    l1_admin_divisions = db.relationship(
+        'Level1AdministrativeDivision',
+        back_populates='country'
+    )
+
+    # noship_cultivars - backref from seeds.models.Cultivar
+
+    def __init__(self, alpha3=None):
+        self.alpha3 = alpha3
+
+    def __repr__(self):
+        return '<Country: "{}">'.format(self.name)
+
+    @classmethod
+    def get_with_alpha3(cls, alpha3):
+        """Load a `Country` with the given alpha3 from the database."""
+        return cls.query.filter(cls.alpha3 == alpha3.upper()).one_or_none()
+
+    @classmethod
+    def generate_from_alpha3s(cls, alpha3s):
+        """Generate a list of `Country` instances from list of alpha3 codes.
+
+        Args:
+
+            alpha3s - a list of alpha3 country codes.
+        """
+        for alpha3 in alpha3s:
+            yield(cls(alpha3=alpha3))
+
+    @property
+    def _country(self):
+        if not self._cached:
+            self._cached = countries.get(alpha3=self.alpha3)
+        return self._cached
+
+    @property
+    def alpha2(self):
+        return self._country.alpha2
+    
+    @property
+    def name(self):
+        return self._country.name
+
+    @property
+    def numeric(self):
+        return self._country.numeric
+
+    @property
+    def official_name(self):
+        return self._country.official_name
+
+    def get_l1_admin_division_by_abbr(self, abbr):
+        """Return l1 admin division with given abbr, or `None`."""
+        abbr = abbr.upper()
+        return next(
+            (d for d in self.l1_admin_divisions if d.abbreviation == abbr),
+            None
+        )
 
 
 class Address(db.Model, TimestampMixin):
@@ -55,12 +144,11 @@ class Address(db.Model, TimestampMixin):
     address_line1 = db.Column(db.Text)
     address_line2 = db.Column(db.Text)
     city = db.Column(db.Text)
-    us_state_id = db.Column(db.ForeignKey('us_states.id'))
-    us_state = db.relationship('USState')
-    country = db.Column(
-        db.Enum(*(c.alpha3 for c in countries), name='country')
-    )
-    province_or_state = db.Column(db.Text)
+    country_id = db.Column(db.ForeignKey('countries.id'))
+    country = db.relationship('Country')
+    l1_admin_division_id = db.Column(db.ForeignKey('l1_admin_divisions.id'))
+    l1_admin_division = db.relationship('Level1AdministrativeDivision')
+    unlisted_l1_admin_division = db.Column(db.Text)
     email = db.Column(db.Text)
     phone = db.Column(db.Text)
     fax = db.Column(db.Text)

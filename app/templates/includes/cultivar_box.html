@@ -50,13 +50,30 @@ Copyright Swallowtail Garden Seeds, Inc
 	{% endif %}
   {% if cultivar.packets %}
   {% for packet in cultivar.packets %}
+  {# BEGIN new add to cart form #}
+  <div class="packet-info">
+    {{ packet.quantity.html_value|safe }} {{ packet.quantity.units }} - ${{ packet.price }}
+  </div>
+  {% if cultivar.in_stock %}
+  <form class="add-to-cart-form" method="POST" action="{{ url_for('shop.add_to_cart', product_number=packet.sku, origin=cultivar.url) }}">
+    {{ packet.product.form.hidden_tag() }}
+    <div class="add-to-cart-fields">
+      Qty: {{ packet.product.form.quantity(class='add-to-cart-quantity') }} {{ packet.product.form.submit(class='add-to-cart-submit') }}
+    </div>
+  </form>
+  {% else %}
+    <div class="add-to-cart-out-of-stock">OUT OF STOCK</div>
+  {% endif %}
+
+  {# END new add to cart form #}
+{#
   <form class="Cultivar_form" method="POST" action="{{ url_for('shop.add_to_cart', product_number=packet.sku, origin=cultivar.url) }}">
     {{ packet.product.form.hidden_tag() }}
 	<table class="Cultivar_table">
 		<tr>
 			<td  colspan=3 class="Cultivar_table_size_price">
 				
-				{# {{ packet.sku }}: #}{{ packet.quantity.html_value|safe }} {{ packet.quantity.units }} - ${{ packet.price }}
+				{{ packet.quantity.html_value|safe }} {{ packet.quantity.units }} - ${{ packet.price }}
 			</td>
 		</tr>
 		{% if cultivar.in_stock %}
@@ -70,7 +87,8 @@ Copyright Swallowtail Garden Seeds, Inc
 		<tr><th class="Cultivar_table_out_of_stock">OUT OF STOCK</th></tr>
     {% endif %}
 	</table>
-  </form>
+</form>
+#}
     {% endfor %}
   {% endif %}
   {# Cultivar admin below #}

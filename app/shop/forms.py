@@ -37,7 +37,6 @@ class AddProductForm(Form):
         render_kw={'min': '1'},
         validators=[NumberRange(min=1)]
     )
-    number = HiddenField()
     submit = SubmitField('Add to Cart')
 
 

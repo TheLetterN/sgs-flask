@@ -28,12 +28,12 @@ from app.shop.forms import (
 from app.shop.models import Transaction
 
 
-@shop.route('/add-to-cart', methods=('GET', 'POST'))
-def add_to_cart():
-    form = AddProductForm()
+@shop.route('/add-to-cart/<product_number>', methods=('GET', 'POST'))
+def add_to_cart(product_number):
+    form = AddProductForm(prefix=product_number)
     if form.validate_on_submit:
         qty = form.quantity.data
-        pn = form.number.data
+        pn = product_number
         cur_trans = Transaction.load(current_user)
         if not cur_trans:
             cur_trans = Transaction()

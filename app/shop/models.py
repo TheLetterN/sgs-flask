@@ -92,6 +92,12 @@ class State(db.Model):
                     country=country
                 )
 
+    @property
+    def html(self):
+        """str: HTML5 abbreviation tag for a state."""
+        return '<abbr title="{}">{}</abbr>'.format(self.name,
+                                                   self.abbreviation)
+
 
 class Country(db.Model):
     """Table for countries.
@@ -389,8 +395,7 @@ class Product(db.Model, TimestampMixin):
     def form(self):
         """AddProductForm: A form for adding a `Product` to a transaction."""
         if not self._form:
-            self._form = AddProductForm()
-            self._form.number.data = self.number
+            self._form = AddProductForm(prefix=self.number)
         return self._form
 
     @property

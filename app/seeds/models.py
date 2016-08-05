@@ -1929,6 +1929,19 @@ class Cultivar(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
         else:
             return None
 
+    @property
+    def noship_states_html(self):
+        """str: A list of states a `Cultivar` can't be shipped to."""
+        if self.noship_states:
+            return 'Cannot ship to {}.'.format(
+                list_to_english(
+                    [s.html for s in self.noship_states],
+                    ', or '
+                )
+            )
+        else:
+            return ''
+
     def generate_slug(self):
         """Generate a string for use in URLs for pages that use `Cultivar`."""
         return slugify(self.name) if self.name else None

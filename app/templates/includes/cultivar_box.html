@@ -42,14 +42,16 @@ Copyright Swallowtail Garden Seeds, Inc
     Grows nicely with {{ cultivar.gw_links|safe }}.
   </p>
     {% endif %}
+    {% if cultivar.noship_states %}
+    <span class="Cultivar_do_not_ship">{{ cultivar.noship_states_html|safe }}</span>
+    {% endif %} 
 		{% if not cultivar.in_stock %}
 	</p>
 	{% endif %}
   {% if cultivar.packets %}
   {% for packet in cultivar.packets %}
-  <form class=Cultivar_form" method="POST" action="{{ url_for('shop.add_to_cart', origin=cultivar.url) }}">
+  <form class="Cultivar_form" method="POST" action="{{ url_for('shop.add_to_cart', product_number=packet.sku, origin=cultivar.url) }}">
     {{ packet.product.form.hidden_tag() }}
-    {{ packet.product.form.number }}
 	<table class="Cultivar_table">
 		<tr>
 			<td  colspan=3 class="Cultivar_table_size_price">
@@ -67,9 +69,9 @@ Copyright Swallowtail Garden Seeds, Inc
 		{% else %}
 		<tr><th class="Cultivar_table_out_of_stock">OUT OF STOCK</th></tr>
     {% endif %}
+	</table>
   </form>
     {% endfor %}
-	</table>
   {% endif %}
   {# Cultivar admin below #}
 	{% if current_user.can(Permission.MANAGE_SEEDS) %}

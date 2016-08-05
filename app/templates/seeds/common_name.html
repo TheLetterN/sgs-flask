@@ -41,8 +41,8 @@ Copyright Swallowtail Garden Seeds, Inc
 	{% if individuals %}
 	<a class="to-indv-varieties" href="#individual-varieties"><h2 class="button100">Individual {{ cn.arranged_name }} Varieties</h2></a>
 	{% endif %}
-	{% endif %}
 </div>
+	{% endif %}
 {# END onpage nav #}
 {% endblock %}
 {% block main %}
@@ -64,7 +64,7 @@ Copyright Swallowtail Garden Seeds, Inc
 	<p class="Header_p"><a href="#{{ cn.slug }}-instructions">How to plant {{ cn.arranged_name }} seeds</a></p>
 	{% endif %}
 	{% if cn.description %}
-	<div class="Introduction"><p class="Introduction_p">{{ cn.description|safe }}</p></div>
+	<div class="Introduction">{{ cn.description|safe }}</div>
 	{% endif %}
 </div>
 {# END common name page header #}
@@ -115,9 +115,7 @@ Copyright Swallowtail Garden Seeds, Inc
 {% if cn.instructions %}
 <div id="{{ cn.slug }}-instructions" class="Growing">
 	<h2 class="Growing_h2">How to Plant {{ cn.arranged_name }} Seeds</h2>
-	<p class="Growing_p">
 		{{ cn.instructions|indent(6)|safe }}
-	</p>
 </div>
 {% endif %}
 {% endblock %}

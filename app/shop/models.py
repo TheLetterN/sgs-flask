@@ -34,11 +34,14 @@ class TransactionExistsError(Exception):
         self.message = message
 
 
-class Level1AdministrativeDivision(db.Model):
+class State(db.Model):
     """Table for first-level administration divisions of countries.
 
-    These are the main subdivisions of countries, typically states, provinces,
-    or regions.
+    Even though this table is for all forms of first-level administration
+    division (State, Province, Region, Canton, etc.) it is called 'State'
+    for the sake of simplicity, and since this is meant for a company in the
+    United States that primarly ships to the United States, 'State' is the
+    most straightforward term to use.
 
     Attributes:
         name - The full name of the administrative division, e.g. "California"
@@ -50,20 +53,20 @@ class Level1AdministrativeDivision(db.Model):
             given admin division. For example, Baby's Breath can't be shipped
             to California.
     """
-    __tablename__ = 'l1_admin_divisions'
+    __tablename__ = 'states'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.Text)
     abbreviation = db.Column(db.Text)
     country_id = db.Column(db.Integer, db.ForeignKey('countries.id'))
-    country = db.relationship('Country', back_populates='l1_admin_divisions')
+    country = db.relationship('Country', back_populates='states')
     # noship_cultivars - backref from seeds.models.Cultivar
 
     def __repr__(self):
-        return '<First Level Administrative Division: "{}">'.format(self.name)
+        return '<State/Provice/Region/etc: "{}">'.format(self.name)
 
     @classmethod
     def generate_from_dict(cls, d):
-        """Generate `Level1AdministrativeDivision` instances from a dict.
+        """Generate `State` instances from a dict.
 
         The dict should contain alpha3 country codes as keys with dicts
         containing admin districts. Example:
@@ -98,7 +101,7 @@ class Country(db.Model):
         noship - Whether or not the `Country` can be shipped to.
         at_own_risk - Whether or not shipping to the `Country` is considered
             at the customer's own risk.
-        l1_admin_divisions - First-level administrative divisions belonging
+        states - First-level administrative divisions belonging
             to `Country`; For example, US states or Canadian provinces.
         noship_cultivars - A list of `Cultivars` that can't be shipped to the
             given `Country`.
@@ -109,11 +112,7 @@ class Country(db.Model):
     alpha3 = db.Column(db.Text)
     noship = db.Column(db.Boolean)
     at_own_risk = db.Column(db.Boolean)
-    l1_admin_divisions = db.relationship(
-        'Level1AdministrativeDivision',
-        back_populates='country'
-    )
-
+    states = db.relationship('State', back_populates='country')
     # noship_cultivars - backref from seeds.models.Cultivar
 
     def __init__(self, alpha3=None):
@@ -171,11 +170,11 @@ class Country(db.Model):
         """str: The official (long form) name of `Country`."""
         return self._country.official_name
 
-    def get_l1_admin_division_by_abbr(self, abbr):
+    def get_state_by_abbr(self, abbr):
         """Return l1 admin division with given abbr, or `None`."""
         abbr = abbr.upper()
         return next(
-            (d for d in self.l1_admin_divisions if d.abbreviation == abbr),
+            (d for d in self.states if d.abbreviation == abbr),
             None
         )
 
@@ -191,10 +190,9 @@ class Address(db.Model, TimestampMixin):
         business name - Optional business the address belongs to.
         city - The city portion of the address.
         country - The country the address is in.
-        l1_admin_division - The first-level administrative division the
-            address is in.
-        unlisted_l1_admin_division - A level1 admin division that doesn't
-            have a `Level1AdministrativeDivision` instance in the database.
+        state - The first-level administrative division the address is in.
+        unlisted_state - A first-level admin division that doesn't have a
+            `State` instance in the database.
         email - The email address of the person the address belongs to.
         phone - Phone number of person address belongs to.
         fax - Optional fax number of person address belongs to.
@@ -214,9 +212,9 @@ class Address(db.Model, TimestampMixin):
     city = db.Column(db.Text)
     country_id = db.Column(db.ForeignKey('countries.id'))
     country = db.relationship('Country')
-    l1_admin_division_id = db.Column(db.ForeignKey('l1_admin_divisions.id'))
-    l1_admin_division = db.relationship('Level1AdministrativeDivision')
-    unlisted_l1_admin_division = db.Column(db.Text)
+    state_id = db.Column(db.ForeignKey('states.id'))
+    state = db.relationship('State')
+    unlisted_state = db.Column(db.Text)
     email = db.Column(db.Text)
     phone = db.Column(db.Text)
     fax = db.Column(db.Text)

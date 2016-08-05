@@ -38,8 +38,8 @@ copy_to_sgs_flask/
 # Ignore JSON files.
 *.json
 
-# Except for us_states.json
-!us_states.json
+# Except for states.json
+!states.json
 
 # Ignore pending changes file.
 pending.txt

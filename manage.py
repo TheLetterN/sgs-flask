@@ -49,7 +49,7 @@ def create():
     from app.auth import models as auth_models
     from app.seeds import models as seeds_models
     from app.shop import models as shop_models
-    from app.shop.models import Country, Level1AdministrativeDivision
+    from app.shop.models import Country, State
     resp = input(
         'WARNNG: This will erase existing database and create a new one! '
         'Proceed anyway? y/N: '
@@ -76,22 +76,23 @@ def create():
         db.session.flush()
         print('Populating States/Provinces/etc...')
         try:
-            with open('level1_admin_divisions.json',
+            with open('states.json',
                       'r',
                       encoding='utf-8') as ifile:
                 d = json.loads(ifile.read())
                 db.session.add_all(
-                    Level1AdministrativeDivision.generate_from_dict(d)
+                    State.generate_from_dict(d)
                 )
                 db.session.flush()
         except FileNotFoundError:
             db.session.rollback()
             raise FileNotFoundError(
-                'Could not find file "us_states.json" in the base sgs-flask '
+                'Could not find file "states.json" in the base sgs-flask '
                 'directory! If it does not exist, it should be created and '
-                'contain a JSON object formatted {"<abbreviation>": "<full '
-                'state name>", ...} eg: {"AL": "Alabama", "AK": "Alaska", '
-                '... }'
+                'contain a JSON object formatted: { "<country alpha3 code>": '
+                '{ "<state abbreviation>": "<state name>", ... }, ... } e.g. '
+                '{ "USA": {"AL": "Alabama", "AK": "Alaska", ... }, {"CAN": { '
+                '{"AB": "Alberta", "BC": "British Columbia", ... }, ... }'
             )
         print('Creating first administrator account...')
         admin.name = input('Enter name for admin account: ')

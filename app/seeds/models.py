@@ -206,15 +206,11 @@ cultivars_to_gw_sections = db.Table(
 )
 
 
-cultivars_to_l1_admin_divisions = db.Table(
-    'cultivars_to_l1_admin_divisions',
+cultivars_to_states = db.Table(
+    'cultivars_to_states',
     db.Model.metadata,
     db.Column('cultivar_id', db.Integer, db.ForeignKey('cultivars.id')),
-    db.Column(
-        'l1_admin_division_id',
-        db.Integer,
-        db.ForeignKey('l1_admin_divisions.id')
-    )
+    db.Column('state_id', db.Integer, db.ForeignKey('states.id'))
 )
 
 
@@ -1703,9 +1699,9 @@ class Cultivar(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
         foreign_keys=parent_section_id,
         back_populates='child_cultivars'
     )
-    noship_l1_admin_divisions = db.relationship(
-        'Level1AdministrativeDivision',
-        secondary=cultivars_to_l1_admin_divisions,
+    noship_states = db.relationship(
+        'State',
+        secondary=cultivars_to_states,
         backref='noship_cultivars'
     )
     noship_countries = db.relationship(

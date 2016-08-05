@@ -48,6 +48,7 @@ from app.seeds.models import (
     Quantity,
     VegetableData
 )
+from app.shop.models import Country
 
 
 def save_batch(lines, index, directory=None, pages_dir=None):
@@ -307,11 +308,17 @@ def cultivar_div_to_dict(cv_div):
                 dtm = veg_data.replace('(OP)', '').replace('(Hyb.)', '')
                 if dtm:
                     cv['days to maturity'] = dtm.strip()
+    noship = cv_div.find(
+        'span', class_=lambda x: x and 'do_not_ship' in x.lower()
+    )
+    if noship:
+        parts = noship.text.split(' ')
+        cv['noship_states'] = []
+        for part in parts:
+            if part[:2].isupper():
+                cv['noship_states'].append(part[:2])
     ps = cv_div.h3.find_next_siblings('p')
     if ps:
-        spans = ps[-1].find_next_siblings('span')
-        if spans:
-            ps = ps + spans
         desc = merge_p(ps)
         cv['description'] = ' '.join(desc.split())
     try:
@@ -1037,6 +1044,7 @@ class PageAdder(object):
             cv_hyb = cvd['hybrid'] if 'hybrid' in cvd else None
             cv_dtm = cvd['days to maturity'] if 'days to maturity' in cvd \
                 else None
+            cv_nss = cvd['noship_states'] if 'noship_states' in cvd else None
             cv_desc = cvd['description'] if 'description' in cvd else None
             cv_org = cvd['organic']
             cv_in_stock = cvd['in stock'] if 'in stock' in cvd else None
@@ -1105,6 +1113,14 @@ class PageAdder(object):
                     cv.vegetable_data.days_to_maturity = cv_dtm
                     print('\'{0}\' is expected to mature in {1}.'
                           .format(cv.fullname, cv_dtm), file=stream)
+            if cv_nss:
+                usa = Country.get_with_alpha3('USA')
+                for abbr in cv_nss:
+                    state = usa.get_state_by_abbr(abbr)
+                    if state not in cv.noship_states:
+                        cv.noship_states.append(state)
+                        print('Cannot ship \'{0}\' to {1}.'
+                              .format(cv.fullname, state.name), file=stream)
             if cv_desc and cv.description != cv_desc:
                 cv.description = cv_desc
                 print('Description for \'{0}\' set to: {1}'

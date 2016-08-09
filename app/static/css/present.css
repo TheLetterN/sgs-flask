@@ -133,6 +133,7 @@ p span{color:#007f00;font-weight:700;}
     color: #242424;
     font-size: 1em;
     font-weight: 700;
+    margin-top: 1em;
     padding: .2em;
     text-align: center;
 
@@ -147,8 +148,7 @@ p span{color:#007f00;font-weight:700;}
 }
 
 .add-to-cart-quantity {
-    height: 2em;
-    margin-right: 4%;
+    margin-right: 6%;
     text-align: center;
     width: 4em;
 }
@@ -160,10 +160,10 @@ p span{color:#007f00;font-weight:700;}
     color: #f6f6f6;
     cursor: pointer;
     height: 2em;
-    font-family: 'book-antiqua',Palatino;
-    font-size: 1.2em;
+    font-size: 1em;
+    margin-top: .0625em;
     text-transform: uppercase;
-    width: 64%;
+    width: 50%;
 }
 
 .add-to-cart-submit:hover {
@@ -425,7 +425,7 @@ a.Section_div_a{text-decoration:none;}
 }
 .Cultivar_img{
     float: left;
-    margin: 0 .75em .1em 0;
+    margin: 0 .75em .3em 0;
     vertical-align: text-top;
 }
 .Cultivar_small{display:block;line-height:1.3;margin-bottom:-1.6em;margin-left:1.6em;margin-top:.5em;color:#832F2F;font-size:.7em;}

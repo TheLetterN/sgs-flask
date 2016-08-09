@@ -49,7 +49,7 @@ from .models import (
     Quantity,
     USDollar
 )
-from .forms import (
+from app.seeds.forms import (
     AddBotanicalNameForm,
     AddIndexForm,
     AddCommonNameForm,
@@ -77,6 +77,7 @@ from .forms import (
     SelectSectionForm
 )
 
+from app.shop.forms import AddProductForm
 
 cblr = Crumbler('seeds')
 

@@ -56,9 +56,9 @@ Copyright Swallowtail Garden Seeds, Inc
   </div>
   {% if cultivar.in_stock %}
   <form class="add-to-cart-form" method="POST" action="{{ url_for('shop.add_to_cart', product_number=packet.sku, origin=cultivar.url) }}">
-    {{ packet.product.form.hidden_tag() }}
+    {{ packet.form.hidden_tag() }}
     <div class="add-to-cart-fields">
-      Qty: {{ packet.product.form.quantity(class='add-to-cart-quantity') }} {{ packet.product.form.submit(class='add-to-cart-submit') }}
+      Qty: {{ packet.form.quantity(class='add-to-cart-quantity') }} {{ packet.form.submit(class='add-to-cart-submit') }}
     </div>
   </form>
   {% else %}

@@ -28,6 +28,8 @@ from wtforms import (
 from wtforms.fields.html5 import IntegerField
 from wtforms.validators import NumberRange
 
+from app.shop.models import Country
+
 
 class AddProductForm(Form):
     """Form for adding a product to a customer's shopping cart."""
@@ -66,13 +68,37 @@ class AddressForm(Form):
     address_line2 = StringField('Address Line 2')
     city = StringField('City')
     country = SelectField('Country')
-    state = SelectField('State/Province/Region')
+    usa_state = SelectField('State')
+    can_state = SelectField('Province')
+    aus_state = SelectField('State')
     unlisted_state = StringField('Other State/Provice/Region')
     email = StringField('Email Address')
     phone = StringField('Phone Number')
     fax = StringField('Fax Number')
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.set_selects()
+
+    def set_selects(self):
+        self.country.choices = (
+            (c.alpha3, c.name) for c in Country.query.all()
+        )
+        usa = Country.get_with_alpha3('USA')
+        self.usa_state.choices = (
+            (s.abbreviation, s.name) for s in usa.states
+        )
+        can = Country.get_with_alpha3('CAN')
+        self.can_state.choices = (
+            (s.abbreviation, s.name) for s in can.states
+        )
+        aus = Country.get_with_alpha3('AUS')
+        self.aus_state.choices = (
+            (s.abbreviation, s.name) for s in aus.states
+        )
+
 
 class CheckoutForm(Form):
     billing_address = FormField(AddressForm)
     shipping_address = FormField(AddressForm)
+    submit = SubmitField('Review Order')

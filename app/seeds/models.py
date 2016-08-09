@@ -110,6 +110,7 @@ from app.db_helpers import (
     TimestampMixin,
     USDollar
 )
+from app.shop.forms import AddProductForm
 from app.shop.models import Product
 
 
@@ -2071,6 +2072,7 @@ class Packet(db.Model, TimestampMixin):
         'Product',
         backref=db.backref('packet', uselist=False)
     )
+    _form = None
 
     def __repr__(self):
         return '<{0} SKU #{1}>'.format(self.__class__.__name__, self.sku)
@@ -2129,6 +2131,12 @@ class Packet(db.Model, TimestampMixin):
                                                    self.price,
                                                    qv,
                                                    qu)
+
+    @property
+    def form(self):
+        if not self._form:
+            self._form = AddProductForm(prefix=self.sku)
+        return self._form
 
     @property
     def label(self):

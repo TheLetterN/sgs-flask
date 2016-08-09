@@ -23,6 +23,7 @@ from flask_login import current_user
 from . import shop
 from app.shop.forms import (
     AddProductForm,
+    CheckoutForm,
     ShoppingCartForm
 )
 from app.shop.models import Transaction
@@ -107,7 +108,12 @@ def undo_remove_product(product_number, quantity):
 
 @shop.route('/checkout')
 def checkout():
-    return 'Nothing to see here.'
+    form = CheckoutForm()
+    if form.validate_on_submit():
+        pass #TODO
+    form.billing_address.country.data = 'USA'
+    form.shipping_address.country.data = 'USA'
+    return render_template('shop/checkout.html', form=form)
 
 
 # TODO: Remove these views when no longer needed!

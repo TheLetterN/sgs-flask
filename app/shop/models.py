@@ -25,7 +25,6 @@ from sqlalchemy.exc import InvalidRequestError
 
 from app import db
 from app.db_helpers import TimestampMixin, USDollar
-from app.shop.forms import AddProductForm
 
 
 class TransactionExistsError(Exception):
@@ -362,8 +361,6 @@ class Product(db.Model, TimestampMixin):
     )
     # packet: backref from app.seeds.models.Packet
 
-    _form = None
-
     def __init__(self, number=None):
         self.number = number
 
@@ -390,13 +387,6 @@ class Product(db.Model, TimestampMixin):
         else:
             obj = cls()
         return obj
-
-    @property
-    def form(self):
-        """AddProductForm: A form for adding a `Product` to a transaction."""
-        if not self._form:
-            self._form = AddProductForm(prefix=self.number)
-        return self._form
 
     @property
     def cultivar(self):
@@ -517,14 +507,6 @@ class TransactionLine(db.Model, TimestampMixin):
             return self.product.in_stock
         except AttributeError:
             return False
-
-
-@event.listens_for(TransactionLine.quantity, 'set')
-def transaction_line_set_quantity_event(target, value, oldvalue, initiator):
-    """Set the quantity of the associated product's form quantity."""
-    # TODO: Make sure this doesn't result in undefined behavior.
-    if value is not None and target.product:
-        target.product.form.quantity.data = value
 
 
 @event.listens_for(TransactionLine.product, 'set')

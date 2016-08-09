@@ -738,6 +738,15 @@ class Page(object):
             intro = self.main_div.find('div', class_='Cultivar').extract()
         if intro:
             ps = intro.find_all('p', recursive=False)
+            noship = intro.find(
+                'p', class_=lambda x: x and 'do_not_ship' in x.lower()
+            )
+            if noship:
+                parts = noship.text.split(' ')
+                cn['noship_states'] = []
+                for part in parts:
+                    if part[:2].isupper():
+                        cn['noship_states'].append(part[:2])
         else:
             ps = None
         if not ps:
@@ -826,6 +835,7 @@ class Page(object):
             'synonyms',
             'botanical names',
             'description',
+            'noship_states',
             'sections',
             'cultivars',
             'grows with',
@@ -1197,6 +1207,10 @@ class PageAdder(object):
             cn_desc = self.tree['description']
         else:
             cn_desc = None
+        if 'noship_states' in self.tree:
+            cn_nss = self.tree['noship_states']
+        else:
+            cn_nss = None
         if 'instructions' in self.tree:
             cn_inst = self.tree['instructions']
         else:
@@ -1228,6 +1242,14 @@ class PageAdder(object):
             cn.description = cn_desc
             print('Description for \'{0}\' set to: {1}'
                   .format(cn.name, cn.description), file=stream)
+        if cn_nss:
+            usa = Country.get_with_alpha3('USA')
+            for abbr in cn_nss:
+                state = usa.get_state_by_abbr(abbr)
+                if state not in cn.noship_states:
+                    cn.noship_states.append(state)
+                    print('Cannot ship \'{0}\' to {1}.'
+                          .format(cn.name, state.name), file=stream)
         if cn_inst and cn.instructions != cn_inst:
             cn.instructions = cn_inst
             print('Planting instructions for \'{0}\' set to: {1}'

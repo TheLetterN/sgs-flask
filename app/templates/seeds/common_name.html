@@ -66,6 +66,9 @@ Copyright Swallowtail Garden Seeds, Inc
 	{% if cn.description %}
 	<div class="Introduction">{{ cn.description|safe }}</div>
 	{% endif %}
+    {% if cn.noship_states %}
+    <span class="Cultivar_do_not_ship">{{ cn.noship_states_html|safe }}</span>
+    {% endif %} 
 </div>
 {# END common name page header #}
 {% if featured %}

@@ -34,7 +34,6 @@ Copyright Swallowtail Garden Seeds, Inc
   <h4 class="Cultivar_organic">Organically grown.</h4>
   {% endif %}
 	{% if cultivar.description %}
-	<p class="Cultivar_p">
 		{{ cultivar.description|safe }}
 		{% endif %}
     {% if cultivar.grows_with %}
@@ -45,9 +44,6 @@ Copyright Swallowtail Garden Seeds, Inc
     {% if cultivar.noship_states %}
     <span class="Cultivar_do_not_ship">{{ cultivar.noship_states_html|safe }}</span>
     {% endif %} 
-		{% if not cultivar.in_stock %}
-	</p>
-	{% endif %}
   {% if cultivar.packets %}
   {% for packet in cultivar.packets %}
   {# BEGIN new add to cart form #}

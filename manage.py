@@ -103,6 +103,22 @@ def create():
                 '<int or decimal cost above which is at own risk>], e.g.: '
                 '[... , "JPN", "NLD", ["NOR", 50], "PRI", "ESP", ...]'
             )
+        print('Setting noship countries...')
+        try:
+            with open('noship_countries.json', 'r', encoding='utf-8') as ifile:
+                a3s = json.loads(ifile.read())
+                for alpha3 in a3s:
+                    country = Country.get_with_alpha3(alpha3)
+                    country.noship = True
+                db.session.flush()
+        except FileNotFoundError:
+            db.session.rollback()
+            raise FileNotFoundError(
+                'Could not find file "noship_countries.json" in base sgs-'
+                'flask folder. This file should be a JSON list containing '
+                'alpha3 country codes for countries we cannot ship to. e.g.: '
+                '["BGD", "BRA", "CHN", ... ]'
+            )
         print('Populating States/Provinces/etc...')
         try:
             with open('states.json',

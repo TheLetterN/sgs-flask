@@ -171,7 +171,15 @@ class Country(db.Model):
     @property
     def name(self):
         """str: The common name of `Country`."""
-        return self._country.name
+        # The ISO standard for some country names is debatable, and may be
+        # offensive to some. As such, we change them to a less potentially
+        # offensive version here to avoid ruffling too many feathers.
+        if 'Taiwan' in self._country.name:
+            return 'Taiwan'
+        elif 'Palestine' in self._country.name:
+            return 'Palestine'
+        else:
+            return self._country.name
 
     @property
     def numeric(self):

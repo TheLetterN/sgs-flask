@@ -34,9 +34,8 @@
       <li>{{ form_field(form.billing_address.address_line1)|safe }}</li>
       <li>{{ form_field(form.billing_address.address_line2)|safe }}</li>
       <li>{{ form_field(form.billing_address.city)|safe }}</li>
-      <li>{{ form_field(form.billing_address.country)|safe }}</li>
-      <li>{{ form_field(form.billing_address.usa_state)|safe }}{{form_field(form.billing_address.can_state)|safe}}{{form_field(form.billing_address.aus_state)|safe }}</li>
-      <li>{{ form_field(form.billing_address.unlisted_state)|safe }}</li>
+      <li>{{ form_field(form.billing_address.country, onchange='showStateSelect(this)')|safe }}</li>
+      <li><span id="billing_address-usa-state-select">{{ form_field(form.billing_address.usa_state)|safe }}</span><span id="billing_address-can-state-select">{{form_field(form.billing_address.can_state)|safe}}</span><span id="billing_address-aus-state-select">{{form_field(form.billing_address.aus_state)|safe }}</span><span id="billing_address-other-state">{{ form_field(form.billing_address.unlisted_state)|safe }}</span></li>
       <li>{{ form_field(form.billing_address.email)|safe }}</li>
       <li>{{ form_field(form.billing_address.phone)|safe }}</li>
       <li>{{ form_field(form.billing_address.fax)|safe }}</li>
@@ -49,9 +48,8 @@
       <li>{{ form_field(form.shipping_address.address_line1)|safe }}</li>
       <li>{{ form_field(form.shipping_address.address_line2)|safe }}</li>
       <li>{{ form_field(form.shipping_address.city)|safe }}</li>
-      <li>{{ form_field(form.shipping_address.usa_state)|safe }}{{form_field(form.shipping_address.can_state)|safe}}{{form_field(form.shipping_address.aus_state)|safe }}</li>
-      <li>{{ form_field(form.shipping_address.country)|safe }}</li>
-      <li>{{ form_field(form.shipping_address.unlisted_state)|safe }}</li>
+      <li>{{ form_field(form.shipping_address.country, onchange='showStateSelect(this)')|safe }}</li>
+      <li><span id="shipping_address-usa-state-select">{{ form_field(form.shipping_address.usa_state)|safe }}</span><span id="shipping_address-can-state-select">{{form_field(form.shipping_address.can_state)|safe}}</span><span id="shipping_address-aus-state-select">{{form_field(form.shipping_address.aus_state)|safe }}</span><span id="shipping_address-other-state">{{ form_field(form.shipping_address.unlisted_state)|safe }}</span></li>
       <li>{{ form_field(form.shipping_address.email)|safe }}</li>
       <li>{{ form_field(form.shipping_address.phone)|safe }}</li>
       <li>{{ form_field(form.shipping_address.fax)|safe }}</li>
@@ -59,4 +57,34 @@
     {{ form_field(form.submit)|safe }}
   </ol>
 </form>
+{% endblock %}
+{% block scripts %}
+<script>
+  function showStateSelect(country){
+    var prefix = country.id.split("-")[0];
+    if(country.value == 'USA') {
+      document.getElementById(prefix.concat('-other-state')).style.display = "none";
+      document.getElementById(prefix.concat('-can-state-select')).style.display = "none";
+      document.getElementById(prefix.concat('-aus-state-select')).style.display = "none";
+      document.getElementById(prefix.concat('-usa-state-select')).style.display = "inline";
+    } else if (country.value == 'CAN') {
+      document.getElementById(prefix.concat('-other-state')).style.display = "none";
+      document.getElementById(prefix.concat('-usa-state-select')).style.display = "none";
+      document.getElementById(prefix.concat('-aus-state-select')).style.display = "none";
+      document.getElementById(prefix.concat('-can-state-select')).style.display = "inline";
+    } else if (country.value == 'AUS') {
+      document.getElementById(prefix.concat('-other-state')).style.display = "none";
+      document.getElementById(prefix.concat('-usa-state-select')).style.display = "none";
+      document.getElementById(prefix.concat('-can-state-select')).style.display = "none";
+      document.getElementById(prefix.concat('-aus-state-select')).style.display = "inline";
+    } else {
+      document.getElementById(prefix.concat('-usa-state-select')).style.display = "none";
+      document.getElementById(prefix.concat('-can-state-select')).style.display = "none";
+      document.getElementById(prefix.concat('-aus-state-select')).style.display = "none";
+      document.getElementById(prefix.concat('-other-state')).style.display = "inline";
+    }
+  };
+  showStateSelect(document.getElementById('billing_address-country'));
+  showStateSelect(document.getElementById('shipping_address-country'));
+</script>
 {% endblock %}

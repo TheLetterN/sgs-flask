@@ -104,8 +104,15 @@ class Country(db.Model):
     Attributes:
         alpha3 - The alpha3 code for a country, e.g. "USA", "CAN", or "AUS".
         noship - Whether or not the `Country` can be shipped to.
-        at_own_risk - Whether or not shipping to the `Country` is considered
-            at the customer's own risk.
+        safe_to_ship - A boolean for whether or not a country has been
+            confirmed safe to ship to. (In other words, not at own risk or
+            unable to ship to.) Defaults to False so that if we don't know
+            whether or not we can ship to a country, it defaults to at own
+            risk.
+        at_own_risk_threshold - A price in US dollars above which shipping to
+            a given `Country` becomes unsafe/at own risk. For example, it is
+            safe to ship orders under $50 to Norway, but over that it becomes
+            at own risk.
         states - First-level administrative divisions belonging
             to `Country`; For example, US states or Canadian provinces.
         noship_cultivars - A list of `Cultivars` that can't be shipped to the
@@ -116,7 +123,8 @@ class Country(db.Model):
     _cached = None
     alpha3 = db.Column(db.Text)
     noship = db.Column(db.Boolean)
-    at_own_risk = db.Column(db.Boolean)
+    safe_to_ship = db.Column(db.Boolean, default=False)
+    at_own_risk_threshold = db.Column(USDollar)
     states = db.relationship('State', back_populates='country')
     # noship_cultivars - backref from seeds.models.Cultivar
 
@@ -182,6 +190,22 @@ class Country(db.Model):
             (d for d in self.states if d.abbreviation == abbr),
             None
         )
+
+    def at_own_risk(self, usd=None):
+        """Whether or not shipping to a `Country` is at own risk.
+
+        Args:
+            usd: Optional USD value above which an order becomes at own risk.
+
+        Returns:
+            bool: Whether or not shipping is at own risk for `Country`.
+        """
+        if usd and self.at_own_risk_threshold:
+            return usd > self.at_own_risk_threshold
+        elif self.safe_to_ship:
+            return False
+        else:
+            return True
 
 
 class Address(db.Model, TimestampMixin):

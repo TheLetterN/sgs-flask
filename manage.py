@@ -74,6 +74,35 @@ def create():
             )
         )
         db.session.flush()
+        print('Setting safe to ship countries...')
+        try:
+            with open('safe_to_ship_countries.json',
+                      'r',
+                      encoding='utf-8') as ifile:
+                sts = json.loads(ifile.read())
+                for c in sts:
+                    if isinstance(c, str):
+                        alpha3 = c
+                        thresh = None
+                    else:
+                        alpha3 = c[0]
+                        thresh = c[1]
+                    country = Country.get_with_alpha3(alpha3)
+                    if thresh:
+                        country.at_own_risk_threshold = thresh
+                    country.safe_to_ship = True
+                db.session.flush()
+        except FileNotFoundError:
+            db.session.rollback()
+            raise FileNotFoundError(
+                'Could not find file "safe_to_ship_countries.json" in base '
+                'sgs-dlask folder. This file should be a JSON list containing '
+                'alpha3 country codes for countries we can safely ship to, '
+                'including ones that become at own risk above a certain cost '
+                'total, which should be 2 value lists formatted ["<alpha3", '
+                '<int or decimal cost above which is at own risk>], e.g.: '
+                '[... , "JPN", "NLD", ["NOR", 50], "PRI", "ESP", ...]'
+            )
         print('Populating States/Provinces/etc...')
         try:
             with open('states.json',

@@ -113,6 +113,8 @@ def checkout():
     form.shipping_address.set_selects(filter_noship=True)
     if form.validate_on_submit():
         pass #TODO
+    if not current_user.is_anonymous:
+        form.billing_address.email.data = current_user.email
     form.billing_address.country.data = 'USA'
     form.shipping_address.country.data = 'USA'
     return render_template('shop/checkout.html', form=form)

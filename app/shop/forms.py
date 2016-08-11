@@ -86,15 +86,15 @@ class AddressForm(Form):
             self.country.choices = (
                 (c.alpha3, c.name) for c in countries
             )
-        usa = Country.get_with_alpha3('USA')
+        usa = Country.get(alpha3='USA')
         self.usa_state.choices = (
             (s.abbreviation, s.name) for s in usa.states
         )
-        can = Country.get_with_alpha3('CAN')
+        can = Country.get(alpha3='CAN')
         self.can_state.choices = (
             (s.abbreviation, s.name) for s in can.states
         )
-        aus = Country.get_with_alpha3('AUS')
+        aus = Country.get(alpha3='AUS')
         self.aus_state.choices = (
             (s.abbreviation, s.name) for s in aus.states
         )

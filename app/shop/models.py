@@ -76,7 +76,7 @@ class State(db.Model):
             d - the `dict` to get state data from.
         """
         for alpha3 in d:
-            country = Country.get_with_alpha3(alpha3)
+            country = Country.get(alpha3=alpha3)
             if not country:
                 raise RuntimeError(
                     'Could not generate first level administration districts '
@@ -135,15 +135,54 @@ class Country(db.Model):
         return '<Country: "{}">'.format(self.name)
 
     @classmethod
-    def get_with_alpha3(cls, alpha3):
-        """Load a `Country` with the given alpha3 from the database.
+    def get(cls,
+            alpha3=None,
+            alpha2=None,
+            name=None,
+            numeric=None,
+            official_name=None):
+        """Load a `Country` with the given parameter.
+
+        Passed values will take precedence in this order: alpha3, alpha2,
+        name, official_name, numeric. The first argument in that order to
+        contain data will be used, and all others will not be used.
 
         Args:
             alpha3: The alpha3 code of the `Country` to load.
+            alpha2: The alpha2 code of the `Country` to load.
+            name: The name of the `Country` to load. Note: This needs to be
+                as it is in the ISO 3166-1 standard, so "Taiwan" needs to be
+                "Taiwan, Province of China" and "Palestine" needs to be
+                "Palestine, State of", even though we alter them in the
+                property `Country.name`.
+            official_name: The official name of the `Country` to load.
+            numeric: The numeric of the `Country` to load.
 
         Returns:
-            The `Country` from the database with the given alpha3 code.
+            The `Country` from the database with the given data.
         """
+        if alpha3:
+            pass
+        elif alpha2:
+            try:
+                alpha3 = countries.get(alpha2=alpha2).alpha3
+            except KeyError:
+                return None
+        elif name:
+            try:
+                alpha3 = countries.get(name=name).alpha3
+            except KeyError:
+                return None
+        elif numeric:
+            try:
+                alpha3 = countries.get(numeric=numeric).alpha3
+            except KeyError:
+                return None
+        elif official_name:
+            try:
+                alpha3 = countries.get(official_name=official_name).alpha3
+            except KeyError:
+                return None
         return cls.query.filter(cls.alpha3 == alpha3.upper()).one_or_none()
 
     @classmethod

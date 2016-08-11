@@ -63,7 +63,7 @@ def cart():
             cur_trans.save()
             flash('Changes saved.')
         elif form.checkout.data:
-            flash('Check this out.')
+            return redirect(url_for('shop.checkout'))
         return redirect(url_for('shop.cart'))
     else:
         print(form.errors)

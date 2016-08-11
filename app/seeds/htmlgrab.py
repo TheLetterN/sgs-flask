@@ -1124,13 +1124,22 @@ class PageAdder(object):
                     print('\'{0}\' is expected to mature in {1}.'
                           .format(cv.fullname, cv_dtm), file=stream)
             if cv_nss:
-                usa = Country.get_with_alpha3('USA')
+                usa = Country.get(alpha3='USA')
                 for abbr in cv_nss:
                     state = usa.get_state_by_abbr(abbr)
-                    if state not in cv.noship_states:
-                        cv.noship_states.append(state)
-                        print('Cannot ship \'{0}\' to {1}.'
-                              .format(cv.fullname, state.name), file=stream)
+                    if state:
+                        if state not in cv.noship_states:
+                            cv.noship_states.append(state)
+                            print('Cannot ship "{0}" to {1}.'
+                                  .format(cv.fullname, state.name),
+                                  file=stream)
+                    else:
+                        country = Country.get(alpha2=abbr)
+                        if country and country not in cv.noship_countries:
+                            cv.noship_countries.append(country)
+                            print('Cannot ship "{0}" to {1}.'
+                                  .format(cv.fullname, country.name),
+                                  file=stream)
             if cv_desc and cv.description != cv_desc:
                 cv.description = cv_desc
                 print('Description for \'{0}\' set to: {1}'
@@ -1243,13 +1252,20 @@ class PageAdder(object):
             print('Description for \'{0}\' set to: {1}'
                   .format(cn.name, cn.description), file=stream)
         if cn_nss:
-            usa = Country.get_with_alpha3('USA')
+            usa = Country.get(alpha3='USA')
             for abbr in cn_nss:
                 state = usa.get_state_by_abbr(abbr)
-                if state not in cn.noship_states:
-                    cn.noship_states.append(state)
-                    print('Cannot ship \'{0}\' to {1}.'
-                          .format(cn.name, state.name), file=stream)
+                if state:
+                    if state not in cn.noship_states:
+                        cn.noship_states.append(state)
+                        print('Cannot ship \'{0}\' to {1}.'
+                              .format(cn.name, state.name), file=stream)
+                else:
+                    country = Country.get(alpha2=abbr)
+                    if country and country not in cn.noship_countries:
+                        cn.noship_countries.append(country)
+                        print('Cannot ship "{0}" to {1}.'
+                              .format(cn.name, country.name), file=stream)
         if cn_inst and cn.instructions != cn_inst:
             cn.instructions = cn_inst
             print('Planting instructions for \'{0}\' set to: {1}'

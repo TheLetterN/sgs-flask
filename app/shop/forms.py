@@ -23,7 +23,8 @@ from wtforms import (
     HiddenField,
     SelectField,
     StringField,
-    SubmitField
+    SubmitField,
+    ValidationError
 )
 from wtforms.fields.html5 import IntegerField
 from wtforms.validators import Length, NumberRange
@@ -123,6 +124,22 @@ class AddressForm(Form):
             [(s.abbreviation, s.name) for s in aus.states]
         )
         self.aus_state.choices.insert(0, ('0', ''))
+
+    def validate_usa_state(self, field):
+        """Raise ValidationError if country is USA and no state selected."""
+        if self.country.data == 'USA' and field.data == '0':
+            raise ValidationError('Please select a state.')
+
+    def validate_can_state(self, field):
+        """Raise ValidationError if country is CAN and no state selected."""
+        if self.country.data == 'CAN' and field.data == '0':
+            raise ValidationError('Please select a province.')
+
+    def validate_aus_state(self, field):
+        """Raise ValidationError if country is AUS and no state selected."""
+        if self.country.data == 'AUS' and field.data == '0':
+            raise ValidationError('Please select a state.')
+
 
 
 class CheckoutForm(Form):

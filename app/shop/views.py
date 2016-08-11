@@ -117,8 +117,12 @@ def checkout():
         return redirect(url_for('shop.checkout'))
     if not current_user.is_anonymous:
         form.billing_address.email.data = current_user.email
-    form.billing_address.country.data = 'USA'
-    form.shipping_address.country.data = 'USA'
+    # Since as of writing this wtforms has a bug in which `None` is coerced
+    # to a string in select fields, I'm using whether or not `form.submit` has
+    # been pressed to know if the default countries need to be set or not. -N
+    if not form.submit.data:
+        form.billing_address.country.data = 'USA'
+        form.shipping_address.country.data = 'USA'
     return render_template('shop/checkout.html', form=form)
 
 

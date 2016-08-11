@@ -106,13 +106,17 @@ def undo_remove_product(product_number, quantity):
     return redirect(request.args.get('origin') or url_for('shop.cart'))
 
 
-@shop.route('/checkout')
+@shop.route('/checkout', methods=['GET', 'POST'])
 def checkout():
     form = CheckoutForm()
     form.billing_address.set_selects()
     form.shipping_address.set_selects(filter_noship=True)
     if form.validate_on_submit():
-        pass #TODO
+        flash('All fields valid.')
+        print('all validated')
+        return redirect(url_for('shop.checkout'))
+    else:
+        print(form.errors)
     if not current_user.is_anonymous:
         form.billing_address.email.data = current_user.email
     form.billing_address.country.data = 'USA'

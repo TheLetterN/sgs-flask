@@ -90,17 +90,17 @@ class AddressForm(Form):
         self.usa_state.choices = (
             [(s.abbreviation, s.name) for s in usa.states]
         )
-        self.usa_state.choices.insert(0, (None, ''))
+        self.usa_state.choices.insert(0, ('0', ''))
         can = Country.get(alpha3='CAN')
         self.can_state.choices = (
             [(s.abbreviation, s.name) for s in can.states]
         )
-        self.can_state.choices.insert(0, (None, ''))
+        self.can_state.choices.insert(0, ('0', ''))
         aus = Country.get(alpha3='AUS')
         self.aus_state.choices = (
             [(s.abbreviation, s.name) for s in aus.states]
         )
-        self.aus_state.choices.insert(0, (None, ''))
+        self.aus_state.choices.insert(0, ('0', ''))
 
 
 class CheckoutForm(Form):

@@ -33,6 +33,7 @@
   <ol>
     <fieldset>
       <legend>Billing Address:</legend>
+      {{ form.billing_address.hidden_tag() }}
       <li>{{ form_field(form.billing_address.first_name)|safe }}</li>
       <li>{{ form_field(form.billing_address.last_name)|safe }}</li>
       <li>{{ form_field(form.billing_address.business_name)|safe }}</li>
@@ -47,6 +48,7 @@
     </fieldset>
     <fieldset>
       <legend>Shipping Address:</legend>
+      {{ form.shipping_address.hidden_tag() }}
       <li><input type="checkbox" name="shipping-same-as-billing" onclick="setShippingAddress(this.form)"> <label for="shipping-same-as-billing">Same as billing address</label></li>
       <li>{{ form_field(form.shipping_address.first_name)|safe }}</li>
       <li>{{ form_field(form.shipping_address.last_name)|safe }}</li>
@@ -114,9 +116,9 @@
       f['shipping_address-address_line2'].value = '';
       f['shipping_address-city'].value = '';
       f['shipping_address-country'].value = 'USA';
-      f['shipping_address-usa_state'].value = null;
-      f['shipping_address-can_state'].value = null;
-      f['shipping_address-aus_state'].value = null;
+      f['shipping_address-usa_state'].value = '0';
+      f['shipping_address-can_state'].value = '0';
+      f['shipping_address-aus_state'].value = '0';
       f['shipping_address-email'].value = '';
       f['shipping_address-phone'].value = '';
       f['shipping_address-fax'].value = '';

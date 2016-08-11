@@ -109,6 +109,8 @@ def undo_remove_product(product_number, quantity):
 @shop.route('/checkout')
 def checkout():
     form = CheckoutForm()
+    form.billing_address.set_selects()
+    form.shipping_address.set_selects(filter_noship=True)
     if form.validate_on_submit():
         pass #TODO
     form.billing_address.country.data = 'USA'

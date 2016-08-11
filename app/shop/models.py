@@ -107,8 +107,8 @@ class Country(db.Model):
         safe_to_ship - A boolean for whether or not a country has been
             confirmed safe to ship to. (In other words, not at own risk or
             unable to ship to.) Defaults to False so that if we don't know
-            whether or not we can ship to a country, it defaults to at own
-            risk.
+            whether or not we can ship to a country, it defaults to `False`,
+            which means at own risk.
         at_own_risk_threshold - A price in US dollars above which shipping to
             a given `Country` becomes unsafe/at own risk. For example, it is
             safe to ship orders under $50 to Norway, but over that it becomes
@@ -116,13 +116,13 @@ class Country(db.Model):
         states - First-level administrative divisions belonging
             to `Country`; For example, US states or Canadian provinces.
         noship_cultivars - A list of `Cultivars` that can't be shipped to the
-            given `Country`.
+            given `Country`. Defaults to `False`.
     """
     __tablename__ = 'countries'
     id = db.Column(db.Integer, primary_key=True)
     _cached = None
     alpha3 = db.Column(db.Text)
-    noship = db.Column(db.Boolean)
+    noship = db.Column(db.Boolean, default=False)
     safe_to_ship = db.Column(db.Boolean, default=False)
     at_own_risk_threshold = db.Column(USDollar)
     states = db.relationship('State', back_populates='country')

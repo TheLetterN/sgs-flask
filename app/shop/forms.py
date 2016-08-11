@@ -76,14 +76,16 @@ class AddressForm(Form):
     phone = StringField('Phone Number')
     fax = StringField('Fax Number')
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.set_selects()
-
-    def set_selects(self):
-        self.country.choices = (
-            (c.alpha3, c.name) for c in Country.query.all()
-        )
+    def set_selects(self, filter_noship=False):
+        countries = Country.query.all()
+        if filter_noship:
+            self.country.choices = (
+                (c.alpha3, c.name) for c in countries if not c.noship
+            )
+        else:
+            self.country.choices = (
+                (c.alpha3, c.name) for c in countries
+            )
         usa = Country.get_with_alpha3('USA')
         self.usa_state.choices = (
             (s.abbreviation, s.name) for s in usa.states

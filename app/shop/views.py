@@ -115,8 +115,6 @@ def checkout():
         flash('All fields valid.')
         print('all validated')
         return redirect(url_for('shop.checkout'))
-    else:
-        print(form.errors)
     if not current_user.is_anonymous:
         form.billing_address.email.data = current_user.email
     form.billing_address.country.data = 'USA'

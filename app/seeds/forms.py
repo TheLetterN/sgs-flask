@@ -34,6 +34,7 @@ from wtforms import (
     ValidationError
 )
 from wtforms.validators import DataRequired, Length, Optional
+from app.form_validators import NotSpace
 from app.redirects import RedirectsFile
 from .models import (
     BotanicalName,
@@ -135,18 +136,6 @@ class IsBotanicalName(object):
 
     def __call__(self, form, field):
         if not BotanicalName.validate(field.data):
-            raise ValidationError(self.message)
-
-
-class NotSpace(object):
-    """Validator to ensure a field is not purely whitespace."""
-    def __init__(self, message=None):
-        if not message:
-            message = 'Field cannot consist entirely of whitespace.'
-        self.message = message
-
-    def __call__(self, form, field):
-        if field.data and field.data.isspace():
             raise ValidationError(self.message)
 
 

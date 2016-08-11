@@ -26,8 +26,9 @@ from wtforms import (
     SubmitField
 )
 from wtforms.fields.html5 import IntegerField
-from wtforms.validators import NumberRange
+from wtforms.validators import Length, NumberRange
 
+from app.form_validators import Email, NotSpace
 from app.shop.models import Country
 
 
@@ -61,30 +62,51 @@ class ShoppingCartForm(Form):
 
 
 class AddressForm(Form):
-    first_name = StringField('First Name')
-    last_name = StringField('Last Name')
-    business_name = StringField('Business Name')
-    address_line1 = StringField('Address Line 1')
-    address_line2 = StringField('Address Line 2')
-    city = StringField('City')
+    first_name = StringField(
+        'First Name',
+        validators=[Length(1, 254), NotSpace()]
+    )
+    last_name = StringField(
+        'Last Name',
+        validators=[Length(1, 254), NotSpace()]
+    )
+    business_name = StringField(
+        'Business Name',
+        validators=[Length(1, 254), NotSpace()]
+    )
+    address_line1 = StringField(
+        'Address Line 1',
+        validators=[Length(1, 254), NotSpace()]
+    )
+    address_line2 = StringField(
+        'Address Line 2',
+        validators=[Length(0, 254), NotSpace()]
+    )
+    city = StringField('City', validators=[Length(1, 254), NotSpace()])
     country = SelectField('Country')
     usa_state = SelectField('State')
     can_state = SelectField('Province')
     aus_state = SelectField('State')
-    unlisted_state = StringField('Other State/Provice/Region')
-    email = StringField('Email Address')
-    phone = StringField('Phone Number')
-    fax = StringField('Fax Number')
+    unlisted_state = StringField(
+        'State/Provice/Region',
+        validators=[Length(0, 254), NotSpace()]
+    )
+    email = StringField(
+        'Email Address',
+        validators=[Email(), Length(1, 254), NotSpace()]
+    )
+    phone = StringField('Phone Number', validators=[Length(1, 25), NotSpace()])
+    fax = StringField('Fax Number', validators=[Length(0, 25), NotSpace()])
 
     def set_selects(self, filter_noship=False):
         countries = Country.query.all()
         if filter_noship:
             self.country.choices = (
-                (c.alpha3, c.name) for c in countries if not c.noship
+                [(c.alpha3, c.name) for c in countries if not c.noship]
             )
         else:
             self.country.choices = (
-                (c.alpha3, c.name) for c in countries
+                [(c.alpha3, c.name) for c in countries]
             )
         usa = Country.get(alpha3='USA')
         self.usa_state.choices = (

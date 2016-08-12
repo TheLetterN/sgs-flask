@@ -113,7 +113,9 @@ def checkout():
     form.shipping_address.set_selects(filter_noship=True)
     if form.validate_on_submit():
         flash('All fields valid.')
-        print('all validated')
+        #TMP
+        if form.billing_address.business_name.data:
+            print('Business name has data! #{}#'.format(form.billing_address.business_name.data))
         return redirect(url_for('shop.checkout'))
     if not current_user.is_anonymous:
         form.billing_address.email.data = current_user.email

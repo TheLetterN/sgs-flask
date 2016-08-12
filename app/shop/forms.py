@@ -27,9 +27,9 @@ from wtforms import (
     ValidationError
 )
 from wtforms.fields.html5 import IntegerField
-from wtforms.validators import Length, NumberRange
+from wtforms.validators import DataRequired, Length, NumberRange
 
-from app.form_validators import Email, NotSpace
+from app.form_helpers import Email, StrippedStringField
 from app.shop.models import Country
 
 
@@ -65,39 +65,55 @@ class ShoppingCartForm(Form):
 class AddressForm(Form):
     first_name = StringField(
         'First Name',
-        validators=[Length(1, 254), NotSpace()]
+        validators=[DataRequired(message='Please enter a first name.'),
+                    Length(max=254)]
     )
     last_name = StringField(
         'Last Name',
-        validators=[Length(1, 254), NotSpace()]
+        validators=[DataRequired(message='Please enter a last name.'),
+                    Length(max=254)]
     )
-    business_name = StringField(
+    business_name = StrippedStringField(
         'Business Name',
-        validators=[Length(1, 254), NotSpace()]
+        validators=[Length(max=254)]
     )
     address_line1 = StringField(
         'Address Line 1',
-        validators=[Length(1, 254), NotSpace()]
+        validators=[DataRequired(message='Please enter an address.'),
+                    Length(max=254)]
     )
-    address_line2 = StringField(
+    address_line2 = StrippedStringField(
         'Address Line 2',
-        validators=[Length(0, 254), NotSpace()]
+        validators=[Length(max=254)]
     )
-    city = StringField('City', validators=[Length(1, 254), NotSpace()])
+    city = StringField(
+        'City',
+        validators=[DataRequired(message='Please enter a city.'),
+                    Length(max=254)]
+    )
+    postalcode = StringField(
+        'Zip/Postal Code',
+        validators=[DataRequired(message='Please enter a zip/postal code.'),
+                    Length(max=16)]
     country = SelectField('Country')
     usa_state = SelectField('State')
     can_state = SelectField('Province')
     aus_state = SelectField('State')
-    unlisted_state = StringField(
+    unlisted_state = StrippedStringField(
         'State/Provice/Region',
-        validators=[Length(0, 254), NotSpace()]
+        validators=[Length(max=254)]
     )
     email = StringField(
         'Email Address',
-        validators=[Email(), Length(1, 254), NotSpace()]
+        validators=[Email(message='Please enter a valid email address'),
+                    Length(max=254)]
     )
-    phone = StringField('Phone Number', validators=[Length(1, 25), NotSpace()])
-    fax = StringField('Fax Number', validators=[Length(0, 25), NotSpace()])
+    phone = StringField(
+        'Phone Number',
+        validators=[DataRequired(message='Please enter a phone number.'),
+                    Length(max=25),]
+    )
+    fax = StrippedStringField('Fax Number', validators=[Length(max=25)])
 
     def set_selects(self, filter_noship=False):
         countries = Country.query.all()

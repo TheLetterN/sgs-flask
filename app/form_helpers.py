@@ -17,9 +17,10 @@
 
 
 from validate_email import validate_email
-from wtforms import ValidationError
+from wtforms import StringField, ValidationError
 
 
+# Validators
 class NotSpace(object):
     """Validator to ensure a field is not purely whitespace."""
     def __init__(self, message=None):
@@ -47,3 +48,16 @@ class Email(object):
     def __call__(self, form, field):
         if not validate_email(field.data):
             raise ValidationError(self.message)
+
+
+# Custom Fields
+class StrippedStringField(StringField):
+    """A `StringField` that strips trailing whitespace.
+    
+    This is primarily useful for fields we want to allow submitting without
+    data, but which we don't want saving whitespace from if that's all it
+    contains.
+    """
+    def process_formdata(self, valuelist):
+        super().process_formdata(valuelist)
+        self.data = self.data.strip()

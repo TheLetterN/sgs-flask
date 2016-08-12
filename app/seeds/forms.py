@@ -34,7 +34,7 @@ from wtforms import (
     ValidationError
 )
 from wtforms.validators import DataRequired, Length, Optional
-from app.form_validators import NotSpace
+from app.form_helpers import NotSpace
 from app.redirects import RedirectsFile
 from .models import (
     BotanicalName,
@@ -46,7 +46,7 @@ from .models import (
     Quantity,
     Cultivar
 )
-from .models import USDollar as USDollar_
+from app.seeds.models import USDollar as USDollar_
 
 
 IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png']

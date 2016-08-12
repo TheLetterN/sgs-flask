@@ -265,6 +265,7 @@ class Address(db.Model, TimestampMixin):
         last_name - The last name of the person the address belongs to.
         business name - Optional business the address belongs to.
         city - The city portion of the address.
+        postalcode - The zip/postal code of the address.
         country - The country the address is in.
         state - The first-level administrative division the address is in.
         unlisted_state - A first-level admin division that doesn't have a
@@ -286,6 +287,7 @@ class Address(db.Model, TimestampMixin):
     address_line1 = db.Column(db.Text)
     address_line2 = db.Column(db.Text)
     city = db.Column(db.Text)
+    postalcode = db.Column(db.Text)
     country_id = db.Column(db.ForeignKey('countries.id'))
     country = db.relationship('Country')
     state_id = db.Column(db.ForeignKey('states.id'))

@@ -95,6 +95,7 @@ class AddressForm(Form):
         'Zip/Postal Code',
         validators=[DataRequired(message='Please enter a zip/postal code.'),
                     Length(max=16)]
+    )
     country = SelectField('Country')
     usa_state = SelectField('State')
     can_state = SelectField('Province')

@@ -12,12 +12,8 @@ from app.seeds.forms import (
     EditIndexForm,
     EditPacketForm,
     IsBotanicalName,
-    NotSpace,
-    ReplaceMe,
-    RRPath,
     SelectSectionForm,
     select_field_choices,
-    SynonymLength,
     USDollar
 )
 from app.seeds.models import (
@@ -102,92 +98,6 @@ class TestValidators:
             ibn = IsBotanicalName()
             ibn.__call__(None, field)
         m_bnv.assert_called_with('invalid botanical name')
-
-    def test_notspace(self, app):
-        """Raise validation error if field data is whitespace."""
-        ns = NotSpace()
-        form = mock.MagicMock()
-        form.name.data = 'foo'
-        ns.__call__(form, form.name)
-        with pytest.raises(ValidationError):
-            form.name.data = ' '
-            ns.__call__(form, form.name)
-        with pytest.raises(ValidationError):
-            form.name.data = '\n'
-            ns.__call__(form, form.name)
-        with pytest.raises(ValidationError):
-            form.name.data = '\t'
-            ns.__call__(form, form.name)
-
-    def test_replaceme(self):
-        """Raise ValidationError if field data contains < and >."""
-        form = AddRedirectForm()
-        form.old_path.data = '/path/to/redirect'
-        rm = ReplaceMe()
-        rm.__call__(form, form.old_path)
-        form.old_path.data = '/path/to/<replace me>'
-        with pytest.raises(ValidationError):
-            rm.__call__(form, form.old_path)
-        form.old_path.data = '/<replace>/to/redirect'
-        with pytest.raises(ValidationError):
-            rm.__call__(form, form.old_path)
-        form.old_path.data = '/path/<replace this>/redirect'
-        with pytest.raises(ValidationError):
-            rm.__call__(form, form.old_path)
-
-    def test_rrpath(self):
-        """Raise ValidationError if field data does not begin with /."""
-        form = AddRedirectForm()
-        form.old_path.data = '/path/to/redirect'
-        rr = RRPath()
-        rr.__call__(form, form.old_path)
-        form.old_path.data = '\\windows\\style\\path'
-        with pytest.raises(ValidationError):
-            rr.__call__(form, form.old_path)
-        form.old_path.data = 'relative/path'
-        with pytest.raises(ValidationError):
-            rr.__call__(form, form.old_path)
-
-    def test_synonymlength_min_and_max_length(self):
-        """Raise error if min_length > max_length."""
-        SynonymLength(min_length=0, max_length=42)
-        SynonymLength(min_length=12, max_length=12)
-        with pytest.raises(ValueError):
-            SynonymLength(min_length=11, max_length=10)
-
-    def test_synonymlength_too_short(self):
-        """Raise error if any synonym is too short."""
-        sl = SynonymLength(min_length=9, max_length=32)
-        field = mock.MagicMock()
-        field.data = 'Napoleon'
-        with pytest.raises(ValidationError):
-            sl.__call__(form=None, field=field)
-
-    def test_synonymlength_too_long(self):
-        sl = SynonymLength(min_length=0, max_length=11)
-        field = mock.MagicMock()
-        field.data = 'Too long; didn\'t pass'
-        with pytest.raises(ValidationError):
-            sl.__call__(form=None, field=field)
-
-    def test_synonymlength_just_right(self):
-        sl = SynonymLength(min_length=0, max_length=16)
-        field = mock.MagicMock()
-        field.data = 'Just Right'
-        sl.__call__(form=None, field=field)
-
-    def test_synonymlength_no_data(self):
-        """Don't raise a ValidationError if no synonyms given.
-
-        Note that min_length is 1 here, as this validator should only care
-        about synonym length if synonyms are present.
-        """
-        sl = SynonymLength(1, 6)
-        field = mock.MagicMock()
-        field.data = ''
-        sl.__call__(None, field)
-        field.data = None
-        sl.__call__(None, field)
 
     def test_usdollar(self):
         """Raise validation error if value can't be converted to USD."""

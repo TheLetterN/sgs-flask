@@ -112,7 +112,7 @@ class AddressForm(Form):
     phone = StringField(
         'Phone Number',
         validators=[DataRequired(message='Please enter a phone number.'),
-                    Length(max=25),]
+                    Length(max=25)]
     )
     fax = StrippedStringField('Fax Number', validators=[Length(max=25)])
 
@@ -156,7 +156,6 @@ class AddressForm(Form):
         """Raise ValidationError if country is AUS and no state selected."""
         if self.country.data == 'AUS' and field.data == '0':
             raise ValidationError('Please select a state.')
-
 
 
 class CheckoutForm(Form):

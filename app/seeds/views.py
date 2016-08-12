@@ -77,8 +77,6 @@ from app.seeds.forms import (
     SelectSectionForm
 )
 
-from app.shop.forms import AddProductForm
-
 cblr = Crumbler('seeds')
 
 

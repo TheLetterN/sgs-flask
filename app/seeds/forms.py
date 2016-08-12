@@ -18,9 +18,8 @@
 import datetime
 
 from flask import current_app, Markup, url_for
-from werkzeug import secure_filename
 from flask_wtf import Form
-from flask_wtf.file import FileAllowed, FileField
+from flask_wtf.file import FileAllowed
 from wtforms import (
     BooleanField,
     DateField,
@@ -28,12 +27,18 @@ from wtforms import (
     RadioField,
     SelectField,
     SelectMultipleField,
-    StringField,
     SubmitField,
-    TextAreaField,
     ValidationError
 )
 from wtforms.validators import DataRequired, Length, Optional
+from app.form_helpers import (
+    BeginsWith,
+    ListItemLength,
+    ReplaceMe,
+    SecureFileField,
+    StrippedStringField,
+    StrippedTextAreaField
+)
 from app.redirects import RedirectsFile
 from .models import (
     BotanicalName,
@@ -45,7 +50,7 @@ from .models import (
     Quantity,
     Cultivar
 )
-from .models import USDollar as USDollar_
+from app.seeds.models import USDollar as USDollar_
 
 
 IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png']
@@ -120,9 +125,6 @@ def remove_from_choices(choices, obj):
 
 
 # Custom validators
-#
-# Note: Each validator has a `messages` attribute, which is just the error
-# message to display when triggered.
 class IsBotanicalName(object):
     """Validator to ensure data looks like a valid botanical name."""
     def __init__(self, message=None):
@@ -136,75 +138,6 @@ class IsBotanicalName(object):
     def __call__(self, form, field):
         if not BotanicalName.validate(field.data):
             raise ValidationError(self.message)
-
-
-class NotSpace(object):
-    """Validator to ensure a field is not purely whitespace."""
-    def __init__(self, message=None):
-        if not message:
-            message = 'Field cannot consist entirely of whitespace.'
-        self.message = message
-
-    def __call__(self, form, field):
-        if field.data and field.data.isspace():
-            raise ValidationError(self.message)
-
-
-class ReplaceMe(object):
-    """Validator for fields populated with data that needs to be edited.
-
-    These fields can be populated with strings that need to be edited by the
-    user to be valid. The parts that need to be edited are enclosed in <>.
-    """
-    def __init__(self, message=None):
-        if not message:
-            self.message = 'Field contains data that needs to be replaced. '\
-                           'Please replace any sections surrounded by < and '\
-                           '> with requested data.'
-
-    def __call__(self, form, field):
-        if '<' in field.data and '>' in field.data:
-            raise ValidationError(self.message)
-
-
-class RRPath(object):
-    """Validatator for fields requiring a root-relative path."""
-    def __init__(self, message=None):
-        if not message:
-            message = 'Field must contain a root-relative path beginning with'\
-                      'a forward slash. (/)'
-        self.message = message
-
-    def __call__(self, form, field):
-        if field.data and field.data[0] != '/':
-            raise ValidationError(self.message)
-
-
-class SynonymLength(object):
-    """Validator for length of each synonym in a comma-separated list.
-
-    Note:
-        This validator only concerns itself with the length of each synonym,
-        so if no synonyms are present it will not raise an error.
-    """
-    def __init__(self, min_length, max_length, message=None):
-        if min_length <= max_length:
-            self.min_length = min_length
-            self.max_length = max_length
-        else:
-            raise ValueError('min_length can\'t be larger than max_length!')
-        if not message:
-            self.message = ('Each synonym must be between {0} and {1} '
-                            'characters in length!'.format(self.min_length,
-                                                           self.max_length))
-
-    def __call__(self, form, field):
-        if field.data:
-            syns = field.data.split(', ')
-            bad_syns = [s for s in syns if len(s) < self.min_length
-                                        or len(s) > self.max_length]  # noqa
-            if bad_syns:
-                raise ValidationError(self.message.format(', '.join(bad_syns)))
 
 
 class USDollar(object):
@@ -222,15 +155,6 @@ class USDollar(object):
                 raise ValidationError(self.message)
 
 
-# Custom fields
-class SecureFileField(FileField):
-    """A FileField that automatically secures its filename."""
-    def process_formdata(self, value):
-        super().process_formdata(value)
-        if self.data:
-            self.data.filename = secure_filename(self.data.filename)
-
-
 # Forms
 #
 # Note: `submit` in forms is always the button for form submission, and `field`
@@ -239,16 +163,23 @@ class AddIndexForm(Form):
     """Form for adding a new `Index` to the database.
 
     Attributes:
-        name: DBified string field for the name of an `Index`.
+        name: String field for the name of an `Index`.
         thumbnail: FileField for thumbnail image.
         description: Text field for the description of an`Index`.
         pos: Select field for where this `Index` belongs in relation to others.
     """
-    name = StringField('Index Name', validators=[Length(1, 64), NotSpace()])
-    thumbnail = SecureFileField('Thumbnail Image',
-                                validators=[FileAllowed(IMAGE_EXTENSIONS,
-                                                        'Images only!')])
-    description = TextAreaField('Description', validators=[NotSpace()])
+    name = StrippedStringField(
+        'Index Name',
+        validators=[DataRequired(), Length(max=254)]
+    )
+    thumbnail = SecureFileField(
+        'Thumbnail Image',
+        validators=[FileAllowed(IMAGE_EXTENSIONS, 'Images only!')]
+    )
+    description = StrippedTextAreaField(
+        'Description',
+        validators=[Length(max=5120)]
+    )
     pos = SelectField('Position', coerce=int)
     submit = SubmitField('Save Index')
 
@@ -289,15 +220,25 @@ class AddCommonNameForm(Form):
 
         index: The `Index` added `CommonName` will be under.
     """
-    name = StringField('Common Name', validators=[Length(1, 64), NotSpace()])
-    thumbnail = SecureFileField('Thumbnail Image',
-                                validators=[FileAllowed(IMAGE_EXTENSIONS,
-                                                        'Images only!')])
-    description = TextAreaField('Description', validators=[NotSpace()])
-    instructions = TextAreaField('Planting Instructions',
-                                 validators=[NotSpace()])
-    synonyms = StringField('Synonyms',
-                           validators=[NotSpace(), SynonymLength(0, 64)])
+    name = StrippedStringField(
+        'Common Name',
+        validators=[DataRequired(), Length(max=254)]
+    )
+    thumbnail = SecureFileField(
+        'Thumbnail Image',
+        validators=[FileAllowed(IMAGE_EXTENSIONS, 'Images only!')]
+    )
+    description = StrippedTextAreaField(
+        'Description',
+        validators=[Length(max=5120)]
+    )
+    instructions = StrippedTextAreaField(
+        'Planting Instructions',
+        validators=[Length(max=5120)])
+    synonyms = StrippedStringField(
+        'Synonyms',
+        validators=[Length(max=5120), ListItemLength(maximum=254)]
+    )
     pos = SelectField('Position', coerce=int)
     visible = BooleanField('Show on auto-generated pages', default='checked')
     gw_common_names_ids = SelectMultipleField(
@@ -388,12 +329,14 @@ class AddBotanicalNameForm(Form):
 
         cn: The `CommonName` to add `BotanicalName` to.
     """
-    name = StringField('Botanical Name',
-                       validators=[IsBotanicalName(),
-                                   Length(1, 64),
-                                   NotSpace()])
-    synonyms = StringField('Synonyms', validators=[SynonymLength(1, 64),
-                                                   NotSpace()])
+    name = StrippedStringField(
+        'Botanical Name',
+        validators=[DataRequired(), IsBotanicalName(), Length(max=254)]
+    )
+    synonyms = StrippedStringField(
+        'Synonyms',
+        validators=[Length(max=5120), ListItemLength(maximum=254)]
+    )
     next_page = RadioField(
         'After submission, go to',
         choices=[('add_section', 'Add Section (optional)'),
@@ -446,12 +389,18 @@ class AddSectionForm(Form):
         cn: The `CommonName` this `Section` will belong to.
     """
     parent = SelectField('Subcategory Of (Optional)', coerce=int)
-    name = StringField('Section Name', validators=[Length(1, 64), NotSpace()])
-    subtitle = StringField(
-        'Subtitle (Leave blank for default.)',
-        validators=[Length(1, 64), NotSpace(), Optional()]
+    name = StrippedStringField(
+        'Section Name',
+        validators=[DataRequired(), Length(max=254)]
     )
-    description = TextAreaField('Description', validators=[NotSpace()])
+    subtitle = StrippedStringField(
+        'Subtitle (Leave blank for default.)',
+        validators=[Length(max=254)]
+    )
+    description = StrippedTextAreaField(
+        'Description',
+        validators=[Length(max=5120)]
+    )
     pos = SelectField('Position', coerce=int)
     submit = SubmitField('Save Section')
 
@@ -495,7 +444,7 @@ class AddCultivarForm(Form):
     """Form for adding a new `Cultivar` to the database.
 
     Attributes:
-        name: DBified string field for the name of added `Cultivar`.
+        name: String field for the name of added `Cultivar`.
         subtitle: An optional subtitle to use if the subtitle is something
             other than '<common name> Seeds'.
         botanical_name: Select field for the optional `BotanicalName` for the
@@ -516,10 +465,13 @@ class AddCultivarForm(Form):
 
         cn: The `CommonName` added `Cultivar` belongs to.
     """
-    name = StringField('Cultivar Name', validators=[Length(1, 64), NotSpace()])
-    subtitle = StringField(
+    name = StrippedStringField(
+        'Cultivar Name',
+        validators=[DataRequired(), Length(max=254)]
+    )
+    subtitle = StrippedStringField(
         'Subtitle (Leave blank for default.)',
-        validators=[Length(1, 64), NotSpace(), Optional()]
+        validators=[Length(max=254)]
     )
     botanical_name = SelectField('Botanical Name', coerce=int)
     section = SelectField('Section', coerce=int)
@@ -528,10 +480,15 @@ class AddCultivarForm(Form):
         'Thumbnail Image',
         validators=[FileAllowed(IMAGE_EXTENSIONS, 'Images only!')]
     )
-    description = TextAreaField('Description', validators=[NotSpace()])
+    description = StrippedTextAreaField(
+        'Description',
+        validators=[Length(max=5120)]
+    )
     pos = SelectField('Position', coerce=int)
-    synonyms = StringField('Synonyms', validators=[SynonymLength(1, 64),
-                                                   NotSpace()])
+    synonyms = StrippedStringField(
+        'Synonyms',
+        validators=[ListItemLength(maximum=254)]
+    )
     gw_common_names_ids = SelectMultipleField(
         'Common Names',
         render_kw={'size': 10},
@@ -618,7 +575,7 @@ class AddCultivarForm(Form):
             ValidationError: If an `Image` with  already exists in database.
         """
         if field.data:
-            filename = secure_filename(field.data.filename)
+            filename = field.data.filename
             image = Image.query\
                 .filter(Image.filename == filename)\
                 .one_or_none()
@@ -641,12 +598,22 @@ class AddPacketForm(Form):
 
         cultivar: The `Cultivar` added `Packet` belongs to.
     """
-    sku = StringField('SKU', validators=[Length(1, 32), NotSpace()])
-    price = StringField('Price in US dollars',
-                        validators=[DataRequired(), NotSpace(), USDollar()])
-    quantity = StringField('Quantity', validators=[DataRequired(), NotSpace()])
-    units = StringField('Unit of measurement',
-                        validators=[Length(1, 32), NotSpace()])
+    sku = StrippedStringField(
+        'SKU',
+        validators=[DataRequired(), Length(max=32)]
+    )
+    price = StrippedStringField(
+        'Price in US dollars',
+        validators=[DataRequired(), Length(max=16), USDollar()]
+    )
+    quantity = StrippedStringField(
+        'Quantity',
+        validators=[DataRequired(), Length(max=16)]
+    )
+    units = StrippedStringField(
+        'Unit of measurement',
+        validators=[DataRequired(), Length(max=32)]
+    )
     again = BooleanField('Add another packet after this.')
     submit = SubmitField('Save Packet')
 
@@ -695,14 +662,20 @@ class AddRedirectForm(Form):
         new_path: String field for path to redirect to.
         status_code: Select field for HTTP redirect status code to use.
     """
-    old_path = StringField('Old Path', validators=[DataRequired(),
-                                                   NotSpace(),
-                                                   ReplaceMe(),
-                                                   RRPath()])
-    new_path = StringField('New Path', validators=[DataRequired(),
-                                                   NotSpace(),
-                                                   ReplaceMe(),
-                                                   RRPath()])
+    old_path = StrippedStringField(
+        'Old Path',
+        validators=[BeginsWith('/'),
+                    DataRequired(),
+                    Length(max=4096),
+                    ReplaceMe()]
+    )
+    new_path = StrippedStringField(
+        'New Path',
+        validators=[BeginsWith('/'),
+                    DataRequired(),
+                    Length(max=4096),
+                    ReplaceMe()]
+    )
     status_code = SelectField('Status Code',
                               coerce=int,
                               choices=[(300, '300 Multiple Choices'),
@@ -774,12 +747,18 @@ class EditIndexForm(Form):
         description: String field for description.
     """
     id = HiddenField()
-    name = StringField('Index', validators=[Length(1, 64), NotSpace()])
+    name = StrippedStringField(
+        'Index',
+        validators=[DataRequired(), Length(max=254)]
+    )
     thumbnail = SecureFileField(
         'New Thumbnail',
         validators=[FileAllowed(IMAGE_EXTENSIONS, 'Images only!')]
     )
-    description = TextAreaField('Description', validators=[NotSpace()])
+    description = StrippedTextAreaField(
+        'Description',
+        validators=[Length(max=5120)]
+    )
     pos = SelectField('Position', coerce=int)
     submit = SubmitField('Save Index')
 
@@ -823,15 +802,26 @@ class EditCommonNameForm(Form):
     index_id = SelectField('Index',
                            coerce=int,
                            validators=[DataRequired()])
-    name = StringField('Common Name', validators=[Length(1, 64), NotSpace()])
+    name = StrippedStringField(
+        'Common Name',
+        validators=[DataRequired(), Length(max=254)]
+    )
     thumbnail = SecureFileField(
         'New Thumbnail',
         validators=[FileAllowed(IMAGE_EXTENSIONS, 'Images only!')]
     )
-    description = TextAreaField('Description', validators=[NotSpace()])
-    instructions = TextAreaField('Planting Instructions',
-                                 validators=[NotSpace()])
-    synonyms_string = StringField('Synonyms', validators=[NotSpace()])
+    description = StrippedTextAreaField(
+        'Description',
+        validators=[Length(max=5120)]
+    )
+    instructions = StrippedTextAreaField(
+        'Planting Instructions',
+        validators=[Length(max=5120)]
+    )
+    synonyms_string = StrippedStringField(
+        'Synonyms',
+        validators=[Length(max=5120), ListItemLength(maximum=254)]
+    )
     pos = SelectField('Position', coerce=int)
     gw_common_names_ids = SelectMultipleField(
         'Other Common Names',
@@ -927,12 +917,15 @@ class EditBotanicalNameForm(Form):
         synonyms_string: String field for synonyms of this botanical name.
     """
     id = HiddenField()
-    name = StringField('Botanical Name',
-                       validators=[Length(1, 64),
-                                   IsBotanicalName(),
-                                   NotSpace()])
+    name = StrippedStringField(
+        'Botanical Name',
+        validators=[DataRequired(), IsBotanicalName(), Length(max=254)]
+    )
     common_names = SelectMultipleField('Select Common Names', coerce=int)
-    synonyms_string = StringField('Synonyms', validators=[NotSpace()])
+    synonyms_string = StrippedStringField(
+        'Synonyms',
+        validators=[Length(max=5120), ListItemLength(maximum=254)]
+    )
     submit = SubmitField('Save Botanical Name')
 
     def __init__(self, *args, **kwargs):
@@ -995,12 +988,18 @@ class EditSectionForm(Form):
     id = HiddenField()
     parent_id = SelectField('Subsection Of (Optional)', coerce=int)
     common_name_id = SelectField('Select Common Name', coerce=int)
-    name = StringField('Section Name', validators=[Length(1, 64), NotSpace()])
-    subtitle = StringField('Subtitle (Leave blank for default.)',
-                           validators=[Length(1, 64),
-                                       NotSpace(),
-                                       Optional()])
-    description = TextAreaField('Description', validators=[NotSpace()])
+    name = StrippedStringField(
+        'Section Name',
+        validators=[DataRequired(), Length(max=254)]
+    )
+    subtitle = StrippedStringField(
+        'Subtitle (Leave blank for default.)',
+        validators=[Length(max=254)]
+    )
+    description = StrippedTextAreaField(
+        'Description',
+        validators=[Length(max=5120)]
+    )
     pos = SelectField('Position', coerce=int)
     submit = SubmitField('Save Section')
 
@@ -1078,18 +1077,27 @@ class EditCultivarForm(Form):
     botanical_name_id = SelectField('Botanical Name', coerce=int)
     section_id = SelectField('Section', coerce=int)
     organic = BooleanField('Organic')
-    name = StringField('Cultivar Name', validators=[Length(1, 64), NotSpace()])
-    subtitle = StringField('Subtitle (Leave blank for default.)',
-                           validators=[Length(1, 64),
-                                       NotSpace(),
-                                       Optional()])
-    description = TextAreaField('Description', validators=[NotSpace()])
+    name = StrippedStringField(
+        'Cultivar Name',
+        validators=[DataRequired(), Length(max=254)]
+    )
+    subtitle = StrippedStringField(
+        'Subtitle (Leave blank for default.)',
+        validators=[Length(max=254)]
+    )
+    description = StrippedTextAreaField(
+        'Description',
+        validators=[Length(max=5120)]
+    )
     pos = SelectField('Position', coerce=int)
     thumbnail = SecureFileField(
         'New Thumbnail',
         validators=[FileAllowed(IMAGE_EXTENSIONS, 'Images only!')]
     )
-    synonyms_string = StringField('Synonyms', validators=[NotSpace()])
+    synonyms_string = StrippedStringField(
+        'Synonyms',
+        validators=[Length(max=5120), ListItemLength(maximum=254)]
+    )
     gw_common_names_ids = SelectMultipleField(
         'Common Names',
         render_kw={'size': 10},
@@ -1237,12 +1245,22 @@ class EditPacketForm(Form):
     """
     id = HiddenField()
     cultivar_id = SelectField('Cultivar', coerce=int)
-    sku = StringField('SKU', validators=[Length(1, 32), NotSpace()])
-    price = StringField('Price in US dollars',
-                        validators=[DataRequired(), NotSpace(), USDollar()])
-    qty_val = StringField('Quantity', validators=[DataRequired(), NotSpace()])
-    units = StringField('Unit of measurement',
-                        validators=[Length(1, 32), NotSpace()])
+    sku = StrippedStringField(
+        'SKU',
+        validators=[DataRequired(), Length(max=32)]
+    )
+    price = StrippedStringField(
+        'Price in US dollars',
+        validators=[DataRequired(), Length(max=16), USDollar()]
+    )
+    qty_val = StrippedStringField(
+        'Quantity',
+        validators=[DataRequired(), Length(max=16)]
+    )
+    units = StrippedStringField(
+        'Unit of measurement',
+        validators=[DataRequired(), Length(max=32)]
+    )
     submit = SubmitField('Save Packet')
 
     def __init__(self, *args, **kwargs):

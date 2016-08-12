@@ -110,6 +110,7 @@ from app.db_helpers import (
     TimestampMixin,
     USDollar
 )
+from app.shop.forms import AddProductForm
 from app.shop.models import Product
 
 
@@ -203,6 +204,38 @@ cultivars_to_gw_sections = db.Table(
     db.Model.metadata,
     db.Column('cultivar_id', db.Integer, db.ForeignKey('cultivars.id')),
     db.Column('section_id', db.Integer, db.ForeignKey('sections.id'))
+)
+
+
+cultivars_to_states = db.Table(
+    'cultivars_to_states',
+    db.Model.metadata,
+    db.Column('cultivar_id', db.Integer, db.ForeignKey('cultivars.id')),
+    db.Column('state_id', db.Integer, db.ForeignKey('states.id'))
+)
+
+
+cultivars_to_countries = db.Table(
+    'cultivars_to_countries',
+    db.Model.metadata,
+    db.Column('cultivar_id', db.Integer, db.ForeignKey('cultivars.id')),
+    db.Column('country_id', db.Integer, db.ForeignKey('countries.id'))
+)
+
+
+common_names_to_states = db.Table(
+    'common_names_to_states',
+    db.Model.metadata,
+    db.Column('common_name_id', db.Integer, db.ForeignKey('common_names.id')),
+    db.Column('state_id', db.Integer, db.ForeignKey('states.id'))
+)
+
+
+common_names_to_countries = db.Table(
+    'common_names_to_countries',
+    db.Model.metadata,
+    db.Column('common_name_id', db.Integer, db.ForeignKey('common_names.id')),
+    db.Column('state_id', db.Integer, db.ForeignKey('countries.id'))
 )
 
 
@@ -737,6 +770,16 @@ class CommonName(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
         back_populates='parent_common_name'
     )
     synonyms = db.relationship('Synonym', back_populates='common_name')
+    noship_states = db.relationship(
+        'State',
+        secondary=common_names_to_states,
+        backref='noship_common_names'
+    )
+    noship_countries = db.relationship(
+        'Country',
+        secondary=common_names_to_countries,
+        backref='noship_common_names'
+    )
 
     def __init__(self,
                  name=None,
@@ -829,6 +872,20 @@ class CommonName(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
             gw_cultivars=[cv.id for cv in self.gw_cultivars],
             visible=self.visible
         )
+
+    @property
+    def noship_states_html(self):
+        """str: A list of states a `CommonName` can't be shipped to."""
+        if self.noship_states:
+            return '{} seeds cannot ship to {}.'.format(
+                self.name,
+                list_to_english(
+                    [s.html for s in self.noship_states],
+                    ', or '
+                )
+            )
+        else:
+            return ''
 
     @classmethod
     def from_dict_(cls, dict_):
@@ -1683,6 +1740,16 @@ class Cultivar(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
         foreign_keys=parent_section_id,
         back_populates='child_cultivars'
     )
+    noship_states = db.relationship(
+        'State',
+        secondary=cultivars_to_states,
+        backref='noship_cultivars'
+    )
+    noship_countries = db.relationship(
+        'Country',
+        secondary=cultivars_to_countries,
+        backref='noship_cultivars'
+    )
 
     def __init__(self,
                  name=None,
@@ -1903,6 +1970,19 @@ class Cultivar(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
         else:
             return None
 
+    @property
+    def noship_states_html(self):
+        """str: A list of states a `Cultivar` can't be shipped to."""
+        if self.noship_states:
+            return 'Cannot ship to {}.'.format(
+                list_to_english(
+                    [s.html for s in self.noship_states],
+                    ', or '
+                )
+            )
+        else:
+            return ''
+
     def generate_slug(self):
         """Generate a string for use in URLs for pages that use `Cultivar`."""
         return slugify(self.name) if self.name else None
@@ -1988,7 +2068,11 @@ class Packet(db.Model, TimestampMixin):
     cultivar_id = db.Column(db.Integer, db.ForeignKey('cultivars.id'))
     cultivar = db.relationship('Cultivar', back_populates='packets')
     product_id = db.Column(db.Integer, db.ForeignKey('products.id'))
-    product = db.relationship('Product')
+    product = db.relationship(
+        'Product',
+        backref=db.backref('packet', uselist=False)
+    )
+    _form = None
 
     def __repr__(self):
         return '<{0} SKU #{1}>'.format(self.__class__.__name__, self.sku)
@@ -2047,6 +2131,12 @@ class Packet(db.Model, TimestampMixin):
                                                    self.price,
                                                    qv,
                                                    qu)
+
+    @property
+    def form(self):
+        if not self._form:
+            self._form = AddProductForm(prefix=self.sku)
+        return self._form
 
     @property
     def label(self):

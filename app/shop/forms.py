@@ -21,21 +21,36 @@ from wtforms import (
     FieldList,
     FormField,
     HiddenField,
-    IntegerField,
-    SubmitField
+    SelectField,
+    StringField,
+    SubmitField,
+    ValidationError
 )
+from wtforms.fields.html5 import IntegerField
+from wtforms.validators import DataRequired, Length, NumberRange
+
+from app.form_helpers import Email, StrippedStringField
+from app.shop.models import Country
 
 
 class AddProductForm(Form):
     """Form for adding a product to a customer's shopping cart."""
-    quantity = IntegerField('Quantity', default=1)
-    number = HiddenField()
+    quantity = IntegerField(
+        'Quantity',
+        default=1,
+        render_kw={'min': '1'},
+        validators=[NumberRange(min=1)]
+    )
     submit = SubmitField('Add to Cart')
 
 
 class ShoppingCartLineForm(Form):
     """Form for a line in the shopping cart."""
-    quantity = IntegerField('Quantity')
+    quantity = IntegerField(
+        'Quantity',
+        render_kw={'min': '1'},
+        validators=[NumberRange(min=1)]
+    )
     product_number = HiddenField()
     product_label = HiddenField()
 
@@ -45,3 +60,105 @@ class ShoppingCartForm(Form):
     lines = FieldList(FormField(ShoppingCartLineForm))
     save = SubmitField('Save Changes')
     checkout = SubmitField('Checkout')
+
+
+class AddressForm(Form):
+    first_name = StringField(
+        'First Name',
+        validators=[DataRequired(message='Please enter a first name.'),
+                    Length(max=254)]
+    )
+    last_name = StringField(
+        'Last Name',
+        validators=[DataRequired(message='Please enter a last name.'),
+                    Length(max=254)]
+    )
+    business_name = StrippedStringField(
+        'Business Name',
+        validators=[Length(max=254)]
+    )
+    address_line1 = StringField(
+        'Address Line 1',
+        validators=[DataRequired(message='Please enter an address.'),
+                    Length(max=254)]
+    )
+    address_line2 = StrippedStringField(
+        'Address Line 2',
+        validators=[Length(max=254)]
+    )
+    city = StringField(
+        'City',
+        validators=[DataRequired(message='Please enter a city.'),
+                    Length(max=254)]
+    )
+    postalcode = StringField(
+        'Zip/Postal Code',
+        validators=[DataRequired(message='Please enter a zip/postal code.'),
+                    Length(max=16)]
+    )
+    country = SelectField('Country')
+    usa_state = SelectField('State')
+    can_state = SelectField('Province')
+    aus_state = SelectField('State')
+    unlisted_state = StrippedStringField(
+        'State/Provice/Region',
+        validators=[Length(max=254)]
+    )
+    email = StringField(
+        'Email Address',
+        validators=[Email(message='Please enter a valid email address'),
+                    Length(max=254)]
+    )
+    phone = StringField(
+        'Phone Number',
+        validators=[DataRequired(message='Please enter a phone number.'),
+                    Length(max=25)]
+    )
+    fax = StrippedStringField('Fax Number', validators=[Length(max=25)])
+
+    def set_selects(self, filter_noship=False):
+        countries = Country.query.all()
+        if filter_noship:
+            self.country.choices = (
+                [(c.alpha3, c.name) for c in countries if not c.noship]
+            )
+        else:
+            self.country.choices = (
+                [(c.alpha3, c.name) for c in countries]
+            )
+        usa = Country.get(alpha3='USA')
+        self.usa_state.choices = (
+            [(s.abbreviation, s.name) for s in usa.states]
+        )
+        self.usa_state.choices.insert(0, ('0', ''))
+        can = Country.get(alpha3='CAN')
+        self.can_state.choices = (
+            [(s.abbreviation, s.name) for s in can.states]
+        )
+        self.can_state.choices.insert(0, ('0', ''))
+        aus = Country.get(alpha3='AUS')
+        self.aus_state.choices = (
+            [(s.abbreviation, s.name) for s in aus.states]
+        )
+        self.aus_state.choices.insert(0, ('0', ''))
+
+    def validate_usa_state(self, field):
+        """Raise ValidationError if country is USA and no state selected."""
+        if self.country.data == 'USA' and field.data == '0':
+            raise ValidationError('Please select a state.')
+
+    def validate_can_state(self, field):
+        """Raise ValidationError if country is CAN and no state selected."""
+        if self.country.data == 'CAN' and field.data == '0':
+            raise ValidationError('Please select a province.')
+
+    def validate_aus_state(self, field):
+        """Raise ValidationError if country is AUS and no state selected."""
+        if self.country.data == 'AUS' and field.data == '0':
+            raise ValidationError('Please select a state.')
+
+
+class CheckoutForm(Form):
+    billing_address = FormField(AddressForm)
+    shipping_address = FormField(AddressForm)
+    submit = SubmitField('Review Order')

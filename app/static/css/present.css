@@ -122,34 +122,103 @@ i{font-weight:700;}
 
 em{display:block;font-weight:400;font-size:.95em;}
 p span{color:#007f00;font-weight:700;}
+
+/* I have altered the add to cart form. Pray I do not alter it any further. -Nicholas */
+.packet-info {
+    background-color: #f6f6f6;
+    border: 1px solid #d3d3d3;
+    border-left: none;
+    border-right: none;
+    clear: both;
+    color: #242424;
+    font-size: 1em;
+    font-weight: 700;
+    margin-top: 1em;
+    padding: .2em;
+    text-align: center;
+
+}
+
+.add-to-cart-fields {
+    background-color: #f6f6f6;
+    font-weight: 700;
+    padding: .1em;
+    text-align: right;
+    vertical-align: middle;
+}
+
+.add-to-cart-quantity {
+    margin-right: 6%;
+    text-align: center;
+    width: 4em;
+}
+
+.add-to-cart-submit {
+    background-color: #657f9a;
+    border: 2px solid;
+    border-color: #89a #568 #457 #78a;
+    color: #f6f6f6;
+    cursor: pointer;
+    height: 2em;
+    font-size: 1em;
+    margin-top: .0625em;
+    text-transform: uppercase;
+    width: 50%;
+}
+
+.add-to-cart-submit:hover {
+    background-color: #679;
+    font-weight: 900;
+    text-shadow: 1px 1px #134;
+}
+
+.add-to-cart-submit:active {
+    background-color: #457;
+    border: 0;
+}
+
+.add-to-cart-out-of-stock {
+    background: #bc4444;
+    color: #f6f6f6;
+    font-size: 1.05em;
+    font-weight: 700;
+    margin: 0;
+    opacity: .8;
+    padding: .2em;
+    text-align: center;
+    width: 101%;
+}
+
+/*
 .Cultivar_form{margin-top:1em;margin-bottom:0;width:99.9999%;}
 .Cultivar_form.Cultivar_form-modified{margin-top:0;}
 .Cultivar_table{text-align:center;font-family:'book-antiqua',Palatino;width:99.99%;border-collapse:separate;}
 .Cultivar_button_submit:before{top:-.125em;}
 .Cultivar_button_submit{cursor:pointer;font-size:1em;text-transform:uppercase;margin-top:.0625em;top:.075em;position:relative;height:2em;border-radius:1.5625em;background-color:#657f9a;color:#f6f6f6;width:99.9999%;vertical-align:bottom;}
 .Cultivar_button_submit:hover{background-color:#65769a;color:#f7f7f7;outline:none;transition:.05s;font-size:1em;}
-
+*/
 
 /*do not change color of disabled button*/
 /*.Cultivar_button_submit:disabled{background:#bc4444;opacity:.8;}*/
-
-
+/*
 .Cultivar_table_text{width:66%;outline:none;text-align:center;height:2em;font-weight:700;}
 .Cultivar_button_submit:active{top:-.125em;}
 .Cultivar_table_text:focus{background-color:#f7f7f7;border:none;}
 .Cultivar_table_size_price{font-size:1.05em;font-weight:700;padding:.2em;background-color:#e1e6ea;color:#292E37;border:.025em solid #7F9A65;border-right:none;border-left:none;}
 .Cultivar_table_qty{width:18%;vertical-align:middle;text-align:right;padding-right:.5em;border:none;font-size:1.05em;background-color:#d8e0d0;color:#292E37;font-weight:700;letter-spacing:.005em;}
-
+*/
 
 /*ADD THIS STUFF*//*ADD THIS STUFF*//*ADD THIS STUFF*/
+/*
 .Cultivar_table_out_of_stock{width:101%;font-size:1.05em;font-weight:700;padding:.2em;width:100%;background:#bc4444;opacity:.8;color:#f6f6f6;margin:0;}
+*/
 /*ADD THIS STUFF*//*ADD THIS STUFF*//*ADD THIS STUFF*/
 
-
+/*
 .Cultivar_table_th{width:18%;background-color:#d8e0d0;text-align:left;vertical-align:middle;}
 .Cultivar_table_th2{width:64%;vertical-align:top;height:2.3em;background-color:#d8e0d0;}
 .Cultivar_table_th2:hover{-ms-transition-delay:.1s;-moz-transition-delay:.1s;-o-transition-delay:.1s;-webkit-transition-delay:.1s;transition-delay:.1s;}
-
+*/
 .onpagenav{border-bottom:.025em solid #292E37;overflow:hidden;padding:0;text-align:center;}
 .onpagenav h2[class^="button"]{display:inline-block;float:left;color:#f7f7f7;font-size:.75em;margin:0;outline:1px solid #f7f7f7;background-color:#7f9a65;padding:.5em .625em;text-decoration:none;white-space:nowrap;}
 .onpagenav h2[class^="button"]:hover{background-color:#657f9a;}
@@ -320,7 +389,7 @@ li:nth-child(5) .Main_nav-drop-down-menu{margin-left:-16.65em;width:100%;z-index
 #back-top span{width:100px;height:100px;display:block;margin-bottom:7px;background:#a5a5a5 url(http://www.swallowtailgardenseeds.com/assets/up-arrow.png) no-repeat center center;border-radius:15px;transition:1s;}
 #back-top a:hover span{background-color:#b34141;}
 p{margin:0 1em 0 0;line-height:1.5;color:#292E37;}
-.group p {font-family:"Lucida Grande"}
+.group p {font-family: "Lucida Grande","Lucida Sans Unicode","Droid Sans",Tahoma,sans-serif;}
 b {font-weight:400;}
 h1{font-size:2em;line-height:1;}
 h2{font-size:1.625em;line-height:1;}
@@ -348,13 +417,24 @@ a.Section_div_a{text-decoration:none;}
 .Series_h2{text-align:left;line-height:1.1;}
 .Series_p{margin:-.75em 2em 0 0;}
 .Series_p-p{margin:.5em 2em 0 0;margin-top:.25em;}
-.Cultivar{margin-bottom:4em;margin-top:1.75em;border:.025em solid #176739;background-color:#f6f6f6;border-radius:.5em;}
-.Cultivar_img{margin:0 0 0 1em;float:right;vertical-align:text-top;border-top-right-radius:.5em;}
+.Cultivar{
+    background-color: #f6f6f6;
+    border: 1px solid #292e37;
+    margin: 1.75em 0 4em 0;
+    text-align: left;
+}
+.Cultivar_img{
+    float: left;
+    margin: 0 .75em .3em 0;
+    vertical-align: text-top;
+}
 .Cultivar_small{display:block;line-height:1.3;margin-bottom:-1.6em;margin-left:1.6em;margin-top:.5em;color:#832F2F;font-size:.7em;}
 .Cultivar_h3{margin-left:.75em;}
 .Cultivar_em{line-height:.9;font-style:italic;font-size:.9em;display:block;color:#141414;font-weight:400;}
 .Cultivar_em2{font-size:.65em;display:block;margin-top:.25em;}
-.Cultivar_p{margin-top:-.75em;margin-left:1em;margin-bottom:1em;}
+.Cultivar_p{
+    margin: -.75em .5em 1em 1em;
+}
 .RelatedLinks{background:#ebefe7;margin-bottom:3em;margin-top:3em;outline:.025em solid #832F2F;padding-top:.5em;padding-left:1em;padding-right:.2em;border:none;}
 .RelatedLinks_p{margin-bottom:.15em;}
 .RelatedLinks_img{margin-bottom:.15em;padding-top:.5em;padding-bottom:.5em;}

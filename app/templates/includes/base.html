@@ -18,10 +18,10 @@ Copyright Swallowtail Garden Seeds, Inc
 {# The main block should be indented 6 spaces in derived pages. #}
 {% set nav_data = load_nav_data() %}
 <!DOCTYPE html>
-<html>
+<html lang="en">
 	<head>
 		<meta charset="utf-8">
-		<link rel='stylesheet' href='http://fonts.googleapis.com/css?family=Droid+Serif:400,700,400italic,700italic |Droid+Sans:400,700'>
+		<link rel='stylesheet' href='http://fonts.googleapis.com/css?family=Droid+Serif:400,700,400italic,700italic%7cDroid+Sans:400,700'>
 		<meta name="viewport" content="width=device-width, initial-scale=1">
 		<link rel="shortcut icon" href="{{ url_for('static', filename='images/assets/favicon.ico') }}">
 		{% if not ALLOW_CRAWLING %}

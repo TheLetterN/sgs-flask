@@ -48,6 +48,7 @@ from app.seeds.models import (
     Quantity,
     VegetableData
 )
+from app.shop.models import Country
 
 
 def save_batch(lines, index, directory=None, pages_dir=None):
@@ -307,11 +308,17 @@ def cultivar_div_to_dict(cv_div):
                 dtm = veg_data.replace('(OP)', '').replace('(Hyb.)', '')
                 if dtm:
                     cv['days to maturity'] = dtm.strip()
+    noship = cv_div.find(
+        'span', class_=lambda x: x and 'do_not_ship' in x.lower()
+    )
+    if noship:
+        parts = noship.text.split(' ')
+        cv['noship_states'] = []
+        for part in parts:
+            if part[:2].isupper():
+                cv['noship_states'].append(part[:2])
     ps = cv_div.h3.find_next_siblings('p')
     if ps:
-        spans = ps[-1].find_next_siblings('span')
-        if spans:
-            ps = ps + spans
         desc = merge_p(ps)
         cv['description'] = ' '.join(desc.split())
     try:
@@ -731,6 +738,15 @@ class Page(object):
             intro = self.main_div.find('div', class_='Cultivar').extract()
         if intro:
             ps = intro.find_all('p', recursive=False)
+            noship = intro.find(
+                'p', class_=lambda x: x and 'do_not_ship' in x.lower()
+            )
+            if noship:
+                parts = noship.text.split(' ')
+                cn['noship_states'] = []
+                for part in parts:
+                    if part[:2].isupper():
+                        cn['noship_states'].append(part[:2])
         else:
             ps = None
         if not ps:
@@ -819,6 +835,7 @@ class Page(object):
             'synonyms',
             'botanical names',
             'description',
+            'noship_states',
             'sections',
             'cultivars',
             'grows with',
@@ -1037,6 +1054,7 @@ class PageAdder(object):
             cv_hyb = cvd['hybrid'] if 'hybrid' in cvd else None
             cv_dtm = cvd['days to maturity'] if 'days to maturity' in cvd \
                 else None
+            cv_nss = cvd['noship_states'] if 'noship_states' in cvd else None
             cv_desc = cvd['description'] if 'description' in cvd else None
             cv_org = cvd['organic']
             cv_in_stock = cvd['in stock'] if 'in stock' in cvd else None
@@ -1105,6 +1123,23 @@ class PageAdder(object):
                     cv.vegetable_data.days_to_maturity = cv_dtm
                     print('\'{0}\' is expected to mature in {1}.'
                           .format(cv.fullname, cv_dtm), file=stream)
+            if cv_nss:
+                usa = Country.get(alpha3='USA')
+                for abbr in cv_nss:
+                    state = usa.get_state_by_abbr(abbr)
+                    if state:
+                        if state not in cv.noship_states:
+                            cv.noship_states.append(state)
+                            print('Cannot ship "{0}" to {1}.'
+                                  .format(cv.fullname, state.name),
+                                  file=stream)
+                    else:
+                        country = Country.get(alpha2=abbr)
+                        if country and country not in cv.noship_countries:
+                            cv.noship_countries.append(country)
+                            print('Cannot ship "{0}" to {1}.'
+                                  .format(cv.fullname, country.name),
+                                  file=stream)
             if cv_desc and cv.description != cv_desc:
                 cv.description = cv_desc
                 print('Description for \'{0}\' set to: {1}'
@@ -1181,6 +1216,10 @@ class PageAdder(object):
             cn_desc = self.tree['description']
         else:
             cn_desc = None
+        if 'noship_states' in self.tree:
+            cn_nss = self.tree['noship_states']
+        else:
+            cn_nss = None
         if 'instructions' in self.tree:
             cn_inst = self.tree['instructions']
         else:
@@ -1212,6 +1251,21 @@ class PageAdder(object):
             cn.description = cn_desc
             print('Description for \'{0}\' set to: {1}'
                   .format(cn.name, cn.description), file=stream)
+        if cn_nss:
+            usa = Country.get(alpha3='USA')
+            for abbr in cn_nss:
+                state = usa.get_state_by_abbr(abbr)
+                if state:
+                    if state not in cn.noship_states:
+                        cn.noship_states.append(state)
+                        print('Cannot ship \'{0}\' to {1}.'
+                              .format(cn.name, state.name), file=stream)
+                else:
+                    country = Country.get(alpha2=abbr)
+                    if country and country not in cn.noship_countries:
+                        cn.noship_countries.append(country)
+                        print('Cannot ship "{0}" to {1}.'
+                              .format(cn.name, country.name), file=stream)
         if cn_inst and cn.instructions != cn_inst:
             cn.instructions = cn_inst
             print('Planting instructions for \'{0}\' set to: {1}'

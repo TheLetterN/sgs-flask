@@ -38,6 +38,11 @@ copy_to_sgs_flask/
 # Ignore JSON files.
 *.json
 
+# Except for the ones needed for initial setup.
+!states.json
+!safe_to_ship_countries.json
+!noship_countries.json
+
 # Ignore pending changes file.
 pending.txt
 

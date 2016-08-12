@@ -19,7 +19,9 @@
 # Copyright Swallowtail Garden Seeds, Inc
 
 
-import os, sys
+import json
+import os
+import sys
 from getpass import getpass
 
 import pytest
@@ -43,9 +45,11 @@ def make_shell_context():
 @manager.command
 def create():
     """Create a new database and add an admin user."""
+    from pycountry import countries
     from app.auth import models as auth_models
     from app.seeds import models as seeds_models
     from app.shop import models as shop_models
+    from app.shop.models import Country, State
     resp = input(
         'WARNNG: This will erase existing database and create a new one! '
         'Proceed anyway? y/N: '
@@ -62,6 +66,79 @@ def create():
         db.create_all()
         admin = User()
         db.session.add(admin)
+        print('Populating countries table...')
+        db.session.add_all(
+            sorted(
+                Country.generate_from_alpha3s(c.alpha3 for c in countries),
+                key=lambda x: x.name
+            )
+        )
+        db.session.flush()
+        print('Setting safe to ship countries...')
+        try:
+            with open('safe_to_ship_countries.json',
+                      'r',
+                      encoding='utf-8') as ifile:
+                sts = json.loads(ifile.read())
+                for c in sts:
+                    if isinstance(c, str):
+                        alpha3 = c
+                        thresh = None
+                    else:
+                        alpha3 = c[0]
+                        thresh = c[1]
+                    country = Country.get_with_alpha3(alpha3)
+                    if thresh:
+                        country.at_own_risk_threshold = thresh
+                    country.safe_to_ship = True
+                db.session.flush()
+        except FileNotFoundError:
+            db.session.rollback()
+            raise FileNotFoundError(
+                'Could not find file "safe_to_ship_countries.json" in base '
+                'sgs-dlask folder. This file should be a JSON list containing '
+                'alpha3 country codes for countries we can safely ship to, '
+                'including ones that become at own risk above a certain cost '
+                'total, which should be 2 value lists formatted ["<alpha3", '
+                '<int or decimal cost above which is at own risk>], e.g.: '
+                '[... , "JPN", "NLD", ["NOR", 50], "PRI", "ESP", ...]'
+            )
+        print('Setting noship countries...')
+        try:
+            with open('noship_countries.json', 'r', encoding='utf-8') as ifile:
+                a3s = json.loads(ifile.read())
+                for alpha3 in a3s:
+                    country = Country.get_with_alpha3(alpha3)
+                    country.noship = True
+                db.session.flush()
+        except FileNotFoundError:
+            db.session.rollback()
+            raise FileNotFoundError(
+                'Could not find file "noship_countries.json" in base sgs-'
+                'flask folder. This file should be a JSON list containing '
+                'alpha3 country codes for countries we cannot ship to. e.g.: '
+                '["BGD", "BRA", "CHN", ... ]'
+            )
+        print('Populating States/Provinces/etc...')
+        try:
+            with open('states.json',
+                      'r',
+                      encoding='utf-8') as ifile:
+                d = json.loads(ifile.read())
+                db.session.add_all(
+                    State.generate_from_dict(d)
+                )
+                db.session.flush()
+        except FileNotFoundError:
+            db.session.rollback()
+            raise FileNotFoundError(
+                'Could not find file "states.json" in the base sgs-flask '
+                'directory! If it does not exist, it should be created and '
+                'contain a JSON object formatted: { "<country alpha3 code>": '
+                '{ "<state abbreviation>": "<state name>", ... }, ... } e.g. '
+                '{ "USA": {"AL": "Alabama", "AK": "Alaska", ... }, {"CAN": { '
+                '{"AB": "Alberta", "BC": "British Columbia", ... }, ... }'
+            )
         print('Creating first administrator account...')
         admin.name = input('Enter name for admin account: ')
         admin.email = input('Enter email address for admin account: ')

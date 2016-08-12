@@ -17,7 +17,7 @@
 #}
 {% macro form_field(field, dbifiable=False, show_label=True) %}
 {% if show_label %}{% if dbifiable %}{{ field.label(style='display:block;') }}{% else %}{{ field.label }}{% endif %}{% endif %}
-{% if dbifiable %}{{ field(class_='dbifiable', style='display:inline;') }}<button type="button" id="dbify-{{ field.id }}" class="dbify-button">dbify!</button>{% else %}{{ field }}{% endif %}
+{% if dbifiable %}{{ field(class_='dbifiable', style='display:inline;') }}<button type="button" id="dbify-{{ field.id }}" class="dbify-button">dbify!</button>{% else %}{{ field(**kwargs) }}{% endif %}
 {% if field.errors %}{% for error in field.errors %}
 <div class="form_error">{{ error }}</div>
 {% endfor %}{% endif %}

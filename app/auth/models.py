@@ -23,6 +23,7 @@ from werkzeug import generate_password_hash, check_password_hash
 from flask_login import UserMixin
 from app import db, login_manager
 from app.email import send_email
+from app.shop.models import Customer
 
 
 class EmailRequest(db.Model):
@@ -91,6 +92,19 @@ class User(UserMixin, db.Model):
 
     def __init__(self):
         self.permissions = 0
+
+    @property
+    def current_transaction(self):
+        try:
+            return self.customer_data.current_transaction
+        except AttributeError:
+            return None
+
+    @current_transaction.setter
+    def current_transaction(self, transaction):
+        if not self.customer_data:
+            self.customer_data = Customer()
+        self.customer_data.current_transaction = transaction
 
     def can(self, permission):
         """Verify if a user has a permission.

@@ -1,0 +1,135 @@
+{# This file is part of SGS-Flask.
+
+   SGS-Flask is free software: you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
+ 
+   SGS-Flask is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+ 
+   You should have received a copy of the GNU General Public License
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ 
+   Copyright Swallowtail Garden Seeds, Inc 
+#}
+
+{% extends "includes/base.html" %}
+{% from "includes/form_field.html" import form_field %}
+{% block head %}
+<title>Checkout</title>
+{% endblock %}
+{% block main %}
+<h1>Checkout</h1>
+{% if current_user.is_anonymous %}
+<div class="not-logged-in-warning">
+  Warning: You are not logged in! While you may still complete your order without logging in or creating an account, using an account will make it easier for you to keep track of your order and place future orders. <a href="{{ url_for('auth.login', origin=request.path) }}">Click here to log in</a>, or <a href="{{ url_for('auth.register', origin=request.path) }}">click here to create an account</a>.
+</div>
+{% endif %}
+<form method="POST">
+  {{ form.hidden_tag() }}
+  <ol>
+    <fieldset>
+      <legend>Billing Address:</legend>
+      {{ form.billing_address.hidden_tag() }}
+      <li>{{ form_field(form.billing_address.first_name)|safe }}</li>
+      <li>{{ form_field(form.billing_address.last_name)|safe }}</li>
+      <li>{{ form_field(form.billing_address.business_name)|safe }}</li>
+      <li>{{ form_field(form.billing_address.address_line1)|safe }}</li>
+      <li>{{ form_field(form.billing_address.address_line2)|safe }}</li>
+      <li>{{ form_field(form.billing_address.postalcode)|safe }}</li>
+      <li>{{ form_field(form.billing_address.city)|safe }}</li>
+      <li>{{ form_field(form.billing_address.country, onchange='showStateSelect(this)')|safe }}</li>
+      <li><span id="billing_address-usa-state-select">{{ form_field(form.billing_address.usa_state)|safe }}</span><span id="billing_address-can-state-select">{{form_field(form.billing_address.can_state)|safe}}</span><span id="billing_address-aus-state-select">{{form_field(form.billing_address.aus_state)|safe }}</span><span id="billing_address-other-state">{{ form_field(form.billing_address.unlisted_state)|safe }}</span></li>
+      <li>{{ form_field(form.billing_address.email)|safe }}</li>
+      <li>{{ form_field(form.billing_address.phone)|safe }}</li>
+      <li>{{ form_field(form.billing_address.fax)|safe }}</li>
+    </fieldset>
+    <fieldset>
+      <legend>Shipping Address:</legend>
+      {{ form.shipping_address.hidden_tag() }}
+      <li><input type="checkbox" name="shipping-same-as-billing" onclick="setShippingAddress(this.form)"> <label for="shipping-same-as-billing">Same as billing address</label></li>
+      <li>{{ form_field(form.shipping_address.first_name)|safe }}</li>
+      <li>{{ form_field(form.shipping_address.last_name)|safe }}</li>
+      <li>{{ form_field(form.shipping_address.business_name)|safe }}</li>
+      <li>{{ form_field(form.shipping_address.address_line1)|safe }}</li>
+      <li>{{ form_field(form.shipping_address.address_line2)|safe }}</li>
+      <li>{{ form_field(form.shipping_address.postalcode)|safe }}</li>
+      <li>{{ form_field(form.shipping_address.city)|safe }}</li>
+      <li>{{ form_field(form.shipping_address.country, onchange='showStateSelect(this)')|safe }}</li>
+      <li><span id="shipping_address-usa-state-select">{{ form_field(form.shipping_address.usa_state)|safe }}</span><span id="shipping_address-can-state-select">{{form_field(form.shipping_address.can_state)|safe}}</span><span id="shipping_address-aus-state-select">{{form_field(form.shipping_address.aus_state)|safe }}</span><span id="shipping_address-other-state">{{ form_field(form.shipping_address.unlisted_state)|safe }}</span></li>
+      <li>{{ form_field(form.shipping_address.email)|safe }}</li>
+      <li>{{ form_field(form.shipping_address.phone)|safe }}</li>
+      <li>{{ form_field(form.shipping_address.fax)|safe }}</li>
+    </fieldset>
+    {{ form_field(form.submit)|safe }}
+  </ol>
+</form>
+{% endblock %}
+{% block scripts %}
+<script>
+  function showStateSelect(country){
+    var prefix = country.id.split("-")[0];
+    if(country.value == 'USA') {
+      document.getElementById(prefix.concat('-other-state')).style.display = "none";
+      document.getElementById(prefix.concat('-can-state-select')).style.display = "none";
+      document.getElementById(prefix.concat('-aus-state-select')).style.display = "none";
+      document.getElementById(prefix.concat('-usa-state-select')).style.display = "inline";
+    } else if (country.value == 'CAN') {
+      document.getElementById(prefix.concat('-other-state')).style.display = "none";
+      document.getElementById(prefix.concat('-usa-state-select')).style.display = "none";
+      document.getElementById(prefix.concat('-aus-state-select')).style.display = "none";
+      document.getElementById(prefix.concat('-can-state-select')).style.display = "inline";
+    } else if (country.value == 'AUS') {
+      document.getElementById(prefix.concat('-other-state')).style.display = "none";
+      document.getElementById(prefix.concat('-usa-state-select')).style.display = "none";
+      document.getElementById(prefix.concat('-can-state-select')).style.display = "none";
+      document.getElementById(prefix.concat('-aus-state-select')).style.display = "inline";
+    } else {
+      document.getElementById(prefix.concat('-usa-state-select')).style.display = "none";
+      document.getElementById(prefix.concat('-can-state-select')).style.display = "none";
+      document.getElementById(prefix.concat('-aus-state-select')).style.display = "none";
+      document.getElementById(prefix.concat('-other-state')).style.display = "inline";
+    }
+  };
+
+  function setShippingAddress(f){
+    if(f['shipping-same-as-billing'].checked == true) {
+      f['shipping_address-first_name'].value = f['billing_address-first_name'].value;
+      f['shipping_address-last_name'].value = f['billing_address-last_name'].value;
+      f['shipping_address-business_name'].value = f['billing_address-business_name'].value;
+      f['shipping_address-address_line1'].value = f['billing_address-address_line1'].value;
+      f['shipping_address-address_line2'].value = f['billing_address-address_line2'].value;
+      f['shipping_address-city'].value = f['billing_address-city'].value;
+      f['shipping_address-country'].value = f['billing_address-country'].value;
+      f['shipping_address-usa_state'].value = f['billing_address-usa_state'].value;
+      f['shipping_address-can_state'].value = f['billing_address-can_state'].value;
+      f['shipping_address-aus_state'].value = f['billing_address-aus_state'].value;
+      f['shipping_address-email'].value = f['billing_address-email'].value;
+      f['shipping_address-phone'].value = f['billing_address-phone'].value;
+      f['shipping_address-fax'].value = f['billing_address-fax'].value;
+    } else {
+      f['shipping_address-first_name'].value = '';
+      f['shipping_address-last_name'].value = '';
+      f['shipping_address-business_name'].value = '';
+      f['shipping_address-address_line1'].value = '';
+      f['shipping_address-address_line2'].value = '';
+      f['shipping_address-city'].value = '';
+      f['shipping_address-country'].value = 'USA';
+      f['shipping_address-usa_state'].value = '0';
+      f['shipping_address-can_state'].value = '0';
+      f['shipping_address-aus_state'].value = '0';
+      f['shipping_address-email'].value = '';
+      f['shipping_address-phone'].value = '';
+      f['shipping_address-fax'].value = '';
+    }
+
+    showStateSelect(document.getElementById('billing_address-country'));
+    showStateSelect(document.getElementById('shipping_address-country'));
+  };
+  showStateSelect(document.getElementById('billing_address-country'));
+  showStateSelect(document.getElementById('shipping_address-country'));
+</script>
+{% endblock %}

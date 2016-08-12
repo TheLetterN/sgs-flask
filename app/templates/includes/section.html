@@ -29,7 +29,7 @@ Copyright Swallowtail Garden Seeds, Inc
   </div>
   {% endif %}
 		{% if sec.description %}
-		<p class="{{ class_prefix }}_p">{{ sec.description|safe }}</p>
+		{{ sec.description|safe }}
 		{% endif %}
 	</div>
 	<div class="{{ class_prefix }}_cultivars">

@@ -87,7 +87,7 @@ def create():
                     else:
                         alpha3 = c[0]
                         thresh = c[1]
-                    country = Country.get_with_alpha3(alpha3)
+                    country = Country.get(alpha3=alpha3)
                     if thresh:
                         country.at_own_risk_threshold = thresh
                     country.safe_to_ship = True
@@ -108,7 +108,7 @@ def create():
             with open('noship_countries.json', 'r', encoding='utf-8') as ifile:
                 a3s = json.loads(ifile.read())
                 for alpha3 in a3s:
-                    country = Country.get_with_alpha3(alpha3)
+                    country = Country.get(alpha3=alpha3)
                     country.noship = True
                 db.session.flush()
         except FileNotFoundError:

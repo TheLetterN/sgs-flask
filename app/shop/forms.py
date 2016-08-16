@@ -22,7 +22,6 @@ from wtforms import (
     FormField,
     HiddenField,
     SelectField,
-    StringField,
     SubmitField,
     ValidationError
 )
@@ -63,12 +62,12 @@ class ShoppingCartForm(Form):
 
 
 class AddressForm(Form):
-    first_name = StringField(
+    first_name = StrippedStringField(
         'First Name',
         validators=[DataRequired(message='Please enter a first name.'),
                     Length(max=254)]
     )
-    last_name = StringField(
+    last_name = StrippedStringField(
         'Last Name',
         validators=[DataRequired(message='Please enter a last name.'),
                     Length(max=254)]
@@ -77,7 +76,7 @@ class AddressForm(Form):
         'Business Name',
         validators=[Length(max=254)]
     )
-    address_line1 = StringField(
+    address_line1 = StrippedStringField(
         'Address Line 1',
         validators=[DataRequired(message='Please enter an address.'),
                     Length(max=254)]
@@ -86,15 +85,14 @@ class AddressForm(Form):
         'Address Line 2',
         validators=[Length(max=254)]
     )
-    city = StringField(
+    city = StrippedStringField(
         'City',
         validators=[DataRequired(message='Please enter a city.'),
                     Length(max=254)]
     )
-    postalcode = StringField(
+    postalcode = StrippedStringField(
         'Zip/Postal Code',
-        validators=[DataRequired(message='Please enter a zip/postal code.'),
-                    Length(max=16)]
+        validators=[Length(max=16)]
     )
     country = SelectField('Country')
     usa_state = SelectField('State')
@@ -104,17 +102,17 @@ class AddressForm(Form):
         'State/Provice/Region',
         validators=[Length(max=254)]
     )
-    email = StringField(
+    email = StrippedStringField(
         'Email Address',
         validators=[Email(message='Please enter a valid email address'),
                     Length(max=254)]
     )
-    phone = StringField(
+    phone = StrippedStringField(
         'Phone Number',
         validators=[DataRequired(message='Please enter a phone number.'),
-                    Length(max=25)]
+                    Length(max=32)]
     )
-    fax = StrippedStringField('Fax Number', validators=[Length(max=25)])
+    fax = StrippedStringField('Fax Number', validators=[Length(max=32)])
 
     def set_selects(self, filter_noship=False):
         countries = Country.query.all()

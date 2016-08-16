@@ -108,6 +108,7 @@ def undo_remove_product(product_number, quantity):
 
 @shop.route('/checkout', methods=['GET', 'POST'])
 def checkout():
+    cur_trans = Transaction.load(current_user)
     form = CheckoutForm()
     form.billing_address.set_selects()
     form.shipping_address.set_selects(filter_noship=True)
@@ -122,7 +123,9 @@ def checkout():
     if not form.submit.data:
         form.billing_address.country.data = 'USA'
         form.shipping_address.country.data = 'USA'
-    return render_template('shop/checkout.html', form=form)
+    return render_template('shop/checkout.html',
+                           cur_trans=cur_trans,
+                           form=form)
 
 
 # TODO: Remove these views when no longer needed!

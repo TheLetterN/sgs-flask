@@ -29,7 +29,7 @@ from wtforms.fields.html5 import IntegerField
 from wtforms.validators import DataRequired, Length, NumberRange
 
 from app.form_helpers import Email, StrippedStringField
-from app.shop.models import Country
+from app.shop.models import Address, Country
 
 
 class AddProductForm(Form):
@@ -114,6 +114,106 @@ class AddressForm(Form):
     )
     fax = StrippedStringField('Fax Number', validators=[Length(max=32)])
 
+    def __eq__(self, other):
+        ret = (
+            self.first_name.data == other.first_name.data and
+            self.last_name.data == other.last_name.data and
+            self.business_name.data == other.business_name.data and
+            self.address_line1.data == other.address_line1.data and
+            self.address_line2.data == other.address_line2.data and
+            self.city.data == other.city.data and
+            self.postalcode.data == other.postalcode.data and
+            self.country.data == other.country.data and
+            self.email.data == other.email.data and
+            self.phone.data == other.phone.data and
+            self.fax.data == other.fax.data
+        )
+        if ret:  # We know self.country.data == other.country.data
+            if self.country.data == 'USA':
+                ret &= self.usa_state.data == other.usa_state.data
+            elif self.country.data == 'CAN':
+                ret &= self.can_state.data == other.can_state.data
+            elif self.country.data == 'AUS':
+                ret &= self.aus_state.data == other.aus_state.data
+            else:
+                ret &= self.unlisted_state.data == other.unlisted_state.data
+        return ret
+
+    def equals_address(self, address):
+        """Check if the data in form is equal to given address."""
+        if not address:
+            return False
+        ret = (
+            self.first_name.data == address.first_name and
+            self.last_name.data == address.last_name and
+            self.business_name.data == address.business_name and
+            self.address_line1.data == address.address_line1 and
+            self.address_line2.data == address.address_line2 and
+            self.city.data == address.city and
+            self.postalcode.data == address.postalcode and
+            self.country.data == address.country.alpha3 and
+            self.email.data == address.email and
+            self.phone.data == address.phone and
+            self.fax.data == address.fax
+        )
+        if ret:
+            if self.country.data == 'USA':
+                ret &= self.usa_state.data == address.state.abbreviation
+            elif self.country.data == 'CAN':
+                ret &= self.can_state.data == address.state.abbreviation
+            elif self.country.data == 'AUS':
+                ret &= self.aus_state.data == address.state.abbreviation
+            else:
+                ret &= self.unlisted_state.data == address.unlisted_state
+        return ret
+
+    def populate_address(self, address):
+        """Populate an `Address` with data from `AddressForm`.
+
+        Args:
+            address: the `Address` instance to populate.
+        """
+        address.first_name = self.first_name.data
+        address.last_name = self.last_name.data
+        address.business_name = self.business_name.data
+        address.address_line1 = self.address_line1.data
+        address.address_line2 = self.address_line2.data
+        address.city = self.city.data
+        address.postalcode = self.postalcode.data
+        address.country = Country.get(alpha3=self.country.data)
+        address.email = self.email.data
+        address.phone = self.phone.data
+        address.fax = self.fax.data
+        if self.country.data == 'USA':
+            address.state = address.country.get_state(
+                abbreviation=self.usa_state.data
+            )
+        elif self.country.data == 'CAN':
+            address.state = address.country.get_state(
+                abbreviation=self.can_state.data
+            )
+        elif self.country.data == 'AUS':
+            address.state = address.country.get_state(
+                abbreviation=self.aus_state.data
+            )
+        else:
+            address.unlisted_state = self.unlisted_state.data
+
+    def get_or_create_address(self):
+        """Get an `Address` with corresponding data or create it."""
+        addresses = Address.query.filter(
+            Address.address_line1 == self.address_line1.data
+        ).filter(
+            Address.city == self.city.data
+        ).all()
+        for address in addresses:
+            if self.equals_address(address):
+                return address
+        else:
+            address = Address()
+            self.populate_address(address)
+            return address
+
     def set_selects(self, filter_noship=False):
         countries = Country.query.all()
         if filter_noship:
@@ -154,6 +254,32 @@ class AddressForm(Form):
         """Raise ValidationError if country is AUS and no state selected."""
         if self.country.data == 'AUS' and field.data == '0':
             raise ValidationError('Please select a state.')
+
+    def populate_from_address(self, addr):
+        """Populate an `AddressForm` with data from an`Address` instance.
+
+        Args:
+            addr: The `Address` instance to populate form with.
+        """
+        self.first_name.data = addr.first_name
+        self.last_name.data = addr.last_name
+        self.business_name.data = addr.business_name
+        self.address_line1.data = addr.address_line1
+        self.address_line2.data = addr.address_line2
+        self.city.data = addr.city
+        self.postalcode.data = addr.postalcode
+        self.country.data = addr.country.alpha3
+        if addr.country.alpha3 == 'USA':
+            self.usa_state.data = addr.state.abbreviation
+        elif addr.country.alpha3 == 'CAN':
+            self.can_state.data = addr.state.abbreviation
+        elif addr.country.alpha3 == 'AUS':
+            self.aus_state.data = addr.state.abbreviation
+        else:
+            self.unlisted_state.data = addr.unlisted_state
+        self.email.data = addr.email
+        self.phone.data = addr.phone
+        self.fax.data = addr.fax
 
 
 class CheckoutForm(Form):

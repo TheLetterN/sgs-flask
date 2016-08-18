@@ -22,6 +22,11 @@
 {% endblock %}
 {% block main %}
 {% if cur_trans and cur_trans.lines %}
+{% if current_user.is_anonymous %}
+<div class="not-logged-in-warning">
+  You are not logged in. Logging in will ensure items in your cart are saved. <a href="{{ url_for('auth.login', origin=request.path) }}">Click here to log in</a>, or if you do not have an account yet, <a href="{{ url_for('auth.register', origin=request.path) }}">click here to create one</a>.
+</div>
+{% endif %}
 <form method="POST">
   {{ form.hidden_tag() }}
  <ul>

@@ -23,12 +23,18 @@
 <title>Checkout</title>
 {% endblock %}
 {% block main %}
-<h1>Checkout</h1>
-{% if current_user.is_anonymous %}
-<div class="not-logged-in-warning">
-  Warning: You are not logged in! While you may still complete your order without logging in or creating an account, using an account will make it easier for you to keep track of your order and place future orders. <a href="{{ url_for('auth.login', origin=request.path) }}">Click here to log in</a>, or <a href="{{ url_for('auth.register', origin=request.path) }}">click here to create an account</a>.
+{% if current_user.is_anonymous and not guest %}
+<div class="checkout-login">
+  <a href="{{ url_for('auth.login', origin=request.path) }}">Log in.</a>
 </div>
-{% endif %}
+<div class="checkout-register">
+  <a href="{{ url_for('auth.register', origin=request.path) }}">Create account.</a>
+</div>
+<div class="checkout-guest">
+  <a href="{{ url_for('shop.checkout', guest=True) }}">Continue as guest.</a>
+</div>
+{% else %}
+<h1>Checkout</h1>
 <form method="POST">
   {{ form.hidden_tag() }}
   <ol>
@@ -68,6 +74,7 @@
     {{ form_field(form.submit)|safe }}
   </ol>
 </form>
+{% endif %}
 {{ transaction_summary(cur_trans) }}
 {% endblock %}
 {% block scripts %}

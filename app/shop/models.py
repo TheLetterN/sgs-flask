@@ -91,6 +91,10 @@ class State(db.Model):
                     country=country
                 )
 
+    @classmethod
+    def get(cls, country, abbreviation=None, name=None):
+        return country.get_state(abbreviation=abbreviation, name=name)
+
     @property
     def html(self):
         """str: HTML5 abbreviation tag for a state."""
@@ -230,6 +234,26 @@ class Country(db.Model):
         """str: The official (long form) name of `Country`."""
         return self._country.official_name
 
+    def get_state(self, abbreviation=None, name=None):
+        """Get a `State` belonging to `Country`.
+
+        Args:
+            abbreviation: The abbreviation for the `State`.
+            name: The full name of the `State`.
+        """
+        if abbreviation:
+            return next(
+                (d for d in self.states if d.abbreviation == abbreviation),
+                None
+            )
+        elif name:
+            return next(
+                (d for d in self.states if d.name == name),
+                None
+            )
+        else:
+            raise ValueError('Need an abbreviation or name to get a state!')
+
     def get_state_by_abbr(self, abbr):
         """Return l1 admin division with given abbr, or `None`."""
         abbr = abbr.upper()
@@ -280,7 +304,9 @@ class Address(db.Model, TimestampMixin):
     customer = db.relationship(
         'Customer',
         foreign_keys=customer_id,
-        back_populates='addresses')
+        back_populates='addresses',
+        post_update=True
+    )
     first_name = db.Column(db.Text)
     last_name = db.Column(db.Text)
     business_name = db.Column(db.Text)
@@ -326,7 +352,10 @@ class Customer(db.Model, TimestampMixin):
         'Address',
         foreign_keys=billing_address_id
     )
-    shipping_address_id = db.Column(db.Integer, db.ForeignKey('addresses.id'))
+    shipping_address_id = db.Column(
+        db.Integer,
+        db.ForeignKey('addresses.id')
+    )
     shipping_address = db.relationship(
         'Address',
         foreign_keys=shipping_address_id
@@ -334,7 +363,8 @@ class Customer(db.Model, TimestampMixin):
     addresses = db.relationship(
         'Address',
         foreign_keys='Address.customer_id',
-        back_populates='customer'
+        back_populates='customer',
+        post_update=True
     )
     transactions = db.relationship(
         'Transaction',
@@ -377,6 +407,21 @@ class Customer(db.Model, TimestampMixin):
         if not self.billing_address:
             self.billing_address = Address()
         self.billing_address.first_name = value
+
+    def save_id_to_session(self):
+        if self.id:
+            session['customer id'] = self.id
+        else:
+            raise RuntimeError(
+                'Attempted to save nonexistent customer id to session!'
+            )
+
+    @classmethod
+    def get_from_session(cls):
+        try:
+            return cls.query.get(session['customer id'])
+        except KeyError:
+            return None
 
 
 @event.listens_for(Customer.billing_address, 'set')

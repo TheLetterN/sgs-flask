@@ -26,7 +26,8 @@ from app.shop.forms import (
     CheckoutForm,
     ShoppingCartForm
 )
-from app.shop.models import Transaction
+from app import db
+from app.shop.models import Customer, Transaction
 
 
 @shop.route('/add-to-cart/<product_number>', methods=('GET', 'POST'))
@@ -108,23 +109,55 @@ def undo_remove_product(product_number, quantity):
 
 @shop.route('/checkout', methods=['GET', 'POST'])
 def checkout():
+    guest = request.args.get('guest') or False
     cur_trans = Transaction.load(current_user)
     form = CheckoutForm()
     form.billing_address.set_selects()
     form.shipping_address.set_selects(filter_noship=True)
+    customer = cur_trans.customer
+    if not customer:
+        customer = Customer.get_from_session()
     if form.validate_on_submit():
+        if not customer:
+            customer = Customer()
+        if customer.current_transaction is not cur_trans:
+            customer.current_transaction = cur_trans
+        if not current_user.is_anonymous and not current_user.customer_data:
+            current_user.customer_data = customer
+        if not form.billing_address.equals_address(customer.billing_address):
+            customer.billing_address = (
+                form.billing_address.get_or_create_address()
+            )
+        if not form.shipping_address.equals_address(customer.shipping_address):
+            if form.billing_address.form == form.shipping_address.form:
+                customer.shipping_address = customer.billing_address
+            else:
+                customer.shipping_address = (
+                    form.shipping_address.get_or_create_address()
+                )
+        db.session.add_all([cur_trans, customer])
+        db.session.commit()
+        if current_user.is_anonymous:
+            customer.save_id_to_session()
         flash('All fields valid.')
         return redirect(url_for('shop.checkout'))
-    if not current_user.is_anonymous:
-        form.billing_address.email.data = current_user.email
     # Since as of writing this wtforms has a bug in which `None` is coerced
     # to a string in select fields, I'm using whether or not `form.submit` has
     # been pressed to know if the default countries need to be set or not. -N
     if not form.submit.data:
-        form.billing_address.country.data = 'USA'
-        form.shipping_address.country.data = 'USA'
+        try:
+            form.billing_address.populate_from_address(
+                customer.billing_address
+            )
+            form.shipping_address.populate_from_address(
+                customer.shipping_address
+            )
+        except AttributeError:
+            form.billing_address.country.data = 'USA'
+            form.shipping_address.country.data = 'USA'
     return render_template('shop/checkout.html',
                            cur_trans=cur_trans,
+                           guest=guest,
                            form=form)
 
 
@@ -137,4 +170,4 @@ def clear_cart():
 
 @shop.route('/show_session')
 def show_session():
-    return str(session['cart'])
+    return str(session)

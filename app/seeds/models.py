@@ -1630,6 +1630,8 @@ class Cultivar(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
         visible: Whether or not this cultivar should be shown on automatically
             generated pages. Cultivars with `visible` set to `False` can still
             be shown on custom pages.
+        taxable: Whether or not seeds of a cultivar are taxable in the state
+            of California.
         thumbnail: An optional thumbnail `Image` for a `Cultivar`.
         images: `Image` instances which are not thumbnails, but which are
             associated with a `Cultivar`.
@@ -1681,6 +1683,7 @@ class Cultivar(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
     in_stock = db.Column(db.Boolean)
     visible = db.Column(db.Boolean)
     organic = db.Column(db.Boolean)
+    taxable = db.Column(db.Boolean)
     thumbnail_id = db.Column(db.Integer, db.ForeignKey('images.id'))
     thumbnail = db.relationship(
         'Image',

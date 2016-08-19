@@ -639,6 +639,11 @@ def add_cultivar(cn_id=None):
             messages.append('Set as organic.')
         else:
             cv.organic = False
+        if form.taxable.data:
+            cv.taxable = True
+            messages.append('Set as taxable in California.')
+        else:
+            cv.taxable = False
         if form.thumbnail.data:
             add_thumbnail(form.thumbnail, cv, messages)
         if form.description.data:
@@ -1281,6 +1286,14 @@ def edit_cultivar(cv_id=None):
             else:
                 cv.organic = False
                 messages.append('No longer set as organic.')
+        if form.taxable.data != cv.taxable:
+            edited = True
+            if form.taxable.data:
+                cv.taxable = True
+                messages.append('Set as organic.')
+            else:
+                cv.taxable = False
+                messages.append('No longer set as taxable.')
         if form.subtitle.data != cv.subtitle:
             if form.subtitle.data:
                 edited = True

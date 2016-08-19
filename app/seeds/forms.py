@@ -462,6 +462,8 @@ class AddCultivarForm(Form):
             replenished when stock gets low.
         visible: Checkbox for whether or not added `Cultivar` should be visible
             on auto-generated pages.
+        taxable: Checkbox for whether or not added `Cultivar` is taxable
+            in the state of California.
 
         cn: The `CommonName` added `Cultivar` belongs to.
     """
@@ -512,6 +514,7 @@ class AddCultivarForm(Form):
     active = BooleanField('Actively replenished', default='checked')
     visible = BooleanField('Visible on auto-generated pages',
                            default='checked')
+    taxable = BooleanField('Taxable in California', default='checked')
     submit = SubmitField('Save Cultivar')
 
     def __init__(self, cn, *args, **kwargs):
@@ -1077,6 +1080,7 @@ class EditCultivarForm(Form):
     botanical_name_id = SelectField('Botanical Name', coerce=int)
     section_id = SelectField('Section', coerce=int)
     organic = BooleanField('Organic')
+    taxable = BooleanField('Taxable in California')
     name = StrippedStringField(
         'Cultivar Name',
         validators=[DataRequired(), Length(max=254)]

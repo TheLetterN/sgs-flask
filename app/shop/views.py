@@ -135,6 +135,8 @@ def checkout():
                 customer.shipping_address = (
                     form.shipping_address.get_or_create_address()
                 )
+        if form.shipping_notes.data:
+            cur_trans.shipping_notes = form.shipping_notes.data
         db.session.add_all([cur_trans, customer])
         db.session.commit()
         if current_user.is_anonymous:
@@ -155,6 +157,8 @@ def checkout():
         except AttributeError:
             form.billing_address.country.data = 'USA'
             form.shipping_address.country.data = 'USA'
+        if cur_trans.shipping_notes:
+            form.shipping_notes.data = cur_trans.shipping_notes
     return render_template('shop/checkout.html',
                            cur_trans=cur_trans,
                            guest=guest,

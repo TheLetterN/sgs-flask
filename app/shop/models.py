@@ -304,8 +304,7 @@ class Address(db.Model, TimestampMixin):
     customer = db.relationship(
         'Customer',
         foreign_keys=customer_id,
-        back_populates='addresses',
-        post_update=True
+        back_populates='addresses'
     )
     first_name = db.Column(db.Text)
     last_name = db.Column(db.Text)
@@ -350,7 +349,8 @@ class Customer(db.Model, TimestampMixin):
     billing_address_id = db.Column(db.Integer, db.ForeignKey('addresses.id'))
     billing_address = db.relationship(
         'Address',
-        foreign_keys=billing_address_id
+        foreign_keys=billing_address_id,
+        post_update=True
     )
     shipping_address_id = db.Column(
         db.Integer,
@@ -358,13 +358,13 @@ class Customer(db.Model, TimestampMixin):
     )
     shipping_address = db.relationship(
         'Address',
-        foreign_keys=shipping_address_id
+        foreign_keys=shipping_address_id,
+        post_update=True
     )
     addresses = db.relationship(
         'Address',
         foreign_keys='Address.customer_id',
-        back_populates='customer',
-        post_update=True
+        back_populates='customer'
     )
     transactions = db.relationship(
         'Transaction',
@@ -646,6 +646,7 @@ class Transaction(db.Model, TimestampMixin):
     customer - The `Customer` the `Transaction` belongs to.
     billed_to - The `Address` the `Transaction` was billed to.
     shipped_to - The `Address` the `Transaction` was shipped to.
+    shipping_notes - Any notes on shipping left by customer.
     """
     __tablename__ = 'transactions'
     id = db.Column(db.Integer, primary_key=True)
@@ -674,6 +675,7 @@ class Transaction(db.Model, TimestampMixin):
     billed_to = db.relationship('Address', foreign_keys=billed_to_id)
     shipped_to_id = db.Column(db.Integer, db.ForeignKey('addresses.id'))
     shipped_to = db.relationship('Address', foreign_keys=shipped_to_id)
+    shipping_notes = db.Column(db.Text)
 
     def __init__(self, lines=None, status=None, customer=None):
         self.lines = lines if lines else []
@@ -874,4 +876,8 @@ class Transaction(db.Model, TimestampMixin):
                 db.session.commit()
             return user.current_transaction
         else:
-            return cls.from_session()
+            c = Customer.get_from_session()
+            if c and c.current_transaction:
+                return c.current_transaction
+            else:
+                return cls.from_session()

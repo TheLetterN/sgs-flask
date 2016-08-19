@@ -37,42 +37,45 @@
 <h1>Checkout</h1>
 <form method="POST">
   {{ form.hidden_tag() }}
-  <ol>
     <fieldset>
       <legend>Billing Address:</legend>
       {{ form.billing_address.hidden_tag() }}
-      <li>{{ form_field(form.billing_address.first_name)|safe }}</li>
-      <li>{{ form_field(form.billing_address.last_name)|safe }}</li>
-      <li>{{ form_field(form.billing_address.business_name)|safe }}</li>
-      <li>{{ form_field(form.billing_address.address_line1)|safe }}</li>
-      <li>{{ form_field(form.billing_address.address_line2)|safe }}</li>
-      <li>{{ form_field(form.billing_address.postalcode)|safe }}</li>
-      <li>{{ form_field(form.billing_address.city)|safe }}</li>
-      <li>{{ form_field(form.billing_address.country, onchange='showStateSelect(this)')|safe }}</li>
-      <li><span id="billing_address-usa-state-select">{{ form_field(form.billing_address.usa_state)|safe }}</span><span id="billing_address-can-state-select">{{form_field(form.billing_address.can_state)|safe}}</span><span id="billing_address-aus-state-select">{{form_field(form.billing_address.aus_state)|safe }}</span><span id="billing_address-other-state">{{ form_field(form.billing_address.unlisted_state)|safe }}</span></li>
-      <li>{{ form_field(form.billing_address.email)|safe }}</li>
-      <li>{{ form_field(form.billing_address.phone)|safe }}</li>
-      <li>{{ form_field(form.billing_address.fax)|safe }}</li>
+      <ol>
+        <li>{{ form_field(form.billing_address.first_name)|safe }}</li>
+        <li>{{ form_field(form.billing_address.last_name)|safe }}</li>
+        <li>{{ form_field(form.billing_address.business_name)|safe }}</li>
+        <li>{{ form_field(form.billing_address.address_line1)|safe }}</li>
+        <li>{{ form_field(form.billing_address.address_line2)|safe }}</li>
+        <li>{{ form_field(form.billing_address.postalcode)|safe }}</li>
+        <li>{{ form_field(form.billing_address.city)|safe }}</li>
+        <li>{{ form_field(form.billing_address.country, onchange='showStateSelect(this)')|safe }}</li>
+        <li><span id="billing_address-usa-state-select">{{ form_field(form.billing_address.usa_state)|safe }}</span><span id="billing_address-can-state-select">{{form_field(form.billing_address.can_state)|safe}}</span><span id="billing_address-aus-state-select">{{form_field(form.billing_address.aus_state)|safe }}</span><span id="billing_address-other-state">{{ form_field(form.billing_address.unlisted_state)|safe }}</span></li>
+        <li>{{ form_field(form.billing_address.email)|safe }}</li>
+        <li>{{ form_field(form.billing_address.phone)|safe }}</li>
+        <li>{{ form_field(form.billing_address.fax)|safe }}</li>
+    </ol>
     </fieldset>
     <fieldset>
       <legend>Shipping Address:</legend>
       {{ form.shipping_address.hidden_tag() }}
-      <li><input type="checkbox" name="shipping-same-as-billing" onclick="setShippingAddress(this.form)"> <label for="shipping-same-as-billing">Same as billing address</label></li>
-      <li>{{ form_field(form.shipping_address.first_name)|safe }}</li>
-      <li>{{ form_field(form.shipping_address.last_name)|safe }}</li>
-      <li>{{ form_field(form.shipping_address.business_name)|safe }}</li>
-      <li>{{ form_field(form.shipping_address.address_line1)|safe }}</li>
-      <li>{{ form_field(form.shipping_address.address_line2)|safe }}</li>
-      <li>{{ form_field(form.shipping_address.postalcode)|safe }}</li>
-      <li>{{ form_field(form.shipping_address.city)|safe }}</li>
-      <li>{{ form_field(form.shipping_address.country, onchange='showStateSelect(this)')|safe }}</li>
-      <li><span id="shipping_address-usa-state-select">{{ form_field(form.shipping_address.usa_state)|safe }}</span><span id="shipping_address-can-state-select">{{form_field(form.shipping_address.can_state)|safe}}</span><span id="shipping_address-aus-state-select">{{form_field(form.shipping_address.aus_state)|safe }}</span><span id="shipping_address-other-state">{{ form_field(form.shipping_address.unlisted_state)|safe }}</span></li>
-      <li>{{ form_field(form.shipping_address.email)|safe }}</li>
-      <li>{{ form_field(form.shipping_address.phone)|safe }}</li>
-      <li>{{ form_field(form.shipping_address.fax)|safe }}</li>
+      <ol>
+        <li><input type="checkbox" id= "shipping-same-as-billing" name="shipping-same-as-billing" onclick="setShippingAddress(this.form)"> <label for="shipping-same-as-billing">Same as billing address</label></li>
+        <li>{{ form_field(form.shipping_address.first_name)|safe }}</li>
+        <li>{{ form_field(form.shipping_address.last_name)|safe }}</li>
+        <li>{{ form_field(form.shipping_address.business_name)|safe }}</li>
+        <li>{{ form_field(form.shipping_address.address_line1)|safe }}</li>
+        <li>{{ form_field(form.shipping_address.address_line2)|safe }}</li>
+        <li>{{ form_field(form.shipping_address.postalcode)|safe }}</li>
+        <li>{{ form_field(form.shipping_address.city)|safe }}</li>
+        <li>{{ form_field(form.shipping_address.country, onchange='showStateSelect(this)')|safe }}</li>
+        <li><span id="shipping_address-usa-state-select">{{ form_field(form.shipping_address.usa_state)|safe }}</span><span id="shipping_address-can-state-select">{{form_field(form.shipping_address.can_state)|safe}}</span><span id="shipping_address-aus-state-select">{{form_field(form.shipping_address.aus_state)|safe }}</span><span id="shipping_address-other-state">{{ form_field(form.shipping_address.unlisted_state)|safe }}</span></li>
+        <li>{{ form_field(form.shipping_address.email)|safe }}</li>
+        <li>{{ form_field(form.shipping_address.phone)|safe }}</li>
+        <li>{{ form_field(form.shipping_address.fax)|safe }}</li>
+        <li>{{ form_field(form.shipping_notes)|safe }}</li>
+      </ol>
     </fieldset>
     {{ form_field(form.submit)|safe }}
-  </ol>
 </form>
 {% endif %}
 {{ transaction_summary(cur_trans) }}

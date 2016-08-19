@@ -28,7 +28,7 @@ from wtforms import (
 from wtforms.fields.html5 import IntegerField
 from wtforms.validators import DataRequired, Length, NumberRange
 
-from app.form_helpers import Email, StrippedStringField
+from app.form_helpers import Email, StrippedStringField, StrippedTextAreaField
 from app.shop.models import Address, Country
 
 
@@ -228,17 +228,17 @@ class AddressForm(Form):
         self.usa_state.choices = (
             [(s.abbreviation, s.name) for s in usa.states]
         )
-        self.usa_state.choices.insert(0, ('0', ''))
+        self.usa_state.choices.insert(0, ('0', 'Select a state:'))
         can = Country.get(alpha3='CAN')
         self.can_state.choices = (
             [(s.abbreviation, s.name) for s in can.states]
         )
-        self.can_state.choices.insert(0, ('0', ''))
+        self.can_state.choices.insert(0, ('0', 'Select a province:'))
         aus = Country.get(alpha3='AUS')
         self.aus_state.choices = (
             [(s.abbreviation, s.name) for s in aus.states]
         )
-        self.aus_state.choices.insert(0, ('0', ''))
+        self.aus_state.choices.insert(0, ('0', 'Select a state:'))
 
     def validate_usa_state(self, field):
         """Raise ValidationError if country is USA and no state selected."""
@@ -285,4 +285,8 @@ class AddressForm(Form):
 class CheckoutForm(Form):
     billing_address = FormField(AddressForm)
     shipping_address = FormField(AddressForm)
+    shipping_notes = StrippedTextAreaField(
+        'Shipping Comments',
+        validators=[Length(max=5120)]
+    )
     submit = SubmitField('Review Order')

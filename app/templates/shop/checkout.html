@@ -18,7 +18,7 @@
 
 {% extends "includes/base.html" %}
 {% from "includes/form_field.html" import form_field %}
-{% from "includes/transaction_summary.html" import transaction_summary %}
+{% from "includes/order_summary.html" import order_summary %}
 {% block head %}
 <title>Checkout</title>
 {% endblock %}
@@ -78,7 +78,7 @@
     {{ form_field(form.submit)|safe }}
 </form>
 {% endif %}
-{{ transaction_summary(cur_trans) }}
+{{ order_summary(current_order) }}
 {% endblock %}
 {% block scripts %}
 <script>

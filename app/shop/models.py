@@ -24,11 +24,11 @@ from sqlalchemy import event
 from sqlalchemy.exc import InvalidRequestError
 
 from app import db
-from app.db_helpers import TimestampMixin, USDollar
+from app.db_helpers import FourPlaceDecimal, TimestampMixin, USDollar
 
 
-class TransactionExistsError(Exception):
-    """Error for attempting to replace an existing `Transaction`."""
+class OrderExistsError(Exception):
+    """Error for attempting to replace an existing `Order`."""
     def __init__(self, message):
         self.message = message
 
@@ -58,6 +58,7 @@ class State(db.Model):
     abbreviation = db.Column(db.Text)
     country_id = db.Column(db.Integer, db.ForeignKey('countries.id'))
     country = db.relationship('Country', back_populates='states')
+    tax = db.Column(FourPlaceDecimal())
     # noship_cultivars - backref from seeds.models.Cultivar
 
     def __repr__(self):
@@ -341,8 +342,8 @@ class Customer(db.Model, TimestampMixin):
     billing_address - The billing address of the customer.
     shipping_address - The last-used shipping address of the customer.
     addresses - All addresses belonging to the customer.
-    transactions - `Transaction` instances belonging to customer.
-    current_transaction - `Transaction` in progress.
+    orders - `Order` instances belonging to customer.
+    current_order - `Order` in progress.
     """
     __tablename__ = 'customers'
     id = db.Column(db.Integer, primary_key=True)
@@ -366,18 +367,18 @@ class Customer(db.Model, TimestampMixin):
         foreign_keys='Address.customer_id',
         back_populates='customer'
     )
-    transactions = db.relationship(
-        'Transaction',
-        foreign_keys='Transaction.customer_id',
+    orders = db.relationship(
+        'Order',
+        foreign_keys='Order.customer_id',
         back_populates='customer'
     )
-    transaction_id = db.Column(
+    current_order_id = db.Column(
         db.Integer,
-        db.ForeignKey('transactions.id')
+        db.ForeignKey('orders.id')
     )
-    current_transaction = db.relationship(
-        'Transaction',
-        foreign_keys=transaction_id,
+    current_order = db.relationship(
+        'Order',
+        foreign_keys=order_id,
         post_update=True
     )
     user = db.relationship(
@@ -441,22 +442,22 @@ def add_shipping_address_event(target, value, oldvalue, initiator):
         target.addresses.append(value)
 
 
-@event.listens_for(Customer.current_transaction, 'set')
-def add_current_transaction_event(target, value, oldvalue, initiator):
-    """Don't allow replacing `Customer.current_transaction` with another.
+@event.listens_for(Customer.current_order, 'set')
+def add_current_order_event(target, value, oldvalue, initiator):
+    """Don't allow replacing `Customer.current_order` with another.
 
     Raises:
-        TransactionExistsError - If a current transaction already exists.
+        OrderExistsError - If a current order already exists.
     """
     if value is not None:
-        if target.current_transaction is not None:
-            raise TransactionExistsError(
-                '{0} already has a transaction in progress!'
+        if target.current_order is not None:
+            raise OrderExistsError(
+                '{0} already has an order in progress!'
                 .format(target)
             )
         else:
-            if value not in target.transactions:
-                target.transactions.append(value)
+            if value not in target.orders:
+                target.orders.append(value)
 
 
 class Product(db.Model, TimestampMixin):
@@ -467,7 +468,7 @@ class Product(db.Model, TimestampMixin):
     number - The ID number (usually a SKU) of the `Product`.
     label - The string used to label the `Product`.
     price - The price for one unit of the `Product`.
-    transaction_lines - `TransactionLine` instances with a given `Product`.
+    order_lines - `LineItem` instances with a given `Product`.
     packet - A `Packet` corresponding to a `Product`.
     """
     __tablename__ = 'products'
@@ -476,8 +477,8 @@ class Product(db.Model, TimestampMixin):
     number = db.Column(db.Text, unique=True)
     label = db.Column(db.Text)
     price = db.Column(USDollar)
-    transaction_lines = db.relationship(
-        'TransactionLine',
+    order_lines = db.relationship(
+        'LineItem',
         back_populates='product'
     )
     # packet: backref from app.seeds.models.Packet
@@ -526,27 +527,27 @@ class Product(db.Model, TimestampMixin):
             return False
 
 
-class TransactionLine(db.Model, TimestampMixin):
-    """Table for lines in a transaction.
+class LineItem(db.Model, TimestampMixin):
+    """Table for lines in an order.
 
     Note:
         The columns of `Product` are reproduced here because we want to keep
-        the `Product` data as it was when the `TransactionLine` was last
+        the `Product` data as it was when the `LineItem` was last
         modified, regardless of changes to the `Product`.
 
     Attributes:
-        transaction - The `Transaction` a `TransactionLine` belongs to.
-        product - The `Product` the `TransactionLine` is for.
+        order - The `Order` a `LineItem` belongs to.
+        product - The `Product` the `LineItem` is for.
         quantity - The number of units of `Product`.
         product_number - The ID number of `Product`.
         label - The label of `Product`.
         price - The price of `Product`.
     """
     id = db.Column(db.Integer, primary_key=True)
-    transaction_id = db.Column(db.Integer, db.ForeignKey('transactions.id'))
-    transaction = db.relationship('Transaction', back_populates='lines')
+    order_id = db.Column(db.Integer, db.ForeignKey('orders.id'))
+    order = db.relationship('Order', back_populates='lines')
     product_id = db.Column(db.Integer, db.ForeignKey('products.id'))
-    product = db.relationship('Product', back_populates='transaction_lines')
+    product = db.relationship('Product', back_populates='order_lines')
     quantity = db.Column(db.Integer)
     # Copied Product columns.
     product_number = db.Column(db.Text)
@@ -556,7 +557,7 @@ class TransactionLine(db.Model, TimestampMixin):
     def __init__(self, product=None, product_number=None, quantity=None):
         if product and product_number and product.number != product_number:
             raise ValueError(
-                'Attempted to initialize a Transaction with a product and a '
+                'Attempted to initialize a Order with a product and a '
                 'product_number that corresponds to a different product!'
             )
         if not product and product_number is not None:
@@ -584,7 +585,7 @@ class TransactionLine(db.Model, TimestampMixin):
 
     @classmethod
     def from_session_data(cls, data):
-        """Create a `TransactionLine` from `session_data`.
+        """Create a `LineItem` from `session_data`.
 
         Args:
             data: A `dict` as generated by `session_data`.
@@ -596,10 +597,10 @@ class TransactionLine(db.Model, TimestampMixin):
 
     @property
     def session_data(self):
-        """dict: `TransactionLine` data to store in the user session.
+        """dict: `LineItem` data to store in the user session.
 
         This is just the product number and quantity, as that's the only
-        information that is necessary to create a `TransactionLine`.
+        information that is necessary to create a `LineItem`.
         """
         return {
             'product number': self.product_number,
@@ -608,14 +609,14 @@ class TransactionLine(db.Model, TimestampMixin):
 
     @property
     def text(self):
-        """str: A string representing a `TransactionLine`'s data."""
+        """str: A string representing a `LineItem`'s data."""
         return '{0} of product #{1}: "{2}"'.format(self.quantity,
                                                    self.product_number,
                                                    self.label)
 
     @property
     def total(self):
-        """Decimal: The total cost of products in a `TransactionLine`."""
+        """Decimal: The total cost of products in a `LineItem`."""
         try:
             return self.quantity * self.price
         except TypeError:
@@ -630,32 +631,32 @@ class TransactionLine(db.Model, TimestampMixin):
             return False
 
 
-@event.listens_for(TransactionLine.product, 'set')
-def transaction_line_set_product_event(target, value, oldvalue, initiator):
-    """Copy relevant values when setting `TransactionLine.product`."""
+@event.listens_for(LineItem.product, 'set')
+def order_line_set_product_event(target, value, oldvalue, initiator):
+    """Copy relevant values when setting `LineItem.product`."""
     if value is not None:
         target.product_number = value.number
         target.label = value.label
         target.price = value.price
 
 
-class Transaction(db.Model, TimestampMixin):
-    """Table for transactions.
+class Order(db.Model, TimestampMixin):
+    """Table for orders.
 
     Attributes:
 
-    lines - `TransactionLine` instances belonging to this `Transaction`.
-    status - The state the `Transaction` is in.
-    customer - The `Customer` the `Transaction` belongs to.
-    billed_to - The `Address` the `Transaction` was billed to.
-    shipped_to - The `Address` the `Transaction` was shipped to.
+    lines - `LineItem` instances belonging to this `Order`.
+    status - The state the `Order` is in.
+    customer - The `Customer` the `Order` belongs to.
+    billed_to - The `Address` the `Order` was billed to.
+    shipped_to - The `Address` the `Order` was shipped to.
     shipping_notes - Any notes on shipping left by customer.
     """
-    __tablename__ = 'transactions'
+    __tablename__ = 'orders'
     id = db.Column(db.Integer, primary_key=True)
     lines = db.relationship(
-        'TransactionLine',
-        back_populates='transaction',
+        'LineItem',
+        back_populates='order',
         cascade='all, delete-orphan'
     )
     status = db.Column(db.Enum(
@@ -671,7 +672,7 @@ class Transaction(db.Model, TimestampMixin):
     customer = db.relationship(
         'Customer',
         foreign_keys=customer_id,
-        back_populates='transactions'
+        back_populates='orders'
     )
     billed_to_id = db.Column(db.Integer, db.ForeignKey('addresses.id'))
     billed_to = db.relationship('Address', foreign_keys=billed_to_id)
@@ -691,14 +692,14 @@ class Transaction(db.Model, TimestampMixin):
 
     @classmethod
     def from_session_data(cls, data):
-        """Create a transaction from session_data.
+        """Create an order from session_data.
 
         Args:
             data: A `dict` containing the data needed to create a new
-            `Transaction`.
+            `Order`.
 
         Returns:
-            Transaction - The created `Transaction`.
+            Order - The created `Order`.
         """
         lines = []
         for d in data:
@@ -706,7 +707,7 @@ class Transaction(db.Model, TimestampMixin):
                 Product.number == d['product number']
             ).one_or_none()
             if product:
-                lines.append(TransactionLine(
+                lines.append(LineItem(
                     product=product,
                     quantity=d['quantity']
                 ))
@@ -714,25 +715,25 @@ class Transaction(db.Model, TimestampMixin):
 
     @classmethod
     def from_session(cls, session_key='cart'):
-        """Create a transaction from session data.
+        """Create an order from session data.
 
         Args:
             session_key: A string to use as key in session to load session
                 data from. Defaults to 'cart'.
 
         Returns:
-            Transaction - The `Transaction` created from data in the session.
+            Order - The `Order` created from data in the session.
         """
         try:
-            transaction = cls.from_session_data(session[session_key])
-            if len(transaction.lines) != len(session[session_key]):
+            order = cls.from_session_data(session[session_key])
+            if len(order.lines) != len(session[session_key]):
                 # TODO: Inform customer that items in their cart are gone.
-                pnos = [l.product_number for l in transaction.lines]
+                pnos = [l.product_number for l in order.lines]
                 for sline in list(session[session_key]):
                     if sline['product number'] not in pnos:
                         session[session_key].remove(sline)
-            if transaction.lines:
-                return transaction
+            if order.lines:
+                return order
             else:
                 return None
         except KeyError:
@@ -745,20 +746,20 @@ class Transaction(db.Model, TimestampMixin):
     @property
     def text(self):
         lines_text = '\n'.join(l.text for l in self.lines)
-        return 'Transaction #{0} with lines:\n{1}'.format(self.id, lines_text)
+        return 'Order #{0} with lines:\n{1}'.format(self.id, lines_text)
 
     @property
     def total(self):
         return sum(l.total for l in self.lines)
 
     def add_line(self, product_number, quantity):
-        """Add a `TransactionLine`.
+        """Add a `LineItem`.
 
         Note:
-            This creates a new `TransactionLine` instance regardless of whether
-            or not the product is already in the `Transaction` so that the
+            This creates a new `LineItem` instance regardless of whether
+            or not the product is already in the `Order` so that the
             returned line reflects the quantity of product added rather than
-            the total. If the product already exists in the `Transaction`, the
+            the total. If the product already exists in the `Order`, the
             created line will not be added to it, instead `quantity` will be
             added to the existing line.
 
@@ -767,10 +768,10 @@ class Transaction(db.Model, TimestampMixin):
             quantity: The quantity of product to add.
 
         Returns:
-            The created `TransactionLine` instance so its data can be used
+            The created `LineItem` instance so its data can be used
             by the caller of `add_line`.
         """
-        line = TransactionLine(
+        line = LineItem(
             product_number=product_number,
             quantity=quantity
         )
@@ -782,13 +783,13 @@ class Transaction(db.Model, TimestampMixin):
         return line
 
     def get_line(self, product_number):
-        """Get `TransactionLine` with given `product_number`.
+        """Get `LineItem` with given `product_number`.
 
         Args:
             product_number: The product number of the line to return.
 
         Returns:
-            A `TransactionLine` with given `product_number`, or None if not
+            A `LineItem` with given `product_number`, or None if not
             present in `lines`.
         """
         return next(
@@ -797,7 +798,7 @@ class Transaction(db.Model, TimestampMixin):
         )
 
     def change_line_quantity(self, product_number, quantity):
-        """Set quantity of a given `TransactionLine`.
+        """Set quantity of a given `LineItem`.
 
         Args:
             product_number: The number of the `Product` on the line.
@@ -806,10 +807,10 @@ class Transaction(db.Model, TimestampMixin):
         self.get_line(product_number).quantity = quantity
 
     def delete_line(self, line):
-        """Remove a `TransactionLine` and ensure it's deleted.
+        """Remove a `LineItem` and ensure it's deleted.
 
         Args:
-            line: The `TransactionLine` to delete.
+            line: The `LineItem` to delete.
         """
         self.lines.remove(line)
         try:
@@ -821,7 +822,7 @@ class Transaction(db.Model, TimestampMixin):
             self.save()
         else:
             self.save_to_session()
-            # There is no reason to keep the transaction around if it's empty.
+            # There is no reason to keep the order around if it's empty.
             try:
                 db.session.delete(self)
                 db.session.commit()
@@ -829,18 +830,18 @@ class Transaction(db.Model, TimestampMixin):
                 pass
 
     def save_to_session(self, session_key='cart'):
-        """Save a `Transaction` to the session.
+        """Save a `Order` to the session.
 
         Args:
             session_key: A string to use as key in session under which to
-                store transaction data.
+                store order data.
         """
         session[session_key] = self.session_data
 
     def save(self, session_key='cart'):
-        """Save a `Transaction` to the session and (if applicable) database.
+        """Save a `Order` to the session and (if applicable) database.
 
-        The `Transaction` will be saved to the database if it belongs to a
+        The `Order` will be saved to the database if it belongs to a
         logged in user, otherwise it will only be saved to the session.
 
         Args:
@@ -853,7 +854,7 @@ class Transaction(db.Model, TimestampMixin):
             if (self.customer and
                     self.customer is not current_user.customer_data):
                 raise RuntimeError(
-                    'Cannot attach a new customer to a transaction that '
+                    'Cannot attach a new customer to an order that '
                     'already has a customer associated with it!'
                 )
             self.customer = current_user.customer_data
@@ -863,23 +864,23 @@ class Transaction(db.Model, TimestampMixin):
 
     @classmethod
     def load(cls, user=None):
-        """Load a transaction.
+        """Load an order.
 
         Args:
-            user: An optional `User` whom the transaction belongs to.
+            user: An optional `User` whom the order belongs to.
 
         Returns:
-            The `User`'s current_transaction if present, otherwise the
-            transaction from the session if present, otherwise `None`.
+            The `User`'s current_order if present, otherwise the
+            order from the session if present, otherwise `None`.
         """
         if not user.is_anonymous:
-            if not user.current_transaction:
-                user.current_transaction = cls.from_session()
+            if not user.current_order:
+                user.current_order = cls.from_session()
                 db.session.commit()
-            return user.current_transaction
+            return user.current_order
         else:
             c = Customer.get_from_session()
-            if c and c.current_transaction:
-                return c.current_transaction
+            if c and c.current_order:
+                return c.current_order
             else:
                 return cls.from_session()

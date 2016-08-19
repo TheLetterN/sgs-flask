@@ -21,7 +21,7 @@
 <title>Cart</title>
 {% endblock %}
 {% block main %}
-{% if cur_trans and cur_trans.lines %}
+{% if current_order and current_order.lines %}
 {% if current_user.is_anonymous %}
 <div class="not-logged-in-warning">
   You are not logged in. Logging in will ensure items in your cart are saved. <a href="{{ url_for('auth.login', origin=request.path) }}">Click here to log in</a>, or if you do not have an account yet, <a href="{{ url_for('auth.register', origin=request.path) }}">click here to create one</a>.
@@ -32,11 +32,11 @@
  <ul>
     {% for line in form.lines %}
     {{ line.hidden_tag() }}
-    {% set tline = cur_trans.get_line(line.product_number.data) %}
+    {% set tline = current_order.get_line(line.product_number.data) %}
     <li{% if not tline.in_stock %} class="out-of-stock-cart-line"{% endif %}>{% if tline.in_stock %}{{ line.quantity() }}{{ line.product_number }}{% else %}<strike>{{ tline.quantity }}{% endif %} {% if tline.product and tline.product.cultivar %}<a href="{{ tline.product.cultivar.url }}">{{ tline.label|safe }}</a>{% else %}{{ tline.label|safe }}{% endif %} for ${{ tline.price }} each. Total: ${{ tline.total }}{% if not tline.in_stock %}</strike> (Out of Stock!){% endif %} [<a title="Remove Item" class="remove-item" href="{{ url_for('shop.remove_product', product_number = tline.product_number, origin=request.path) }}">X</a>]</li>
   {% endfor %}
 </ul>
-<div class='cart-total'>Total: ${{ cur_trans.total }}</div>
+<div class='cart-total'>Total: ${{ current_order.total }}</div>
     {{ form.save() }}{{ form.checkout() }}
 </form>
 {% else %}

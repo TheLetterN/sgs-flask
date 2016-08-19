@@ -89,37 +89,27 @@ Copyright Swallowtail Garden Seeds, Inc
   {% endif %}
   {# Cultivar admin below #}
 	{% if current_user.can(Permission.MANAGE_SEEDS) %}
+  {% macro flipper(attr) %}
+  {{ cultivar.fullname }} is <em class="status-{% if cultivar[attr] %}true{% else %}false{% endif %}">{% if not cultivar[attr] %}not {% endif %}{{ attr }}</em><a class="toggle-{% if cultivar[attr] %}false{% else %}true{% endif %}" href="{{ url_for('seeds.flip_cultivar_bool', cv_id=cultivar.id, attr=attr, origin=request.path + '#' + cultivar.slug) }}">Set as {% if cultivar[attr] %}not {% endif %}{{ attr }}</a>
+  {% endmacro %}
 	<div class="cultivar-admin">
 		<h3>ADMIN - Options for {{ cultivar.fullname }}:</h3>
 		<ul class="cultivar-status">
-			<li class="cultivar-featured">
-				{% if cultivar.featured %}
-				{{ cultivar.fullname }} is <em class="status-true">featured</em>. <a class="toggle-false" href="{{ url_for('seeds.flip_featured', cv_id=cultivar.id, origin=request.path + '#' + cultivar.slug) }}">Set as not featured</a>
-				{% else %}
-				{{ cultivar.fullname }} is <em class="status-false">not featured</em>. <a class="toggle-true" href="{{ url_for('seeds.flip_featured', cv_id=cultivar.id, origin=request.path + '#' + cultivar.slug) }}">Set as featured</a>
-				{% endif %}
-			</li>
-			<li class="cultivar-in-stock">
-				{% if cultivar.in_stock %}
-				{{ cultivar.fullname }} is <em class="status-true">in stock</em>. <a class="toggle-false" href="{{ url_for('seeds.flip_in_stock', cv_id=cultivar.id, origin=request.path + '#' + cultivar.slug) }}">Set as out of stock</a>
-				{% else %}
-				{{ cultivar.fullname }} is <em class="status-false">out of stock</em>. <a class="toggle-true" href="{{ url_for('seeds.flip_in_stock', cv_id=cultivar.id, origin=request.path + '#' + cultivar.slug) }}">Set as in stock</a>
-				{% endif %}
+			<li>
+        {{ flipper('featured') }}
 			</li>
 			<li>
-				{% if cultivar.active %}
-				{{ cultivar.fullname }} is <em class="status-true">active</em>. <a class="toggle-false" href="{{ url_for('seeds.flip_active', cv_id=cultivar.id, origin=request.path + '#' + cultivar.slug) }}">Set as inactive</a>
-				{% else %}
-				{{ cultivar.fullname }} is <em class="status-false">inactive</em>. <a class="toggle-true" href="{{ url_for('seeds.flip_active', cv_id=cultivar.id, origin=request.path + '#' + cultivar.slug) }}">Set as active</a>
-				{% endif %}
+        {{ flipper('in stock') }}
 			</li>
 			<li>
-				{% if cultivar.visible %}
-				{{ cultivar.fullname }} is <em class="status-true">visible</em> on auto-generated pages. <a class="toggle-false" href="{{ url_for('seeds.flip_visible', cv_id=cultivar.id, origin=request.path + '#' + cultivar.slug) }}">Set as invisible</a>
-				{% else %}
-				{{ cultivar.fullname }} is <em class="status-false">not visible</em> on auto-generated pages. <a class="toggle-true" href="{{ url_for('seeds.flip_visible', cv_id=cultivar.id, origin=request.path + '#' + cultivar.slug) }}">Set as visible</a>
-				{% endif %}
+        {{ flipper('active') }}
 			</li>
+			<li>
+        {{ flipper('visible') }}
+			</li>
+      <li>
+        {{ flipper('taxable') }}
+      </li>
 		</ul>
     <a title="move up/backward" href="{{ url_for('seeds.move_cultivar', cv_id=cultivar.id, delta=-1, origin=request.path + '#{}'.format(cultivar.slug)) }}">&#9650;</a> | <a href="{{ url_for('seeds.edit_cultivar', cv_id=cultivar.id) }}">Edit {{ cultivar.fullname }}</a> | <a href="{{ url_for('seeds.remove_cultivar', cv_id=cultivar.id) }}">Remove {{ cultivar.fullname }}</a> | <a title="move down/forward" href="{{ url_for('seeds.move_cultivar', cv_id=cultivar.id, delta=1, origin=request.path + '#{}'.format(cultivar.slug)) }}">&#9660;</a>
 		<div class="packet-admin">

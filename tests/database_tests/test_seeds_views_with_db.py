@@ -573,64 +573,32 @@ class TestEditPacketRouteWithDB:
         assert pkt.quantity is qty
 
 
-class TestFlipDroppedRouteWithDB:
-    """Test seeds.flip_active."""
-    def test_flip_active_no_cultivar(self, app, db):
+class TestFlipCultivarBoolWithDB:
+    """Test seeds.flip_cultivar_bool."""
+    def test_flip_cultivar_bool(self, app, db):
         """Return 404 if no cultivar exists with given id."""
         with app.test_client() as tc:
-            rv = tc.get(url_for('seeds.flip_active', cv_id=42))
+            rv = tc.get(
+                url_for('seeds.flip_cultivar_bool', cv_id=42, attr='active')
+            )
         assert rv.status_code == 404
 
-    def test_flip_active_success(self, app, db):
-        """Set dropped to the opposite of its current value and redirect."""
-        cultivar = foxy_cultivar()
-        cultivar.active = False
-        db.session.add(cultivar)
+    def test_flip_cultivar_bool_success(self, app, db):
+        """Flip status of attr."""
+        cv = foxy_cultivar()
+        cv.active = False
+        db.session.add(cv)
         db.session.commit()
         with app.test_client() as tc:
-            rv = tc.get(url_for('seeds.flip_active', cv_id=cultivar.id))
-        assert rv.location == url_for('seeds.manage', _external=True)
-        assert cultivar.active
+            rv = tc.get(
+                url_for('seeds.flip_cultivar_bool', cv_id=cv.id, attr='active')
+            )
+        assert cv.active
         with app.test_client() as tc:
-            rv = tc.get(url_for('seeds.flip_active',
-                                cv_id=cultivar.id,
-                                origin=url_for('seeds.home')))
-        assert rv.location == url_for('seeds.home', _external=True)
-        assert not cultivar.active
-
-
-class TestFlipInStockRouteWithDB:
-    """Test seeds.flip_in_stock."""
-    def test_flip_in_stock_no_cultivar(self, app, db):
-        """Return 404 if no cultivar exists with given id."""
-        with app.test_client() as tc:
-            rv = tc.get(url_for('seeds.flip_in_stock', cv_id=42))
-        assert rv.status_code == 404
-
-    def test_flip_in_stock_success(self, app, db):
-        """Reverse value of in_stock and redirect on successful submit."""
-        cultivar = foxy_cultivar()
-        cultivar.in_stock = False
-        db.session.add(cultivar)
-        db.session.commit()
-        with app.test_client() as tc:
-            rv = tc.get(url_for('seeds.flip_in_stock', cv_id=cultivar.id))
-        assert rv.location == url_for('seeds.manage', _external=True)
-        assert cultivar.in_stock
-        with app.test_client() as tc:
-            rv = tc.get(url_for('seeds.flip_in_stock',
-                                cv_id=cultivar.id,
-                                origin=url_for('seeds.home')))
-        assert rv.location == url_for('seeds.home', _external=True)
-        assert not cultivar.in_stock
-        with app.test_client() as tc:
-            rv = tc.get(url_for('seeds.flip_in_stock', cv_id=cultivar.id),
-                        follow_redirects=True)
-        assert '"Foxy Foxglove" is now in stock' in str(rv.data)
-        with app.test_client() as tc:
-            rv = tc.get(url_for('seeds.flip_in_stock', cv_id=cultivar.id),
-                        follow_redirects=True)
-        assert '"Foxy Foxglove" is now out of stock.' in str(rv.data)
+            rv = tc.get(
+                url_for('seeds.flip_cultivar_bool', cv_id=cv.id, attr='active')
+            )
+        assert not cv.active
 
 
 class TestHomeRouteWithDB:

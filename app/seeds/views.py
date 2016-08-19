@@ -2156,77 +2156,18 @@ def cultivar(idx_slug=None, cn_slug=None, cv_slug=None):
     abort(404)
 
 
-@seeds.route('flip_featured/<int:cv_id>')
-@login_required
+@seeds.route('flip_cultivar_bool/<int:cv_id>/<attr>')
 @permission_required(Permission.MANAGE_SEEDS)
-def flip_featured(cv_id):
-    """Toggle 'featured' status of given `Cultivar`."""
+def flip_cultivar_bool(cv_id, attr):
+    """Toggle a boolean attribute of a `Cultivar`."""
     cv = Cultivar.query.get(cv_id)
     if cv is None:
         abort(404)
-    if cv.featured:
-        cv.featured = False
-        flash('"{0}" will no longer be featured on its common name\'s page.'
-              .format(cv.fullname))
+    cv[attr] = not cv[attr]
+    if cv[attr]:
+        flash('"{}" is now set as {}.'.format(cv.fullname, attr))
     else:
-        cv.featured = True
-        flash('"{0}" will now be featured on its common name\'s page.'
-              .format(cv.fullname))
-    db.session.commit()
-    return redirect(request.args.get('origin') or url_for('seeds.manage'))
-
-
-@seeds.route('/flip_in_stock/<int:cv_id>')
-@login_required
-@permission_required(Permission.MANAGE_SEEDS)
-def flip_in_stock(cv_id):
-    cv = Cultivar.query.get(cv_id)
-    if cv is None:
-        abort(404)
-    if cv.in_stock:
-        flash('"{0}" is now out of stock.'.format(cv.fullname))
-        cv.in_stock = False
-    else:
-        flash('"{0}" is now in stock.'.format(cv.fullname))
-        cv.in_stock = True
-    db.session.commit()
-    return redirect(request.args.get('origin') or url_for('seeds.manage'))
-
-
-@seeds.route('/flip_active/<int:cv_id>')
-@permission_required(Permission.MANAGE_SEEDS)
-def flip_active(cv_id):
-    """Reverse active status of given cultivar."""
-    cv = Cultivar.query.get(cv_id)
-    if cv is None:
-        abort(404)
-    if cv.active:
-        flash('"{0}" has been set as inactive.'.
-              format(cv.fullname))
-        cv.active = False
-    else:
-        flash('"{0}" has been set as active.'.
-              format(cv.fullname))
-        cv.active = True
-    db.session.commit()
-    return redirect(request.args.get('origin') or url_for('seeds.manage'))
-
-
-@seeds.route('/flip_visible/<int:cv_id>')
-@permission_required(Permission.MANAGE_SEEDS)
-def flip_visible(cv_id):
-    """Reverse visible status of given cultivar."""
-    cv = Cultivar.query.get(cv_id)
-    if cv is None:
-        abort(404)
-    if cv.visible:
-        cv.visible = False
-        flash('"{0}" is no longer visible on auto-generated pages.'
-              .format(cv.fullname))
-    else:
-        cv.visible = True
-        flash('"{0}" is now visible on auto-generated pages.'
-              .format(cv.fullname))
+        flash('"{}" is no longer set as {}.'.format(cv.fullname, attr))
     db.session.commit()
     return redirect(request.args.get('origin') or url_for('seeds.manage'))
 

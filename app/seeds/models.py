@@ -1788,6 +1788,18 @@ class Cultivar(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
         return '<{0} "{1}">'.format(self.__class__.__name__,
                                     self.fullname)
 
+    def __getitem__(self, key):
+        try:
+            return getattr(self, key.replace(' ', '_'))
+        except AttributeError:
+            raise KeyError(key)
+
+    def __setitem__(self, key, value):
+        try:
+            setattr(self, key.replace(' ', '_'), value)
+        except AttributeError:
+            raise KeyError(key)
+
     @property
     def url(self):
         # TODO: Integrate option for if cultivar pages are active.

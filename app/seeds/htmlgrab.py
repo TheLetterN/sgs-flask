@@ -1069,6 +1069,10 @@ class PageAdder(object):
                                         common_name=cn.name,
                                         index=cn.index.name,
                                         stream=stream)
+            if 'vegetable' in cn.index.name.lower():
+                cv.taxable = False
+            else:
+                cv.taxable = True
             if cv_st:
                 cv.subtitle = cv_st
                 print('Subtitle for {0} set to: {1}'

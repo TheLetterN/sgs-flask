@@ -590,12 +590,12 @@ class TestFlipCultivarBoolWithDB:
         db.session.add(cv)
         db.session.commit()
         with app.test_client() as tc:
-            rv = tc.get(
+            tc.get(
                 url_for('seeds.flip_cultivar_bool', cv_id=cv.id, attr='active')
             )
         assert cv.active
         with app.test_client() as tc:
-            rv = tc.get(
+            tc.get(
                 url_for('seeds.flip_cultivar_bool', cv_id=cv.id, attr='active')
             )
         assert not cv.active

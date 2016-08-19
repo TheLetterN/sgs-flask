@@ -68,7 +68,11 @@ def cart():
         return redirect(url_for('shop.cart'))
     else:
         print(form.errors)
-    return render_template('shop/cart.html', current_order=current_order, form=form)
+    return render_template(
+        'shop/cart.html',
+        current_order=current_order,
+        form=form
+    )
 
 
 @shop.route('/remove_product/<product_number>')
@@ -100,7 +104,10 @@ def undo_remove_product(product_number, quantity):
         current_order = Order()
         if not current_user.is_anonymous:
             current_user.current_order = current_order
-    line = current_order.add_line(product_number=product_number, quantity=quantity)
+    line = current_order.add_line(
+        product_number=product_number,
+        quantity=quantity
+    )
     current_order.save()
 
     flash('Returned {} of "{}" to cart.'.format(line.quantity, line.label))

@@ -369,13 +369,16 @@ class Customer(db.Model, TimestampMixin):
     transactions = db.relationship(
         'Transaction',
         foreign_keys='Transaction.customer_id',
-        post_update=True,
         back_populates='customer'
     )
-    transaction_id = db.Column(db.Integer, db.ForeignKey('transactions.id'))
+    transaction_id = db.Column(
+        db.Integer,
+        db.ForeignKey('transactions.id')
+    )
     current_transaction = db.relationship(
         'Transaction',
-        foreign_keys=transaction_id
+        foreign_keys=transaction_id,
+        post_update=True
     )
     user = db.relationship(
         'User',
@@ -668,7 +671,6 @@ class Transaction(db.Model, TimestampMixin):
     customer = db.relationship(
         'Customer',
         foreign_keys=customer_id,
-        post_update=True,
         back_populates='transactions'
     )
     billed_to_id = db.Column(db.Integer, db.ForeignKey('addresses.id'))

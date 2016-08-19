@@ -176,6 +176,34 @@ class OrderingListMixin(object):
         )
 
 
+class FourPlaceDecimal(db.TypeDecorator):
+    """Type for Decimal number with a max of four places.
+
+    Attributes:
+
+    impl: The column type the actual data is stored as.
+    """
+    impl = db.Integer
+
+    def process_bind_param(self, value, dialect):
+        """Convert a `Decimal` with up to 4 places into an int.
+
+        value is converted to `str`, then `Decimal` to ensure it will take
+        anything that can be converted to `Decimal`, but will not attempt to
+        convert a `float` to a `Decimal`.
+        """
+        if value is None:
+            return None
+        else:
+            return int(Decimal(str(value)) * 10000)
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        else:
+            return Decimal(value) / 10000
+
+
 class USDollar(db.TypeDecorator):
     """Type for US dollar amounts to be stored in the database.
 

@@ -27,7 +27,7 @@ from app.shop.forms import (
     ShoppingCartForm
 )
 from app import db
-from app.shop.models import Customer, Transaction
+from app.shop.models import Customer, Order
 
 
 @shop.route('/add-to-cart/<product_number>', methods=('GET', 'POST'))
@@ -36,13 +36,13 @@ def add_to_cart(product_number):
     if form.validate_on_submit:
         qty = form.quantity.data
         pn = product_number
-        cur_trans = Transaction.load(current_user)
-        if not cur_trans:
-            cur_trans = Transaction()
+        current_order = Order.load(current_user)
+        if not current_order:
+            current_order = Order()
             if not current_user.is_anonymous:
-                current_user.current_transaction = cur_trans
-        line = cur_trans.add_line(product_number=pn, quantity=qty)
-        cur_trans.save()
+                current_user.current_order = current_order
+        line = current_order.add_line(product_number=pn, quantity=qty)
+        current_order.save()
         flash(
             'Added {0} of "{1}" to shopping cart.'.format(line.quantity,
                                                           line.label)
@@ -52,31 +52,31 @@ def add_to_cart(product_number):
 
 @shop.route('/cart', methods=['GET', 'POST'])
 def cart():
-    cur_trans = Transaction.load(current_user)
-    form = ShoppingCartForm(obj=cur_trans)
+    current_order = Order.load(current_user)
+    form = ShoppingCartForm(obj=current_order)
     if form.validate_on_submit():
         if form.save.data:
             for line in form.lines.entries:
-                cur_trans.change_line_quantity(
+                current_order.change_line_quantity(
                     line.product_number.data,
                     line.quantity.data
                 )
-            cur_trans.save()
+            current_order.save()
             flash('Changes saved.')
         elif form.checkout.data:
             return redirect(url_for('shop.checkout'))
         return redirect(url_for('shop.cart'))
     else:
         print(form.errors)
-    return render_template('shop/cart.html', cur_trans=cur_trans, form=form)
+    return render_template('shop/cart.html', current_order=current_order, form=form)
 
 
 @shop.route('/remove_product/<product_number>')
 def remove_product(product_number):
     """Remove the line containing given product from the cart."""
-    cur_trans = Transaction.load(current_user)
+    current_order = Order.load(current_user)
     origin = request.args.get('origin')
-    line = cur_trans.get_line(product_number)
+    line = current_order.get_line(product_number)
     flash(
         'Removed {} of "{}" from cart. [<a href="{}">UNDO</a>]'.format(
             line.quantity,
@@ -89,19 +89,19 @@ def remove_product(product_number):
             )
         )
     )
-    cur_trans.delete_line(line)
+    current_order.delete_line(line)
     return redirect(origin or url_for('shop.cart'))
 
 
 @shop.route('/undo_remove_product/<product_number>/<int:quantity>')
 def undo_remove_product(product_number, quantity):
-    cur_trans = Transaction.load(current_user)
-    if not cur_trans:
-        cur_trans = Transaction()
+    current_order = Order.load(current_user)
+    if not current_order:
+        current_order = Order()
         if not current_user.is_anonymous:
-            current_user.current_transaction = cur_trans
-    line = cur_trans.add_line(product_number=product_number, quantity=quantity)
-    cur_trans.save()
+            current_user.current_order = current_order
+    line = current_order.add_line(product_number=product_number, quantity=quantity)
+    current_order.save()
 
     flash('Returned {} of "{}" to cart.'.format(line.quantity, line.label))
     return redirect(request.args.get('origin') or url_for('shop.cart'))
@@ -110,18 +110,18 @@ def undo_remove_product(product_number, quantity):
 @shop.route('/checkout', methods=['GET', 'POST'])
 def checkout():
     guest = request.args.get('guest') or False
-    cur_trans = Transaction.load(current_user)
+    current_order = Order.load(current_user)
     form = CheckoutForm()
     form.billing_address.set_selects()
     form.shipping_address.set_selects(filter_noship=True)
-    customer = cur_trans.customer
+    customer = current_order.customer
     if not customer:
         customer = Customer.get_from_session()
     if form.validate_on_submit():
         if not customer:
             customer = Customer()
-        if customer.current_transaction is not cur_trans:
-            customer.current_transaction = cur_trans
+        if customer.current_order is not current_order:
+            customer.current_order = current_order
         if not current_user.is_anonymous and not current_user.customer_data:
             current_user.customer_data = customer
         if not form.billing_address.equals_address(customer.billing_address):
@@ -136,8 +136,8 @@ def checkout():
                     form.shipping_address.get_or_create_address()
                 )
         if form.shipping_notes.data:
-            cur_trans.shipping_notes = form.shipping_notes.data
-        db.session.add_all([cur_trans, customer])
+            current_order.shipping_notes = form.shipping_notes.data
+        db.session.add_all([current_order, customer])
         db.session.commit()
         if current_user.is_anonymous:
             customer.save_id_to_session()
@@ -157,10 +157,10 @@ def checkout():
         except AttributeError:
             form.billing_address.country.data = 'USA'
             form.shipping_address.country.data = 'USA'
-        if cur_trans.shipping_notes:
-            form.shipping_notes.data = cur_trans.shipping_notes
+        if current_order.shipping_notes:
+            form.shipping_notes.data = current_order.shipping_notes
     return render_template('shop/checkout.html',
-                           cur_trans=cur_trans,
+                           current_order=current_order,
                            guest=guest,
                            form=form)
 

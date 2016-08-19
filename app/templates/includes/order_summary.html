@@ -15,16 +15,16 @@
  
    Copyright Swallowtail Garden Seeds, Inc 
 #}
-{% macro transaction_summary(transaction) %}
-<div class="transaction-summary">
+{% macro order_summary(order) %}
+<div class="order-summary">
   <div><a href="{{ url_for('shop.cart') }}">Click here</a> to edit your order.</div>
-  <table class="transaction-summary-lines">
+  <table class="order-summary-lines">
     <tr>
       <th>Product</th>
       <th>Quantity</th>
       <th>Price</th>
     </tr>
-    {% for line in transaction.lines %}
+    {% for line in order.lines %}
     <tr>
       <td class="line-label">{{ line.label }}</td>
       <td class="line-quantity">{{ line.quantity }}</td>
@@ -34,7 +34,7 @@
     <tr>
       <td></td>
       <td></td>
-      <td>Estimated Total: {{ transaction.total }}</td>
+      <td>Estimated Total: {{ order.total }}</td>
     </tr>
   </table>
 </div>

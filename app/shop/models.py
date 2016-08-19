@@ -378,7 +378,7 @@ class Customer(db.Model, TimestampMixin):
     )
     current_order = db.relationship(
         'Order',
-        foreign_keys=order_id,
+        foreign_keys=current_order_id,
         post_update=True
     )
     user = db.relationship(

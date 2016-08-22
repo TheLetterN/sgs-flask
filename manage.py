@@ -22,7 +22,9 @@
 import json
 import os
 import sys
+from decimal import Decimal
 from getpass import getpass
+from pathlib import Path
 
 import pytest
 from flask_migrate import Migrate, MigrateCommand
@@ -75,10 +77,12 @@ def create():
         )
         db.session.flush()
         print('Setting safe to ship countries...')
+        stsfile = Path(
+            app.config['JSON_FOLDER'], 
+            'safe_to_ship_countries.json'
+        )
         try:
-            with open('safe_to_ship_countries.json',
-                      'r',
-                      encoding='utf-8') as ifile:
+            with stsfile.open('r', encoding='utf-8') as ifile:
                 sts = json.loads(ifile.read())
                 for c in sts:
                     if isinstance(c, str):
@@ -95,17 +99,18 @@ def create():
         except FileNotFoundError:
             db.session.rollback()
             raise FileNotFoundError(
-                'Could not find file "safe_to_ship_countries.json" in base '
-                'sgs-dlask folder. This file should be a JSON list containing '
-                'alpha3 country codes for countries we can safely ship to, '
-                'including ones that become at own risk above a certain cost '
-                'total, which should be 2 value lists formatted ["<alpha3", '
-                '<int or decimal cost above which is at own risk>], e.g.: '
-                '[... , "JPN", "NLD", ["NOR", 50], "PRI", "ESP", ...]'
+                'Could not find file "{}". This file should be a JSON list '
+                'containing alpha3 country codes for countries we can safely '
+                'ship to, including ones that become at own risk above a '
+                'certain cost total, which should be 2 value lists formatted '
+                '["<alpha3", <int or decimal cost above which is at own '
+                'risk>], e.g.: [... , "JPN", "NLD", ["NOR", 50], "PRI", '
+                '"ESP", ...]'.format(stsfile.absolute())
             )
         print('Setting noship countries...')
+        ncfile = Path(app.config['JSON_FOLDER'], 'noship_countries.json')
         try:
-            with open('noship_countries.json', 'r', encoding='utf-8') as ifile:
+            with ncfile.open('r', encoding='utf-8') as ifile:
                 a3s = json.loads(ifile.read())
                 for alpha3 in a3s:
                     country = Country.get(alpha3=alpha3)
@@ -114,16 +119,15 @@ def create():
         except FileNotFoundError:
             db.session.rollback()
             raise FileNotFoundError(
-                'Could not find file "noship_countries.json" in base sgs-'
-                'flask folder. This file should be a JSON list containing '
-                'alpha3 country codes for countries we cannot ship to. e.g.: '
-                '["BGD", "BRA", "CHN", ... ]'
+                'Could not find file "{}"! This file should be a JSON list '
+                'containing alpha3 country codes for countries we cannot '
+                'ship to. e.g.: ["BGD", "BRA", "CHN", ... ]'
+                .format(ncfile.absolute())
             )
         print('Populating States/Provinces/etc...')
         try:
-            with open('states.json',
-                      'r',
-                      encoding='utf-8') as ifile:
+            sfile = Path(app.config['JSON_FOLDER'], 'states.json')
+            with sfile.open('r', encoding='utf-8') as ifile:
                 d = json.loads(ifile.read())
                 db.session.add_all(
                     State.generate_from_dict(d)
@@ -132,12 +136,28 @@ def create():
         except FileNotFoundError:
             db.session.rollback()
             raise FileNotFoundError(
-                'Could not find file "states.json" in the base sgs-flask '
-                'directory! If it does not exist, it should be created and '
-                'contain a JSON object formatted: { "<country alpha3 code>": '
-                '{ "<state abbreviation>": "<state name>", ... }, ... } e.g. '
-                '{ "USA": {"AL": "Alabama", "AK": "Alaska", ... }, {"CAN": { '
-                '{"AB": "Alberta", "BC": "British Columbia", ... }, ... }'
+                'Could not find file "{}"! If it does not exist, it should '
+                'be created and contain a JSON object formatted: { "<country '
+                'alpha3 code>": { "<state abbreviation>": "<state name>", '
+                '... }, ... } e.g. {"USA": {"AL": "Alabama", "AK": '
+                '"Alaska", ... }, "CAN": {"AB": "Alberta", "BC": '
+                '"British Columbia", ... }, ... }'.format(sfile.absolute())
+            )
+        print('Setting California sales tax...')
+        rfile = Path(app.config['JSON_FOLDER'], 'rates.json')
+        try:
+            with rfile.open('r', encoding='utf-8') as ifile:
+                rates = json.loads(ifile.read())
+            ca = State.get(
+                country=Country.get(alpha3='USA'), abbreviation='CA'
+            )
+            ca.tax = Decimal(str(rates['sales tax']['USA']['CA']))
+            db.session.flush()
+        except FileNotFoundError:
+            raise FileNotFoundError(
+                'Could not find file "{}"! It should contain a JSON object '
+                'including: { "sales tax": {"USA": {"CA":<tax rate>i, ... }, '
+                '... }, ... }'.format(rfile.absolute())
             )
         print('Creating first administrator account...')
         admin.name = input('Enter name for admin account: ')

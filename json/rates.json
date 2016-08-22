@@ -1,0 +1,12 @@
+{
+    "international shipping": 6.95,
+    "free US shipping threshold": 40,
+    "sales tax": {
+        "USA": {
+            "CA": 8.75
+        }
+    },
+    "US shipping": 4.95,
+    "international additional charge threshold": 200,
+    "CAN additional charge threshold": 400
+}

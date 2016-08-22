@@ -17,6 +17,9 @@
 # Copyright Swallowtail Garden Seeds, Inc
 
 
+from decimal import Decimal
+
+
 from flask import session
 from flask_login import current_user
 from pycountry import countries
@@ -615,20 +618,69 @@ class LineItem(db.Model, TimestampMixin):
                                                    self.label)
 
     @property
-    def total(self):
-        """Decimal: The total cost of products in a `LineItem`."""
-        try:
-            return self.quantity * self.price
-        except TypeError:
-            return None
-
-    @property
     def in_stock(self):
         """bool: Whether or not the product on the line is in stock."""
         try:
             return self.product.in_stock
         except AttributeError:
             return False
+
+    @property
+    def customer(self):
+        """Customer: The `Customer` ordering the `LineItem`."""
+        return self.order.customer
+
+    @property
+    def shipping_address(self):
+        """Address: The shipping address of `Customer` if present."""
+        return self.customer.shipping_address
+
+    @property
+    def cultivar(self):
+        """Cultivar: The `Cultivar` this `LineItem` is for."""
+        return self.product.cultivar
+
+    @property
+    def noship_country(self):
+        """bool: Whether product can be shipped to country in shipping addr."""
+        try:
+            if self.shipping_address.country in self.cultivar.noship_countries:
+                return True
+        except AttributeError:
+            pass
+        return False
+
+    @property
+    def noship_state(self):
+        """bool: Whether product can be shipped to state in shipping addr."""
+        try:
+            if self.shipping_address.state in self.cultivar.noship_states:
+                return True
+        except AttributeError:
+            pass
+        return False
+
+    @property
+    def noship(self):
+        """bool: Whether or not product can be shipped to customer."""
+        return self.noship_state or self.noship_country
+
+    @property
+    def total(self):
+        """Decimal: The total cost of products in a `LineItem`."""
+        try:
+            if not self.noship:
+                return self.quantity * self.price
+            else:
+                return Decimal(0)
+        except TypeError:
+            return None
+
+    @property
+    def taxable(self):
+        """bool: Whether or not `LineItem` is taxable."""
+        return self.cultivar.taxable
+
 
 
 @event.listens_for(LineItem.product, 'set')
@@ -749,8 +801,32 @@ class Order(db.Model, TimestampMixin):
         return 'Order #{0} with lines:\n{1}'.format(self.id, lines_text)
 
     @property
-    def total(self):
+    def before_tax_total(self):
         return sum(l.total for l in self.lines)
+
+    @property
+    def tax(self):
+        """Decimal: The total sales tax to add."""
+        try:
+            tax_rate = self.customer.shipping_address.state.tax
+            if tax_rate:
+                taxable_total = sum(l.total for l in self.lines if l.taxable)
+                return (
+                    taxable_total * (tax_rate / 100)
+                ).quantize(Decimal('.00'))
+        except:
+            pass
+        return Decimal(0)
+
+    @property
+    def after_tax_total(self):
+        return self.before_tax_total + self.tax
+
+    @property
+    def total(self):
+        #TODO: Include shipping
+        return self.after_tax_total
+
 
     def add_line(self, product_number, quantity):
         """Add a `LineItem`.

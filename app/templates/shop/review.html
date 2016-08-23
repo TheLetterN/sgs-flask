@@ -1,0 +1,41 @@
+{# This file is part of SGS-Flask.
+
+   SGS-Flask is free software: you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
+ 
+   SGS-Flask is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+ 
+   You should have received a copy of the GNU General Public License
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ 
+   Copyright Swallowtail Garden Seeds, Inc 
+#}
+
+{% extends "includes/base.html" %}
+{% block head %}
+<title>Review Order</title>
+{% endblock %}
+{% block main %}
+<div class="review-order">
+  <a href="{{ url_for('shop.cart') }}">Click here</a> to edit your order.
+  <table class="order-table">
+    <tr class="order-header-row">
+      <th>Product</th>
+      <th>Quantity</th>
+      <th>Price</th>
+    </tr>
+    {% for line in customer.current_order.lines %}
+    <tr class="order-row{% if line.noship %}-noship{% endif %}">
+      <td class="line-label">{{ line.label }}</td>
+      <td class="line-quantity">{{ line.quantity }}</td>
+      <td class="line-total">{{ line.total }}</td>
+    </tr>{% if line.noship_state %}<span class="noship-state-warning">Cannot ship this seed to {{ line.shipping_address.state.name }}.</span>{% elif line.noship_country %}<span class="noship-country-warning">Cannot ship this seed to {{ line.shipping_address.country.name }}.</span>{% endif %}
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

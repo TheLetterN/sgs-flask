@@ -16,11 +16,12 @@
 
 # Copyright Swallowtail Garden Seeds, Inc
 
-
+import json
 from decimal import Decimal
+from pathlib import Path
 
 
-from flask import session
+from flask import current_app, session
 from flask_login import current_user
 from pycountry import countries
 from sqlalchemy import event
@@ -801,6 +802,13 @@ class Order(db.Model, TimestampMixin):
         return 'Order #{0} with lines:\n{1}'.format(self.id, lines_text)
 
     @property
+    def shipping_address(self):
+        try:
+            return self.customer.shipping_address
+        except AttributeError:
+            return None
+
+    @property
     def before_tax_total(self):
         return sum(l.total for l in self.lines)
 
@@ -823,10 +831,24 @@ class Order(db.Model, TimestampMixin):
         return self.before_tax_total + self.tax
 
     @property
-    def total(self):
-        #TODO: Include shipping
-        return self.after_tax_total
+    def shipping_cost(self):
+        rfile = Path(current_app.config.get('JSON_FOLDER'), 'rates.json')
+        with rfile.open('r', encoding='utf-8') as ifile:
+            rates = json.loads(ifile.read())
+        try:
+            if self.shipping_address.country.alpha3 == 'USA':
+                if self.before_tax_total < rates['free US shipping threshold']:
+                    return Decimal(str(rates['US shipping']))
+            else:
+                # TODO: Handle additional itl shipping charges.
+                return Decimal(str(rates['international shipping']))
+        except AttributeError:
+            pass
+        return Decimal(0)
 
+    @property
+    def total(self):
+        return self.after_tax_total + self.shipping_cost
 
     def add_line(self, product_number, quantity):
         """Add a `LineItem`.

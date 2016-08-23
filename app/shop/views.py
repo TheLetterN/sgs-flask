@@ -149,7 +149,7 @@ def checkout():
         if current_user.is_anonymous:
             customer.save_id_to_session()
         flash('All fields valid.')
-        return redirect(url_for('shop.checkout'))
+        return redirect(url_for('shop.review'))
     # Since as of writing this wtforms has a bug in which `None` is coerced
     # to a string in select fields, I'm using whether or not `form.submit` has
     # been pressed to know if the default countries need to be set or not. -N
@@ -170,6 +170,15 @@ def checkout():
                            current_order=current_order,
                            guest=guest,
                            form=form)
+
+
+shop.route('/review_order')
+def review_order():
+    if current_user.is_anonymous:
+        customer = Customer.get_from_session()
+    else:
+        customer = current_user.customer_data
+    return render_template('shop/review.html', customer=customer)
 
 
 # TODO: Remove these views when no longer needed!

@@ -94,17 +94,17 @@ class User(UserMixin, db.Model):
         self.permissions = 0
 
     @property
-    def current_transaction(self):
+    def current_order(self):
         try:
-            return self.customer_data.current_transaction
+            return self.customer_data.current_order
         except AttributeError:
             return None
 
-    @current_transaction.setter
-    def current_transaction(self, transaction):
+    @current_order.setter
+    def current_order(self, order):
         if not self.customer_data:
             self.customer_data = Customer()
-        self.customer_data.current_transaction = transaction
+        self.customer_data.current_order = order
 
     def can(self, permission):
         """Verify if a user has a permission.

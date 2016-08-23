@@ -33,9 +33,27 @@
     <tr class="order-row{% if line.noship %}-noship{% endif %}">
       <td class="line-label">{{ line.label }}</td>
       <td class="line-quantity">{{ line.quantity }}</td>
-      <td class="line-total">{{ line.total }}</td>
+      <td class="line-total">${{ line.total }}</td>
     </tr>{% if line.noship_state %}<span class="noship-state-warning">Cannot ship this seed to {{ line.shipping_address.state.name }}.</span>{% elif line.noship_country %}<span class="noship-country-warning">Cannot ship this seed to {{ line.shipping_address.country.name }}.</span>{% endif %}
     {% endfor %}
+  </table>
+  <table class="totals-table">
+    <tr class="subtotal">
+      <td>Subtotal:</td>
+      <td>${{ customer.current_order.before_tax_total }}</td>
+    </tr>
+    <tr class="shipping-row">
+      <td>Shipping:</td>
+      <td>${{ customer.current_order.shipping_cost }}</td>
+    </tr>
+    <tr class="tax-row">
+      <td>Sales Tax:</td>
+      <td>${{ customer.current_order.tax }}</td>
+    </tr>
+    <tr class="total-row">
+      <td>Total:</td>
+      <td>${{ customer.current_order.total }}</td>
+    </tr>
   </table>
 </div>
 {% endblock %}

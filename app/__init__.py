@@ -29,7 +29,7 @@ import json
 from pathlib import Path
 import pyphen
 from flask import Flask, current_app, session
-from flask_login import AnonymousUserMixin, LoginManager
+from flask_login import AnonymousUserMixin, current_user, LoginManager
 from flask_mail import Mail
 from flask_sqlalchemy import SQLAlchemy
 from slugify import slugify
@@ -79,22 +79,6 @@ def load_nav_data(json_file=None):
     except FileNotFoundError:
         items = []
     return items
-
-
-def sum_cart_items(session_key='cart', quantity_key='quantity'):
-    """Return the total quantity of items in a shopping cart in session.
-
-    Args:
-        session_key: The key to get items from in `session`.
-        quantity_key: The key in each item that represents the quantity.
-
-    Returns:
-        An integer total quantity of all products in session cart.
-    """
-    try:
-        return sum(i[quantity_key] for i in session[session_key])
-    except KeyError:
-        return 0
 
 
 class Permission(object):
@@ -164,6 +148,8 @@ def create_app(config_name):
     from .main import main as main_blueprint
     from .seeds import seeds as seeds_blueprint
     from .shop import shop as shop_blueprint
+    from .shop.models import Order
+
     app.register_blueprint(auth_blueprint, url_prefix='/auth')
     app.register_blueprint(main_blueprint)
     app.register_blueprint(seeds_blueprint, url_prefix='/seeds')
@@ -180,6 +166,10 @@ def create_app(config_name):
     if pending.has_content():  # pragma: no cover
         pending.clear()
         pending.save()
+
+    def sum_cart_items():
+        o = Order.load(current_user)
+        return o.number_of_items
 
     # Make things available to Jinja
     app.add_template_global(slugify, 'slugify')

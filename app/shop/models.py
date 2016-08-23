@@ -793,6 +793,10 @@ class Order(db.Model, TimestampMixin):
             return None
 
     @property
+    def number_of_items(self):
+        return sum(l.quantity for l in self.lines)
+
+    @property
     def session_data(self):
         return [l.session_data for l in self.lines]
 

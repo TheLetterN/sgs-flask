@@ -16,6 +16,7 @@ Copyright Swallowtail Garden Seeds, Inc
 {# It should only contain elements we want on all pages. #}
 {# The head block should be indented 4 spaces in derived pages. #}
 {# The main block should be indented 6 spaces in derived pages. #}
+{% from "includes/auto_plural.html" import auto_plural %}
 {% set nav_data = load_nav_data() %}
 <!DOCTYPE html>
 <html lang="en">
@@ -42,8 +43,10 @@ Copyright Swallowtail Garden Seeds, Inc
 				<a class="Page_header-banner-home-link" href="{{ url_for('main.index') }}"></a><img class="Page_header-banner" src="{{ url_for('static', filename='images/assets/sgs-banner.jpg') }}" alt="Swallowtail Garden Seeds">
 			</div>
     </div>
+    {# BEGIN Shopping Cart Link #}
     {% set cart_items = sum_cart_items() %}
     <a class="cart-link" href="{{ url_for('shop.cart') }}">Your Cart: {{ cart_items }} item{% if cart_items > 1 or cart_items == 0 %}s{% endif %}</a>
+    {# END Shopping Cart Link #}
 		{% include "includes/main_nav.html" %}
 		{% block subnav %}{% endblock %}
 		{% include "includes/admin_nav.html" -%}

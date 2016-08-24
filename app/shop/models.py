@@ -619,14 +619,6 @@ class LineItem(db.Model, TimestampMixin):
                                                    self.label)
 
     @property
-    def in_stock(self):
-        """bool: Whether or not the product on the line is in stock."""
-        try:
-            return self.product.in_stock
-        except AttributeError:
-            return False
-
-    @property
     def customer(self):
         """Customer: The `Customer` ordering the `LineItem`."""
         return self.order.customer
@@ -640,6 +632,14 @@ class LineItem(db.Model, TimestampMixin):
     def cultivar(self):
         """Cultivar: The `Cultivar` this `LineItem` is for."""
         return self.product.cultivar
+
+    @property
+    def in_stock(self):
+        """bool: Whether or not the product on the line is in stock."""
+        try:
+            return self.cultivar.in_stock
+        except AttributeError:
+            return False
 
     @property
     def noship_country(self):
@@ -670,7 +670,7 @@ class LineItem(db.Model, TimestampMixin):
     def total(self):
         """Decimal: The total cost of products in a `LineItem`."""
         try:
-            if not self.noship:
+            if not self.noship and self.in_stock:
                 return self.quantity * self.price
             else:
                 return Decimal(0)

@@ -453,12 +453,14 @@ a.Section_div_a{text-decoration:none;}
 
 
 /* BEGIN checkout process CSS */
-.order-row-noship {
+.noship-line,
+.out-of-stock-line {
     background-color: #fbb;
     color: #999;
     font-style: italic;
 }
-.noship-warning {
+.noship-warning,
+.out-of-stock-warning {
     color: #000;
     font-style: normal;
 }

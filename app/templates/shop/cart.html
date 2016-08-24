@@ -27,18 +27,62 @@
   You are not logged in. Logging in will ensure items in your cart are saved. <a href="{{ url_for('auth.login', origin=request.path) }}">Click here to log in</a>, or if you do not have an account yet, <a href="{{ url_for('auth.register', origin=request.path) }}">click here to create one</a>.
 </div>
 {% endif %}
+<h1>Shopping Cart:</h1>
 <form method="POST">
   {{ form.hidden_tag() }}
- <ul>
-    {% for line in form.lines %}
-    {{ line.hidden_tag() }}
-    {% set tline = current_order.get_line(line.product_number.data) %}
-    <li{% if not tline.in_stock %} class="out-of-stock-cart-line"{% endif %}>{% if tline.in_stock %}{{ line.quantity() }}{{ line.product_number }}{% else %}<strike>{{ tline.quantity }}{% endif %} {% if tline.product and tline.product.cultivar %}<a href="{{ tline.product.cultivar.url }}">{{ tline.label|safe }}</a>{% else %}{{ tline.label|safe }}{% endif %} for ${{ tline.price }} each. Total: ${{ tline.total }}{% if not tline.in_stock %}</strike> (Out of Stock!){% endif %} [<a title="Remove Item" class="remove-item" href="{{ url_for('shop.remove_product', product_number = tline.product_number, origin=request.path) }}">X</a>]</li>
-  {% endfor %}
-</ul>
-<div class='cart-total'>Total: ${{ current_order.total }}</div>
-    {{ form.save() }}{{ form.checkout() }}
+  <table>
+    <thead>
+      <tr>
+        <th>Quantity</th>
+        <th>Product</th>
+        <th>Price</th>
+        <th>Total</th>
+        <th></th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for line in form.lines %}
+      {% set oline = current_order.get_line(line.product_number.data) %}
+      <tr{% if not oline.in_stock %} class="out-of-stock-line"{% elif oline.noship %} class="noship-line"{% endif %}>
+        <td>{{ line.hidden_tag() }}{% if oline.in_stock and not oline.noship %}{{ line.quantity() }}{{ line.product_number() }}{% else %}{{ oline.quantity }}{% endif %}</td>
+        <td><a href="{{ oline.cultivar.url }}">{{ oline.label|safe }}</a></td>
+        <td>${{ oline.price }}</td>
+        <td>{% if oline.in_stock and not oline.noship %}${{ oline.total }}{% else %}N/A{% endif %}</td>
+        <td style="color: #000; font-style: normal;">[<a title="Remove Item" class="remove-item" href="{{ url_for('shop.remove_product', product_number=oline.product_number, origin=request.path) }}">X</a>]</td>
+        {% if oline.noship %}
+        <td class="noship-warning">Cannot ship to {% if oline.noship_state %}{{ oline.shipping_address.state.name }}{% elif oline.noship_country %}{{ oline.shipping_address.country.name }}.{% endif %}</td>
+        {% elif not oline.in_stock %}
+        <td class="out-of-stock-warning">Out of Stock</td>
+        {% else %}
+        <td></td>
+        {% endif %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {{ form.save() }}{{ form.checkout() }}
 </form>
+  <table class="order-totals-table">
+    <tr class="subtotal">
+      <td>Subtotal:</td>
+      <td>${{ current_order.before_tax_total }}</td>
+    </tr>
+    <tr class="shipping-row">
+      <td>Shipping:</td>
+      <td>{% if current_order.status == current_order.NEW %}Calculated During Checkout{% else %}${{ current_order.shipping_cost }}{% endif %}</td>
+    </tr>
+    <tr class="tax-row">
+      <td>Sales Tax:</td>
+      <td>{% if current_order.status == current_order.NEW %}Calculated During Checkout{% else %}${{ current_order.tax }}{% endif %}</td>
+    </tr>
+    {% if current_order.status != current_order.NEW %}
+    <tr class="total-row">
+      <td>Total:</td>
+      <td>${{ current_order.total }}</td>
+    </tr>
+    {% endif %}
+  </table>
 {% else %}
 <div class="empty-cart">No items in cart.</div>
 {% endif %}

@@ -25,19 +25,25 @@
         <th>Product</th>
         <th>Quantity</th>
         <th>Price</th>
+        <th>Total</th>
         <th></th>
       </tr>
     </thead>
     <tbody>
       {% for line in order.lines %}
-      <tr class="order-row{% if line.noship %}-noship{% endif %}">
-        <td class="line-item-label">{{ line.label }}</td>
-        <td class="line-item-quantity">{{ line.quantity }} {{ auto_plural('packet', line.quantity) }}</td>
-        <td class="line-item-total">${{ line.total }}</td>
-        {% if line.noship_state %}
-        <td class="noship-warning">Cannot ship this seed to {{ line.shipping_address.state.name }}.</td>
-        {% elif line.noship_country %}
-        <td class="noship-warning">Cannot ship this seed to {{ line.shipping_address.country.name }}.</td>
+      <tr class="order-line{% if line.noship %} noship-line{% elif not line.in_stock %} out-of-stock-line{% endif %}">
+        <td class="line-label">{{ line.label }}</td>
+        <td class="line-quantity">{{ line.quantity }} {{ auto_plural('packet', line.quantity) }}</td>
+        <td class="line-price">${{ line.price }}</td>
+        {% if line.in_stock and not line.noship %}
+        <td class="line-total">${{ line.total }}</td>
+        {% else %}
+        <td>N/A</td>
+        {% endif %}
+        {% if line.noship %}
+        <td class="noship-warning">Cannot ship this seed to {% if line.noship_state %}{{ line.shipping_address.state.name }}{% else %}{{ line.shipping_address.country.name }}{% endif %}.</td>
+        {% elif not line.in_stock %}
+        <td class="out-of-stock-warning">Out of Stock</td>
         {% else %}
         <td></td>
         {% endif %}

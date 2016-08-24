@@ -14,28 +14,56 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  
    Copyright Swallowtail Garden Seeds, Inc 
-#}
+   #}
+{% from "includes/auto_plural.html" import auto_plural %}
 {% macro order_summary(order) %}
 <div class="order-summary">
-  <div><a href="{{ url_for('shop.cart') }}">Click here</a> to edit your order.</div>
-  <table class="order-summary-lines">
-    <tr>
-      <th>Product</th>
-      <th>Quantity</th>
-      <th>Price</th>
+  <a href="{{ url_for('shop.cart') }}">Click here</a> to edit your order.
+  <table class="order-table">
+    <thead>
+      <tr>
+        <th>Product</th>
+        <th>Quantity</th>
+        <th>Price</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for line in order.lines %}
+      <tr class="order-row{% if line.noship %}-noship{% endif %}">
+        <td class="line-item-label">{{ line.label }}</td>
+        <td class="line-item-quantity">{{ line.quantity }} {{ auto_plural('packet', line.quantity) }}</td>
+        <td class="line-item-total">${{ line.total }}</td>
+        {% if line.noship_state %}
+        <td class="noship-warning">Cannot ship this seed to {{ line.shipping_address.state.name }}.</td>
+        {% elif line.noship_country %}
+        <td class="noship-warning">Cannot ship this seed to {{ line.shipping_address.country.name }}.</td>
+        {% else %}
+        <td></td>
+        {% endif %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <table class="order-totals-table">
+    <tr class="subtotal">
+      <td>Subtotal:</td>
+      <td>${{ order.before_tax_total }}</td>
     </tr>
-    {% for line in order.lines %}
-    <tr>
-      <td class="line-label">{{ line.label }}</td>
-      <td class="line-quantity">{{ line.quantity }}</td>
-      <td class="line-total">{{ line.total }}</td>
+    <tr class="shipping-row">
+      <td>Shipping:</td>
+      <td>{% if order.status == order.NEW %}Calculated During Checkout{% else %}${{ order.shipping_cost }}{% endif %}</td>
     </tr>
-    {% endfor %}
-    <tr>
-      <td></td>
-      <td></td>
-      <td>Estimated Total: {{ order.total }}</td>
+    <tr class="tax-row">
+      <td>Sales Tax:</td>
+      <td>{% if order.status == order.NEW %}Calculated During Checkout{% else %}${{ order.tax }}{% endif %}</td>
     </tr>
+    {% if order.status != order.NEW %}
+    <tr class="total-row">
+      <td>Total:</td>
+      <td>${{ order.total }}</td>
+    </tr>
+    {% endif %}
   </table>
 </div>
 {% endmacro %}

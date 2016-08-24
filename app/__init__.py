@@ -27,11 +27,14 @@ of the website for Swallowtail Garden Seeds.
 
 import json
 from pathlib import Path
+
+
 import pyphen
 from flask import Flask, current_app, session
 from flask_login import AnonymousUserMixin, current_user, LoginManager
 from flask_mail import Mail
 from flask_sqlalchemy import SQLAlchemy
+from inflection import pluralize
 from slugify import slugify
 from config import CONFIG
 from .pending import Pending
@@ -175,10 +178,11 @@ def create_app(config_name):
             return 0
 
     # Make things available to Jinja
-    app.add_template_global(slugify, 'slugify')
-    app.add_template_global(Permission, 'Permission')
     app.add_template_global(hyphenate, 'hyphenate')
+    app.add_template_global(Permission, 'Permission')
+    app.add_template_global(pluralize, 'pluralize')
     app.add_template_global(load_nav_data, 'load_nav_data')
+    app.add_template_global(slugify, 'slugify')
     app.add_template_global(sum_cart_items, 'sum_cart_items')
 
     return app

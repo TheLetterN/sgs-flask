@@ -54,8 +54,11 @@ def add_to_cart(product_number):
 def cart():
     current_order = Order.load(current_user)
     form = ShoppingCartForm(obj=current_order)
-    if current_order.status == Order.PENDING_REVIEW:
-        form.checkout.label.text = 'Review Order'
+    try:
+        if current_order.status == Order.PENDING_REVIEW:
+            form.checkout.label.text = 'Review Order'
+    except AttributeError:
+        pass
     if form.validate_on_submit():
         if form.save.data:
             for line in form.lines.entries:
@@ -184,7 +187,10 @@ def review_order():
         customer = Customer.get_from_session()
     else:
         customer = current_user.customer_data
-    return render_template('shop/review.html', customer=customer)
+    return render_template(
+        'shop/review.html',
+        current_order=customer.current_order
+    )
 
 
 # TODO: Remove these views when no longer needed!

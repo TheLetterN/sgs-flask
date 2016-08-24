@@ -15,12 +15,6 @@
  
    Copyright Swallowtail Garden Seeds, Inc 
 #}
-
-{% from "includes/order_summary.html" import order_summary %}
-{% extends "includes/base.html" %}
-{% block head %}
-<title>Review Order</title>
-{% endblock %}
-{% block main %}
-{{ order_summary(current_order) }}
-{% endblock %}
+{% macro auto_plural(word, quantity) %}
+{% if quantity > 1 %}{{ pluralize(word) }}{% else %} {{ word }}{% endif %}
+{% endmacro %}

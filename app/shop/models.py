@@ -706,21 +706,18 @@ class Order(db.Model, TimestampMixin):
     shipping_notes - Any notes on shipping left by customer.
     """
     __tablename__ = 'orders'
+
+    NEW = 1
+    PENDING_REVIEW = 2
+
+
     id = db.Column(db.Integer, primary_key=True)
     lines = db.relationship(
         'LineItem',
         back_populates='order',
         cascade='all, delete-orphan'
     )
-    status = db.Column(db.Enum(
-        'in progress',
-        'pending payment',
-        'payment rejected',
-        'paid',
-        'refunded',
-        'shipped',
-        name='status',
-    ))
+    status = db.Column(db.Integer, default=NEW)
     customer_id = db.Column(db.Integer, db.ForeignKey('customers.id'))
     customer = db.relationship(
         'Customer',

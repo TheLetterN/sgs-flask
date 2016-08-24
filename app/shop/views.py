@@ -54,6 +54,8 @@ def add_to_cart(product_number):
 def cart():
     current_order = Order.load(current_user)
     form = ShoppingCartForm(obj=current_order)
+    if current_order.status == Order.PENDING_REVIEW:
+        form.checkout.label.text = 'Review Order'
     if form.validate_on_submit():
         if form.save.data:
             for line in form.lines.entries:
@@ -64,7 +66,10 @@ def cart():
             current_order.save()
             flash('Changes saved.')
         elif form.checkout.data:
-            return redirect(url_for('shop.checkout'))
+            if current_order.status == Order.PENDING_REVIEW:
+                return redirect(url_for('shop.review_order'))
+            else:
+                return redirect(url_for('shop.checkout'))
         return redirect(url_for('shop.cart'))
     else:
         print(form.errors)
@@ -144,6 +149,7 @@ def checkout():
                 )
         if form.shipping_notes.data:
             current_order.shipping_notes = form.shipping_notes.data
+        current_order.status = Order.PENDING_REVIEW
         db.session.add_all([current_order, customer])
         db.session.commit()
         if current_user.is_anonymous:

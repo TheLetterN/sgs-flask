@@ -32,9 +32,14 @@
     {% for line in customer.current_order.lines %}
     <tr class="order-row{% if line.noship %}-noship{% endif %}">
       <td class="line-label">{{ line.label }}</td>
-      <td class="line-quantity">{{ line.quantity }}</td>
+      <td class="line-quantity">{{ line.quantity }} packet{% if line.quantity > 1 %}s{% endif %}</td>
       <td class="line-total">${{ line.total }}</td>
-    </tr>{% if line.noship_state %}<span class="noship-state-warning">Cannot ship this seed to {{ line.shipping_address.state.name }}.</span>{% elif line.noship_country %}<span class="noship-country-warning">Cannot ship this seed to {{ line.shipping_address.country.name }}.</span>{% endif %}
+      {% if line.noship_state %}
+      <td class="noship-warning">Cannot ship this seed to {{ line.shipping_address.state.name }}.</td>
+      {% elif line.noship_country %}
+      <td class="noship-warning">Cannot ship this seed to {{ line.shipping_address.country.name }}.</td>
+      {% endif %}
+    </tr>
     {% endfor %}
   </table>
   <table class="totals-table">

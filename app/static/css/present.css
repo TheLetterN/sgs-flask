@@ -450,3 +450,16 @@ a.Section_div_a{text-decoration:none;}
 
 /*@media all and (min-width:55em){#container{max-width:980px;}
 }*/
+
+
+/* BEGIN checkout process CSS */
+.order-row-noship {
+    background-color: #fbb;
+    color: #999;
+    font-style: italic;
+}
+.noship-warning {
+    color: #000;
+    font-style: normal;
+}
+/* END checkout process CSS */

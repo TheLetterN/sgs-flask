@@ -169,7 +169,10 @@ def create_app(config_name):
 
     def sum_cart_items():
         o = Order.load(current_user)
-        return o.number_of_items
+        try:
+            return o.number_of_items
+        except:
+            return 0
 
     # Make things available to Jinja
     app.add_template_global(slugify, 'slugify')

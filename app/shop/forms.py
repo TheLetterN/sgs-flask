@@ -289,4 +289,5 @@ class CheckoutForm(Form):
         'Shipping Comments',
         validators=[Length(max=5120)]
     )
-    submit = SubmitField('Review Order')
+    nonce = HiddenField(id='card-nonce')
+    review_order = SubmitField('Review Order')

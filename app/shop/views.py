@@ -133,6 +133,7 @@ def checkout():
     if not customer:
         customer = Customer.get_from_session()
     if form.validate_on_submit():
+        print('Nonce: {}'.format(form.nonce.data))
         if not customer:
             customer = Customer()
         if customer.current_order is not current_order:
@@ -152,6 +153,8 @@ def checkout():
                 )
         if form.shipping_notes.data:
             current_order.shipping_notes = form.shipping_notes.data
+        elif current_order.shipping_notes:
+            current_order.shipping_notes = None
         current_order.status = Order.PENDING_REVIEW
         db.session.add_all([current_order, customer])
         db.session.commit()
@@ -162,7 +165,7 @@ def checkout():
     # Since as of writing this wtforms has a bug in which `None` is coerced
     # to a string in select fields, I'm using whether or not `form.submit` has
     # been pressed to know if the default countries need to be set or not. -N
-    if not form.submit.data:
+    if not form.review_order.data:
         try:
             form.billing_address.populate_from_address(
                 customer.billing_address

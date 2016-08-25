@@ -35,7 +35,7 @@
 </div>
 {% else %}
 <h1>Checkout</h1>
-<form method="POST">
+<form id="checkout-form" method="POST">
   {{ form.hidden_tag() }}
     <fieldset id="billing-address">
       <legend>Billing Address:</legend>
@@ -46,7 +46,7 @@
         <li>{{ form_field(form.billing_address.business_name)|safe }}</li>
         <li>{{ form_field(form.billing_address.address_line1)|safe }}</li>
         <li>{{ form_field(form.billing_address.address_line2)|safe }}</li>
-        <li>{{ form_field(form.billing_address.postalcode)|safe }}</li>
+        <li>{{ form_field(form.billing_address.postalcode, onblur="paymentForm.setPostalCode(this.value)")|safe }}</li>
         <li>{{ form_field(form.billing_address.city)|safe }}</li>
         <li>{{ form_field(form.billing_address.country, onchange='showStateSelect(this)')|safe }}</li>
         <li><span id="billing_address-usa-state-select">{{ form_field(form.billing_address.usa_state)|safe }}</span><span id="billing_address-can-state-select">{{form_field(form.billing_address.can_state)|safe}}</span><span id="billing_address-aus-state-select">{{form_field(form.billing_address.aus_state)|safe }}</span><span id="billing_address-other-state">{{ form_field(form.billing_address.unlisted_state)|safe }}</span></li>
@@ -75,7 +75,15 @@
         <li>{{ form_field(form.shipping_notes)|safe }}</li>
       </ol>
     </fieldset>
-    {{ form_field(form.submit)|safe }}
+    <label>Card Number</label>
+    <div id="sq-card-number"></div>
+    <label>CVV</label>
+    <div id="sq-cvv"></div>
+    <label>Expiration Date</label>
+    <div id="sq-expiration-date"></div>
+    <label>Postal Code</label>
+    <div id="sq-postal-code"></div>
+    {{ form.review_order(onclick='requestCardNonce(event)') }}
 </form>
 {% endif %}
 {{ order_summary(current_order) }}
@@ -146,4 +154,88 @@
   showStateSelect(document.getElementById('billing_address-country'));
   showStateSelect(document.getElementById('shipping_address-country'));
 </script>
+<script type="text/javascript" src="https://js.squareup.com/v2/paymentform"></script>
+<script>
+  var applicationId = 'sandbox-sq0idp-09Oc7f_zT2lFXGCmUnODkA';
+  var paymentForm = new SqPaymentForm({
+    applicationId: applicationId,
+    inputClass: 'sq-input',
+    inputStyles: [
+      {
+        fontSize: '15px'
+      }
+    ],
+    cardNumber: {
+      elementId: 'sq-card-number',
+      placeholder: '**** **** **** ****'
+    },
+    cvv: {
+      elementId: 'sq-cvv',
+      placeholder: 'CVV'
+    },
+    expirationDate: {
+      elementId: 'sq-expiration-date',
+      placeholder: 'MM/YY'
+    },
+    postalCode: {
+      elementId: 'sq-postal-code'
+    },
+    callbacks: {
+      cardNonceResponseReceived: function(errors, nonce, cardData) {
+        if (errors) {
+          console.log("Encountered errors:");
+
+          errors.forEach(function(error) {
+            console.log(' ' + error.message);
+          });
+        } else {
+          document.getElementById('card-nonce').value = nonce;
+          document.getElementById('checkout-form').submit();
+        }
+      },
+      unsupportedBrowserDetected: function() {
+        alert('oops!')
+      },
+      inputEventRecieved: function(inputEvent) {
+        switch (inputEvent.eventType) {
+          case 'focusClassAdded':
+            break;
+          case 'focusClassRemoved':
+            break;
+          case 'errorClassAdded':
+            break;
+          case 'errorClassRemoved':
+            break;
+          case 'cardBrandChanged':
+            break;
+          case 'postalCodeChanged':
+            break;
+        }
+      },
+      paymentFormLoaded: function() {
+        var pc = document.getElementById('billing_address-postalcode').value
+        paymentForm.setPostalCode(pc)
+      }
+    }
+  });
+
+function requestCardNonce(event) {
+  //Prevent from submitting.
+  event.preventDefault();
+  paymentForm.requestCardNonce();
+};
+</script>
+<style type="text/css">
+  .sq-input {
+    border: 1px solid rgb(223, 223, 223);
+    outline-offset: -2px;
+    margin-bottom: 5px;
+ }
+ .sq-input--focus {
+   outline: 5px auto rgb(59, 153, 252);
+ }
+ .sq-input--error {
+   outline: 5px auto rgb(255, 97, 97);
+ }
+</style>
 {% endblock %}

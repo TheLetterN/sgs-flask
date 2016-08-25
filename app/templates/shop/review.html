@@ -22,5 +22,43 @@
 <title>Review Order</title>
 {% endblock %}
 {% block main %}
+<h1>Review Order</h1>
+<h2>Order Summary:</h2>
 {{ order_summary(current_order) }}
+{% if current_user.is_anonymous %}
+    {% set checkout_url = url_for('shop.checkout', guest=True) %}
+{% else %}
+    {% set checkout_url = url_for('shop.checkout') %}
+{% endif %}
+{% set billing = current_order.customer.billing_address %}
+{% set shipping = current_order.customer.shipping_address %}
+{% macro address_p(address) %}
+  <p class="address">
+    <span>Name:</span> {{ address.first_name }} {{ address.last_name }}<br>
+    {% if address.business_name %}<span>Business:</span> {{ address.business_name }}<br>{% endif %}
+    <span>Street Address:</span> {{ address.address_line1 }}<br>
+    {% if address.address_line2 %}{{ address.address_line2 }}<br>{% endif %}
+    <span>City:</span> {{ address.city }}<br>
+    {% if address.state %}<span>{% if address.country.alpha3 == 'CAN' %}Province:{% else %}State:{% endif %}</span> {{ address.state.abbreviation }}<br>{% endif %}
+    {% if address.postalcode %}<span>Postalcode:</span> {{ address.postalcode }}<br>{% endif %}
+    <span>Country:</span> {{ address.country.name }}<br>
+    <span>Email Address:</span> {{ address.email }}<br>
+    <span>Phone Number:</span> {{ address.phone }}<br>
+    {% if address.fax %}<span>Fax:</span> {{ address.fax }}<br>{% endif %}
+  </p>
+{% endmacro %}
+<div class="billing-address">
+  <h2>Bill To: (<a href="{{ checkout_url + "#billing-address" }}">Click to Edit</a>)</h2>
+  {{ address_p(billing) }}
+</div>
+<div class="shipping-address">
+  <h2>Ship To: (<a href="{{ checkout_url + "#shipping-address" }}">Click to Edit</a>)</h2>
+  {{ address_p(shipping) }}
+  {% if current_order.shipping_notes %}
+  <h3>Shipping Comments:</h3>
+  <p class="shipping-comments">
+    {{ current_order.shipping_notes }}
+  </p>
+  {% endif %}
+</div>
 {% endblock %}

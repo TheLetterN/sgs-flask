@@ -37,7 +37,7 @@
 <h1>Checkout</h1>
 <form method="POST">
   {{ form.hidden_tag() }}
-    <fieldset>
+    <fieldset id="billing-address">
       <legend>Billing Address:</legend>
       {{ form.billing_address.hidden_tag() }}
       <ol>
@@ -55,7 +55,7 @@
         <li>{{ form_field(form.billing_address.fax)|safe }}</li>
     </ol>
     </fieldset>
-    <fieldset>
+    <fieldset id="shipping-address">
       <legend>Shipping Address:</legend>
       {{ form.shipping_address.hidden_tag() }}
       <ol>

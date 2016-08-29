@@ -24,6 +24,7 @@ from . import shop
 from app.shop.forms import (
     AddProductForm,
     CheckoutForm,
+    ShippingForm,
     ShoppingCartForm
 )
 from app import db
@@ -60,19 +61,16 @@ def cart():
     except AttributeError:
         pass
     if form.validate_on_submit():
+        for line in form.lines.entries:
+            current_order.change_line_quantity(
+                line.product_number.data,
+                line.quantity.data
+            )
+        current_order.save()
+        if form.checkout.data:
+            return redirect(url_for('shop.shipping'))
         if form.save.data:
-            for line in form.lines.entries:
-                current_order.change_line_quantity(
-                    line.product_number.data,
-                    line.quantity.data
-                )
-            current_order.save()
             flash('Changes saved.')
-        elif form.checkout.data:
-            if current_order.status == Order.PENDING_REVIEW:
-                return redirect(url_for('shop.review_order'))
-            else:
-                return redirect(url_for('shop.checkout'))
         return redirect(url_for('shop.cart'))
     else:
         print(form.errors)
@@ -122,6 +120,39 @@ def undo_remove_product(product_number, quantity):
     return redirect(request.args.get('origin') or url_for('shop.cart'))
 
 
+@shop.route('/shipping', methods=['GET', 'POST'])
+def shipping():
+    form = ShippingForm()
+    form.address.set_selects(filter_noship=True)
+    order = Order.load(current_user)
+    customer = order.customer
+    if not customer:
+        customer = Customer.get_from_session()
+    if form.validate_on_submit():
+        if not customer:
+            customer = Customer()
+            db.session.add(customer)
+        if customer.current_order is not order:
+            customer.current_order = order
+        customer.shipping_address = form.address.get_or_create_address()
+        if not form.comments.data:
+            form.comments.data = None
+        if form.comments.data != order.shipping_comments:
+            order.shipping_comments = form.comments.data
+        db.session.commit()
+        return redirect(url_for('shop.billing'))
+    try:
+        form.address.populate_from_address(customer.shipping_address)
+    except AttributeError:
+        form.address.country.data = 'USA'
+    return render_template('shop/shipping.html', form=form, order=order)
+
+
+@shop.route('/billing', methods=['GET', 'POST'])
+def billing():
+    return('Nothing yet.')
+
+
 @shop.route('/checkout', methods=['GET', 'POST'])
 def checkout():
     guest = request.args.get('guest') or False
@@ -151,10 +182,10 @@ def checkout():
                 customer.shipping_address = (
                     form.shipping_address.get_or_create_address()
                 )
-        if form.shipping_notes.data:
-            current_order.shipping_notes = form.shipping_notes.data
-        elif current_order.shipping_notes:
-            current_order.shipping_notes = None
+        if form.shipping_comments.data:
+            current_order.shipping_comments = form.shipping_notes.data
+        elif current_order.shipping_comments:
+            current_order.shipping_comments = None
         current_order.status = Order.PENDING_REVIEW
         db.session.add_all([current_order, customer])
         db.session.commit()
@@ -176,8 +207,8 @@ def checkout():
         except AttributeError:
             form.billing_address.country.data = 'USA'
             form.shipping_address.country.data = 'USA'
-        if current_order.shipping_notes:
-            form.shipping_notes.data = current_order.shipping_notes
+        if current_order.shipping_comments:
+            form.shipping_comments.data = current_order.shipping_notes
     return render_template('shop/checkout.html',
                            current_order=current_order,
                            guest=guest,

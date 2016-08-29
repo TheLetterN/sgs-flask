@@ -18,6 +18,7 @@
 
 from flask_wtf import Form
 from wtforms import (
+    BooleanField,
     FieldList,
     FormField,
     HiddenField,
@@ -285,9 +286,26 @@ class AddressForm(Form):
 class CheckoutForm(Form):
     billing_address = FormField(AddressForm)
     shipping_address = FormField(AddressForm)
-    shipping_notes = StrippedTextAreaField(
+    shipping_comments = StrippedTextAreaField(
         'Shipping Comments',
         validators=[Length(max=5120)]
     )
     nonce = HiddenField(id='card-nonce')
     review_order = SubmitField('Review Order')
+
+
+class ShippingForm(Form):
+    address = FormField(AddressForm)
+    comments = StrippedTextAreaField(
+        'Shipping Comments',
+        validators=[Length(max=5120)]
+    )
+    # TODO: shipping method
+    proceed = SubmitField('Proceed to Billing')
+
+
+class BillingForm(Form):
+    same_as_shipping = BooleanField('Use shipping address')
+    address = FormField(AddressForm)
+    nonce = HiddenField('nonce', id='card-nonce')
+    proceed = SubmitField('Review Order')

@@ -703,7 +703,7 @@ class Order(db.Model, TimestampMixin):
     customer - The `Customer` the `Order` belongs to.
     billed_to - The `Address` the `Order` was billed to.
     shipped_to - The `Address` the `Order` was shipped to.
-    shipping_notes - Any notes on shipping left by customer.
+    shipping_comments - Any notes on shipping left by customer.
     """
     __tablename__ = 'orders'
 
@@ -728,7 +728,7 @@ class Order(db.Model, TimestampMixin):
     billed_to = db.relationship('Address', foreign_keys=billed_to_id)
     shipped_to_id = db.Column(db.Integer, db.ForeignKey('addresses.id'))
     shipped_to = db.relationship('Address', foreign_keys=shipped_to_id)
-    shipping_notes = db.Column(db.Text)
+    shipping_comments = db.Column(db.Text)
 
     def __init__(self, lines=None, status=None, customer=None):
         self.lines = lines if lines else []

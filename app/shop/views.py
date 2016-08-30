@@ -144,6 +144,7 @@ def shipping():
         return redirect(url_for('shop.billing'))
     try:
         form.address.populate_from_address(customer.shipping_address)
+        form.comments.data = order.shipping_comments
     except AttributeError:
         form.address.country.data = 'USA'
     return render_template('shop/shipping.html', form=form, order=order)
@@ -154,6 +155,15 @@ def billing():
     form = BillingForm()
     form.address.set_selects()
     order = Order.load(current_user)
+    customer = order.customer
+    if not customer:
+        customer = Customer.get_from_session()
+    if form.validate_on_submit():
+        return 'billing entered'
+    try:
+        form.address.populate_from_address(customer.billing_address)
+    except AttributeError:
+        form.address.country.data = "USA"
     return render_template('shop/billing.html', form=form, order=order)
 
 

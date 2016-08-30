@@ -30,7 +30,7 @@ from pathlib import Path
 
 
 import pyphen
-from flask import Flask, current_app, session
+from flask import Flask, current_app, render_template, session
 from flask_login import AnonymousUserMixin, current_user, LoginManager
 from flask_mail import Mail
 from flask_sqlalchemy import SQLAlchemy
@@ -184,5 +184,10 @@ def create_app(config_name):
     app.add_template_global(load_nav_data, 'load_nav_data')
     app.add_template_global(slugify, 'slugify')
     app.add_template_global(sum_cart_items, 'sum_cart_items')
+
+    # Error pages
+    @app.errorhandler(404)
+    def page_not_found(e):
+        return render_template('errors/404.html'), 404
 
     return app

@@ -1,0 +1,56 @@
+{# This file is part of SGS-Flask.
+
+   SGS-Flask is free software: you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
+ 
+   SGS-Flask is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+ 
+   You should have received a copy of the GNU General Public License
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ 
+   Copyright Swallowtail Garden Seeds, Inc 
+#}
+
+{% extends "includes/base.html" %}
+{% from "includes/form_field.html" import form_field %}
+{% from "includes/order_summary.html" import order_summary %}
+{% block head %}
+<title>Billing Address</title>
+{% endblock %}
+{% block main %}
+<h1>Enter Billing Address</h1>
+<form id="shipping-form" method="POST">
+  {{ form.hidden_tag() }}
+  {{ form.address.hidden_tag() }}
+  <ul>
+    <li>{{ form_field(form.address.first_name)|safe }}</li>
+    <li>{{ form_field(form.address.last_name)|safe }}</li>
+    <li>{{ form_field(form.address.business_name)|safe }}</li>
+    <li>{{ form_field(form.address.address_line1)|safe }}</li>
+    <li>{{ form_field(form.address.address_line2)|safe }}</li>
+    <li>{{ form_field(form.address.postalcode)|safe }}</li>
+    <li>{{ form_field(form.address.city)|safe }}</li>
+    <li>{{ form_field(form.address.country, onchange='setVisibleStateField(this)')|safe }}</li>
+    <li id="usa-state">{{ form_field(form.address.usa_state)|safe }}</li>
+    <li id="can-state">{{ form_field(form.address.can_state)|safe }}</li>
+    <li id="aus-state">{{ form_field(form.address.aus_state)|safe }}</li>
+    <li id="unlisted-state">{{ form_field(form.address.unlisted_state)|safe }}</li>
+    <li>{{ form_field(form.address.email)|safe }}</li>
+    <li>{{ form_field(form.address.phone)|safe }}</li>
+    <li>{{ form_field(form.address.fax)|safe }}</li>
+  </ul>
+  {{ form.proceed }}
+</form>
+{{ order_summary(order) }}
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='scripts/set-visible-state-field.js') }}"></script>
+<script>
+  setVisibleStateField(document.getElementById('address-country'))
+</script>
+{

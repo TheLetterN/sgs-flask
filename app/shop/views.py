@@ -23,6 +23,7 @@ from flask_login import current_user
 from . import shop
 from app.shop.forms import (
     AddProductForm,
+    BillingForm,
     CheckoutForm,
     ShippingForm,
     ShoppingCartForm
@@ -150,7 +151,10 @@ def shipping():
 
 @shop.route('/billing', methods=['GET', 'POST'])
 def billing():
-    return('Nothing yet.')
+    form = BillingForm()
+    form.address.set_selects()
+    order = Order.load(current_user)
+    return render_template('shop/billing.html', form=form, order=order)
 
 
 @shop.route('/checkout', methods=['GET', 'POST'])

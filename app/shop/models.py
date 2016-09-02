@@ -337,6 +337,27 @@ class Address(db.Model, TimestampMixin):
         parts = (self.first_name, self.last_name)
         return ' '.join(n for n in parts if n)
 
+    @property
+    def page_json(self):
+        """Return a JSON object suitable for embedding on a page."""
+        data = dict(
+            first_name=self.first_name,
+            last_name=self.last_name,
+            business_name=self.business_name,
+            address_line1=self.address_line1,
+            address_line2=self.address_line2,
+            city=self.city,
+            postalcode=self.postalcode,
+            country=self.country.alpha3,
+            state=self.state.abbreviation,
+            unlisted_state=self.unlisted_state,
+            email=self.email,
+            phone=self.phone,
+            fax=self.fax
+        )
+        return json.dumps(data)
+
+
 
 class Customer(db.Model, TimestampMixin):
     """Table for customer data.

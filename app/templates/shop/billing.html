@@ -28,6 +28,7 @@
   {{ form.hidden_tag() }}
   {{ form.address.hidden_tag() }}
   <ul>
+    <li>{{ form_field(form.same_as_shipping, onclick="populateOnCheck(this)")|safe }}</li>
     <li>{{ form_field(form.address.first_name)|safe }}</li>
     <li>{{ form_field(form.address.last_name)|safe }}</li>
     <li>{{ form_field(form.address.business_name)|safe }}</li>
@@ -51,6 +52,50 @@
 {% block scripts %}
 <script src="{{ url_for('static', filename='scripts/set-visible-state-field.js') }}"></script>
 <script>
-  setVisibleStateField(document.getElementById('address-country'))
+  shipping = {{ shipping.page_json|safe }};
+  function populateOnCheck(checkbox) {
+    if (checkbox.checked) {
+      $('#address-first_name').val(shipping['first_name']);
+      $('#address-last_name').val(shipping['last_name']);
+      $('#address-business_name').val(shipping['business_name']);
+      $('#address-address_line1').val(shipping['address_line1']);
+      $('#address-address_line2').val(shipping['address_line2']);
+      $('#address-city').val(shipping['city']);
+      $('#address-postalcode').val(shipping['postalcode']);
+      $('#address-country').val(shipping['country']);
+      if (shipping['country'] == 'USA') {
+        $('#address-usa_state').val(shipping['state']);
+      } else if (shipping['country'] == 'CAN') {
+        $('#address-can_state').val(shipping['state']);
+      } else if (shipping['country'] == 'AUS') {
+        $('#address-aus_state').val(shipping['state']);
+      }
+      $('#address-unlisted_state').val(shipping['unlisted_state']);
+      $('#address-email').val(shipping['email']);
+      $('#address-phone').val(shipping['phone']);
+      $('#address-fax').val(shipping['fax']);
+    } else {
+      $('#address-first_name').val('');
+      $('#address-last_name').val('');
+      $('#address-business_name').val('');
+      $('#address-address_line1').val('');
+      $('#address-address_line2').val('');
+      $('#address-city').val('');
+      $('#address-postalcode').val('');
+      $('#address-country').val('USA');
+      $('#address-usa_state').val(0);
+      $('#address-can_state').val(0);
+      $('#address-aus_state').val(0);
+      $('#address-unlisted_state').val('');
+      $('#address-email').val('');
+      $('#address-phone').val('');
+      $('#address-fax').val('');
+    }
+  };
+  // Run it in case box is checked when (re)loading page.
+  populateOnCheck($('#same_as_shipping').get(0))
+</script>
+<script>
+  setVisibleStateField(document.getElementById('address-country'));
 </script>
 {% endblock %}

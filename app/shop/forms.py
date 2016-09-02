@@ -305,7 +305,7 @@ class ShippingForm(Form):
 
 
 class BillingForm(Form):
-    same_as_shipping = BooleanField('Use shipping address')
+    same_as_shipping = BooleanField('Same as shipping address')
     address = FormField(AddressForm)
     nonce = HiddenField('nonce', id='card-nonce')
     proceed = SubmitField('Review Order')

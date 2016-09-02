@@ -164,7 +164,12 @@ def billing():
         form.address.populate_from_address(customer.billing_address)
     except AttributeError:
         form.address.country.data = "USA"
-    return render_template('shop/billing.html', form=form, order=order)
+    return render_template(
+        'shop/billing.html',
+        form=form,
+        order=order,
+        shipping=customer.shipping_address
+    )
 
 
 @shop.route('/checkout', methods=['GET', 'POST'])

@@ -23,10 +23,11 @@
 <title>Billing Address</title>
 {% endblock %}
 {% block main %}
-<h1>Enter Billing Address</h1>
+<h1>Billing</h1>
 <form id="shipping-form" method="POST">
   {{ form.hidden_tag() }}
   {{ form.address.hidden_tag() }}
+  <h2>Billing Address</h2>
   <ul>
     <li>{{ form_field(form.same_as_shipping, onclick="populateOnCheck(this)")|safe }}</li>
     <li>{{ form_field(form.address.first_name)|safe }}</li>
@@ -44,6 +45,9 @@
     <li>{{ form_field(form.address.email)|safe }}</li>
     <li>{{ form_field(form.address.phone)|safe }}</li>
     <li>{{ form_field(form.address.fax)|safe }}</li>
+  </ul>
+  <h2>Payment</h2>
+  <ul>
   </ul>
   {{ form.proceed }}
 </form>
@@ -92,8 +96,11 @@
       $('#address-fax').val('');
     }
   };
-  // Run it in case box is checked when (re)loading page.
-  populateOnCheck($('#same_as_shipping').get(0))
+  // Run it if box is checked when (re)loading page.
+  var checkbox = $('#same_as_shipping').get(0);
+  if (checkbox.checked) {
+    populateOnCheck(checkbox);
+  }
 </script>
 <script>
   setVisibleStateField(document.getElementById('address-country'));

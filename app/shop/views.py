@@ -159,6 +159,11 @@ def billing():
     if not customer:
         customer = Customer.get_from_session()
     if form.validate_on_submit():
+        if form.same_as_shipping.data:
+            customer.shipping_address = customer.billing_address
+        else:
+            customer.shipping_address = form.address.get_or_create_address()
+        db.session.commit()
         return 'billing entered'
     try:
         form.address.populate_from_address(customer.billing_address)

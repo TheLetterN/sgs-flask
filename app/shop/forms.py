@@ -307,5 +307,5 @@ class ShippingForm(Form):
 class BillingForm(Form):
     same_as_shipping = BooleanField('Same as shipping address')
     address = FormField(AddressForm)
-    nonce = HiddenField('nonce', id='card-nonce')
+    stripeToken = HiddenField('stripeToken')  # Stripe needs this camelcase.
     proceed = SubmitField('Review Order')

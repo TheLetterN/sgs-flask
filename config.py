@@ -83,6 +83,11 @@ class Config(object):
         '\xbdc@:b\xac\xfa\xfa\xd1z[\xa3=\xd1\x9a\x0b&\xe3\x1d5\xe9\x84(\xda'
     SUPPORT_EMAIL = os.environ.get('SGS_SUPPORT_EMAIL') or \
         'support@swallowtailgardenseeds.com'
+    # Stripe keys
+    STRIPE_SECRET_KEY = os.environ.get('SGS_STRIPE_SECRET_KEY') or \
+        'sk_test_MmYmxPgaLmMMOIHRfkIhFE6c'
+    STRIPE_PUB_KEY = os.environ.get('SGS_STRIPE_PUB_KEY') or \
+        'pk_test_xqkd4rqJFhtRRGVoqkWL4cx0'
     # Set to suppress Flask-SQLAlchemy warning. May need to change later.
     SQLALCHEMY_TRACK_MODIFICATIONS = True
     if os.environ.get('SGS_SQLALCHEMY_ECHO'):
@@ -139,6 +144,9 @@ class ProductionConfig(Config):
     """
     SQLALCHEMY_DATABASE_URI = os.environ.get('SGS_DATABASE_URI')
     ALLOW_CRAWLING = os.environ.get('SGS_ALLOW_CRAWLING') or True
+    #Do not use test keys for Stripe in production!
+    STRIPE_SECRET_KEY = os.environ.get('SGS_STRIPE_SECRET_KEY')
+    STRIPE_PUB_KEY = os.environ.get('SGS_STRIPE_PUB_KEY')
 
 
 CONFIG = {

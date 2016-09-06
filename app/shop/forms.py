@@ -92,7 +92,7 @@ class AddressForm(Form):
                     Length(max=254)]
     )
     postalcode = StrippedStringField(
-        'Zip/Postal Code',
+        'ZIP/Postal Code',
         validators=[Length(max=16)]
     )
     country = SelectField('Country')

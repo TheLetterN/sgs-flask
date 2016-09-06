@@ -24,7 +24,7 @@
 {% endblock %}
 {% block main %}
 <h1>Billing</h1>
-<form id="shipping-form" method="POST">
+<form id="billing-form" method="POST">
   {{ form.hidden_tag() }}
   {{ form.address.hidden_tag() }}
   <h2>Billing Address</h2>
@@ -47,14 +47,76 @@
     <li>{{ form_field(form.address.fax)|safe }}</li>
   </ul>
   <h2>Payment</h2>
+  <h3>Card Information</h3>
+{#  WARNING!
+    
+    Fields for credit card number, expiration, and cvc should NEVER have the
+    "name" property set (In other words, no <input name="card-number" ..>)
+    because without the name property their data will not be submitted along
+    with this form. This is how we want it to work, as it is more secure to
+    keep it out of the POST data than to let it be there even if we don't use
+    it. Credit card data should only ever be sent to and handled by our
+    payment processor! This way we don't have to worry about PCI compliance
+    beyond ensuring the data is never sent to or stored on our server.
+    #}
+    <span class="payment-errors"></span>
   <ul>
+    <li>
+      <label for="card-number">Card Number</label>
+      <input type="text" size="20" id="card-number">
+    </li>
+    <li>
+      <label for="card-exp-month">Expires</label>
+      <input type="text" size="2" id="card-exp-month" placeholder="MM"> / <input type="text" size="2" id="card-exp-year" placeholder="YY">
+    </li>
+    <li>
+      <label for="card-cvc">CVC Code</label>
+      <input type="text" id="card-cvc" size="4">
+    </li>
   </ul>
   {{ form.proceed }}
 </form>
 {{ order_summary(order) }}
 {% endblock %}
 {% block scripts %}
+<script src="https://js.stripe.com/v2/"></script>
 <script src="{{ url_for('static', filename='scripts/set-visible-state-field.js') }}"></script>
+<script>
+  Stripe.setPublishableKey("{{ config['STRIPE_PUB_KEY'] }}");
+  $(function () {
+    var $form = $("#billing-form");
+    $form.submit(function (event) {
+      // Disable submit button to prevent repeated clicks.
+      $form.find("input[type=submit]").prop('disabled', true);
+
+      // Request token from Stripe.
+      Stripe.card.createToken({
+        number: $("#card-number").val(),
+        exp_month: $("#card-exp-month").val(),
+        exp_year: $("#card-exp-year").val(),
+        cvc: $("#card-cvc").val(),
+        address_line1: $("#address-address_line1").val(),
+        address_zip: $("#address-postalcode")
+        }, stripeResponseHandler);
+
+      //Prevent form from being submitted.
+      return false;
+    });
+  });
+  function stripeResponseHandler(status, response) {
+    var $form = $("#billing-form");
+
+    if (response.error) {
+      $form.find('.payment-errors').text(response.error.message);
+      $form.find('input[type=submit]').prop('disabled', false);
+    } else {
+      var token = response.id;
+      $form.find('#stripeToken').val(token);
+
+      $form.get(0).submit();
+    }
+  };
+</script>
 <script>
   shipping = {{ shipping.page_json|safe }};
   function populateOnCheck(checkbox) {

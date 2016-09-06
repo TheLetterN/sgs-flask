@@ -160,11 +160,12 @@ def billing():
         customer = Customer.get_from_session()
     if form.validate_on_submit():
         if form.same_as_shipping.data:
-            customer.shipping_address = customer.billing_address
+            customer.billing_address = customer.shipping_address
         else:
             customer.shipping_address = form.address.get_or_create_address()
         db.session.commit()
-        return 'billing entered'
+        flash('Stripe Token: {}'.format(form.stripeToken.data))
+        return redirect(url_for('shop.billing'))
     try:
         form.address.populate_from_address(customer.billing_address)
     except AttributeError:

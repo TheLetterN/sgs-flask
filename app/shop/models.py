@@ -872,6 +872,11 @@ class Order(db.Model, TimestampMixin):
     def total(self):
         return self.after_tax_total + self.shipping_cost
 
+    @property
+    def total_cents(self):
+        # TODO: Check if this needs to be quantized before converting to int.
+        return int(self.total * 100)
+
     def add_line(self, product_number, quantity):
         """Add a `LineItem`.
 

@@ -16,6 +16,7 @@
 
 # Copyright Swallowtail Garden Seeds, Inc
 
+import stripe
 
 from flask import flash, redirect, render_template, request, session, url_for
 from flask_login import current_user
@@ -25,6 +26,7 @@ from app.shop.forms import (
     AddProductForm,
     BillingForm,
     CheckoutForm,
+    ConfirmOrderForm,
     ShippingForm,
     ShoppingCartForm
 )
@@ -152,6 +154,7 @@ def shipping():
 
 @shop.route('/billing', methods=['GET', 'POST'])
 def billing():
+    # TODO: Handle returning customers.
     form = BillingForm()
     form.address.set_selects()
     order = Order.load(current_user)
@@ -163,9 +166,9 @@ def billing():
             customer.billing_address = customer.shipping_address
         else:
             customer.shipping_address = form.address.get_or_create_address()
+        session['stripe_token'] = form.stripeToken.data
         db.session.commit()
-        flash('Stripe Token: {}'.format(form.stripeToken.data))
-        return redirect(url_for('shop.billing'))
+        return redirect(url_for('shop.review'))
     try:
         form.address.populate_from_address(customer.billing_address)
     except AttributeError:
@@ -240,15 +243,52 @@ def checkout():
                            form=form)
 
 
-@shop.route('/review_order')
-def review_order():
+@shop.route('/review', methods=['GET', 'POST'])
+def review():
     if current_user.is_anonymous:
         customer = Customer.get_from_session()
     else:
         customer = current_user.customer_data
+    order = customer.current_order
+    form = ConfirmOrderForm()
+    if form.validate_on_submit():
+        if not customer.stripe_id:
+            scustomer = stripe.Customer.create(
+                source=session['stripe_token'],
+                description=customer.fullname
+            )
+            customer.stripe_id = scustomer.id
+            db.session.commit()
+        else:
+            scustomer = stripe.Customer.retrieve(customer.stripe_id)
+        
+        # Charge!
+        try:
+            charge = stripe.Charge.create(
+                amount=order.total_cents,
+                currency="usd",
+                customer=customer.stripe_id,
+                metadata={'order_number': order.number }
+            )
+        except stripe.error.CardError:
+            # TODO
+            return 'It done broked!'
+        flash('It worked!')
+        return redirect(url_for('seeds.home'))
+        
+    try:
+        t = session['stripe_token']
+        token = stripe.Token.retrieve(t)
+    except KeyError:
+        # TODO: Edit flash message.
+        flash('Could not process credit card information.')
+        return redirect(url_for('shop.billing'))
+
     return render_template(
         'shop/review.html',
-        current_order=customer.current_order
+        current_order=order,
+        card=token['card'],
+        form=form
     )
 
 

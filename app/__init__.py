@@ -30,6 +30,7 @@ from pathlib import Path
 
 
 import pyphen
+import stripe
 from flask import Flask, current_app, render_template, session
 from flask_login import AnonymousUserMixin, current_user, LoginManager
 from flask_mail import Mail
@@ -157,6 +158,8 @@ def create_app(config_name):
     app.register_blueprint(main_blueprint)
     app.register_blueprint(seeds_blueprint, url_prefix='/seeds')
     app.register_blueprint(shop_blueprint, url_prefix='/shop')
+
+    stripe.api_key = app.config.get('STRIPE_SECRET_KEY')
 
     # Add redirects
     rdf = RedirectsFile(app.config.get('REDIRECTS_FILE'))

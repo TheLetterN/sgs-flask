@@ -25,11 +25,6 @@
 <h1>Review Order</h1>
 <h2>Order Summary:</h2>
 {{ order_summary(current_order) }}
-{% if current_user.is_anonymous %}
-    {% set checkout_url = url_for('shop.checkout', guest=True) %}
-{% else %}
-    {% set checkout_url = url_for('shop.checkout') %}
-{% endif %}
 {% set billing = current_order.customer.billing_address %}
 {% set shipping = current_order.customer.shipping_address %}
 {% macro address_p(address) %}
@@ -47,12 +42,8 @@
     {% if address.fax %}<span>Fax:</span> {{ address.fax }}<br>{% endif %}
   </p>
 {% endmacro %}
-<div class="billing-address">
-  <h2>Bill To: (<a href="{{ checkout_url + "#billing-address" }}">Click to Edit</a>)</h2>
-  {{ address_p(billing) }}
-</div>
-<div class="shipping-address">
-  <h2>Ship To: (<a href="{{ checkout_url + "#shipping-address" }}">Click to Edit</a>)</h2>
+<div class="shipping-review">
+  <h2>Ship To: (<a href="{{ url_for('shop.shipping') }}">Click to Edit</a>)</h2>
   {{ address_p(shipping) }}
   {% if current_order.shipping_notes %}
   <h3>Shipping Comments:</h3>
@@ -61,4 +52,14 @@
   </p>
   {% endif %}
 </div>
+<div class="billing-review">
+  <h2>Bill To: (<a href="{{ url_for('shop.billing') }}">Click to Edit</a>)</h2>
+  {{ address_p(billing) }}
+  <h3>Payment Method:</h3>
+  <p>{{ card['brand'] }} ending with {{ card['last4'] }} expiring on {{ card['exp_month'] }}/{{ card['exp_year'] }}.</p>
+</div>
+<form method="POST">
+  {{ form.hidden_tag() }}
+  {{ form.proceed }}
+</form>
 {% endblock %}

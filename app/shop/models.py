@@ -411,6 +411,7 @@ class Customer(db.Model, TimestampMixin):
         back_populates='customer_data',
         uselist=False
     )
+    stripe_id = db.Column(db.Text)
 
     def __repr__(self):
         return '<{0} #{1}: "{2}">'.format(
@@ -426,9 +427,9 @@ class Customer(db.Model, TimestampMixin):
         Setter sets name in `billing_address`, creating `billing_address` if
         it doesn't exist.
         """
-        if self.billing_address:
+        try:
             return self.billing_address.first_name
-        else:
+        except AttributeError:
             return None
 
     @first_name.setter
@@ -436,6 +437,28 @@ class Customer(db.Model, TimestampMixin):
         if not self.billing_address:
             self.billing_address = Address()
         self.billing_address.first_name = value
+
+    @property
+    def last_name(self):
+        """str: Last name of customer from billing address."""
+        try:
+            return self.billing_address.last_name
+        except AttributeError:
+            return None
+
+    @last_name.setter
+    def last_name(self, value):
+        if not self.billing_address:
+            self.billing_address = Address()
+        self.billing_address.last_name = value
+
+    @property
+    def fullname(self):
+        """str: The full name of the customer taken from billing address."""
+        try:
+            return self.billing_address.fullname
+        except AttributeError:
+            return None
 
     def save_id_to_session(self):
         if self.id:
@@ -716,8 +739,15 @@ def order_line_set_product_event(target, value, oldvalue, initiator):
 
 class Order(db.Model, TimestampMixin):
     """Table for orders.
+    
+    Capitalized attributes are integers representing `Order.status`.
 
     Attributes:
+
+    INCOMPLETE - An order is considered incomplete until the customer has
+        entered all shipping and billing information.
+    PENDING - All information has been entered by the customer, but they
+        have not reviewed their order and submitted
 
     lines - `LineItem` instances belonging to this `Order`.
     status - The state the `Order` is in.
@@ -728,8 +758,10 @@ class Order(db.Model, TimestampMixin):
     """
     __tablename__ = 'orders'
 
-    NEW = 1
-    PENDING_REVIEW = 2
+    INCOMPLETE = 1
+    PENDING = 2
+    PROCESSED = 3
+    PAID = 4
 
 
     id = db.Column(db.Integer, primary_key=True)
@@ -738,7 +770,7 @@ class Order(db.Model, TimestampMixin):
         back_populates='order',
         cascade='all, delete-orphan'
     )
-    status = db.Column(db.Integer, default=NEW)
+    status = db.Column(db.Integer, default=INCOMPLETE)
     customer_id = db.Column(db.Integer, db.ForeignKey('customers.id'))
     customer = db.relationship(
         'Customer',
@@ -809,6 +841,10 @@ class Order(db.Model, TimestampMixin):
                 return None
         except KeyError:
             return None
+
+    @property
+    def number(self):
+        return self.id
 
     @property
     def number_of_items(self):

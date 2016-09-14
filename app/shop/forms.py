@@ -309,3 +309,7 @@ class BillingForm(Form):
     address = FormField(AddressForm)
     stripeToken = HiddenField('stripeToken')  # Stripe needs this camelcase.
     proceed = SubmitField('Review Order')
+
+
+class ConfirmOrderForm(Form):
+    proceed = SubmitField('Place Order')

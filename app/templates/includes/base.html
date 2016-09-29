@@ -44,8 +44,9 @@ Copyright Swallowtail Garden Seeds, Inc
 			</div>
     </div>
     {# BEGIN Shopping Cart Link #}
-    {% set cart_items = sum_cart_items() %}
+{#    {% set cart_items = sum_cart_items() %}
     <a class="cart-link" href="{{ url_for('shop.cart') }}">Your Cart: {{ cart_items }} item{% if cart_items > 1 or cart_items == 0 %}s{% endif %}</a>
+#}
     {# END Shopping Cart Link #}
 		{% include "includes/main_nav.html" %}
 		{% block subnav %}{% endblock %}

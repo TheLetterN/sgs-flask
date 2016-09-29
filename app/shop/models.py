@@ -406,11 +406,6 @@ class Customer(db.Model, TimestampMixin):
         foreign_keys=current_order_id,
         post_update=True
     )
-    user = db.relationship(
-        'User',
-        back_populates='customer_data',
-        uselist=False
-    )
     stripe_id = db.Column(db.Text)
 
     def __repr__(self):

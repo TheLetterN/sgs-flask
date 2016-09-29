@@ -23,7 +23,6 @@ from werkzeug import generate_password_hash, check_password_hash
 from flask_login import UserMixin
 from app import db, login_manager
 from app.email import send_email
-from app.shop.models import Customer
 
 
 class EmailRequest(db.Model):
@@ -87,24 +86,9 @@ class User(UserMixin, db.Model):
     name = db.Column(db.Text, unique=True)
     password_hash = db.Column(db.Text)
     permissions = db.Column(db.Integer, default=0)
-    customer_data_id = db.Column(db.Integer, db.ForeignKey('customers.id'))
-    customer_data = db.relationship('Customer', back_populates='user')
 
     def __init__(self):
         self.permissions = 0
-
-    @property
-    def current_order(self):
-        try:
-            return self.customer_data.current_order
-        except AttributeError:
-            return None
-
-    @current_order.setter
-    def current_order(self, order):
-        if not self.customer_data:
-            self.customer_data = Customer()
-        self.customer_data.current_order = order
 
     def can(self, permission):
         """Verify if a user has a permission.

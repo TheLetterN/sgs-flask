@@ -110,8 +110,6 @@ from app.db_helpers import (
     TimestampMixin,
     USDollar
 )
-from app.shop.forms import AddProductForm
-from app.shop.models import Product
 
 
 # Association Tables
@@ -2082,12 +2080,6 @@ class Packet(db.Model, TimestampMixin):
     quantity = db.relationship('Quantity', back_populates='packets')
     cultivar_id = db.Column(db.Integer, db.ForeignKey('cultivars.id'))
     cultivar = db.relationship('Cultivar', back_populates='packets')
-    product_id = db.Column(db.Integer, db.ForeignKey('products.id'))
-    product = db.relationship(
-        'Product',
-        backref=db.backref('packet', uselist=False)
-    )
-    _form = None
 
     def __repr__(self):
         return '<{0} SKU #{1}>'.format(self.__class__.__name__, self.sku)
@@ -2148,12 +2140,6 @@ class Packet(db.Model, TimestampMixin):
                                                    qu)
 
     @property
-    def form(self):
-        if not self._form:
-            self._form = AddProductForm(prefix=self.sku)
-        return self._form
-
-    @property
     def label(self):
         """A label for a packet as used in the shopping cart."""
         try:
@@ -2163,16 +2149,6 @@ class Packet(db.Model, TimestampMixin):
                                                self.quantity.units)
         except AttributeError:
             return ''
-
-
-@event.listens_for(SignallingSession, 'before_flush')
-def session_before_flush_event(session, flush_context, instances):
-    for packet in (p for p in db.session if isinstance(p, Packet)):
-        if not packet.product:
-            packet.product = Product.get_or_create(number=packet.sku)
-        packet.product.number = packet.sku
-        packet.product.price = packet.price
-        packet.product.label = packet.label
 
 
 class Quantity(db.Model):

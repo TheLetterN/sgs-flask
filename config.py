@@ -83,6 +83,12 @@ class Config(object):
         '\xbdc@:b\xac\xfa\xfa\xd1z[\xa3=\xd1\x9a\x0b&\xe3\x1d5\xe9\x84(\xda'
     SUPPORT_EMAIL = os.environ.get('SGS_SUPPORT_EMAIL') or \
         'support@swallowtailgardenseeds.com'
+    # Snipcart stuff
+    USE_SNIPCART = True
+    SNIPCART_KEY = os.environ.get('SGS_SNIPCART_KEY') or (
+        'NmE0NzFlNzQtMmU1Yi00NjhlLThlN2MtYzU5N'
+        'jZmN2U0YjM1NjM2MDc3NjM5NTkwNTI4NTUz'
+    )
     # Stripe keys
     STRIPE_SECRET_KEY = os.environ.get('SGS_STRIPE_SECRET_KEY') or \
         'sk_test_MmYmxPgaLmMMOIHRfkIhFE6c'

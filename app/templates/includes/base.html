@@ -25,10 +25,14 @@ Copyright Swallowtail Garden Seeds, Inc
 		<link rel='stylesheet' href='http://fonts.googleapis.com/css?family=Droid+Serif:400,700,400italic,700italic%7cDroid+Sans:400,700'>
 		<meta name="viewport" content="width=device-width, initial-scale=1">
 		<link rel="shortcut icon" href="{{ url_for('static', filename='images/assets/favicon.ico') }}">
-		{% if not ALLOW_CRAWLING %}
+		{% if not config['ALLOW_CRAWLING'] %}
     <!-- ALLOW_CRAWLING is set to False. Please set it to True if you want pages to be crawled by robots! -->
 		<meta name="robots" content="noindex, nofollow">
 		{% endif %}
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.2/jquery.min.js"></script>
+    {% if config['USE_SNIPCART'] %}
+    <script data-api-key="{{ config['SNIPCART_KEY'] }}"></script>
+    {% endif %}
 		{% block head %}{% endblock %}
 		<link rel="stylesheet" href="{{ url_for('static', filename='css/present.css') }}">
 		<link rel="stylesheet" href="{{ url_for('static', filename='css/database.css') }}">
@@ -47,6 +51,9 @@ Copyright Swallowtail Garden Seeds, Inc
 {#    {% set cart_items = sum_cart_items() %}
     <a class="cart-link" href="{{ url_for('shop.cart') }}">Your Cart: {{ cart_items }} item{% if cart_items > 1 or cart_items == 0 %}s{% endif %}</a>
 #}
+    {% if config['USE_SNIPCART'] %}
+    <a href="#" class="snipcart-checkout"><div class="snipcart-summary">Cart: (<span class="snipcart-total-items"></span>)</div></a>
+    {% endif %}
     {# END Shopping Cart Link #}
 		{% include "includes/main_nav.html" %}
 		{% block subnav %}{% endblock %}
@@ -55,11 +62,12 @@ Copyright Swallowtail Garden Seeds, Inc
 			{% if crumbs %}
 			{% include "includes/breadcrumbs.html" %}
 			{% endif %}
-			{% include "includes/flashed.html" %}
+      {% include "includes/flashed.html" %}
 			{% block main %}
 			{% endblock %}
 		</div>
-<!--		<div class="Sidebar">
+    {#
+    <div class="Sidebar">
 			<p class="Sidebar_global-message-box">
 				<b>Orders placed today will ship<br>on Wednesday, July 20th.</b>
 			</p>
@@ -79,7 +87,8 @@ Copyright Swallowtail Garden Seeds, Inc
 			{% block detailed_nav %}
 			{{ make_detailed_nav(nav_data) }}
 			{% endblock %}
-		</div>-->
+    </div>
+    #}
 		<div class="Footer">
 			<a class="Footer_site-map-link" href="{{ url_for('main.static_html', page='site-map',  _external=True) }}">Site Map</a>
 			<p class="Footer_copyright_p">Copyright&nbsp;&#169;&nbsp;2016 Swallowtail&nbsp;Garden&nbsp;Seeds - All&nbsp;Rights&nbsp;Reserved
@@ -88,7 +97,6 @@ Copyright Swallowtail Garden Seeds, Inc
 			</p>
 			<a href="https://seal.godaddy.com/verifySeal?sealID=FgdBKY27IIpHp2q5LkxzgzlbX27e0tqGEF9J5PgG2j7VUTmpgtsRrz" onclick="return popitup('https://seal.godaddy.com/verifySeal?sealID=FgdBKY27IIpHp2q5LkxzgzlbX27e0tqGEF9J5PgG2j7VUTmpgtsRrz')"><img class="Footer_siteseal" src="http://www.swallowtailgardenseeds.com/image-assets/site-seal.gif" alt="Go Daddy Site Seal"></a>
 		</div>
-<script src="{{ url_for('static', filename='scripts/jquery.min.js') }}"></script>
 <script src="{{ url_for('static', filename='scripts/scripts.js') }}"></script>
 		{% block scripts %}{% endblock %}
 	</body>

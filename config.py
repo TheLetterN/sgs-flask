@@ -121,8 +121,7 @@ class DevelopmentConfig(Config):
     Running the server or shell from ``manage.py`` uses this mode.
     """
     DEBUG = True
-    SQLALCHEMY_DATABASE_URI = os.environ.get('SGS_DEV_DATABASE_URI') or \
-        'sqlite:///' + os.path.join(BASEDIR, 'development.db')
+    SQLALCHEMY_DATABASE_URI = os.environ.get('SGS_DEV_DATABASE_URI')
 
 
 class TestingConfig(Config):
@@ -137,8 +136,7 @@ class TestingConfig(Config):
     JSON_FOLDER = os.path.join(TEMPDIR, 'json')
     PENDING_FILE = os.path.join(TEMPDIR, 'pending.txt')
     REDIRECTS_FILE = os.path.join(TEMPDIR, 'redirects.json')
-    SQLALCHEMY_DATABASE_URI = os.environ.get('SGS_TEST_DATABASE_URI') or \
-        'sqlite:///:memory:'
+    SQLALCHEMY_DATABASE_URI = os.environ.get('SGS_TEST_DATABASE_URI')
 
 
 class ProductionConfig(Config):

@@ -716,6 +716,8 @@ class CommonName(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
     slug = db.Column(db.Text)
 
     # Data Optional
+    subtitle = db.Column(db.Text)
+    sunlight = db.Column(db.Text)
     thumbnail_id = db.Column(db.Integer, db.ForeignKey('images.id'))
     thumbnail = db.relationship(
         'Image',

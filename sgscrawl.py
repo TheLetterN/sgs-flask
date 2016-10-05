@@ -71,6 +71,7 @@ class SectionTag:
                 self.class_.replace('section', '').split('-')
             ).strip()
         return dbify(rawname)
+        
 
 
 class CNCrawler:
@@ -87,12 +88,3 @@ class CNCrawler:
         self.cultivars = get_cultivars(self.main)
         self.header = self.main.find('div', class_='Header')
         self.intro = self.main.find('div', class_='Introduction')
-        hp = self.main.find('p', class_='Header_p')
-        self.sunlight = next(
-            (c for c in hp['class'] if 'sun' in c or 'shade' in c),
-            None
-        )
-        subh2 = self.main.find('h2', class_='Header_h2')
-        self.subtitle = subh2.text if subh2 else ''
-        subh3 = self.main.find('h3', class_='Header_h3')
-        self.botanical_names = subh3.text if subh3 else ''

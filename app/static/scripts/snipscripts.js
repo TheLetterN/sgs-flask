@@ -84,5 +84,10 @@ function setupSnip () {
             setSnipcartShippingMethods(cart.order.shippingAddress);
         }
     });
+    Snipcart.api.configure('credit_cards', [
+        {'type': 'visa', 'display': 'Visa'},
+        {'type': 'mastercard', 'display': 'Mastercard'},
+        {'type': 'discover', 'display': 'Discover'}
+    ]);
 
 };

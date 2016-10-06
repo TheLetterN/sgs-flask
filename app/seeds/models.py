@@ -100,7 +100,9 @@ from sqlalchemy import event, inspect
 from sqlalchemy.ext.hybrid import Comparator, hybrid_property
 from sqlalchemy.ext.orderinglist import ordering_list
 from sqlalchemy.sql.expression import and_
-from flask_sqlalchemy import SignallingSession
+from sqlalchemy_utils.types import TSVectorType
+from sqlalchemy_searchable import SearchQueryMixin
+from flask_sqlalchemy import BaseQuery, SignallingSession
 from werkzeug.routing import BuildError
 
 from app import db, list_to_english
@@ -667,6 +669,10 @@ def before_index_insert_or_update(mapper, connection, target):
     target.slug = target.generate_slug()
 
 
+class CommonNameQuery(BaseQuery, SearchQueryMixin):
+    pass
+
+
 class CommonName(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
     """Table for common names.
 
@@ -697,6 +703,7 @@ class CommonName(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
         cultivars: `Cultivar` instances belonging to given `CommonName`.
         synonyms: `Synonym` instances which are synonyms of given `CommonName`.
     """
+    query_class = CommonNameQuery
     __tablename__ = 'common_names'
     __table_args__ = (db.UniqueConstraint('name',
                                           'index_id',
@@ -712,19 +719,19 @@ class CommonName(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
     # Data Required
     index_id = db.Column(db.Integer, db.ForeignKey('indexes.id'))
     index = db.relationship('Index', back_populates='common_names')
-    name = db.Column(db.Text)
-    slug = db.Column(db.Text)
+    name = db.Column(db.UnicodeText)
+    slug = db.Column(db.UnicodeText)
 
     # Data Optional
-    subtitle = db.Column(db.Text)
-    sunlight = db.Column(db.Text)
+    subtitle = db.Column(db.UnicodeText)
+    sunlight = db.Column(db.UnicodeText)
     thumbnail_id = db.Column(db.Integer, db.ForeignKey('images.id'))
     thumbnail = db.relationship(
         'Image',
         back_populates='common_names_with_thumb'
     )
-    description = db.Column(db.Text)
-    instructions = db.Column(db.Text)
+    description = db.Column(db.UnicodeText)
+    instructions = db.Column(db.UnicodeText)
     gw_common_names = db.relationship(
         'CommonName',
         secondary=common_names_to_gw_common_names,
@@ -779,6 +786,10 @@ class CommonName(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
         'Country',
         secondary=common_names_to_countries,
         backref='noship_common_names'
+    )
+    # Search
+    search_vector = db.Column(
+        TSVectorType('name', 'subtitle', 'description', 'instructions')
     )
 
     def __init__(self,

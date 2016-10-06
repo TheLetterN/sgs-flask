@@ -29,6 +29,7 @@ from pathlib import Path
 import pytest
 from flask_migrate import Migrate, MigrateCommand
 from flask_script import Manager, Shell
+from sqlalchemy_searchable import make_searchable
 
 from app import create_app, db, mail, Permission
 from app.auth.models import User
@@ -64,8 +65,11 @@ def create():
             db.engine.execute('drop schema if exists public cascade')
             db.engine.execute('create schema public')
         db.drop_all()
+        print('Configuring mappers...')
+        db.configure_mappers()
         print('Creating new database...')
         db.create_all()
+        db.session.commit()
         admin = User()
         db.session.add(admin)
         print('Populating countries table...')

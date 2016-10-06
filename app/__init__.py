@@ -37,6 +37,8 @@ from flask_mail import Mail
 from flask_sqlalchemy import SQLAlchemy
 from inflection import pluralize
 from slugify import slugify
+from sqlalchemy_searchable import make_searchable
+
 from config import CONFIG
 from .pending import Pending
 from .redirects import RedirectsFile
@@ -119,6 +121,7 @@ class Anonymous(AnonymousUserMixin):
         return False
 
 db = SQLAlchemy()
+make_searchable()
 mail = Mail()
 
 

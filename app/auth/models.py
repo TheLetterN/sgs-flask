@@ -41,7 +41,7 @@ class EmailRequest(db.Model):
     """
     __tablename__ = 'email_requests'
     id = db.Column(db.Integer, primary_key=True)
-    sender = db.Column(db.Text)
+    sender = db.Column(db.UnicodeText)
     time = db.Column(db.DateTime)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
 
@@ -81,10 +81,10 @@ class User(UserMixin, db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     confirmed = db.Column(db.Boolean, default=False)
-    email = db.Column(db.Text, unique=True)
+    email = db.Column(db.UnicodeText, unique=True)
     email_requests = db.relationship('EmailRequest', lazy='dynamic')
-    name = db.Column(db.Text, unique=True)
-    password_hash = db.Column(db.Text)
+    name = db.Column(db.UnicodeText, unique=True)
+    password_hash = db.Column(db.UnicodeText)
     permissions = db.Column(db.Integer, default=0)
 
     def __init__(self):

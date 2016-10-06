@@ -58,8 +58,8 @@ class State(db.Model):
     """
     __tablename__ = 'states'
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.Text)
-    abbreviation = db.Column(db.Text)
+    name = db.Column(db.UnicodeText)
+    abbreviation = db.Column(db.UnicodeText)
     country_id = db.Column(db.Integer, db.ForeignKey('countries.id'))
     country = db.relationship('Country', back_populates='states')
     tax = db.Column(FourPlaceDecimal())
@@ -130,7 +130,7 @@ class Country(db.Model):
     __tablename__ = 'countries'
     id = db.Column(db.Integer, primary_key=True)
     _cached = None
-    alpha3 = db.Column(db.Text)
+    alpha3 = db.Column(db.UnicodeText)
     noship = db.Column(db.Boolean, default=False)
     safe_to_ship = db.Column(db.Boolean, default=False)
     at_own_risk_threshold = db.Column(USDollar)
@@ -311,21 +311,21 @@ class Address(db.Model, TimestampMixin):
         foreign_keys=customer_id,
         back_populates='addresses'
     )
-    first_name = db.Column(db.Text)
-    last_name = db.Column(db.Text)
-    business_name = db.Column(db.Text)
-    address_line1 = db.Column(db.Text)
-    address_line2 = db.Column(db.Text)
-    city = db.Column(db.Text)
-    postalcode = db.Column(db.Text)
+    first_name = db.Column(db.UnicodeText)
+    last_name = db.Column(db.UnicodeText)
+    business_name = db.Column(db.UnicodeText)
+    address_line1 = db.Column(db.UnicodeText)
+    address_line2 = db.Column(db.UnicodeText)
+    city = db.Column(db.UnicodeText)
+    postalcode = db.Column(db.UnicodeText)
     country_id = db.Column(db.ForeignKey('countries.id'))
     country = db.relationship('Country')
     state_id = db.Column(db.ForeignKey('states.id'))
     state = db.relationship('State')
-    unlisted_state = db.Column(db.Text)
-    email = db.Column(db.Text)
-    phone = db.Column(db.Text)
-    fax = db.Column(db.Text)
+    unlisted_state = db.Column(db.UnicodeText)
+    email = db.Column(db.UnicodeText)
+    phone = db.Column(db.UnicodeText)
+    fax = db.Column(db.UnicodeText)
 
     def __repr__(self):
         return '<{0} for: "{1}">'.format(self.__class__.__name__,
@@ -406,7 +406,7 @@ class Customer(db.Model, TimestampMixin):
         foreign_keys=current_order_id,
         post_update=True
     )
-    stripe_id = db.Column(db.Text)
+    stripe_id = db.Column(db.UnicodeText)
 
     def __repr__(self):
         return '<{0} #{1}: "{2}">'.format(
@@ -517,8 +517,8 @@ class Product(db.Model, TimestampMixin):
     __tablename__ = 'products'
     id = db.Column(db.Integer, primary_key=True)
     type_ = db.Column(db.Enum('packet', 'bulk', name='type_'))
-    number = db.Column(db.Text, unique=True)
-    label = db.Column(db.Text)
+    number = db.Column(db.UnicodeText, unique=True)
+    label = db.Column(db.UnicodeText)
     price = db.Column(USDollar)
     order_lines = db.relationship(
         'LineItem',
@@ -593,8 +593,8 @@ class LineItem(db.Model, TimestampMixin):
     product = db.relationship('Product', back_populates='order_lines')
     quantity = db.Column(db.Integer)
     # Copied Product columns.
-    product_number = db.Column(db.Text)
-    label = db.Column(db.Text)
+    product_number = db.Column(db.UnicodeText)
+    label = db.Column(db.UnicodeText)
     price = db.Column(USDollar)
 
     def __init__(self, product=None, product_number=None, quantity=None):
@@ -776,7 +776,7 @@ class Order(db.Model, TimestampMixin):
     billed_to = db.relationship('Address', foreign_keys=billed_to_id)
     shipped_to_id = db.Column(db.Integer, db.ForeignKey('addresses.id'))
     shipped_to = db.relationship('Address', foreign_keys=shipped_to_id)
-    shipping_comments = db.Column(db.Text)
+    shipping_comments = db.Column(db.UnicodeText)
 
     def __init__(self, lines=None, status=None, customer=None):
         self.lines = lines if lines else []

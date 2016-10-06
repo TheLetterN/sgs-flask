@@ -384,13 +384,13 @@ class Index(db.Model, TimestampMixin):
     position = db.Column(db.Integer)
 
     # Data Required
-    name = db.Column(db.Text, unique=True)
-    slug = db.Column(db.Text, unique=True)
+    name = db.Column(db.UnicodeText, unique=True)
+    slug = db.Column(db.UnicodeText, unique=True)
 
     # Data Optional
     thumbnail_id = db.Column(db.Integer, db.ForeignKey('images.id'))
     thumbnail = db.relationship('Image', back_populates='indexes_with_thumb')
-    description = db.Column(db.Text)
+    description = db.Column(db.UnicodeText)
     common_names = db.relationship(
         'CommonName',
         order_by='CommonName.idx_pos',
@@ -1127,7 +1127,7 @@ class BotanicalName(db.Model, TimestampMixin, SynonymsMixin):
     """
     __tablename__ = 'botanical_names'
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.Text, unique=True)
+    name = db.Column(db.UnicodeText, unique=True)
     common_names = db.relationship(
         'CommonName',
         secondary=botanical_names_to_common_names,
@@ -1348,7 +1348,7 @@ class Section(db.Model, TimestampMixin, OrderingListMixin):
     sec_pos = db.Column(db.Integer)
 
     # Data Required
-    name = db.Column(db.Text)
+    name = db.Column(db.UnicodeText)
     common_name_id = db.Column(db.Integer, db.ForeignKey('common_names.id'))
     common_name = db.relationship(
         'CommonName',
@@ -1370,8 +1370,8 @@ class Section(db.Model, TimestampMixin, OrderingListMixin):
         secondary=botanical_names_to_sections,
         back_populates='sections'
     )
-    subtitle = db.Column(db.Text)
-    description = db.Column(db.Text)
+    subtitle = db.Column(db.UnicodeText)
+    description = db.Column(db.UnicodeText)
     parent_id = db.Column(db.Integer, db.ForeignKey('sections.id'))
     parent = db.relationship(
         'Section', remote_side=[id], back_populates='children'
@@ -1663,8 +1663,8 @@ class Cultivar(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
     sec_pos = db.Column(db.Integer)
 
     # Data Required
-    name = db.Column(db.Text)
-    slug = db.Column(db.Text)
+    name = db.Column(db.UnicodeText)
+    slug = db.Column(db.UnicodeText)
     common_name_id = db.Column(db.Integer, db.ForeignKey('common_names.id'))
     common_name = db.relationship(
         'CommonName',
@@ -1672,7 +1672,7 @@ class Cultivar(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
         back_populates='cultivars')
 
     # Data Optional
-    subtitle = db.Column(db.Text)
+    subtitle = db.Column(db.UnicodeText)
     section_id = db.Column(db.Integer, db.ForeignKey('sections.id'))
     sections = db.relationship(
         'Section',
@@ -1687,7 +1687,7 @@ class Cultivar(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
         'BotanicalName',
         back_populates='cultivars'
     )
-    description = db.Column(db.Text)
+    description = db.Column(db.UnicodeText)
     new_until = db.Column(db.Date)
     featured = db.Column(db.Boolean, default=False)
     active = db.Column(db.Boolean)
@@ -2087,7 +2087,7 @@ class Packet(db.Model, TimestampMixin):
     """
     __tablename__ = 'packets'
     id = db.Column(db.Integer, primary_key=True)
-    sku = db.Column(db.Text, unique=True)
+    sku = db.Column(db.UnicodeText, unique=True)
     price = db.Column(USDollar)
     quantity_id = db.Column(db.Integer, db.ForeignKey('quantities.id'))
     quantity = db.relationship('Quantity', back_populates='packets')
@@ -2192,7 +2192,7 @@ class Quantity(db.Model):
     _denominator = db.Column(db.Integer)
     _float = db.Column(db.Float)
     is_decimal = db.Column(db.Boolean, default=False)
-    units = db.Column(db.Text)
+    units = db.Column(db.UnicodeText)
     packets = db.relationship('Packet', back_populates='quantity')
 
     def __init__(self, value=None, units=None):
@@ -2499,7 +2499,7 @@ class Synonym(db.Model):
     """
     __tablename__ = 'synonyms'
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.Text)
+    name = db.Column(db.UnicodeText)
     common_name_id = db.Column(db.Integer, db.ForeignKey('common_names.id'))
     common_name = db.relationship('CommonName', back_populates='synonyms')
     botanical_name_id = db.Column(
@@ -2586,8 +2586,8 @@ class CustomPage(db.Model, TimestampMixin):
     """
     __tablename__ = 'custom_pages'
     id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.Text, unique=True)
-    content = db.Column(db.Text)
+    title = db.Column(db.UnicodeText, unique=True)
+    content = db.Column(db.UnicodeText)
     cultivars = db.relationship(
         'Cultivar',
         secondary=cultivars_to_custom_pages,
@@ -2615,7 +2615,7 @@ class Image(db.Model, TimestampMixin):
     """
     __tablename__ = 'images'
     id = db.Column(db.Integer, primary_key=True)
-    filename = db.Column(db.Text, unique=True)
+    filename = db.Column(db.UnicodeText, unique=True)
     width = db.Column(db.Integer)
     height = db.Column(db.Integer)
 
@@ -2769,7 +2769,7 @@ class VegetableData(db.Model):
     open_pollinated = db.Column(db.Boolean)
     hybrid = db.Column(db.Boolean)
     # TODO: Make custom comparator for days_to_maturity.
-    days_to_maturity = db.Column(db.Text)
+    days_to_maturity = db.Column(db.UnicodeText)
     cultivar = db.relationship(
         'Cultivar',
         uselist=False,

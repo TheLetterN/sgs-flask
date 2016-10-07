@@ -360,6 +360,8 @@ class SynonymsMixin(object):
 
 
 # Models
+class IndexQuery(BaseQuery, SearchQueryMixin):
+    pass
 
 class Index(db.Model, TimestampMixin):
     """Table for seed indexes.
@@ -379,6 +381,7 @@ class Index(db.Model, TimestampMixin):
         description: An optional HTML description of the `Index`.
         common_names: Optional `CommonName` instances belonging to an `Index`.
     """
+    query_class = IndexQuery
     __tablename__ = 'indexes'
     id = db.Column(db.Integer, primary_key=True)
     position = db.Column(db.Integer)
@@ -397,6 +400,8 @@ class Index(db.Model, TimestampMixin):
         collection_class=ordering_list('idx_pos', count_from=1),
         back_populates='index'
     )
+    # Search
+    search_vector = db.Column(TSVectorType('name', 'description'))
 
     def __init__(self, name=None, description=None):
         """Construct an instance of Index.
@@ -1110,6 +1115,10 @@ def before_common_name_insert_or_update(mapper, connection, target):
     target.slug = target.generate_slug()
 
 
+class BotanicalNameQuery(BaseQuery, SearchQueryMixin):
+    pass
+
+
 class BotanicalName(db.Model, TimestampMixin, SynonymsMixin):
     """Table for botanical (scientific) names of seeds.
 
@@ -1125,6 +1134,7 @@ class BotanicalName(db.Model, TimestampMixin, SynonymsMixin):
         cultivars: `Cultivar` instances a `BotanicalName` belongs to.
         synonyms: `Synonym` instances representing synonyms of `BotanicalName`.
     """
+    query_class = BotanicalNameQuery
     __tablename__ = 'botanical_names'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.UnicodeText, unique=True)
@@ -1140,6 +1150,7 @@ class BotanicalName(db.Model, TimestampMixin, SynonymsMixin):
     )
     cultivars = db.relationship('Cultivar', back_populates='botanical_name')
     synonyms = db.relationship('Synonym', back_populates='botanical_name')
+    search_vector = db.Column(TSVectorType('name'))
 
     def __init__(self, name=None, common_names=None, synonyms=None):
         """Construct an instance of BotanicalName.
@@ -1308,6 +1319,10 @@ def before_botanical_name_insert_or_update(mapper, connection, target):
                          'to the database.'.format(target.name))
 
 
+class SectionQuery(BaseQuery, SearchQueryMixin):
+    pass
+
+
 class Section(db.Model, TimestampMixin, OrderingListMixin):
     """Table for sections cultivars may fall under.
 
@@ -1337,6 +1352,7 @@ class Section(db.Model, TimestampMixin, OrderingListMixin):
             given `Section`.
         cultivars: `Cultivar` instances in given `Section`.
     """
+    query_class = SectionQuery
     __tablename__ = 'sections'
     __table_args__ = (db.UniqueConstraint('name',
                                           'common_name_id',
@@ -1394,6 +1410,8 @@ class Section(db.Model, TimestampMixin, OrderingListMixin):
         collection_class=ordering_list('sec_pos', count_from=1),
         back_populates='parent_section'
     )
+    # Search
+    search_vector = db.Column(TSVectorType('name', 'description'))
 
     def __init__(self,
                  name=None,
@@ -1601,6 +1619,10 @@ def section_children_removed(target, value, initiator):
     value.parent_common_name = value.common_name
 
 
+class CultivarQuery(BaseQuery, SearchQueryMixin):
+    pass
+
+
 class Cultivar(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
     """Table for cultivar data.
 
@@ -1652,6 +1674,7 @@ class Cultivar(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
         synonyms: Synonyms for a `Cultivar`.
         custom_pages: `CustomPage` instances that include given `Cultivar`.
     """
+    query_class = CultivarQuery
     __tablename__ = 'cultivars'
     id = db.Column(db.Integer, primary_key=True)
     __table_args__ = (db.UniqueConstraint('name',
@@ -1764,6 +1787,7 @@ class Cultivar(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
         secondary=cultivars_to_countries,
         backref='noship_cultivars'
     )
+    search_vector = db.Column(TSVectorType('name', 'subtitle', 'description'))
 
     def __init__(self,
                  name=None,

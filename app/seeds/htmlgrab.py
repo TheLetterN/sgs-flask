@@ -1198,6 +1198,10 @@ class PageAdder(object):
                         pkt.quantity.units = units
                         if pkt not in cv.packets:
                             cv.packets.append(pkt)
+                        pkt.product_name = (
+                            '{}, {}'.format(pkt.cultivar.common_name.name,
+                                            pkt.cultivar.name).upper()
+                        )
                         print('Packet \'{0}\' added to \'{1}\'.'
                               .format(pkt.info, cv.fullname), file=stream)
             cv.visible = False

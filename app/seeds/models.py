@@ -2112,7 +2112,9 @@ class Packet(db.Model, TimestampMixin):
     __tablename__ = 'packets'
     id = db.Column(db.Integer, primary_key=True)
     sku = db.Column(db.UnicodeText, unique=True)
+    product_name = db.Column(db.UnicodeText)
     price = db.Column(USDollar)
+    taxable = db.Column(db.Boolean, default=True)
     quantity_id = db.Column(db.Integer, db.ForeignKey('quantities.id'))
     quantity = db.relationship('Quantity', back_populates='packets')
     cultivar_id = db.Column(db.Integer, db.ForeignKey('cultivars.id'))
@@ -2134,7 +2136,11 @@ class Packet(db.Model, TimestampMixin):
     @property
     def amount(self):
         """Return the amount of seeds in a packet."""
-        return self.quantity.html_value if self.quantity else None
+        try:
+            return '{} {}'.format(self.quantity.html_value,
+                                  self.quantity.units)
+        except AttributeError:
+            return ''
 
     @classmethod
     def from_values(cls, sku, price, quantity, units):

@@ -12,6 +12,7 @@ along with this program.  If not, see
 <http://www.gnu.org/licenses/>.
 Copyright Swallowtail Garden Seeds, Inc
 #}
+{% from 'includes/snipcart_form.html' import snipcart_form with context %}
 {% macro cultivar_box(cultivar) %}
 {% if cultivar.active and cultivar.visible or current_user.can(Permission.MANAGE_SEEDS) %}
 <div class="Cultivar">
@@ -45,7 +46,6 @@ Copyright Swallowtail Garden Seeds, Inc
     <span class="Cultivar_do_not_ship">{{ cultivar.noship_states_html|safe }}</span>
     {% endif %} 
   {% if cultivar.packets %}
-  {% for packet in cultivar.packets %}
   {# BEGIN old add to cart form #}
   {#
   <div class="packet-info">
@@ -63,17 +63,14 @@ Copyright Swallowtail Garden Seeds, Inc
   {% endif %}
   #}
   {# END old add to cart form #}
-  {# BEGIN new add to cart form #}
-  <form class="add-to-cart-form" method="POST" action="{# TODO #}">
-    {% if cultivar.in_stock %}
-    {# TMP #}<input type="number" name="qty"><button type="button">ADD TO CART</button>
-    {% else %}
-    <div-class="out-of-stock">OUT OF STOCK</div>
+  {# BEGIN Snipcart add to cart form #}
+  {# END Snipcart add to cart form #}
+    {% if config['USE_SNIPCART'] %}
+      {% for packet in cultivar.packets %}
+  {{ snipcart_form(packet) }}
+      {% endfor %}
     {% endif %}
-  </form>
-  {# END new add to cart form #}
-    {% endfor %}
-  {% endif %}
+    {% endif %}
   {# Cultivar admin below #}
 	{% if current_user.can(Permission.MANAGE_SEEDS) %}
   {% macro flipper(attr) %}

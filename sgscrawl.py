@@ -63,6 +63,8 @@ class CultivarTag:
         self.tag = tag
         self.d = dict()
         self.images = tag.find_all('img')
+        self.new_for = tag.find('span', class_='Cultivar_span_new')
+        self.favorite = tag.find('span', class_='Cultivar_span_best_seller')
         self.h3 = tag.find('h3')
         self.h3_ems = self.h3.find_all('em')
         self.ps = tag.find_all('p')

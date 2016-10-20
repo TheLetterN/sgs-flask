@@ -4,6 +4,13 @@ import requests
 from app.db_helpers import dbify
 
 
+def first_text(tag):
+    return next(
+        (c for c in tag.contents if isinstance(c, str) and c.strip()),
+        ''
+    ).strip()
+
+
 def extract_comments(tag):
     return '\n'.join(
         c.extract() for c in tag.find_all(
@@ -38,10 +45,28 @@ def get_cultivars(tag):
     ]
 
 
+def parse_button(button):
+    return {
+        k.replace('data-item-', ''): button[k] for k in button.attrs
+        if 'data-item' in k
+    }
+
+
 class CultivarTag:
     def __init__(self, tag):
         self.tag = tag
+        self.d = dict()
+        self.images = tag.find_all('img')
+        self.h3 = tag.find('h3')
+        self.h3_ems = self.h3.find_all('em')
+        self.ps = tag.find_all('p')
+        self.buttons = tag.find_all('button')
 
+    def populate_d(self):
+        self.d['name'] = first_text(self.h3)
+        self.d['h3 ems'] = [first_text(em) for em in self.h3_ems]
+        self.d['ps'] = [str(p) for p in self.ps]
+        self.d['buttons'] = [parse_button(b) for b in self.buttons]
 
 class SectionTag:
     def __init__(self, tag):
@@ -53,6 +78,7 @@ class SectionTag:
             x.lower() == 'series'
         )
         self.cultivars = get_cultivars(tag)
+        self.comments = extract_comments(tag)
 
     @property
     def class_(self):
@@ -88,3 +114,4 @@ class CNCrawler:
         self.cultivars = get_cultivars(self.main)
         self.header = self.main.find('div', class_='Header')
         self.intro = self.main.find('div', class_='Introduction')
+        self.comments = extract_comments(self.main)

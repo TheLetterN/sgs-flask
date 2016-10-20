@@ -519,8 +519,8 @@ class Index(db.Model, TimestampMixin):
         """str: plural form of `name`."""
         return pluralize(self.name) if self.name is not None else None
 
-    def generate_slug(self):
-        """Generate the string to use in URLs containing this `Index`."""
+    def make_slug(self):
+        """Make the string to use in URLs containing this `Index`."""
         return slugify(self.plural) if self.name is not None else None
 
     # Positioning methods and properties.
@@ -671,7 +671,8 @@ class Index(db.Model, TimestampMixin):
 @event.listens_for(Index, 'before_update')
 def before_index_insert_or_update(mapper, connection, target):
     """Run tasks best done before flushing an `Index` to the database."""
-    target.slug = target.generate_slug()
+    if not target.slug:
+        target.slug = target.make_slug()
 
 
 class CommonNameQuery(BaseQuery, SearchQueryMixin):
@@ -1103,7 +1104,7 @@ class CommonName(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
         """bool: Whether or not `CommonName` has any public cultivars."""
         return self.cultivars and any(cv.public for cv in self.cultivars)
 
-    def generate_slug(self):
+    def make_slug(self):
         """Generate the string to use in URLs for this `CommonName`."""
         return slugify(self.arranged_name) if self.name else None
 
@@ -1112,7 +1113,8 @@ class CommonName(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
 @event.listens_for(CommonName, 'before_update')
 def before_common_name_insert_or_update(mapper, connection, target):
     """Run tasks best done before flushing a `CommonName` to the database."""
-    target.slug = target.generate_slug()
+    if not target.slug:
+        target.slug = target.make_slug()
 
 
 class BotanicalNameQuery(BaseQuery, SearchQueryMixin):
@@ -2033,7 +2035,7 @@ class Cultivar(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
         else:
             return ''
 
-    def generate_slug(self):
+    def make_slug(self):
         """Generate a string for use in URLs for pages that use `Cultivar`."""
         return slugify(self.name) if self.name else None
 
@@ -2042,7 +2044,8 @@ class Cultivar(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
 @event.listens_for(Cultivar, 'before_update')
 def before_cultivar_insert_or_update(mapper, connection, target):
     """Update a `Cultivar` before flushing changes to the database."""
-    target.slug = target.generate_slug()
+    if not target.slug:
+        target.slug = target.make_slug()
 
 
 @event.listens_for(CommonName.cultivars, 'append')

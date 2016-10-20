@@ -2102,7 +2102,7 @@ def index(idx_slug=None):
         abort(404)
 
 
-@seeds.route('/<idx_slug>/<cn_slug>')
+@seeds.route('/<idx_slug>/<cn_slug>.html')
 def common_name(idx_slug=None, cn_slug=None):
     """Display page for a common name."""
     cn = CommonName.query\

@@ -42,7 +42,8 @@ Copyright Swallowtail Garden Seeds, Inc
 		<link rel="stylesheet" href="{{ url_for('static', filename='css/present.css') }}">
 		<link rel="stylesheet" href="{{ url_for('static', filename='css/database.css') }}">
 	</head>
-	<body>
+  <body class="twoColFixLtHdr">
+    <div id="container">
     {# BEGIN Page Header #}
 		<div class="Page_header">
       <p class="Page_header-contact-bar">Toll Free: 1-877-489-7333 <br class="no-desktop-display"><a class="Page_header-contact-bar-email-link" href="mailto:info@swallowtailgardenseeds.com">info@swallowtailgardenseeds.com</a>
@@ -99,7 +100,8 @@ Copyright Swallowtail Garden Seeds, Inc
 			<p class="Footer_copyright_p Footer_copyright_p2">Copyright pertains to all images, none of which may be reproduced in any form without<br class="no-mobile-display"> the expressed written consent of Swallowtail Garden Seeds.
 			</p>
 			<a href="https://seal.godaddy.com/verifySeal?sealID=FgdBKY27IIpHp2q5LkxzgzlbX27e0tqGEF9J5PgG2j7VUTmpgtsRrz" onclick="return popitup('https://seal.godaddy.com/verifySeal?sealID=FgdBKY27IIpHp2q5LkxzgzlbX27e0tqGEF9J5PgG2j7VUTmpgtsRrz')"><img class="Footer_siteseal" src="http://www.swallowtailgardenseeds.com/image-assets/site-seal.gif" alt="Go Daddy Site Seal"></a>
-		</div>
+    </div>
+  </div>
 <script src="{{ url_for('static', filename='scripts/scripts.js') }}"></script>
 		{% block scripts %}{% endblock %}
 	</body>

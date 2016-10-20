@@ -6,7 +6,9 @@ from app.db_helpers import dbify
 
 def first_text(tag):
     return next(
-        (c for c in tag.contents if isinstance(c, str) and c.strip()),
+        (c for c in tag.contents if isinstance(c, str) and
+            not isinstance(c, Comment) and
+            c.strip()),
         ''
     ).strip()
 
@@ -21,20 +23,24 @@ def extract_comments(tag):
 
 
 def get_subsections(tag):
-    sections = [
-        SectionTag(s) for s in tag.find_all('section', recursive=False)
-    ]
-    classes = [s.class_ for s in sections]
-    dupes = [c for c in classes if classes.count(c) > 1]
+    sections = tag.find_all('section', recursive=False)
+    classes = [s['class'] for s in sections]
+    dupes = []
+    for c in classes:
+        if classes.count(c) > 1 and c not in dupes:
+            dupes.append(c)
     for dupe in dupes:
-        secs = [s for s in sections if s.class_ == dupe]
-        master = next((s for s in secs if s.intro), secs[0])
+        secs = [s for s in sections if s['class'] == dupe]
+        # If it has a <p> tag in it, it's got an intro. Probably.
+        master = next((s for s in secs if s.find('p')), secs[0])
         secs.remove(master)
         for sec in secs:
-            master.append(sec.children)
+            for s in sec.find_all('section', recursive=False):
+                master.append(s.extract())
+            for div in sec.find_all('div', recursive=False):
+                master.append(div.extract())
             sections.remove(sec)
-            sec.extract()
-    return sections
+    return [SectionTag(s) for s in sections]
 
 
 def get_cultivars(tag):
@@ -61,12 +67,16 @@ class CultivarTag:
         self.h3_ems = self.h3.find_all('em')
         self.ps = tag.find_all('p')
         self.buttons = tag.find_all('button')
+        self.populate_d()
 
     def populate_d(self):
         self.d['name'] = first_text(self.h3)
         self.d['h3 ems'] = [first_text(em) for em in self.h3_ems]
         self.d['ps'] = [str(p) for p in self.ps]
         self.d['buttons'] = [parse_button(b) for b in self.buttons]
+
+    def __repr__(self):
+        return '<CultivarTag "{}">'.format(self.d['name'])
 
 class SectionTag:
     def __init__(self, tag):
@@ -77,8 +87,12 @@ class SectionTag:
             class_=lambda x: x and x.lower() == 'section' or
             x.lower() == 'series'
         )
+        self.intro = self.header.find_all('p') if self.header else None
         self.cultivars = get_cultivars(tag)
         self.comments = extract_comments(tag)
+
+    def __repr__(self):
+        return '<SectionTag class="{}">'.format(self.class_)
 
     @property
     def class_(self):
@@ -115,3 +129,20 @@ class CNCrawler:
         self.header = self.main.find('div', class_='Header')
         self.intro = self.main.find('div', class_='Introduction')
         self.comments = extract_comments(self.main)
+        self.consolidate_cultivars()
+
+    def consolidate_cultivars(self):
+        for s in self.sections:
+            c = ' '.join(s.class_).lower()
+            if 'individual' in c and 'variet' in c:
+                self.cultivars += s.cultivars
+                self.sections.remove(s)
+
+    @property
+    def all_cultivars(self):
+        cultivars = list(self.cultivars)
+        for section in self.sections:
+            cultivars += section.cultivars
+            for sec in section.subsections:
+                cultivars += sec.cultivars
+        return cultivars

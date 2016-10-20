@@ -129,9 +129,29 @@ class CNCrawler:
         self.sections = get_subsections(self.main)
         self.cultivars = get_cultivars(self.main)
         self.header = self.main.find('div', class_='Header')
+        self.sun = self.header.find(
+            'p',
+            class_=lambda x: x and 'sun' in x or 'shade' in x
+        )
         self.intro = self.main.find('div', class_='Introduction')
         self.comments = extract_comments(self.main)
+        self.growing = self.main.find('div', class_='Growing')
+        self.onpage_nav = None
+        self.related_links = None
+        self.parse_related_and_nav()
         self.consolidate_cultivars()
+
+    def parse_related_and_nav(self):
+        rls = self.main.find_all('div', class_='RelatedLinks')
+        if len(rls) > 2:
+            raise ValueError(
+                'Found more than two RelatedLinks divs on {}!'.format(self.url)
+            )
+        for rl in rls:
+            if rl.find('a', href=lambda x: x[0] == '#'):
+                self.onpage_nav = rl
+            else:
+                self.related_links = rl
 
     def consolidate_cultivars(self):
         for s in self.sections:

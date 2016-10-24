@@ -148,7 +148,8 @@ class CNScraper:
         )
         self.intro = self.main.find('div', class_='Introduction')
         self.comments = extract_comments(self.main)
-        self.growing = self.main.find('div', class_='Growing')
+        self.growing_divs = self.main.find_all('div', class_='Growing')
+        self.growing = self.growing_divs[-1] if self.growing_divs else None
         self.onpage_nav = None
         self.related_links = None
         self.parse_related_and_nav()

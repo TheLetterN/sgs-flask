@@ -67,6 +67,19 @@ class CultivarTag:
         self.favorite = tag.find('span', class_='Cultivar_span_best_seller')
         self.h3 = tag.find('h3')
         self.h3_ems = self.h3.find_all('em')
+        self.subtitle_em = self.h3_ems[0]
+        self.veg_em = None
+        self.bn_em = None
+        if len(self.h3_ems) > 1:
+            if len(self.h3_ems) > 2:
+                raise ValueError(
+                    'Too many ems to parse: {}'.format(self.h3_ems)
+                )
+            em = self.h3_ems[1]
+            if '(OP)' in em.text or 'days' in em.text:
+                self.veg_em = em
+            else:
+                self.bn_em = em
         self.ps = tag.find_all('p')
         self.buttons = tag.find_all('button')
         self.populate_d()
@@ -116,8 +129,8 @@ class SectionTag:
         
 
 
-class CNCrawler:
-    """A crawler for a given common name page."""
+class CNScraper:
+    """A scraper for a given common name page."""
     def __init__(self, url):
         self.url = url
         r = requests.get(url)

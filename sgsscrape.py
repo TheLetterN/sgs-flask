@@ -128,6 +128,22 @@ class SectionTag:
         return dbify(rawname)
         
 
+class IndexScraper:
+    """A scraper for an index (category) page."""
+    def __init__(self, url):
+        self.url = url
+        r = requests.get(url)
+        r.encoding = 'utf-8'
+        self.soup = BeautifulSoup(r.text, 'html5lib')
+        self.main = self.soup.find('div', id='main')
+        if not self.main:
+            raise RuntimeError('No main div on index page: {}'.format(url))
+        self.links = self.main.find(
+            'div',
+            class_='Index_pages-image-links-wrapper'
+        ).find_all('a')
+        self.link_urls = [a['href'] for a in self.links]
+
 
 class CNScraper:
     """A scraper for a given common name page."""
@@ -138,7 +154,7 @@ class CNScraper:
         self.soup = BeautifulSoup(r.text, 'html5lib')
         self.main = self.soup.find('div', id='main')
         if not self.main:
-            raise RuntimeError('No main div found for page: {}'.format(url))
+            raise RuntimeError('No main div on CN page: {}'.format(url))
         self.sections = get_subsections(self.main)
         self.cultivars = get_cultivars(self.main)
         self.header = self.main.find('div', class_='Header')

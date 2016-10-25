@@ -67,7 +67,10 @@ class CultivarTag:
         self.favorite = tag.find('span', class_='Cultivar_span_best_seller')
         self.h3 = tag.find('h3')
         self.h3_ems = self.h3.find_all('em')
-        self.subtitle_em = self.h3_ems[0]
+        try:
+            self.subtitle_em = self.h3_ems[0]
+        except IndexError:
+            self.subtitle_em = None
         self.veg_em = None
         self.bn_em = None
         if len(self.h3_ems) > 1:
@@ -92,6 +95,7 @@ class CultivarTag:
 
     def __repr__(self):
         return '<CultivarTag "{}">'.format(self.d['name'])
+
 
 class SectionTag:
     def __init__(self, tag):
@@ -126,7 +130,7 @@ class SectionTag:
                 self.class_.replace('section', '').split('-')
             ).strip()
         return dbify(rawname)
-        
+
 
 class IndexScraper:
     """A scraper for an index (category) page."""
@@ -143,6 +147,17 @@ class IndexScraper:
             class_='Index_pages-image-links-wrapper'
         ).find_all('a')
         self.link_urls = [a['href'] for a in self.links]
+        self._pages = None
+
+    @property
+    def pages(self):
+        if not self._pages:
+            print('Scraping pages...')
+            self._pages = []
+            for u in self.link_urls:
+                print('Scraping {}...'.format(u))
+                self._pages.append(CNScraper(u))
+        return self._pages
 
 
 class CNScraper:
@@ -170,6 +185,10 @@ class CNScraper:
         self.related_links = None
         self.parse_related_and_nav()
         self.consolidate_cultivars()
+
+
+    def __repr__(self):
+        return '<CNScraper url="{}">'.format(self.url)
 
     def parse_related_and_nav(self):
         rls = self.main.find_all('div', class_='RelatedLinks')

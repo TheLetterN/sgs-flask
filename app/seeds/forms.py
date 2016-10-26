@@ -856,7 +856,7 @@ class EditCommonNameForm(Form):
             model=CommonName,
             order_by='name'
         )
-        remove_from_choices(self.gw_gommon_names_ids.choices, cn)
+        remove_from_choices(self.gw_common_names_ids.choices, cn)
         self.gw_sections_ids.choices = select_field_choices(
             model=Section,
             order_by='name',

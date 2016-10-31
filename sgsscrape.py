@@ -59,6 +59,7 @@ def get_cultivars(tag):
     return [
         CultivarTag(c) for c in tag.find_all('div',
                                              class_='Cultivar',
+                                             id=lambda x: x != 'heirloom-tomato-intro',
                                              recursive=False)
     ]
 
@@ -89,21 +90,24 @@ class CultivarTag:
         self.veg_em = None
         self.bn_em = None
         if len(self.h3_ems) > 1:
-            if len(self.h3_ems) > 2:
-                raise ValueError(
-                    'Too many ems to parse: {}'.format(self.h3_ems)
-                )
             em = self.h3_ems[1]
             if '(OP)' in em.text or 'days' in em.text:
                 self.veg_em = em
             else:
                 self.bn_em = em
+            if len(self.h3_ems) == 3:
+                for c in self.h3_ems[2].contents:
+                    self.bn_em.append(c.extract())
+            if len(self.h3_ems) > 3:
+                raise RuntimeError(
+                    'More than 3 ems dectected:\n{}'.format(self.h3_ems)
+                )
         self.ps = tag.find_all('p')
         self.buttons = tag.find_all('button')
         self._dbdict = dict()
 
     def __repr__(self):
-        return '<CultivarTag "{}">'.format(self.d['name'])
+        return '<CultivarTag "{}">'.format(self.dbdict['name'])
 
     def get_packet_dicts(self):
         return [
@@ -128,7 +132,21 @@ class CultivarTag:
             self._dbdict['favorite'] = True if self.favorite else False
             self._dbdict['images'] = [i['src'] for i in self.images]
             self._dbdict['packets'] = self.get_packet_dicts()
+            self._dbdict['open_pollinated'] = self.veg_op
+            self._dbdict['days_to_maturity'] = self.veg_dtm
         return self._dbdict
+
+    @property
+    def veg_op(self):
+        return self.veg_em and 'OP' in str(self.veg_em)
+
+    @property
+    def veg_dtm(self):
+        if self.veg_em and 'days' in str(self.veg_em):
+            return next(
+                s for s in str(self.veg_em) if any(c.isdigit() for c in s)
+            )
+        return None
 
 
 class SectionTag:
@@ -140,24 +158,31 @@ class SectionTag:
             class_=lambda x: x and x.lower() == 'section' or
             x.lower() == 'series'
         )
-        self.header_h2 = self.header.find('h2')
-        self.header_ems = self.header_h2.find_all('em')
-        if len(self.header_ems) == 1:
-            self.subtitle = self.header_h2.find(
-                'em',
-                class_=lambda x: x and 'Series_em' in x
-            )
-            self.botanical_names = self.header_h2.find(
-                'em',
-                class_=lambda x: x and 'Section_em' in x
-            )
-        elif len(self.header_ems) > 1:
-            self.subtitle = self.header_ems[0]
-            self.botanical_names = self.header_ems[1]
+        if self.header:
+            self.header_h2 = self.header.find('h2')
+            self.header_ems = self.header_h2.find_all('em')
+            if len(self.header_ems) == 1:
+                self.subtitle = self.header_h2.find(
+                    'em',
+                    class_=lambda x: x and 'Series_em' in x
+                )
+                self.botanical_names = self.header_h2.find(
+                    'em',
+                    class_=lambda x: x and 'Section_em' in x
+                )
+            elif len(self.header_ems) > 1:
+                self.subtitle = self.header_ems[0]
+                self.botanical_names = self.header_ems[1]
+            else:
+                self.subtitle = None
+                self.botanical_names = None
+            self.intro = self.header.find_all('p') if self.header else ''
         else:
-            self.subtitle = None
-            self.botanical_names = None
-        self.intro = self.header.find_all('p') if self.header else ''
+            self.header_h2 = str(self.tag['class'])
+            self.botanical_names = ''
+            self.intro = ''
+            self.subtitle = ''
+            
         self.cultivars = get_cultivars(tag)
         self.comments = extract_comments(tag)
         self._dbdict = dict()
@@ -296,9 +321,12 @@ class CNScraper:
             self._dbdict['subtitle'] = first_text(self.header_h2)
             self._dbdict['botanical_names'] = first_text(self.header_h3)
             self._dbdict['slug'] = self.url.split('/')[-1].replace('.html', '')
-            self._dbdict['sunlight'] = next(
-                c for c in self.sun['class'] if 'sun' in c or 'shade' in c
-            )
+            try:
+                self._dbdict['sunlight'] = next(
+                    c for c in self.sun['class'] if 'sun' in c or 'shade' in c
+                )
+            except TypeError:
+                self._dbdict['sunlight'] = ''
             self._dbdict['thumb_url'] = self.thumbnail
             try:
                 self._dbdict['instructions'] = tags_to_str(

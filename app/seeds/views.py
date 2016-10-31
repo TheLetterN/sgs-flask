@@ -444,8 +444,17 @@ def add_common_name(idx_id=None):
         db.session.add(cn)
         messages.append('Creating new common name "{0}" and adding it to '
                         'index "{1}":'.format(cn.name, idx.name))
+        if form.subtitle.data:
+            # TODO: Handle default data.
+            cn.subtitle = form.subtitle.data
+            messages.append('Subtitle set to: <p>{}</p>'.format(cn.subtitle))
         if form.thumbnail.data:
             add_thumbnail(form.thumbnail, cn, messages)
+        if form.botanical_names.data:
+            cn.botanical_names = form.botanical_names.data
+            messages.append(
+                'Botanical names set to: <p>{}</p>'.format(cn.botanical_names)
+            )
         if form.description.data:
             cn.description = form.description.data
             messages.append('Description set to: <p>{0}</p>'

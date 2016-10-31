@@ -28,10 +28,10 @@
         Qty:
       </th>
       <th class="Cultivar_table_th">
-        <input class="Cultivar_table_text" id="quantity-{{ packet.sku }}" min="1" name="Qty" type="number" value="1">
+        <input class="Cultivar_table_text" id="quantity-{{ packet.sku }}" min="1" name="Qty" type="number" value="{% if packet.cultivar.in_stock %}1"{% else %}0" disabled=""{% endif %}>
       </th>
       <th class="Cultivar_table_th2">
-        <button type="button" id="button-{{ packet.sku }}" class="Cultivar_button_submit snipcart-add-item" data-item-description="{{ packet.amount|safe }}" data-item-id="{{ packet.sku }}" data-item-name="{{ packet.product_name }}" data-item-price="{{ packet.price }}" data-item-taxable="{% if packet.taxable %}true{% else %}false{% endif %}" data-item-url="{{ packet.cultivar.url }}">ADD TO CART</button>
+        <button type="button" id="button-{{ packet.sku }}" class="Cultivar_button_submit snipcart-add-item" data-item-description="{{ packet.amount|safe }}" data-item-id="{{ packet.sku }}" data-item-name="{{ packet.product_name }}" data-item-price="{{ packet.price }}" data-item-taxable="{% if packet.taxable %}true{% else %}false{% endif %}" data-item-url="{{ packet.cultivar.url }}"{% if packet.cultivar.in_stock %}>ADD TO CART{% else %} disabled="">OUT OF STOCK{% endif %}</button>
       </th>
     </tr>
   </tbody>

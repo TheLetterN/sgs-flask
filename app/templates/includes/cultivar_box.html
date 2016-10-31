@@ -64,12 +64,12 @@ Copyright Swallowtail Garden Seeds, Inc
   #}
   {# END old add to cart form #}
   {# BEGIN Snipcart add to cart form #}
-  {# END Snipcart add to cart form #}
     {% if config['USE_SNIPCART'] %}
       {% for packet in cultivar.packets %}
   {{ snipcart_form(packet) }}
       {% endfor %}
     {% endif %}
+  {# END Snipcart add to cart form #}
     {% endif %}
   {# Cultivar admin below #}
 	{% if current_user.can(Permission.MANAGE_SEEDS) %}

@@ -207,6 +207,14 @@ class AddCommonNameForm(Form):
         'Common Name',
         validators=[DataRequired(), Length(max=254)]
     )
+    subtitle = StrippedStringField(
+        'Subtitle',
+        validators=[Length(max=254)]
+    )
+    botanical_names = StrippedStringField(
+        'Botanical Name(s)',
+        validators=[Length(max=508)]
+    )
     thumbnail = SecureFileField(
         'Thumbnail Image',
         validators=[FileAllowed(IMAGE_EXTENSIONS, 'Images only!')]

@@ -115,26 +115,6 @@ from app.db_helpers import (
 
 
 # Association Tables
-botanical_names_to_common_names = db.Table(
-    'botanical_names_to_common_names',
-    db.Model.metadata,
-    db.Column('botanical_names_id',
-              db.Integer,
-              db.ForeignKey('botanical_names.id')),
-    db.Column('common_names_id', db.Integer, db.ForeignKey('common_names.id'))
-)
-
-
-botanical_names_to_sections = db.Table(
-    'botanical_names_to_sections',
-    db.Model.metadata,
-    db.Column('botanical_names_id',
-              db.Integer,
-              db.ForeignKey('botanical_names.id')),
-    db.Column('sections.id', db.Integer, db.ForeignKey('sections.id'))
-)
-
-
 cultivars_to_custom_pages = db.Table(
     'cultivars_to_custom_pages',
     db.Model.metadata,
@@ -245,7 +225,6 @@ def dump_db_to_json(filename):
     d['images'] = [i.dict_ for i in Image.query.all()]
     d['indexes'] = [i.dict_ for i in Index.query.all()]
     d['common names'] = [c.dict_ for c in CommonName.query.all()]
-    d['botanical names'] = [b.dict_ for b in BotanicalName.query.all()]
 
     with open(filename, 'w') as outfile:
         outfile.write(json.dumps(d, indent=4))
@@ -267,8 +246,6 @@ def populate_db_from_json(filename):
     for cn_d in d['common names']:
         cn = CommonName.query.get(cn_d['id'])
         cn.gw_from_dict_(cn_d)
-    for bn_d in d['botanical names']:
-        db.session.add(BotanicalName.query.get(bn_d['id']))
     db.session.flush()
 
     db.session.commit()
@@ -704,7 +681,7 @@ class CommonName(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
             given instance.
         visible: Whether or not to list given `CommonName` on non-custom pages.
             Default value: True.
-        botanical_names: `BotanicalName` belonging to given `CommonName`.
+        botanical_names: Botanical names belonging to given `CommonName`.
         sections: `Section` instances belonging to given `CommonName`.
         cultivars: `Cultivar` instances belonging to given `CommonName`.
         synonyms: `Synonym` instances which are synonyms of given `CommonName`.
@@ -736,6 +713,7 @@ class CommonName(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
         'Image',
         back_populates='common_names_with_thumb'
     )
+    botanical_names = db.Column(db.UnicodeText)
     description = db.Column(db.UnicodeText)
     instructions = db.Column(db.UnicodeText)
     gw_common_names = db.relationship(
@@ -753,11 +731,6 @@ class CommonName(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
         secondary=common_names_to_gw_cultivars
     )
     visible = db.Column(db.Boolean)
-    botanical_names = db.relationship(
-        'BotanicalName',
-        secondary=botanical_names_to_common_names,
-        back_populates='common_names'
-    )
     sections = db.relationship(
         'Section',
         foreign_keys='Section.common_name_id',
@@ -794,9 +767,13 @@ class CommonName(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
         backref='noship_common_names'
     )
     # Search
-    search_vector = db.Column(
-        TSVectorType('name', 'subtitle', 'description', 'instructions')
-    )
+    search_vector = db.Column(TSVectorType(
+        'name',
+        'subtitle',
+        'description',
+        'instructions',
+        'botanical_names'
+    ))
 
     def __init__(self,
                  name=None,
@@ -1081,25 +1058,6 @@ class CommonName(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
         }
 
     @property
-    def html_botanical_names(self):
-        """str: A list of botanical names formatted in HTML."""
-        if not self.botanical_names:
-            return ''
-        else:
-            names = []
-            genuses = []
-            for bn in self.botanical_names:
-                parts = bn.fullname.split(' ', 1)
-                if parts[0] in genuses:
-                    name = ('<abbr title="{0}">{1}.</abbr> {2}'
-                            .format(parts[0], parts[0][0], parts[1]))
-                    names.append(name)
-                else:
-                    genuses.append(parts[0])
-                    names.append(bn.fullname)
-            return ', '.join(names)
-
-    @property
     def has_public_cultivars(self):
         """bool: Whether or not `CommonName` has any public cultivars."""
         return self.cultivars and any(cv.public for cv in self.cultivars)
@@ -1115,210 +1073,6 @@ def before_common_name_insert_or_update(mapper, connection, target):
     """Run tasks best done before flushing a `CommonName` to the database."""
     if not target.slug:
         target.slug = target.make_slug()
-
-
-class BotanicalNameQuery(BaseQuery, SearchQueryMixin):
-    pass
-
-
-class BotanicalName(db.Model, TimestampMixin, SynonymsMixin):
-    """Table for botanical (scientific) names of seeds.
-
-    The botanical name is the scientific name of the species a seed belongs
-    to. A correctly-formatted botanical name begins with a genus and species
-    in binomial name format, or at least a genus followed by a descriptive
-    comment.
-
-    Attributes:
-        name: The botanical name given istance of `BotanicalName` represents.
-        common_names: `CommonName` instances a `BotanicalName` belongs to.
-        sections: `Section` instances a `BotanicalName` belongs to.
-        cultivars: `Cultivar` instances a `BotanicalName` belongs to.
-        synonyms: `Synonym` instances representing synonyms of `BotanicalName`.
-    """
-    query_class = BotanicalNameQuery
-    __tablename__ = 'botanical_names'
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.UnicodeText, unique=True)
-    common_names = db.relationship(
-        'CommonName',
-        secondary=botanical_names_to_common_names,
-        back_populates='botanical_names'
-    )
-    sections = db.relationship(
-        'Section',
-        secondary=botanical_names_to_sections,
-        back_populates='botanical_names'
-    )
-    cultivars = db.relationship('Cultivar', back_populates='botanical_name')
-    synonyms = db.relationship('Synonym', back_populates='botanical_name')
-    search_vector = db.Column(TSVectorType('name'))
-
-    def __init__(self, name=None, common_names=None, synonyms=None):
-        """Construct an instance of BotanicalName.
-
-        Note:
-            synonyms should be a string, not a collection of `Synonym` objects,
-            as the only relevant data `Synonym` objects contain is the synonyms
-            themselves.
-        """
-        self.name = name
-        if common_names:  # Can't set collection to None
-            self.common_names = common_names
-        self.synonyms_string = synonyms
-
-    def __repr__(self):
-        """Return representation of BotanicalName in human-readable format.
-
-        Returns:
-            str: Representation formatted <BotanicalName '<.name>'> for
-                 example: <BotanicalName 'Asclepias incarnata'>
-        """
-        return '<{0} "{1}">'.format(self.__class__.__name__,
-                                    self.name)
-
-    @property
-    def dict_(self):
-        """A dictionary of values needed to make a copy of this in a new db."""
-        return dict(
-            id=self.id,
-            name=self.name,
-            common_names=[c.id for c in self.common_names]
-        )
-
-    @classmethod
-    def from_dict_(cls, dict_):
-        """Create a BotanicalName with data from dict_.
-
-        Args:
-            dict_: A dict generated by `BotanicalName.dict_`.
-
-        Returns:
-            BotanicalName: The `BotanicalName` generated from `dict_`.
-        """
-        bn = cls.query.get(dict_['id'])
-        if bn:
-            raise RuntimeError(
-                'A BotanicalName with id {0} already exists as: "{0}"'
-                .format(bn.id, bn.name)
-            )
-        bn = cls()
-        for key in dict_.keys():
-            if key == 'common names':
-                for cn_id in dict_[key]:
-                    cn = CommonName.query.get(cn_id)
-                    bn.common_names.append(cn)
-            else:
-                bn.__setattr__(key, dict_[key])
-
-    @classmethod
-    def get_or_create(cls, name, stream=sys.stdout, fix_bad=False):
-        """Load a `BotanicalName` from db, or create it if it doesn't exist.
-
-        Args:
-            name: Name of the `BotanicalName`.
-            stream: The buffer to print messages to.
-            fix_bad: Whether or not to 'fix' invalid botanical names. Defaults
-                to `False`.
-
-        Returns:
-            BotanicalName: The loaded or created `BotanicalName`.
-
-        Raises:
-            ValueError: If `name` is not valid, and `fix_bad` is not true.
-        """
-        if not cls.validate(name):
-            if fix_bad:
-                parts = name.split(' ')
-                name = ' '.join([parts[0].title()] + parts[1:])
-            else:
-                raise ValueError('"{0}" is not a valid botanical name!'
-                                 .format(name))
-        bn = cls.query.filter(cls.name == name).one_or_none()
-        if bn:
-            bn.created = False
-            print('The BotanicalName "{0}" has been loaded from the '
-                  'database.'.format(bn.name))
-        else:
-            bn = BotanicalName(name=name)
-            bn.created = True
-            print('The BotanicalName "{0}" does not yet exist in the '
-                  'database, so it has been created.'
-                  .format(bn.name))
-        return bn
-
-    @property
-    def genus(self):
-        """str: The genus of the botanical name."""
-        return self.name.split(' ')[0]
-
-    @property
-    def fullname(self):
-        """str: Name with synonyms."""
-        if self.synonyms:
-            abbr = ('<abbr title="{0}">{1}.</abbr>'.format(self.genus,
-                                                           self.genus[0]))
-            syns = [s.name.replace(self.genus, abbr) for s in self.synonyms]
-            return self.name + ' syn. ' + ', syn. '.join(syns)
-        else:
-            return self.name
-
-    @staticmethod
-    def validate(botanical_name):
-        """Return True if botanical_name looks like a valid botanical name.
-
-        Since there is a lot of variation in what constitutes a valid botanical
-        name, the best we can reasonably do is make sure it contains at least
-        two words, and the first could be a validly formatted genus.
-
-        Examples:
-            >>> BotanicalName.validate('Asclepias incarnata')
-            True
-
-            >>> BotanicalName.validate('asclepias incarnata')
-            False
-
-            >>> BotanicalName.validate('ASCLEPIAS INCARNATA')
-            False
-
-            >>> BotanicalName.validate('Asclepias Incarnata')
-            True
-
-            >>> BotanicalName.validate('Digitalis interspecies hybrid')
-            True
-
-        Args:
-            botanical_name: A string containing a botanical name to
-                check for valid formatting.
-
-        Returns:
-            bool: True if botanical_name looks valid, False if it doesn't look
-                valid, or if attempting to parse it raises an exception.
-        """
-        try:
-            nomens = botanical_name.strip().split(' ')
-            if len(nomens) > 1 and nomens[0] == nomens[0].capitalize():
-                return True
-            else:
-                return False
-        except:
-            return False
-
-
-@event.listens_for(BotanicalName, 'before_insert')
-@event.listens_for(BotanicalName, 'before_update')
-def before_botanical_name_insert_or_update(mapper, connection, target):
-    """Run tasks best run before adding a `BotanicalName` to the database."""
-    # Validating `BotanicalName.name` should always be handled at the highest
-    # level possible. Generally, this is either when a user inputs a name, or
-    # a name is loaded from a file. This check exists so that failures to
-    # validate `BotanicalName.name` before attempting to add it to the database
-    # are caught.
-    #
-    # This exception should **never** be raised in production code!
-    if target.name and not BotanicalName.validate(target.name):
-        raise ValueError('Failed attempt to add invalid botanical name {} '
-                         'to the database.'.format(target.name))
 
 
 class SectionQuery(BaseQuery, SearchQueryMixin):
@@ -1344,8 +1098,7 @@ class Section(db.Model, TimestampMixin, OrderingListMixin):
         name: The name of the section.
         common_name: The `CommonName` the `Section` belongs to.
 
-        botanical_names: Optional `BotanicalName` instances belonging to the
-            `Section`.
+        botanical_names: Optional botanical names for the `Section`.
         subtitle: Optional subtitle for `Section`.
         description: HTML description/intro for `Section`.
         parent: Optional parent `Section` the given `Section` is a subsection
@@ -1383,11 +1136,7 @@ class Section(db.Model, TimestampMixin, OrderingListMixin):
         foreign_keys=[parent_common_name_id],
         back_populates='child_sections'
     )
-    botanical_names = db.relationship(
-        'BotanicalName',
-        secondary=botanical_names_to_sections,
-        back_populates='sections'
-    )
+    botanical_names = db.Column(db.UnicodeText)
     subtitle = db.Column(db.UnicodeText)
     description = db.Column(db.UnicodeText)
     parent_id = db.Column(db.Integer, db.ForeignKey('sections.id'))
@@ -1413,7 +1162,12 @@ class Section(db.Model, TimestampMixin, OrderingListMixin):
         back_populates='parent_section'
     )
     # Search
-    search_vector = db.Column(TSVectorType('name', 'description'))
+    search_vector = db.Column(TSVectorType(
+        'name',
+        'subtitle',
+        'description',
+        'botanical_names'
+    ))
 
     def __init__(self,
                  name=None,
@@ -1654,7 +1408,7 @@ class Cultivar(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
             '<`Cultivar.common_name.name`> Seeds', as in Fuseables, e.g.
             'Bacopa/Petunia Multi-Species Seeds'.
         section: Optional `Section` a `Cultivar` belongs to.
-        botanical_name: The `BotanicalName` of given `Cultivar`.
+        botanical_name: The botanical name of given `Cultivar`.
         description: An optional HTML description of a cultivar.
         new_until: An optional date to mark a `Cultivar` as new until.
         featured: Whether or not `Cultivar` should be featured on its common
@@ -1704,14 +1458,7 @@ class Cultivar(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
         secondary=cultivars_to_sections,
         back_populates='cultivars'
     )
-    botanical_name_id = db.Column(
-        db.Integer,
-        db.ForeignKey('botanical_names.id')
-    )
-    botanical_name = db.relationship(
-        'BotanicalName',
-        back_populates='cultivars'
-    )
+    botanical_name = db.Column(db.UnicodeText)
     description = db.Column(db.UnicodeText)
     new_until = db.Column(db.Date)
     featured = db.Column(db.Boolean, default=False)
@@ -1789,7 +1536,12 @@ class Cultivar(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
         secondary=cultivars_to_countries,
         backref='noship_cultivars'
     )
-    search_vector = db.Column(TSVectorType('name', 'subtitle', 'description'))
+    search_vector = db.Column(TSVectorType(
+        'name',
+        'subtitle',
+        'botanical_name',
+        'description'
+    ))
 
     def __init__(self,
                  name=None,
@@ -2527,7 +2279,6 @@ class Synonym(db.Model):
     Attributes:
         name: The synonym itself.
         common_name: A `CommonName` a `Synonym` belongs to.
-        botanical_name: A `BotanicalName` a `Synonym` belongs to.
         cultivar: A `Cultivar` a `Synonym` belongs to.
     """
     __tablename__ = 'synonyms'
@@ -2535,14 +2286,6 @@ class Synonym(db.Model):
     name = db.Column(db.UnicodeText)
     common_name_id = db.Column(db.Integer, db.ForeignKey('common_names.id'))
     common_name = db.relationship('CommonName', back_populates='synonyms')
-    botanical_name_id = db.Column(
-        db.Integer,
-        db.ForeignKey('botanical_names.id')
-    )
-    botanical_name = db.relationship(
-        'BotanicalName',
-        back_populates='synonyms'
-    )
     cultivar_id = db.Column(db.Integer, db.ForeignKey('cultivars.id'))
     cultivar = db.relationship('Cultivar', back_populates='synonyms')
 
@@ -2575,8 +2318,6 @@ class Synonym(db.Model):
         parents = []
         if self.common_name:
             parents.append(self.common_name)
-        if self.botanical_name:
-            parents.append(self.botanical_name)
         if self.cultivar:
             parents.append(self.cultivar)
         if len(parents) == 0:

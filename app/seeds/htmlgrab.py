@@ -38,7 +38,6 @@ from werkzeug import secure_filename
 from app import db
 from app.db_helpers import dbify
 from app.seeds.models import (
-    BotanicalName,
     Section,
     CommonName,
     Cultivar,
@@ -50,6 +49,11 @@ from app.seeds.models import (
 )
 from app.shop.models import Country
 
+class BotanicalName:
+    #TMP: This module is broken until BotanicalName is removed.
+    def __init__(self):
+        raise NotImplementedError('The BotanicalName table no longer exists.'
+                                  'Please remove it from this module.')
 
 def save_batch(lines, index, directory=None, pages_dir=None):
     """Save a batch of pages to JSON.

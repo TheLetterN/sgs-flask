@@ -39,7 +39,6 @@ from . import seeds
 from ..lastcommit import LastCommit
 from app.db_helpers import dbify
 from .models import (
-    BotanicalName,
     Section,
     CommonName,
     Cultivar,
@@ -50,26 +49,22 @@ from .models import (
     USDollar
 )
 from app.seeds.forms import (
-    AddBotanicalNameForm,
     AddIndexForm,
     AddCommonNameForm,
     AddPacketForm,
     AddRedirectForm,
     AddCultivarForm,
     AddSectionForm,
-    EditBotanicalNameForm,
     EditIndexForm,
     EditCommonNameForm,
     EditPacketForm,
     EditCultivarForm,
     EditSectionForm,
-    RemoveBotanicalNameForm,
     RemoveIndexForm,
     RemoveCommonNameForm,
     RemovePacketForm,
     RemoveSectionForm,
     RemoveCultivarForm,
-    SelectBotanicalNameForm,
     SelectIndexForm,
     SelectCommonNameForm,
     SelectPacketForm,
@@ -84,7 +79,6 @@ ADD_ROUTES = (
     ('manage', 'Manage Seeds'),
     'add_index',
     'add_common_name',
-    'add_botanical_name',
     'add_section',
     'add_cultivar',
     'add_packet'
@@ -95,7 +89,6 @@ EDIT_ROUTES = (
     ('manage', 'Manage Seeds'),
     'edit_index',
     'edit_common_name',
-    'edit_botanical_name',
     'edit_section',
     'edit_cultivar',
     'edit_packet'
@@ -106,7 +99,6 @@ REMOVE_ROUTES = (
     ('manage', 'Manage Seeds'),
     'remove_index',
     'remove_common_name',
-    'remove_botanical_name',
     'remove_section',
     'remove_cultivar',
     'remove_packet'
@@ -516,42 +508,6 @@ def add_common_name(idx_id=None):
                            form=form)
 
 
-@seeds.route('/add_botanical_name', methods=['GET', 'POST'])
-@seeds.route('/add_botanical_name/<int:cn_id>', methods=['GET', 'POST'])
-@login_required
-@permission_required(Permission.MANAGE_SEEDS)
-def add_botanical_name(cn_id=None):
-    """Handle web interface for adding BotanicalName objects to database."""
-    cn = CommonName.query.get(cn_id) if cn_id else None
-    if not cn:
-        return redirect(url_for('seeds.select_common_name',
-                                dest='seeds.add_botanical_name'))
-
-    form = AddBotanicalNameForm(cn=cn)
-    if form.validate_on_submit():
-        messages = []
-        bn = BotanicalName(name=form.name.data.strip())
-        db.session.add(bn)
-        bn.common_names.append(cn)
-        messages.append('Creating botanical name "{0}" for common name '
-                        '"{1}":'.format(bn.name, cn.name))
-        if form.synonyms.data:
-            bn.synonyms_string = form.synonyms.data
-            messages.append('Synonyms set to: "{0}".'
-                            .format(bn.synonyms_string))
-        db.session.commit()
-        messages.append('New botanical name "{0}" added to the database.'
-                        .format(bn.name))
-        flash_all(messages)
-        return redirect(url_for('seeds.{0}'.format(form.next_page.data),
-                        cn_id=cn.id))
-
-    crumbs = cblr.crumble_route_group('add_botanical_name', ADD_ROUTES)
-    return render_template('seeds/add_botanical_name.html',
-                           crumbs=crumbs,
-                           form=form)
-
-
 @seeds.route('/add_section', methods=['GET', 'POST'])
 @seeds.route('/add_section/<int:cn_id>', methods=['GET', 'POST'])
 @login_required
@@ -625,10 +581,9 @@ def add_cultivar(cn_id=None):
             cv.subtitle = form.subtitle.data
             messages.append('Subtitle set to: "{0}"'.format(cv.subtitle))
         if form.botanical_name.data:
-            cv.botanical_name = BotanicalName.query\
-                .get(form.botanical_name.data)
+            cv.botanical_name = form.botanical_name.data
             messages.append('Botanical name set to: "{0}".'
-                            .format(cv.botanical_name.name))
+                            .format(cv.botanical_name))
         if form.section.data:
             sec = Section.query.get(form.section.data)
             cv.sections = [sec]
@@ -1045,62 +1000,6 @@ def edit_common_name(cn_id=None):
                            cn=cn)
 
 
-@seeds.route('/edit_botanical_name', methods=['GET', 'POST'])
-@seeds.route('/edit_botanical_name/<int:bn_id>', methods=['GET', 'POST'])
-@login_required
-@permission_required(Permission.MANAGE_SEEDS)
-def edit_botanical_name(bn_id=None):
-    bn = BotanicalName.query.get(bn_id) if bn_id else None
-    if bn is None:
-        return redirect(url_for('seeds.select_botanical_name',
-                                dest='seeds.edit_botanical_name'))
-    form = EditBotanicalNameForm(obj=bn)
-    if form.validate_on_submit():
-        edited = False
-        messages = []
-        messages.append('Editing botanical name "{0}".'.format(bn.name))
-        form.name.data = form.name.data.strip()
-        if form.name.data != bn.name:
-                edited = True
-                bn.name = form.name.data
-                messages.append('Name changed to: "{0}".'.format(bn.name))
-        for cn in list(bn.common_names):
-            if cn.id not in form.common_names.data:
-                edited = True
-                bn.common_names.remove(cn)
-                messages.append('Removed common name "{0}".'.format(cn.name))
-        cnids = [cona.id for cona in bn.common_names]
-        for cnid in form.common_names.data:
-            if cnid not in cnids:
-                edited = True
-                cn = CommonName.query.get(cnid)
-                bn.common_names.append(cn)
-                messages.append('Added common name "{0}".'.format(cn.name))
-        if form.synonyms_string.data != bn.synonyms_string:
-            edited = True
-            if form.synonyms_string.data:
-                bn.synonyms_string = form.synonyms_string.data
-                messages.append('Synonyms changed to: "{0}".'
-                                .format(bn.synonyms_string))
-            else:
-                bn.synonyms_string = None
-                messages.append('Synonyms cleared.')
-        if edited:
-            db.session.commit()
-            messages.append('Changes to "{0}" committed to the database.'
-                            .format(bn.name))
-            flash_all(messages)
-            return redirect(url_for('seeds.manage'))
-        else:
-            messages.append('No changes to "{0}" were made.'.format(bn.name))
-            flash_all(messages)
-            return redirect(url_for('seeds.edit_botanical_name', bn_id=bn_id))
-    crumbs = cblr.crumble_route_group('edit_botanical_name', EDIT_ROUTES)
-    return render_template('/seeds/edit_botanical_name.html',
-                           crumbs=crumbs,
-                           form=form)
-
-
 @seeds.route('/edit_section', methods=['GET', 'POST'])
 @seeds.route('/edit_section/<int:section_id>', methods=['GET', 'POST'])
 @login_required
@@ -1252,19 +1151,6 @@ def edit_cultivar(cv_id=None):
             cv.common_name = CommonName.query.get(form.common_name_id.data)
             messages.append('Common name changed to: "{0}".'
                             .format(cv.common_name.name))
-        if not form.botanical_name_id.data:
-            form.botanical_name_id.data = None
-        if form.botanical_name_id.data != cv.botanical_name_id:
-            edited = True
-            if form.botanical_name_id.data:
-                cv.botanical_name = BotanicalName.query.get(
-                    form.botanical_name_id.data
-                )
-                messages.append('Botanical name changed to: "{0}".'
-                                .format(cv.botanical_name.name))
-            else:
-                cv.botanical_name = None
-                messages.append('Botanical name cleared.')
         old_parent_sec = cv.parent_section
         if not form.section_id.data:
             form.section_id.data = None
@@ -1566,18 +1452,6 @@ def migrate_cultivars(cn, other):
     return warnings
 
 
-def move_botanical_names(cn, other):
-    """Move botanical names from one `CommonName` to another.
-
-    Args:
-        cn: The `CommonName` to move `BotanicalName` instances from.
-        other: The `CommonName` to move them to.
-    """
-    for bn in list(cn.botanical_names):
-        if bn not in other.botanical_names:
-            other.botanical_names.append(bn)
-
-
 def migrate_common_names(idx, other):
     """Move all instances of `CommonName` from one `Index` to another.
 
@@ -1594,14 +1468,13 @@ def migrate_common_names(idx, other):
             warnings.append(
                 'Could not move "{0}" because a common name with the same '
                 'name already belongs to "{1}". Instead of moving it, its '
-                'children (botanical names, section, and cultivars) will be '
+                'children (section, and cultivars) will be '
                 'moved to the one belonging to "{1}" if possible.'
                 .format(cn.name, other.name)
             )
             other_cn = next((
                 c for c in other.common_names if c.name == cn.name), None
             )
-            move_botanical_names(cn, other_cn)
             warnings += migrate_sections(cn, other_cn)
             warnings += migrate_cultivars(cn, other_cn)
     return warnings
@@ -1707,7 +1580,6 @@ def remove_common_name(cn_id=None):
             if cn.synonyms:
                 cn.synonyms_string = None
                 messages.append('Synonyms cleared.')
-            move_botanical_names(cn, new_cn)
             try:
                 for cv in cn.cultivars:
                     warnings.append(redirect_cultivar_warning(
@@ -1736,43 +1608,6 @@ def remove_common_name(cn_id=None):
             return redirect(url_for('seeds.remove_common_name', cn_id=cn_id))
     crumbs = cblr.crumble_route_group('remove_common_name', REMOVE_ROUTES)
     return render_template('seeds/remove_common_name.html',
-                           crumbs=crumbs,
-                           form=form)
-
-
-@seeds.route('/remove_botanical_name', methods=['GET', 'POST'])
-@seeds.route('/remove_botanical_name/<int:bn_id>', methods=['GET', 'POST'])
-@login_required
-@permission_required(Permission.MANAGE_SEEDS)
-def remove_botanical_name(bn_id=None):
-    """Remove a botanical name from the database."""
-    bn = BotanicalName.query.get(bn_id) if bn_id else None
-    if bn is None:
-        return redirect(url_for('seeds.select_botanical_name',
-                                dest='seeds.remove_botanical_name'))
-    form = RemoveBotanicalNameForm()
-    if form.validate_on_submit():
-        messages = []
-        if form.verify_removal.data:
-            messages.append('Removing botanical name "{0}":'.format(bn.name))
-            if bn.synonyms:
-                bn.synonyms_string = None
-                messages.append('Synonyms have been cleared.')
-            db.session.delete(bn)
-            db.session.commit()
-            messages.append('Botanical name removed.')
-            flash_all(messages)
-            return redirect(url_for('seeds.manage'))
-        else:
-            messages.append('Botanical name was not removed, so no changes '
-                            'were made. If you would like to remove it, '
-                            'please check the box labeled "Yes".')
-            flash_all(messages)
-            return redirect(url_for('seeds.remove_botanical_name',
-                                    bn_id=bn_id))
-    crumbs = cblr.crumble_route_group('remove_botanical_name', REMOVE_ROUTES)
-    return render_template('seeds/remove_botanical_name.html',
-                           bn=bn,
                            crumbs=crumbs,
                            form=form)
 
@@ -1964,31 +1799,6 @@ def select_common_name():
         cblr.crumble('select_common_name', dest=dest)
     )
     return render_template('seeds/select_common_name.html',
-                           crumbs=crumbs,
-                           form=form)
-
-
-@seeds.route('/select_botanical_name', methods=['GET', 'POST'])
-@login_required
-@permission_required(Permission.MANAGE_SEEDS)
-def select_botanical_name():
-    """Select a botanical name to load on another page.
-
-    Request Args:
-        dest: The route to redirect to after `BotanicalName` is selected.
-    """
-    dest = request.args.get('dest')
-    if dest is None:
-        flash('Error: No destination page was specified!')
-        return redirect(url_for('seeds.manage'))
-    form = SelectBotanicalNameForm()
-    if form.validate_on_submit():
-        return redirect(url_for(dest, bn_id=form.botanical_name.data))
-    crumbs = (
-        cblr.crumble('manage', 'Manage Seeds'),
-        cblr.crumble('select_botanical_name', dest=dest)
-    )
-    return render_template('seeds/select_botanical_name.html',
                            crumbs=crumbs,
                            form=form)
 

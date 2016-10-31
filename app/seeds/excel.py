@@ -35,7 +35,6 @@ import openpyxl
 from app import db
 from app.db_helpers import dbify
 from app.seeds.models import (
-    BotanicalName,
     Section,
     CommonName,
     Cultivar,
@@ -45,6 +44,11 @@ from app.seeds.models import (
     Quantity
 )
 
+class BotanicalName:
+    #TMP: This module is broken until BotanicalName stuff is removed.
+    def __init__(self):
+        raise NotImplementedError('The BotanicalName table no longer exists.'
+                                  'Please remove it from this module.')
 
 def queryable_dicts_to_json(objects):
     """Generate a JSON string of dictionaries for easily querying.

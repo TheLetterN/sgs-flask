@@ -41,7 +41,6 @@ from app.form_helpers import (
 )
 from app.redirects import RedirectsFile
 from .models import (
-    BotanicalName,
     Section,
     CommonName,
     Image,
@@ -122,22 +121,6 @@ def remove_from_choices(choices, obj):
     except ValueError:
         # No need to remove it if it's not there.
         pass
-
-
-# Custom validators
-class IsBotanicalName(object):
-    """Validator to ensure data looks like a valid botanical name."""
-    def __init__(self, message=None):
-        if not message:
-            self.message = (
-                'Field does not appear to contain a valid botanical name. A '
-                'valid botanical name must begin with a genus, which should '
-                'have its first (and only first) letter capitalized.'
-            )
-
-    def __call__(self, form, field):
-        if not BotanicalName.validate(field.data):
-            raise ValidationError(self.message)
 
 
 class USDollar(object):
@@ -258,8 +241,7 @@ class AddCommonNameForm(Form):
     )
     next_page = RadioField(
         'After submission, go to',
-        choices=[('add_botanical_name', 'Add Botanical Name (optional)'),
-                 ('add_section', 'Add Section (optional)'),
+        choices=[('add_section', 'Add Section (optional)'),
                  ('add_cultivar', 'Add Cultivar')],
         default='add_cultivar'
     )
@@ -317,65 +299,6 @@ class AddCommonNameForm(Form):
                         cn.index.name,
                         url_for('seeds.edit_common_name', cn_id=cn.id))
                 ))
-
-
-class AddBotanicalNameForm(Form):
-    """Form for adding a new `BotanicalName` to the database.
-
-    Attributes:
-        name: String field for the botanical name itself.
-        synonyms: String field for synonyms of the botanical name.
-        next_page: Radio field for the next page to move on to after submit.
-
-        cn: The `CommonName` to add `BotanicalName` to.
-    """
-    name = StrippedStringField(
-        'Botanical Name',
-        validators=[DataRequired(), IsBotanicalName(), Length(max=254)]
-    )
-    synonyms = StrippedStringField(
-        'Synonyms',
-        validators=[Length(max=5120), ListItemLength(maximum=254)]
-    )
-    next_page = RadioField(
-        'After submission, go to',
-        choices=[('add_section', 'Add Section (optional)'),
-                 ('add_cultivar', 'Add Cultivar')],
-        default='add_cultivar'
-    )
-    submit = SubmitField('Save Botanical Name')
-
-    def __init__(self, cn, *args, **kwargs):
-        """Initialize `AddBotanicalNameForm`.
-
-        Args:
-            cn: The `CommonName` to add the new `BotanicalName` to.
-        """
-        super().__init__(*args, **kwargs)
-        self.cn = cn
-
-    def validate_name(self, field):
-        """Raise a ValidationError if botanical name already exists.
-
-        Note:
-            Even though a `BotanicalName` can have multiple `CommonName`
-            instances attached to it, adding `CommonName` instances to an
-            existing `BotanicalName` should be handled by
-            `app.seeds.views.edit_botanical_name`.
-
-        Raises:
-            ValidationError: If the desired `BotanicalName` already exists.
-        """
-        bn = BotanicalName.query\
-            .filter(BotanicalName.name == field.data)\
-            .one_or_none()
-        if bn:
-            raise ValidationError(Markup(
-                'The botanical name \'{0}\' already exists! Click '
-                '<a href="{1}">here</a> if you wish to edit it.'
-                .format(bn.name,
-                        url_for('seeds.edit_botanical_name', bn_id=bn.id))
-            ))
 
 
 class AddSectionForm(Form):
@@ -447,8 +370,7 @@ class AddCultivarForm(Form):
         name: String field for the name of added `Cultivar`.
         subtitle: An optional subtitle to use if the subtitle is something
             other than '<common name> Seeds'.
-        botanical_name: Select field for the optional `BotanicalName` for the
-            added `Cultivar`.
+        botanical_name: String field for botanical name for cultivar.
         section: Select field for optional `Section` for added `Cultivar`.
         thumbnail: File field for uploading thumbnail image.
         description: Text field for optional `Cultivar` HTML description.
@@ -475,7 +397,10 @@ class AddCultivarForm(Form):
         'Subtitle (Leave blank for default.)',
         validators=[Length(max=254)]
     )
-    botanical_name = SelectField('Botanical Name', coerce=int)
+    botanical_name = StrippedStringField(
+        'Botanical Name(s)',
+        validators=[Length(max=254)]
+    )
     section = SelectField('Section', coerce=int)
     organic = BooleanField('Organic')
     thumbnail = SecureFileField(
@@ -523,12 +448,7 @@ class AddCultivarForm(Form):
         self.set_selects()
 
     def set_selects(self):
-        """Sets botanical_names, indexes, and common_names from db."""
-        self.botanical_name.choices = select_field_choices(
-            items=self.cn.botanical_names,
-            order_by='name'
-        )
-        self.botanical_name.choices.insert(0, (0, 'None'))
+        """Sets indexes, and common_names from db."""
         self.section.choices = select_field_choices(items=self.cn.sections,
                                                     order_by='name')
         self.section.choices.insert(0, (0, 'None'))
@@ -909,76 +829,6 @@ class EditCommonNameForm(Form):
                                           'of 64 characters long!')
 
 
-class EditBotanicalNameForm(Form):
-    """Form for editing an existing botanical name in the database.
-
-    Attributes:
-        id: The unique id of edited `BotanicalName`.
-        name: String field for name of botanical name.
-        common_names: Select multiple field for common names edited botanical
-            name belongs to.
-        synonyms_string: String field for synonyms of this botanical name.
-    """
-    id = HiddenField()
-    name = StrippedStringField(
-        'Botanical Name',
-        validators=[DataRequired(), IsBotanicalName(), Length(max=254)]
-    )
-    common_names = SelectMultipleField('Select Common Names', coerce=int)
-    synonyms_string = StrippedStringField(
-        'Synonyms',
-        validators=[Length(max=5120), ListItemLength(maximum=254)]
-    )
-    submit = SubmitField('Save Botanical Name')
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.set_selects()
-        if not self.common_names.data:  # Don't overwrite values from formdata!
-            cns = kwargs['obj'].common_names
-            self.common_names.data = [cn.id for cn in cns]
-
-    def set_selects(self):
-        """Set select fields."""
-        self.common_names.choices = select_field_choices(
-            model=CommonName,
-            title_attribute='select_field_title',
-            order_by='name'
-        )
-
-    def validate_name(self, field):
-        """Raise a ValidationError if name is not valid.
-
-        Raises:
-            ValidationError: If name is not a valid binomen.
-        """
-        if not BotanicalName.validate(field.data):
-            raise ValidationError('\'{0}\' does not appear to be a valid '
-                                  'botanical name. The first word should '
-                                  'begin with a capital letter, and the '
-                                  'second word should be all lowercase.'.
-                                  format(field.data))
-
-    def validate_synonyms_string(self, field):
-        """Raise a ValidationError if any synonyms are invalid.
-
-        Raises:
-            ValidationError: If any synonym is not a valid `BotanicalName`,  or
-                if any synonym is too long.
-            """
-        if field.data:
-            synonyms = field.data.split(', ')
-            for synonym in synonyms:
-                synonym = synonym.strip()
-                if len(synonym) > 64:
-                    raise ValidationError('Each synonym can only be a maximum '
-                                          'of 64 characters long!')
-                if not BotanicalName.validate(synonym):
-                    raise ValidationError('The synonym \'{0}\' does not '
-                                          'appear to be a valid botanical '
-                                          'name.'.format(synonym))
-
-
 class EditSectionForm(Form):
     """Form for editing a Section to the database.
 
@@ -1057,7 +907,7 @@ class EditCultivarForm(Form):
     Attributes:
         id: Unique ID for `Cultivar` to be edited.
         common_name_id: Select field for `CommonName` of edited `Cultivar`.
-        botanical_name_id: Select field for `BotanicalName` of `Cultivar`.
+        botanical_name: String field for botanical name of `Cultivar`.
         section_id: Select field for `Section` `Cultivar` is in, if any.
         name: DBified string field for `Cultivar` name, excluding section and
             common name.
@@ -1077,7 +927,10 @@ class EditCultivarForm(Form):
     common_name_id = SelectField('Common Name',
                                  coerce=int,
                                  validators=[DataRequired()])
-    botanical_name_id = SelectField('Botanical Name', coerce=int)
+    botanical_name = StrippedStringField(
+        'Botanical Name',
+        validators=[Length(max=254)]
+    )
     section_id = SelectField('Section', coerce=int)
     organic = BooleanField('Organic')
     taxable = BooleanField('Taxable in California')
@@ -1134,11 +987,6 @@ class EditCultivarForm(Form):
 
     def set_selects(self):
         """Set choices for all select fields with values from database."""
-        self.botanical_name_id.choices = select_field_choices(
-            model=BotanicalName,
-            order_by='name'
-        )
-        self.botanical_name_id.choices.insert(0, (0, 'None'))
         self.common_name_id.choices = select_field_choices(
             model=CommonName,
             title_attribute='select_field_title',
@@ -1185,25 +1033,6 @@ class EditCultivarForm(Form):
         if cv:
             raise ValidationError('The cultivar \'{0}\' already exists!'
                                   .format(cv.fullname))
-
-    def validate_botanical_name_id(self, field):
-        """Raise ValidationError if bot. name not in selected CommonName.
-
-        Raises:
-            ValidationError: If selected botanical name does not belong to
-                selected common name.
-        """
-        if field.data:
-            bn = BotanicalName.query.get(field.data)
-            cnids = [cn.id for cn in bn.common_names]
-            if self.common_name_id.data not in cnids:
-                bn_url = url_for('seeds.edit_botanical_name', bn_id=bn.id)
-                raise ValidationError(Markup(
-                    'The selected botanical name does not belong to the '
-                    'selected common name. <a href="{0}">Click here</a> if '
-                    'you would like to edit the botanical name \'{1}\''
-                    .format(bn_url, bn.name)
-                ))
 
     def validate_section_id(self, field):
         """Raise ValidationError if `Section` does not belong to `CommonName`.
@@ -1350,7 +1179,7 @@ class RemoveCommonNameForm(Form):
 
         cn: The `CommonName` to remove.
     """
-    move_to = SelectField('Move botanical names and cultivars associated with '
+    move_to = SelectField('Move cultivars associated with '
                           'this common name to', coerce=int)
     verify_removal = BooleanField('Yes')
     submit = SubmitField('Remove Common Name')
@@ -1372,16 +1201,6 @@ class RemoveCommonNameForm(Form):
             title_attribute='select_field_title',
             order_by='name'
         )
-
-
-class RemoveBotanicalNameForm(Form):
-    """Form for removing a `BotanicalName` from the database.
-
-    Attributes:
-        verify_removal: Checkbox for whether or not to remove `BotanicalName`.
-    """
-    verify_removal = BooleanField('Yes')
-    submit = SubmitField('Remove Botanical Name')
 
 
 class RemoveSectionForm(Form):
@@ -1456,25 +1275,6 @@ class SelectCommonNameForm(Form):
             title_attribute='select_field_title',
             order_by='name'
         )
-
-
-class SelectBotanicalNameForm(Form):
-    """Form for selecting a botanical name.
-
-    Attributes:
-        botanical_name: Select field for `BotanicalName`.
-    """
-    botanical_name = SelectField('Select Botanical Name', coerce=int)
-    submit = SubmitField('Submit')
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.set_select()
-
-    def set_select(self):
-        """Populate `botanical_name`."""
-        self.botanical_name.choices = select_field_choices(model=BotanicalName,
-                                                           order_by='name')
 
 
 class SelectSectionForm(Form):

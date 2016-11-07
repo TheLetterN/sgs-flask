@@ -1,3 +1,6 @@
+import json
+from pathlib import Path
+
 from bs4 import BeautifulSoup, Comment
 from inflection import pluralize
 import requests
@@ -75,6 +78,75 @@ def clean_title(title):
     return dbify(title.lower().replace('seeds', '').strip())
 
 
+def scrape_index(url):
+    print('Scraping index from {} ...'.format(url))
+    idx = IndexScraper(url)
+    idx.create_dbdict()
+    return idx
+
+
+def save_index(idx):
+    print('Saving {} index...'.format(idx.dbdict['slug']))
+    p = Path('/tmp', '{}.json'.format(idx.dbdict['slug']))
+    with p.open('w', encoding='utf-8') as ofile:
+        ofile.write(idx.json)
+    print('Saved {} to: {}'.format(idx.dbdict['slug'], p))
+
+
+def scrape_annuals():
+    return scrape_index(
+        'https://www.swallowtailgardenseeds.com/annualsA-Z.html'
+    )
+
+
+def save_annuals(ann=None):
+    if not ann:
+        ann = scrape_annuals()
+    save_index(ann)
+
+
+def scrape_perennials():
+    return scrape_index(
+        'https://www.swallowtailgardenseeds.com/perennialsA-Z.html'
+    )
+
+
+def save_perennials(per=None):
+    if not per:
+        per = scrape_perennials()
+    save_index(per)
+
+
+def scrape_vines():
+    return scrape_index('https://www.swallowtailgardenseeds.com/vines/')
+
+
+def save_vines(vin=None):
+    if not vin:
+        vin = scrape_vines()
+    save_index(vin)
+
+
+def scrape_vegetables():
+    return scrape_index('https://www.swallowtailgardenseeds.com/vegetables/')
+
+
+def save_vegetables(veg=None):
+    if not veg:
+        veg = scrape_vegetables()
+    save_index(veg)
+
+
+def scrape_herbs():
+    return scrape_index('https://www.swallowtailgardenseeds.com/herbs/')
+
+
+def save_herbs(herb=None):
+    if not herb:
+        herb = scrape_herbs()
+    save_index(herb)
+
+
 class CultivarTag:
     def __init__(self, tag):
         self.tag = tag
@@ -123,17 +195,7 @@ class CultivarTag:
     @property
     def dbdict(self):
         if not self._dbdict:
-            print('Creating dbdict for cultivar "{}"...'.format(self.h3))
-            self._dbdict['name'] = first_text(self.h3)
-            self._dbdict['subtitle'] = first_text(self.subtitle_em)
-            self._dbdict['botanical_names'] = first_text(self.bn_em)
-            self._dbdict['description'] = tags_to_str(self.ps)
-            self._dbdict['new_for'] = '2017' if self.new_for else ''
-            self._dbdict['favorite'] = True if self.favorite else False
-            self._dbdict['images'] = [i['src'] for i in self.images]
-            self._dbdict['packets'] = self.get_packet_dicts()
-            self._dbdict['open_pollinated'] = self.veg_op
-            self._dbdict['days_to_maturity'] = self.veg_dtm
+            self.create_dbdict()
         return self._dbdict
 
     @property
@@ -147,6 +209,19 @@ class CultivarTag:
                 s for s in str(self.veg_em) if any(c.isdigit() for c in s)
             )
         return None
+
+    def create_dbdict(self):
+        print('Creating dbdict for cultivar "{}"...'.format(self.h3))
+        self._dbdict['name'] = first_text(self.h3)
+        self._dbdict['subtitle'] = first_text(self.subtitle_em)
+        self._dbdict['botanical_names'] = first_text(self.bn_em)
+        self._dbdict['description'] = tags_to_str(self.ps)
+        self._dbdict['new_for'] = '2017' if self.new_for else ''
+        self._dbdict['favorite'] = True if self.favorite else False
+        self._dbdict['images'] = [i['src'] for i in self.images]
+        self._dbdict['packets'] = self.get_packet_dicts()
+        self._dbdict['open_pollinated'] = self.veg_op
+        self._dbdict['days_to_maturity'] = self.veg_dtm
 
 
 class SectionTag:
@@ -193,13 +268,7 @@ class SectionTag:
     @property
     def dbdict(self):
         if not self._dbdict:
-            print('Creating dbdict for section "{}"...'.format(self.header_h2))
-            self._dbdict['name'] = first_text(self.header_h2)
-            self._dbdict['subtitle'] = first_text(self.subtitle)
-            self._dbdict['botanical_names'] = first_text(self.botanical_names)
-            self._dbdict['description'] = tags_to_str(self.intro)
-            self._dbdict['subsections'] = [s.dbdict for s in self.subsections]
-            self._dbdict['cultivars'] = [c.dbdict for c in self.cultivars]
+            self.create_dbdict()
         return self._dbdict
 
     @property
@@ -219,6 +288,15 @@ class SectionTag:
                 self.class_.replace('section', '').split('-')
             ).strip()
         return dbify(rawname)
+
+    def create_dbdict(self):
+        print('Creating dbdict for section "{}"...'.format(self.header_h2))
+        self._dbdict['name'] = first_text(self.header_h2)
+        self._dbdict['subtitle'] = first_text(self.subtitle)
+        self._dbdict['botanical_names'] = first_text(self.botanical_names)
+        self._dbdict['description'] = tags_to_str(self.intro)
+        self._dbdict['subsections'] = [s.dbdict for s in self.subsections]
+        self._dbdict['cultivars'] = [c.dbdict for c in self.cultivars]
 
 
 class IndexScraper:
@@ -264,15 +342,34 @@ class IndexScraper:
     @property
     def dbdict(self):
         if not self._dbdict:
-            print('Creating dbdict for "{}"...'.format(self.url))
-            name = clean_title(first_text(self.h1))
-            self._dbdict['name'] = name
-            self._dbdict['slug'] = pluralize(name.split(' ')[0].lower())
-            self._dbdict['description'] = tags_to_str(self.intro)
-            self._dbdict['common_names'] = [
-                c.dbdict for c in self.common_names
-            ]
+            self.create_dbdict()
         return self._dbdict
+
+    @property
+    def json(self):
+        return json.dumps(self.dbdict, indent=4)
+
+    def create_dbdict(self):
+        print('Creating dbdict for "{}"...'.format(self.url))
+        name = clean_title(first_text(self.h1))
+        self._dbdict['name'] = name
+        if 'annual' in name.lower():
+            slug = 'annuals'
+        elif 'perenn' in name.lower():
+            slug = 'perennials'
+        elif 'vine' in name.lower():
+            slug = 'vines'
+        elif 'veg' in name.lower():
+            slug = 'vegetables'
+        elif 'herb' in name.lower():
+            slug = 'herbs'
+        else:
+            raise ValueError('Could not determine slug for "{}"'.format(name))
+        self._dbdict['slug'] = slug
+        self._dbdict['description'] = tags_to_str(self.intro)
+        self._dbdict['common_names'] = [
+            c.dbdict for c in self.common_names
+        ]
 
 
 class CNScraper:
@@ -312,37 +409,40 @@ class CNScraper:
     @property
     def dbdict(self):
         if not self._dbdict:
-            print('Creating dbdict for "{}"...'.format(self.url))
-            self._dbdict['name'] = clean_title(first_text(self.header_h1))
-            try:
-                self._dbdict['description'] = tags_to_str(self.intro.contents)
-            except AttributeError:
-                self._dbdict['description'] = ''
-            self._dbdict['subtitle'] = first_text(self.header_h2)
-            self._dbdict['botanical_names'] = first_text(self.header_h3)
-            self._dbdict['slug'] = self.url.split('/')[-1].replace('.html', '')
-            try:
-                self._dbdict['sunlight'] = next(
-                    c for c in self.sun['class'] if 'sun' in c or 'shade' in c
-                )
-            except TypeError:
-                self._dbdict['sunlight'] = ''
-            self._dbdict['thumb_url'] = self.thumbnail
-            try:
-                self._dbdict['instructions'] = tags_to_str(
-                    self.growing.contents
-                )
-            except AttributeError:
-                self._dbdict['instructions'] = ''
-            try:
-                self._dbdict['related_links'] = [
-                    a['href'] for a in self.related_links
-                ]
-            except TypeError:
-                self._dbdict['related_links'] = []
-            self._dbdict['sections'] = [s.dbdict for s in self.sections]
-            self._dbdict['cultivars'] = [c.dbdict for c in self.cultivars]
+            self.create_dbdict()
         return self._dbdict
+
+    def create_dbdict(self):
+        print('Creating dbdict for "{}"...'.format(self.url))
+        self._dbdict['name'] = clean_title(first_text(self.header_h1))
+        try:
+            self._dbdict['description'] = tags_to_str(self.intro.contents)
+        except AttributeError:
+            self._dbdict['description'] = ''
+        self._dbdict['subtitle'] = first_text(self.header_h2)
+        self._dbdict['botanical_names'] = first_text(self.header_h3)
+        self._dbdict['slug'] = self.url.split('/')[-1].replace('.html', '')
+        try:
+            self._dbdict['sunlight'] = next(
+                c for c in self.sun['class'] if 'sun' in c or 'shade' in c
+            )
+        except TypeError:
+            self._dbdict['sunlight'] = ''
+        self._dbdict['thumb_url'] = self.thumbnail
+        try:
+            self._dbdict['instructions'] = tags_to_str(
+                self.growing.contents
+            )
+        except AttributeError:
+            self._dbdict['instructions'] = ''
+        try:
+            self._dbdict['related_links'] = [
+                a['href'] for a in self.related_links
+            ]
+        except TypeError:
+            self._dbdict['related_links'] = []
+        self._dbdict['sections'] = [s.dbdict for s in self.sections]
+        self._dbdict['cultivars'] = [c.dbdict for c in self.cultivars]
 
     def parse_related_and_nav(self):
         rls = self.main.find_all('div', class_='RelatedLinks')

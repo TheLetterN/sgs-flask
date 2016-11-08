@@ -226,7 +226,7 @@ def add_cultivar_to_database(cn, d, section=None):
     cv.description = d['description']
     #TODO: new_until
     cv.featured = d['favorite']
-    #TODO: in_stock
+    cv.in_stock = d['packets'][0]['in_stock']
     #TODO: organic
     cv.taxable = d['packets'][0]['taxable']
     cv.images = [download_image(i) for i in d['images']]
@@ -284,7 +284,8 @@ class CultivarTag:
                 'amount': b['data-item-description'],
                 'product_name': b['data-item-name'],
                 'price': b['data-item-price'],
-                'taxable': True if 't' in b['data-item-taxable'] else False
+                'taxable': True if 't' in b['data-item-taxable'] else False,
+                'in_stock': False if 'OUT' in b.text.upper() else True
             } for b in self.buttons
         ]
 

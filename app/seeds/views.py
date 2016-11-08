@@ -45,7 +45,6 @@ from .models import (
     Image,
     Index,
     Packet,
-    Quantity,
     USDollar
 )
 from app.seeds.forms import (
@@ -718,19 +717,7 @@ def add_packet(cv_id=None):
                         .format(packet.sku, cv.fullname))
         packet.price = form.price.data
         messages.append('Price set to: ${0}.'.format(packet.price))
-        fu = form.units.data.strip()
-        fq = form.quantity.data
-        qty = Quantity.query.filter(
-            Quantity.value == fq,
-            Quantity.units == fu,
-            Quantity.is_decimal == Quantity.dec_check(fq)
-        ).one_or_none()
-        if qty:
-            packet.quantity = qty
-        else:
-            packet.quantity = Quantity(value=fq, units=fu)
-        messages.append('Quantity set to: "{0} {1}".'
-                        .format(packet.quantity.value, packet.quantity.units))
+        #TODO: Amount
         db.session.commit()
         messages.append('New packet with SKU #{0} added to the database.'
                         .format(packet.sku))
@@ -1396,26 +1383,7 @@ def edit_packet(pkt_id=None):
             edited = True
             packet.price = dec_p
             messages.append('Price set to: "${0}".'.format(packet.price))
-        fq = form.qty_val.data
-        fu = form.units.data.strip()
-        if (Quantity(value=fq).value != packet.quantity.value or
-                fu != packet.quantity.units):
-            edited = True
-            oldqty = packet.quantity
-            qty = Quantity.query.filter(
-                Quantity.value == fq,
-                Quantity.units == fu,
-                Quantity.is_decimal == Quantity.dec_check(fq)
-            ).one_or_none()
-            if qty:
-                packet.quantity = qty
-            else:
-                packet.quantity = Quantity(value=fq, units=fu)
-            if not oldqty.packets:
-                db.session.delete(oldqty)
-            messages.append('Quantity set to: "{0} {1}".'
-                            .format(packet.quantity.value,
-                                    packet.quantity.units))
+        #TODO: Amount
         if edited:
             db.session.commit()
             messages.append('Changes to "{0}" committed to the database.'
@@ -1742,8 +1710,6 @@ def remove_packet(pkt_id=None):
     if form.validate_on_submit():
         messages = []
         if form.verify_removal.data:
-            if len(packet.quantity.packets) == 1:
-                db.session.delete(packet.quantity)
             db.session.delete(packet)
             db.session.commit()
             messages.append('Packet removed.')

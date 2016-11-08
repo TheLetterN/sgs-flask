@@ -46,7 +46,6 @@ from .models import (
     Image,
     Index,
     Packet,
-    Quantity,
     Cultivar
 )
 from app.seeds.models import USDollar as USDollar_
@@ -522,8 +521,7 @@ class AddPacketForm(Form):
     Attributes:
         sku: String field for product SKU of added packet.
         price: String field for price in US Dollars.
-        quantity: String field for amount of seed in added packet.
-        units: String fiield for unit of measure for added packet.
+        amount: String field for amount of seed in added packet.
         again: Checkbox for whether or not to keep adding
             packets on submit.
 
@@ -537,13 +535,9 @@ class AddPacketForm(Form):
         'Price in US dollars',
         validators=[DataRequired(), Length(max=16), USDollar()]
     )
-    quantity = StrippedStringField(
-        'Quantity',
+    amount = StrippedStringField(
+        'Amount of Seeds',
         validators=[DataRequired(), Length(max=16)]
-    )
-    units = StrippedStringField(
-        'Unit of measurement',
-        validators=[DataRequired(), Length(max=32)]
     )
     again = BooleanField('Add another packet after this.')
     submit = SubmitField('Save Packet')
@@ -551,21 +545,6 @@ class AddPacketForm(Form):
     def __init__(self, cultivar, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.cultivar = cultivar
-
-    def validate_quantity(self, field):
-        """Raise ValidationError if quantity cannot be parsed as valid.
-
-        Raises:
-            ValidationError: If value of quantity cannot be determined to be a
-                valid decimal, fraction, or integer.
-        """
-        if field.data:
-            try:
-                Quantity(value=field.data.strip())
-            except ValueError:
-                raise ValidationError('Field must be a valid numerical value. '
-                                      '(integer, decimal, fraction, or mixed '
-                                      'number)')
 
     def validate_sku(self, field):
         """Raise ValidationError if sku already exists in database.
@@ -1081,8 +1060,7 @@ class EditPacketForm(Form):
         id: Unique ID of `Packet`.
         sku: String field for `Packet` product SKU.
         price: String field for price in US dollars.
-        qty_val: String field for quantity of seeds in packet.
-        units: String field for unit of measure for quantity of seeds.
+        amount: Amount of seeds in packet.
     """
     id = HiddenField()
     cultivar_id = SelectField('Cultivar', coerce=int)
@@ -1094,23 +1072,15 @@ class EditPacketForm(Form):
         'Price in US dollars',
         validators=[DataRequired(), Length(max=16), USDollar()]
     )
-    qty_val = StrippedStringField(
-        'Quantity',
+    amount = StrippedStringField(
+        'Amount of Seeds',
         validators=[DataRequired(), Length(max=16)]
-    )
-    units = StrippedStringField(
-        'Unit of measurement',
-        validators=[DataRequired(), Length(max=32)]
     )
     submit = SubmitField('Save Packet')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.set_selects()
-        if not self.qty_val.data:
-            self.qty_val.data = str(kwargs['obj'].quantity.value)
-        if not self.units.data:
-            self.units.data = kwargs['obj'].quantity.units
 
     def set_selects(self):
         """Set select fields."""
@@ -1120,21 +1090,6 @@ class EditPacketForm(Form):
             order_by='slug'
         )
         print(self.cultivar_id.data)
-
-    def validate_qty_val(self, field):
-        """Raise ValidationError if quantity cannot be parsed as valid.
-
-        Raises:
-            ValidationError: If value of quantity cannot be determined to be a
-                valid decimal, fraction, or integer.
-        """
-        if field.data:
-            try:
-                Quantity(value=field.data.strip())
-            except ValueError:
-                raise ValidationError('Field must be a valid numerical value. '
-                                      '(integer, decimal, fraction, or mixed '
-                                      'number)')
 
     def validate_sku(self, field):
         """Raise ValidationError if SKU belongs to another packet."""

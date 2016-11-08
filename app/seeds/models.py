@@ -105,7 +105,7 @@ from sqlalchemy_searchable import SearchQueryMixin
 from flask_sqlalchemy import BaseQuery, SignallingSession
 from werkzeug.routing import BuildError
 
-from app import db, list_to_english
+from app import db, html_fractions, list_to_english
 from app.db_helpers import (
     OrderingListMixin,
     row_exists,
@@ -1841,8 +1841,7 @@ class Packet(db.Model, TimestampMixin):
     Attributes:
         sku: Product SKU for the packet.
         price: Price (in US dollars) for this packet.
-        quantity: The `Quantity` of seeds in a `Packet`, including units of
-            measurement.
+        amount: The amount of seeds in a packet.
         cultivar: The `Cultivar` a `Packet` belongs to.
     """
     __tablename__ = 'packets'
@@ -1851,81 +1850,35 @@ class Packet(db.Model, TimestampMixin):
     product_name = db.Column(db.UnicodeText)
     price = db.Column(USDollar)
     taxable = db.Column(db.Boolean, default=True)
-    quantity_id = db.Column(db.Integer, db.ForeignKey('quantities.id'))
-    quantity = db.relationship('Quantity', back_populates='packets')
+    amount = db.Column(db.UnicodeText)
     cultivar_id = db.Column(db.Integer, db.ForeignKey('cultivars.id'))
     cultivar = db.relationship('Cultivar', back_populates='packets')
 
     def __repr__(self):
         return '<{0} SKU #{1}>'.format(self.__class__.__name__, self.sku)
 
-    def __init__(self, sku=None, price=None, quantity=None, cultivar=None):
+    def __init__(self, sku=None, price=None, amount=None, cultivar=None):
         """Create an instance of Packet.
         """
         self.sku = sku
         self.price = price
-        if quantity:
-            self.quantity = quantity
-        if cultivar:
-            self.cultivar = cultivar
-
-    @property
-    def amount(self):
-        """Return the amount of seeds in a packet."""
-        try:
-            return '{} {}'.format(self.quantity.html_value,
-                                  self.quantity.units)
-        except AttributeError:
-            return ''
-
-    @classmethod
-    def from_values(cls, sku, price, quantity, units):
-        """Create a `Packet` given a series of values.
-
-        Args:
-            sku: Product SKU #.
-            price: Price of packet.
-            quantity: Amount of seeds in packet.
-            units: Units of measurement for quantity of seeds in packet.
-
-        Returns:
-            Packet: A new `Packet` instance.
-
-        Raises:
-            ValueError: If given `sku` already exists.
-        """
-        if row_exists(cls.sku, sku):
-            raise ValueError('A packet already exists with the SKU "{0}"!'
-                             .format(sku))
-        qty = Quantity.query\
-            .filter(Quantity.value == quantity, Quantity.units == units)\
-            .one_or_none()
-        if not qty:
-            qty = Quantity(value=quantity, units=units)
-        return cls(sku=sku, price=price, quantity=qty)
+        self.amount = amount
+        self.cultivar = cultivar
 
     @property
     def info(self):
         """str: A formatted string containing the data of this packet."""
-        if self.quantity:
-            qv = self.quantity.value
-            qu = self.quantity.units
-        else:
-            qv = None
-            qu = None
-        return 'SKU #{0}: ${1} for {2} {3}'.format(self.sku,
-                                                   self.price,
-                                                   qv,
-                                                   qu)
+        return 'SKU #{0}: ${1} for {2}'.format(self.sku,
+                                               self.price,
+                                               self.amount)
 
     @property
     def label(self):
         """A label for a packet as used in the shopping cart."""
         try:
-            return '{0}, {1} - {2} {3}'.format(self.cultivar.common_name.name,
-                                               self.cultivar.name,
-                                               self.amount,
-                                               self.quantity.units)
+            return '{0}, {1} - {2}'.format(self.cultivar.common_name.name,
+                                           self.cultivar.name,
+                                           self.amount)
         except AttributeError:
             return ''
 
@@ -1937,328 +1890,10 @@ class Packet(db.Model, TimestampMixin):
         return pkt
 
 
-class Quantity(db.Model):
-    """Table for quantities.
-
-    A Quantity consists of a numerical value and a unit of measurement. Since
-    some numerical values may be integers, some may be fractions, and some may
-    be decimal numbers, all numerical values are stored in internal use
-    attributes `_numerator`, `_denominator`, and `_float`. Integers and
-    fractions are returned using `_numerator` and `_denominator` (since a
-    fraction with a denominator of 1 is an integer) while decimal numbers are
-    specified by setting `is_decimal` to True, and utilize `_float` to return
-    the value.
-
-    Attributes:
-        is_decimal: Whether or not the stored quantity represents a
-            decimal number, as opposed to fraction or integer.
-        units: Unit of measurement of a quantity. (seeds, grams, etc.)
-        packets: `Packet` instances which share a `Quantity`.
-    """
-    __tablename__ = 'quantities'
-    id = db.Column(db.Integer, primary_key=True)
-    __table_args__ = (db.UniqueConstraint('_float',
-                                          'units',
-                                          'is_decimal',
-                                          name='_float_units_uc'),)
-    _numerator = db.Column(db.Integer)
-    _denominator = db.Column(db.Integer)
-    _float = db.Column(db.Float)
-    is_decimal = db.Column(db.Boolean, default=False)
-    units = db.Column(db.UnicodeText)
-    packets = db.relationship('Packet', back_populates='quantity')
-
-    def __init__(self, value=None, units=None):
-        if value:
-            self.value = value
-        if units:
-            self.units = units
-
-    def __repr__(self):
-        return '<{0} "{1} {2}">'.format(self.__class__.__name__,
-                                        self.value,
-                                        self.units)
-
-    @property
-    def html_value(self):
-        """str: A string of `self.value` w/ fractions in HTML if applicable."""
-        if isinstance(self.value, Fraction):
-            if self.value == Fraction(1, 4):
-                return '&frac14;'
-            elif self.value == Fraction(1, 2):
-                return '&frac12;'
-            elif self.value == Fraction(3, 4):
-                return '&frac34;'
-            elif self.value == Fraction(1, 3):
-                return '&#8531;'
-            elif self.value == Fraction(2, 3):
-                return '&#8532;'
-            elif self.value == Fraction(1, 5):
-                return '&#8533;'
-            elif self.value == Fraction(2, 5):
-                return '&#8534;'
-            elif self.value == Fraction(3, 5):
-                return '&#8535;'
-            elif self.value == Fraction(4, 5):
-                return '&#8536;'
-            elif self.value == Fraction(1, 6):
-                return '&#8537;'
-            elif self.value == Fraction(5, 6):
-                return '&#8538;'
-            elif self.value == Fraction(1, 8):
-                return '&#8539;'
-            elif self.value == Fraction(3, 8):
-                return '&#8540;'
-            elif self.value == Fraction(5, 8):
-                return '&#8541;'
-            elif self.value == Fraction(7, 8):
-                return '&#8542;'
-            else:
-                return '<span class="fraction"><sup>{0}</sup>&frasl;'\
-                    '<sub>{1}</sub></span>'.format(self._numerator,
-                                                   self._denominator)
-        return str(self.value)
-
-    @staticmethod
-    def dec_check(val):
-        """Check if a given value is a decimal number.
-
-        Args:
-            val: A value to check the (perfectly cromulent) decimalness of.
-
-        Returns:
-            True: If value appears to be a decimal number.
-            False: If value can't be determined to be a decimal number.
-
-        Examples:
-            >>> Quantity.dec_check(3.14)
-            True
-
-            >>> Quantity.dec_check(42)
-            False
-
-            >>> Quantity.dec_check('3.50')
-            True
-
-            >>> Quantity.dec_check('tree fiddy')
-            False
-
-            >>> Quantity.dec_check('8675309')
-            False
-
-            >>> Quantity.dec_check(Decimal('1.99'))
-            True
-
-            >>> Quantity.dec_check(Fraction(3, 4))
-            False
-
-            >>> Quantity.dec_check('127.0.0.1')
-            False
-        """
-        if isinstance(val, Decimal) or isinstance(val, float):
-            return True
-        if isinstance(val, Fraction):
-            return False
-        try:
-            float(val)
-            try:
-                int(val)
-                return False
-            except:
-                return True
-        except:
-            return False
-
-    @staticmethod
-    def fraction_to_str(val):
-        """Convert a Fraction to a string containing a mixed number.
-
-        Args:
-            val: A fraction to convert to a string fraction or
-                mixed number.
-
-        Returns:
-            str: A string containing a fraction or mixed number.
-
-        Raises:
-            TypeError: If given a non-Fraction value.
-
-        Examples:
-            >>> Quantity.fraction_to_str(Fraction(1, 2))
-            '1/2'
-
-            >>> Quantity.fraction_to_str(Fraction(11, 4))
-            '2 3/4'
-
-            >>> Quantity.fraction_to_str(Fraction(123, 11))
-            '11 2/11'
-        """
-        if isinstance(val, Fraction):
-            if val.numerator > val.denominator:
-                whole = val.numerator // val.denominator
-                part = Fraction(val.numerator % val.denominator,
-                                val.denominator)
-                return '{0} {1}'.format(whole, part)
-            else:
-                return str(val)
-        else:
-            raise TypeError('val must be of type Fraction')
-
-    @staticmethod
-    def to_float(val):
-        """Convert a value into a float as would be stored in `_float`.
-
-        Args:
-            val: Value to convert to a float.
-
-        Returns:
-            float: The converted value.
-        """
-        if Quantity.dec_check(val):
-            return float(val)
-        elif isinstance(val, str):
-            frac = Quantity.str_to_fraction(val)
-        else:
-            frac = Fraction(val)
-        return float(frac)
-
-    @staticmethod
-    def str_to_fraction(val):
-        """Convert a string containing a number into a fraction.
-
-        Args:
-            val: A string containing a fraction or mixed number to convert
-                to a `Fraction`.
-
-        Returns:
-            Fraction
-
-        Raises:
-            TypeError: If val is not a string.
-            ValueError: If val could not be converted to Fraction.
-
-        Examples:
-            >>> Quantity.str_to_fraction('5')
-            Fraction(5, 1)
-
-            >>> Quantity.str_to_fraction('3/4')
-            Fraction(3, 4)
-
-            >>> Quantity.str_to_fraction('11 2/11')
-            Fraction(123, 11)
-
-            >>> Quantity.str_to_fraction('1.1')
-            Fraction(11, 10)
-        """
-        val = val.strip()
-        try:
-            return Fraction(val)
-        except:
-            if ' ' in val:
-                parts = val.split(' ')
-                if len(parts) == 2 and '/' in parts[1]:
-                    try:
-                        whole = int(parts[0])
-                        frac = Fraction(parts[1])
-                        return frac + whole
-                    except:
-                        pass
-        raise ValueError('value {0} of type {1} could not be converted to '
-                         'Fraction'.format(val, type(val)))
-
-    @classmethod
-    def from_queryable_values(cls, value, units):
-        """Query a Quantity from the database given its value and units."""
-        return cls.query\
-            .filter(cls.value == value,
-                    cls.units == units,
-                    cls.is_decimal == cls.dec_check(value))\
-            .one_or_none()
-
-    @hybrid_property
-    def value(self):
-        """"int, float, Fraction: The value of a quantity in the same format
-                it was entered.
-
-            Setter:
-                Convert value a Fraction, store its numerator and denominator,
-                and store a floating point version to allow querying based on
-                quantity value. Flag is_decimal if the initial value is a
-                decimal (floating point) number.
-        """
-        if self._float is not None:
-            if self.is_decimal:
-                return self._float
-            elif self._denominator == 1:
-                return self._numerator
-            else:
-                return Fraction(self._numerator, self._denominator)
-        else:
-            return None
-
-    class ValueComparator(Comparator):
-        """Comparator for `Quantity.value`.
-
-        This comparator allows using values in queries in human-readable form,
-        as they would be entered when setting `value` for an instance of
-        `Quantity`. This way users do not have to convert values to float or
-        worry about what kind of number the value is.
-        """
-        def operate(self, op, other):
-            """Check a value in a query filter.
-
-            Since `_float` and `is_decimal` are needed to retrieve the Quantity
-            instance with the correct value, a filter using `value` needs check
-            whether or not a `value` is a decimal number, and convert it to a
-            float in order to compare it to `_float` and `is_decimal`. Luckily
-            since `is_decimal` is just a boolean value, using == to check
-            against it is perfectly fine regardless of what operator is being
-            used to check `value`.
-            """
-            return and_(op(Quantity._float, Quantity.to_float(other)),
-                        Quantity.is_decimal == Quantity.dec_check(other))
-
-    @value.comparator
-    def value(cls):
-        return Quantity.ValueComparator(cls)
-
-    @value.setter
-    def value(self, val):
-        if val is not None:
-            if Quantity.dec_check(val):
-                self.is_decimal = True
-                self._float = float(val)
-                self._numerator = None
-                self._denominator = None
-            else:
-                self.is_decimal = False
-                if isinstance(val, str):
-                    frac = Quantity.str_to_fraction(val)
-                else:
-                    frac = Fraction(val)
-                self._numerator = frac.numerator
-                self._denominator = frac.denominator
-                self._float = float(frac)
-        else:
-            self.is_decimal = None
-            self._numerator = None
-            self._denominator = None
-            self._float = None
-
-    @property
-    def str_value(self):
-        if isinstance(self.value, Fraction):
-            return self.fraction_to_str(self.value)
-        else:
-            return str(self.value)
-
-
-@event.listens_for(Packet.quantity, 'set')
-def delete_orphaned_quantity(target, value, oldvalue, initiatior):
-    """Delete quantities that no longer have packets associated with them."""
-    if hasattr(oldvalue, 'packets') and len(oldvalue.packets) <= 1:
-        if target in oldvalue.packets or not oldvalue.packets:
-            db.session.delete(oldvalue)
+@event.listens_for(Packet.amount, 'set', retval=True)
+def htmlize_amount(target, value, oldvalue, initiatior):
+    """Convert fractions in amount to HTML."""
+    return html_fractions(value) if value else value
 
 
 class Synonym(db.Model):

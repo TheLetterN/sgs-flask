@@ -40,14 +40,19 @@ from app.seeds.models import (
     Cultivar,
     Image,
     Index,
-    Packet,
-    Quantity
+    Packet
 )
 
 class BotanicalName:
     #TMP: This module is broken until BotanicalName stuff is removed.
     def __init__(self):
         raise NotImplementedError('The BotanicalName table no longer exists.'
+                                  'Please remove it from this module.')
+
+class Quantity:
+    #TMP: This module is broken until Quantity stuff is removed.
+    def __init__(self):
+        raise NotImplementedError('The Quantity table no longer exists.'
                                   'Please remove it from this module.')
 
 def queryable_dicts_to_json(objects):

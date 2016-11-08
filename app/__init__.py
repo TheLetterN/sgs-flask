@@ -48,6 +48,41 @@ from .redirects import RedirectsFile
 hyphenator = pyphen.Pyphen(lang='en_US')
 
 
+def html_fractions(s):
+    """Convert fractions in string to their html equivalent."""
+    return s.replace(
+        '1/4', '&frac14;'
+    ).replace(
+        '1/2', '&frac12;'
+    ).replace(
+        '3/4', '&frac34;'
+    ).replace(
+        '1/3', '&#8531;'
+    ).replace(
+        '2/3', '&#8532;'
+    ).replace(
+        '1/5', '&#8533;'
+    ).replace(
+        '2/5', '&#8534;'
+    ).replace(
+        '3/5', '&#8535;'
+    ).replace(
+        '4/5', '&#8536;'
+    ).replace(
+        '1/6', '&#8537;'
+    ).replace(
+        '5/6', '&#8538;'
+    ).replace(
+        '1/8', '&#8539;'
+    ).replace(
+        '3/8', '&#8540;'
+    ).replace(
+        '5/8', '&#8541;'
+    ).replace(
+        '7/8', '&#8542;'
+    )
+
+
 def hyphenate(text):
     """Return a soft-hyphenated version of text."""
     if text:

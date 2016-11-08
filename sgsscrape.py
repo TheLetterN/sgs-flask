@@ -5,7 +5,18 @@ from bs4 import BeautifulSoup, Comment
 from inflection import pluralize
 import requests
 
+from app import db
 from app.db_helpers import dbify
+from app.seeds.models import (
+    CommonName,
+    Cultivar,
+    Image,
+    Index,
+    Section
+)
+
+
+STATIC = Path(Path.cwd(), 'app', 'static')
 
 
 def first_text(tag):
@@ -93,6 +104,25 @@ def save_index(idx):
     print('Saved {} to: {}'.format(idx.dbdict['slug'], p))
 
 
+def download_image(url):
+    relname = Path(*url.replace('//', '').split('/')[1:])
+    fullname = Path(STATIC, relname)
+    if fullname.exists():
+        print('Image {} already exists, skipping download.')
+    else:
+        print('Downloading {} and saving to "{}"...'.format(url, fullname))
+        img_file = requests.get(url)
+        if img_file.status_code == 200:
+            fullname.parent.mkdir(parents=True, exist_ok=True)
+            with fullname.open('wb') as ofile:
+                ofile.write(img_file.content)
+        else:
+            img_file.raise_for_status()
+    img = Image.get_or_create(filename=str(relname))
+    db.session.add(img)
+    return img
+
+
 def scrape_annuals():
     return scrape_index(
         'https://www.swallowtailgardenseeds.com/annualsA-Z.html'
@@ -145,6 +175,72 @@ def save_herbs(herb=None):
     if not herb:
         herb = scrape_herbs()
     save_index(herb)
+
+
+def add_index_to_database(d):
+    print('Adding index {} to the database...'.format(d['name']))
+    idx = Index.get_or_create(d['name'])
+    db.session.add(idx)
+    db.session.flush()
+    idx.slug = d['slug']
+    idx.description = d['description']
+    for cn in d['common_names']:
+        add_common_name_to_database(idx, cn)
+    db.session.commit()
+
+
+def add_common_name_to_database(idx, d):
+    print('Adding common name {} to the database...'.format(d['name']))
+    cn = CommonName.get_or_create(d['name'], idx)
+    db.session.add(cn)
+    cn.slug = d['slug']
+    cn.subtitle = d['subtitle']
+    cn.sunlight = d['sunlight']
+    cn.thumbnail = download_image(d['thumb_url'])
+    cn.botanical_names = d['botanical_names']
+    cn.description = d['description']
+    cn.instrictions = d['instructions']
+    for sec in d['sections']:
+        add_section_to_database(cn, sec)
+
+
+def add_section_to_database(cn, d, parent=None):
+    sec = Section.get_or_create(d['name'], cn)
+    db.session.add(sec)
+    sec.parent = parent
+    sec.botanical_names = d['botanical_names']
+    sec.subtitle = d['subtitle']
+    sec.description = d['description']
+    for s in d['subsections']:
+        add_section_to_database(cn, s, sec)
+
+
+def add_cultivar_to_database(cn, d, section=None):
+    cv = Cultivar.get_or_create(cn, d['name'])
+    db.session.add(cv)
+    if section:
+        section.cultivars.append(cv)
+    cv.slug = d['slug']
+    cv.subtitle = d['subtitle']
+    cv.botanical_name = d['botanical_names']
+    cv.description = d['description']
+    #TODO: new_until
+    cv.featured = d['favorite']
+    #TODO: in_stock
+    #TODO: organic
+    cv.taxable = d['packets'][0]['taxable']
+    cv.images = [download_image(i) for i in d['images']]
+    cv.thumbnail = cv.images[0]
+    for p in d['packets']:
+        add_packet_to_database(cv, p)
+
+
+def add_packet_to_database(cv, d):
+    pkt = Packet.get_or_create(d['sku'])
+    db.session.add(pkt)
+    if pkt not in cv.packets:
+        cv.packets.append(pkt)
+    #TODO: finish this
 
 
 class CultivarTag:

@@ -987,7 +987,14 @@ class CommonName(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
         Returns:
             CommonName: The `CommonName` loaded or created.
         """
-        cn = cls.from_queryable_values(name=name, index=index)
+        if isinstance(index, Index):
+            cn = cls.query.filter(
+                cls.index_id == index.id
+            ).filter(
+                cls.name == name
+            ).one_or_none()
+        else:
+            cn = cls.from_queryable_values(name=name, index=index)
         if cn:
             print('The CommonName "{0}" has been loaded from the database.'
                   .format(cn.name), file=stream)
@@ -996,7 +1003,10 @@ class CommonName(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
             cn = cls(name=name)
             print('The CommonName "{0}" does not yet exist in the database, '
                   'so it has been created.'.format(cn.name), file=stream)
-            idx = Index.get_or_create(name=index, stream=stream)
+            if isinstance(index, Index):
+                idx = index
+            else:
+                idx = Index.get_or_create(name=index, stream=stream)
             # This should ensure idx_pos is generated correctly.
             # If we do cn.index = Index(...) it always ends up being 1.
             if not idx.common_names:
@@ -1198,32 +1208,28 @@ class Section(db.Model, TimestampMixin, OrderingListMixin):
         return [cls.query.get(id) for id in ids]
 
     @classmethod
-    def get_or_create(cls, name, common_name, index, stream=sys.stdout):
+    def get_or_create(cls, name, common_name,  stream=sys.stdout):
         """Load a `Section` from the db, or create it if it doesn't exist.
 
         Args:
             name: The name of the `Section`.
-            common_name: The name of the `CommonName` it belongs to.
-            index: The name of the `Index` it belongs to.
+            common_name: The `CommonName` it belongs to.
             stream: Buffer to output messages to.
 
         Returns:
             Section: The loaded or created `Section`.
         """
-        sec = cls.query\
-            .join(CommonName, CommonName.id == Section.common_name_id)\
-            .join(Index, Index.id == CommonName.index_id)\
-            .filter(Section.name == name,
-                    CommonName.name == common_name,
-                    Index.name == index)\
-            .one_or_none()
+        sec = cls.query.filter(
+            cls.common_name_id == common_name.id
+        ).filter(
+            cls.name == name
+        ).one_or_none()
         if sec:
             sec.created = False
             print('The Section "{0}" has been loaded from the database.'
                   .format(sec.fullname), file=stream)
         else:
-            cn = CommonName.get_or_create(common_name, index, stream=stream)
-            sec = Section(name=name, common_name=cn)
+            sec = Section(name=name, common_name=common_name)
             sec.created = True
             print('The Section "{0}" does not yet exist in the database, '
                   'so it has been created'.format(sec.fullname), file=stream)
@@ -1948,6 +1954,13 @@ class Packet(db.Model, TimestampMixin):
         except AttributeError:
             return ''
 
+    @classmethod
+    def get_or_create(cls, sku):
+        pkt = cls.query.filter(cls.sku == sku).one_or_none()
+        if not pkt:
+            pkt = cls(sku=sku)
+        return pkt
+
 
 class Quantity(db.Model):
     """Table for quantities.
@@ -2424,7 +2437,7 @@ class Image(db.Model, TimestampMixin):
     @property
     def url(self):
         try:
-            return url_for('static', filename=self.path, _external=True)
+            return url_for('static', filename=self.filename, _external=True)
         except BuildError:
             return ''
 
@@ -2435,6 +2448,17 @@ class Image(db.Model, TimestampMixin):
             'id': self.id,
             'filename': self.filename
         }
+
+    @classmethod
+    def get_or_create(cls, filename, make_unique=False):
+        """Get an existing `Image` or create it if not present."""
+        img = cls.query.filter(cls.filename == filename).one_or_none()
+        if not img:
+            img = cls(filename=filename, make_unique=make_unique)
+            img.created = True
+        else:
+            img.created = False
+        return img
 
     @classmethod
     def from_form_field(cls, field, make_unique=True):

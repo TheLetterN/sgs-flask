@@ -298,44 +298,6 @@ def save_nav_data_json_before_commit(session):
         save_nav_data_json()
 
 
-# Helper Classes
-
-class SynonymsMixin(object):
-    """A mixin class to easily interact with synonyms in child classes."""
-    @property
-    def synonyms_string(self):
-        """str: A list of Synonyms for the parent object.
-
-        The setter parses a string list of synonyms and adds loaded or created
-        synonyms to the object's synonyms. If a falsey value is set, it removes
-        all synonyms from the object and deletes any synonyms which no longer
-        belong to any object.
-        """
-        if self.synonyms:
-            return ', '.join([syn.name for syn in self.synonyms])
-        else:
-            return ''
-
-    @synonyms_string.setter
-    def synonyms_string(self, synonyms):
-        db_changed = False
-        syns = synonyms.split(', ') if synonyms else []
-        for syn in list(self.synonyms):
-            if syn.name not in syns:
-                self.synonyms.remove(syn)
-                if inspect(syn).persistent:
-                    db_changed = True
-                    db.session.delete(syn)
-        for syn in syns:
-            if syn.isspace():
-                syn = None
-            if syn and syn not in [syno.name for syno in self.synonyms]:
-                db_changed = True
-                self.synonyms.append(Synonym(name=syn))
-        if db_changed:
-            db.session.flush()
-
-
 # Models
 class IndexQuery(BaseQuery, SearchQueryMixin):
     pass
@@ -656,7 +618,7 @@ class CommonNameQuery(BaseQuery, SearchQueryMixin):
     pass
 
 
-class CommonName(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
+class CommonName(db.Model, TimestampMixin, OrderingListMixin):
     """Table for common names.
 
     A `CommonName` is the next subdivision below `Index` in how we sort seeds.
@@ -684,7 +646,7 @@ class CommonName(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
         botanical_names: Botanical names belonging to given `CommonName`.
         sections: `Section` instances belonging to given `CommonName`.
         cultivars: `Cultivar` instances belonging to given `CommonName`.
-        synonyms: `Synonym` instances which are synonyms of given `CommonName`.
+        synonyms: Synonyms of given `CommonName`.
     """
     query_class = CommonNameQuery
     __tablename__ = 'common_names'
@@ -716,6 +678,8 @@ class CommonName(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
     botanical_names = db.Column(db.UnicodeText)
     description = db.Column(db.UnicodeText)
     instructions = db.Column(db.UnicodeText)
+    synonyms = db.Column(db.UnicodeText)
+    visible = db.Column(db.Boolean)
     gw_common_names = db.relationship(
         'CommonName',
         secondary=common_names_to_gw_common_names,
@@ -730,7 +694,6 @@ class CommonName(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
         'Cultivar',
         secondary=common_names_to_gw_cultivars
     )
-    visible = db.Column(db.Boolean)
     sections = db.relationship(
         'Section',
         foreign_keys='Section.common_name_id',
@@ -755,7 +718,6 @@ class CommonName(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
         collection_class=ordering_list('cn_pos', count_from=1),
         back_populates='parent_common_name'
     )
-    synonyms = db.relationship('Synonym', back_populates='common_name')
     noship_states = db.relationship(
         'State',
         secondary=common_names_to_states,
@@ -1360,7 +1322,7 @@ class CultivarQuery(BaseQuery, SearchQueryMixin):
     pass
 
 
-class Cultivar(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
+class Cultivar(db.Model, TimestampMixin, OrderingListMixin):
     """Table for cultivar data.
 
     A cultivar is an individual variety of plant, and represents the most
@@ -1441,6 +1403,7 @@ class Cultivar(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
     )
     botanical_name = db.Column(db.UnicodeText)
     description = db.Column(db.UnicodeText)
+    synonyms = db.Column(db.UnicodeText)
     new_until = db.Column(db.Date)
     featured = db.Column(db.Boolean, default=False)
     active = db.Column(db.Boolean)
@@ -1472,7 +1435,6 @@ class Cultivar(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
         cascade='all, delete-orphan',
         back_populates='cultivar'
     )
-    synonyms = db.relationship('Synonym', back_populates='cultivar')
     gw_common_names = db.relationship(
         'CommonName',
         secondary=cultivars_to_gw_common_names
@@ -1894,78 +1856,6 @@ class Packet(db.Model, TimestampMixin):
 def htmlize_amount(target, value, oldvalue, initiatior):
     """Convert fractions in amount to HTML."""
     return html_fractions(value) if value else value
-
-
-class Synonym(db.Model):
-    """Table for synonyms of other objects.
-
-    Attributes:
-        name: The synonym itself.
-        common_name: A `CommonName` a `Synonym` belongs to.
-        cultivar: A `Cultivar` a `Synonym` belongs to.
-    """
-    __tablename__ = 'synonyms'
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.UnicodeText)
-    common_name_id = db.Column(db.Integer, db.ForeignKey('common_names.id'))
-    common_name = db.relationship('CommonName', back_populates='synonyms')
-    cultivar_id = db.Column(db.Integer, db.ForeignKey('cultivars.id'))
-    cultivar = db.relationship('Cultivar', back_populates='synonyms')
-
-    def __init__(self, name=None):
-        self.name = name
-
-    def __repr__(self):
-        """Return string representing a synonym."""
-        if self.parent:
-            return('<{0} "{1}" of {2}: "{3}">'
-                   .format(self.__class__.__name__,
-                           self.name,
-                           None if not self.parent else
-                           self.parent.__class__.__name__,
-                           None if not self.parent else self.parent.name))
-        else:
-            return('<{0} "{1}">'.format(self.__class__.__name__, self.name))
-
-    @property
-    def parent(self):
-        """object: Return whatever object this synonym is linked to.
-
-        Note:
-            Validation of whether or not a synonym is only linked to one
-            object is handled by this property as well, as it needs to check
-            validity anyway to ensure it returns the correct value. Rather
-            than using a separate validation method, the best way to validate
-            a `Synonym` is just to try to access `Synonym.parent`.
-        """
-        parents = []
-        if self.common_name:
-            parents.append(self.common_name)
-        if self.cultivar:
-            parents.append(self.cultivar)
-        if len(parents) == 0:
-            return None
-        if len(parents) == 1:
-            return parents.pop()
-        else:
-            raise ValueError(
-                'Each synonym should only be linked to one other table, but '
-                'this one is linked to: {0}'
-                .format(', '.join([obj.__repr__() for obj in parents]))
-            )
-
-
-@event.listens_for(Synonym, 'before_insert')
-@event.listens_for(Synonym, 'before_update')
-def before_synonym_insert_or_update(mapper, connection, target):
-    """Run tasks needed before flushing a `Synonym` to the database."""
-    # Since Synonym has multiple possible relationships, but each synonym
-    # should only correspond to one object, we need to ensure a Synonym only
-    # has one relationship set before flushing it to the database.
-    #
-    # Simply running the Synonym.parent property will raise an appropriate
-    # exception if more than one relationship is set.
-    target.parent
 
 
 class CustomPage(db.Model, TimestampMixin):

@@ -850,7 +850,7 @@ class CommonName(db.Model, TimestampMixin, OrderingListMixin):
             CommonName: The `CommonName` loaded or created.
         """
         cn = cls.query.filter(
-            cls.common_name_id == index.id
+            cls.index_id == index.id
         ).filter(
             cls.name == name
         ).one_or_none()

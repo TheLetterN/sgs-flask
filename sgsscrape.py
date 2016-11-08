@@ -57,8 +57,8 @@ def get_subsections(tag):
             dupes.append(c)
     for dupe in dupes:
         secs = [s for s in sections if s['class'] == dupe]
-        # If it has a <p> tag in it, it's got an intro. Probably.
-        master = next((s for s in secs if s.find('p')), secs[0])
+        # If it has an h2, it's displayed.
+        master = next((s for s in secs if s.h2), secs[0])
         secs.remove(master)
         for sec in secs:
             for s in sec.find_all('section', recursive=False):
@@ -184,24 +184,35 @@ def add_index_to_database(d):
     db.session.flush()
     idx.slug = d['slug']
     idx.description = d['description']
-    for cn in d['common_names']:
-        add_common_name_to_database(idx, cn)
+    idx.common_names = list(generate_common_names(idx, d['common_names']))
     db.session.commit()
+    
+
+def generate_common_names(idx, l):
+    for d in l:
+        cn = CommonName.get_or_create(d['name'], idx)
+        db.session.add(cn)
+        cn.slug = d['slug']
+        cn.subtitle = d['subtitle']
+        cn.sunlight = d['sunlight']
+        cn.thumbnail = download_image(d['thumb_url'])
+        cn.botanical_names = d['botanical_names']
+        cn.description = d['description']
+        cn.instructions = d['instructions']
+        cn.sections = list(generate_sections(cn, d['sections']))
+        #TODO: finish
+        yield cn
 
 
-def add_common_name_to_database(idx, d):
-    print('Adding common name {} to the database...'.format(d['name']))
-    cn = CommonName.get_or_create(d['name'], idx)
-    db.session.add(cn)
-    cn.slug = d['slug']
-    cn.subtitle = d['subtitle']
-    cn.sunlight = d['sunlight']
-    cn.thumbnail = download_image(d['thumb_url'])
-    cn.botanical_names = d['botanical_names']
-    cn.description = d['description']
-    cn.instrictions = d['instructions']
-    for sec in d['sections']:
-        add_section_to_database(cn, sec)
+def generate_sections(cn, l):
+    for d in l:
+        sec = Section.get_or_create(d['name'], cn)
+        db.session.add(sec)
+        sec.botanical_names = d['botanical_names']
+        sec.subtitle = d['subtitle']
+        sec.description = d['description']
+        sec.children = list(generate_sections(cn, d['subsections']))
+        yield sec
 
 
 def add_section_to_database(cn, d, parent=None):
@@ -250,7 +261,12 @@ class CultivarTag:
         self.new_for = tag.find('span', class_='Cultivar_span_new')
         self.favorite = tag.find('span', class_='Cultivar_span_best_seller')
         self.h3 = tag.find('h3')
-        self.h3_ems = self.h3.find_all('em')
+        try:
+            self.h3_ems = self.h3.find_all('em')
+        except AttributeError:
+            raise RuntimeError(
+                'An AttributeError was raised making tag for: {}'.format(self.tag)
+            )
         try:
             self.subtitle_em = self.h3_ems[0]
         except IndexError:
@@ -494,6 +510,10 @@ class CNScraper:
         self.comments = extract_comments(self.main)
         self.growing_divs = self.main.find_all('div', class_='Growing')
         self.growing = self.growing_divs[-1] if self.growing_divs else None
+        try:
+            self.growing.h2.extract()
+        except AttributeError:
+            pass
         self.onpage_nav = None
         self.related_links = None
         self.parse_related_and_nav()

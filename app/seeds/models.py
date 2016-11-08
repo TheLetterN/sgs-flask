@@ -1353,7 +1353,7 @@ class Cultivar(db.Model, TimestampMixin, OrderingListMixin):
         section: Optional `Section` a `Cultivar` belongs to.
         botanical_name: The botanical name of given `Cultivar`.
         description: An optional HTML description of a cultivar.
-        new_until: An optional date to mark a `Cultivar` as new until.
+        new_until: The year a `Cultivar` is new for, if applicable.
         featured: Whether or not `Cultivar` should be featured on its common
             name page.
         active: True if the cultivar's stock is being actively replenished,
@@ -1404,7 +1404,7 @@ class Cultivar(db.Model, TimestampMixin, OrderingListMixin):
     botanical_name = db.Column(db.UnicodeText)
     description = db.Column(db.UnicodeText)
     synonyms = db.Column(db.UnicodeText)
-    new_until = db.Column(db.Date)
+    new_for = db.Column(db.Integer)
     featured = db.Column(db.Boolean, default=False)
     active = db.Column(db.Boolean)
     in_stock = db.Column(db.Boolean)
@@ -1640,34 +1640,21 @@ class Cultivar(db.Model, TimestampMixin, OrderingListMixin):
     def get_or_create(cls,
                       name,
                       common_name,
-                      index,
                       stream=sys.stdout):
         """Load a cultivar if it exists, create it if not.
-
-        Notes:
-            The boolean attribute 'created' is attached to the `CommonName`
-            instance so we know whether the returned `CommonName` was created
-            or loaded.
-
-        Args:
-            name: Name of the `Cultivar`.
-            common_name: Name of the `CommonName` this `Cultivar` belongs to.
-            index: `Index` the `CommonName` belongs to.
-            stream: Optional IO stream to write messages to.
         """
-        cv = cls.from_queryable_values(name=name,
-                                       common_name=common_name,
-                                       index=index)
+        cv = cls.query.filter(
+            cls.common_name_id == common_name.id
+        ).filter(
+            cls.name == name
+        ).one_or_none()
         if cv:
             cv.created = False
             print('The Cultivar "{0}" has been loaded from the database.'
                   .format(cv.fullname), file=stream)
         else:
-            cv = cls(name=name)
+            cv = cls(name=name, common_name=common_name)
             cv.created = True
-            cv.common_name = CommonName.get_or_create(name=common_name,
-                                                      index=index,
-                                                      stream=stream)
             print('The Cultivar "{0}" does not yet exist in the database, '
                   'so it has been created.'.format(cv.fullname), file=stream)
         return cv
@@ -1708,14 +1695,6 @@ class Cultivar(db.Model, TimestampMixin, OrderingListMixin):
     def public(self):
         """bool: Whether or not `Cultivar` is visible to non-admin users."""
         return self.active and self.visible
-
-    @property
-    def new_for(self):
-        """int: Year cultivar is new for, if applicable."""
-        if self.new_until and self.new_until > datetime.date.today():
-            return self.new_until.year
-        else:
-            return None
 
     @property
     def noship_states_html(self):
@@ -1811,7 +1790,6 @@ class Packet(db.Model, TimestampMixin):
     sku = db.Column(db.UnicodeText, unique=True)
     product_name = db.Column(db.UnicodeText)
     price = db.Column(USDollar)
-    taxable = db.Column(db.Boolean, default=True)
     amount = db.Column(db.UnicodeText)
     cultivar_id = db.Column(db.Integer, db.ForeignKey('cultivars.id'))
     cultivar = db.relationship('Cultivar', back_populates='packets')
@@ -1826,6 +1804,13 @@ class Packet(db.Model, TimestampMixin):
         self.price = price
         self.amount = amount
         self.cultivar = cultivar
+
+    @property
+    def taxable(self):
+        try:
+            return self.cultivar.taxable
+        except AttributeError:
+            return False
 
     @property
     def info(self):

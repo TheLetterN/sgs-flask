@@ -12,6 +12,7 @@ from app.seeds.models import (
     Cultivar,
     Image,
     Index,
+    Packet,
     Section
 )
 
@@ -108,7 +109,7 @@ def download_image(url):
     relname = Path(*url.replace('//', '').split('/')[1:])
     fullname = Path(STATIC, relname)
     if fullname.exists():
-        print('Image {} already exists, skipping download.')
+        print('Image {} already exists, skipping download.'.format(fullname))
     else:
         print('Downloading {} and saving to "{}"...'.format(url, fullname))
         img_file = requests.get(url)
@@ -186,6 +187,7 @@ def add_index_to_database(d):
     idx.description = d['description']
     idx.common_names = list(generate_common_names(idx, d['common_names']))
     db.session.commit()
+    print('Finished adding {} to the database.'.format(d['name']))
     
 
 def generate_common_names(idx, l):
@@ -199,8 +201,8 @@ def generate_common_names(idx, l):
         cn.botanical_names = d['botanical_names']
         cn.description = d['description']
         cn.instructions = d['instructions']
+        cn.cultivars = list(generate_cultivars(cn, d['cultivars']))
         cn.sections = list(generate_sections(cn, d['sections']))
-        #TODO: finish
         yield cn
 
 
@@ -211,39 +213,45 @@ def generate_sections(cn, l):
         sec.botanical_names = d['botanical_names']
         sec.subtitle = d['subtitle']
         sec.description = d['description']
+        sec.cultivars = list(generate_cultivars(cn, d['cultivars']))
         sec.children = list(generate_sections(cn, d['subsections']))
         yield sec
 
 
-def add_section_to_database(cn, d, parent=None):
-    sec = Section.get_or_create(d['name'], cn)
-    db.session.add(sec)
-    sec.parent = parent
-    sec.botanical_names = d['botanical_names']
-    sec.subtitle = d['subtitle']
-    sec.description = d['description']
-    for s in d['subsections']:
-        add_section_to_database(cn, s, sec)
+def generate_cultivars(cn, l):
+    for d in l:
+        cv = Cultivar.get_or_create(d['name'], cn)
+        db.session.add(cv)
+        cv.visible = True
+        cv.active = True
+        cv.subtitle = d['subtitle']
+        cv.botanical_name = d['botanical_names']
+        cv.description = d['description']
+        try:
+            cv.new_for = int(d['new_for'])
+        except ValueError:
+            pass
+        cv.featured = d['favorite']
+        cv.in_stock = d['packets'][0]['in_stock']
+        if 'organic' in cv.description.lower():
+            cv.organic = True
+        cv.taxable = d['packets'][0]['taxable']
+        cv.images = [download_image(i) for i in d['images']]
+        cv.thumbnail = cv.images[0]
+        #TODO: Vegetable data
+        cv.packets = list(generate_packets(d['packets']))
+        yield cv
 
 
-def add_cultivar_to_database(cn, d, section=None):
-    cv = Cultivar.get_or_create(cn, d['name'])
-    db.session.add(cv)
-    if section:
-        section.cultivars.append(cv)
-    cv.slug = d['slug']
-    cv.subtitle = d['subtitle']
-    cv.botanical_name = d['botanical_names']
-    cv.description = d['description']
-    #TODO: new_until
-    cv.featured = d['favorite']
-    cv.in_stock = d['packets'][0]['in_stock']
-    #TODO: organic
-    cv.taxable = d['packets'][0]['taxable']
-    cv.images = [download_image(i) for i in d['images']]
-    cv.thumbnail = cv.images[0]
-    for p in d['packets']:
-        add_packet_to_database(cv, p)
+def generate_packets(l):
+    for d in l:
+        pkt = Packet.get_or_create(d['sku'])
+        db.session.add(pkt)
+        pkt.product_name = d['product_name']
+        pkt.price = d['price']
+        pkt.amount = d['amount']
+        yield pkt
+
 
 
 def add_packet_to_database(cv, d):

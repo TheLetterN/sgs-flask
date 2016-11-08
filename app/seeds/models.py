@@ -882,6 +882,28 @@ class CommonName(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
             return ''
 
     @classmethod
+    def get_or_create(cls, name, index, stream=sys.stdout):
+        """Load a `CommonName` if it exists, create it if not.
+        Returns:
+            CommonName: The `CommonName` loaded or created.
+        """
+        cn = cls.query.filter(
+            cls.common_name_id == index.id
+        ).filter(
+            cls.name == name
+        ).one_or_none()
+        if cn:
+            print('The CommonName "{0}" has been loaded from the database.'
+                  .format(cn.name), file=stream)
+            cn.created = False
+        else:
+            cn = cls(name=name, index=index)
+            print('The CommonName "{0}" does not yet exist in the database, '
+                  'so it has been created.'.format(cn.name), file=stream)
+            cn.created = True
+        return cn
+
+    @classmethod
     def from_dict_(cls, dict_):
         """Create a new `CommonName` from a dict provided by dict_.
 
@@ -968,53 +990,6 @@ class CommonName(db.Model, TimestampMixin, OrderingListMixin, SynonymsMixin):
         """
         return cls.from_queryable_values(name=d['Common Name'],
                                          index=d['Index'])
-
-    @classmethod
-    def get_or_create(cls, name, index, stream=sys.stdout):
-        """Load a `CommonName` if it exists, create it if not.
-
-        Note:
-            The boolean attribute 'created' is attached to the `CommonName`
-            instance so we know whether the returned `CommonName` was created
-            or loaded.
-
-        Args:
-            name: Name of the `CommonName`. Corresponds to `CommonName.name`.
-            index: Name of the `Index` the `CommonName` belongs to.
-                Corresponds to `CommonName.index.name`.
-            stream: Optional IO stream to write messages to.
-
-        Returns:
-            CommonName: The `CommonName` loaded or created.
-        """
-        if isinstance(index, Index):
-            cn = cls.query.filter(
-                cls.index_id == index.id
-            ).filter(
-                cls.name == name
-            ).one_or_none()
-        else:
-            cn = cls.from_queryable_values(name=name, index=index)
-        if cn:
-            print('The CommonName "{0}" has been loaded from the database.'
-                  .format(cn.name), file=stream)
-            cn.created = False
-        else:
-            cn = cls(name=name)
-            print('The CommonName "{0}" does not yet exist in the database, '
-                  'so it has been created.'.format(cn.name), file=stream)
-            if isinstance(index, Index):
-                idx = index
-            else:
-                idx = Index.get_or_create(name=index, stream=stream)
-            # This should ensure idx_pos is generated correctly.
-            # If we do cn.index = Index(...) it always ends up being 1.
-            if not idx.common_names:
-                idx.common_names = [cn]
-            else:
-                idx.common_names.append(cn)
-            cn.created = True
-        return cn
 
     @property
     def arranged_name(self):

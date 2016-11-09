@@ -35,7 +35,6 @@ from app import create_app, db, mail, Permission
 from app.auth.models import User
 from app.seeds.excel import SeedsWorkbook
 from app.seeds.models import Cultivar
-from app.seeds.htmlgrab import Page, PageAdder, save_batch, save_grows_with
 
 app = create_app(os.getenv('SGS_MODE') or 'default')
 manager = Manager(app)
@@ -197,70 +196,6 @@ def make_cultivars_visible():
 def set_grows_with():
     """Save grows with relationships to database."""
     save_grows_with()
-
-
-@manager.command
-def grab_all(index):
-    if 'annual' in index.lower():
-        idx = 'annual'
-    elif 'perennial' in index.lower():
-        idx = 'perennial'
-    elif 'vegetable' in index.lower():
-        idx = 'vegetable'
-    elif 'vine' in index.lower():
-        idx = 'vine'
-    elif 'herb' in index.lower():
-        idx = 'herb'
-    else:
-        raise ValueError('\'{0}\' does not match any known index!'
-                         .format(index))
-    directory = os.path.join('pages', idx)
-    if not os.path.exists(directory):
-        os.mkdir(directory)
-    pages_dir = os.path.join('909', idx)
-    filename = os.path.join('pages', idx + '.txt')
-    with open(filename, 'r') as infile:
-        lines = [l.strip() for l in infile.readlines()]
-    save_batch(lines, idx, directory, pages_dir)
-
-
-@manager.command
-def load_all(index):
-    if 'annual' in index.lower():
-        idx = 'annual'
-    elif 'perennial' in index.lower():
-        idx = 'perennial'
-    elif 'vegetable' in index.lower():
-        idx = 'vegetable'
-    elif 'vine' in index.lower():
-        idx = 'vine'
-    else:
-        idx = 'herb'
-    directory = os.path.join('pages', idx)
-    pages = sorted(os.path.join(directory, p) for p in os.listdir(directory)
-                   if '.json' in  p and p[0] != '.')
-    for page in pages:
-        try:
-            pa = PageAdder.from_json_file(page)
-            pa.save()
-        except Exception as e:
-            raise RuntimeError('An exception \'{}\' occurred when trying to load '
-                               'page: {}'.format(e, page))
-
-
-@manager.command
-def grab(url, outfile, infile=None):
-    """Grab a webpage and save it to a JSON file."""
-    p = Page(url=url, filename=infile)
-    p.save_json(outfile)
-    print('Contents of \'{0}\' saved to: {1}'.format(url, outfile))
-
-
-@manager.command
-def load_json(filename):
-    """Load a JSON file into the database."""
-    pa = PageAdder.from_json_file(filename)
-    pa.save()
 
 
 @manager.option(

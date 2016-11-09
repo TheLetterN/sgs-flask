@@ -79,10 +79,12 @@ def get_subsections(tag):
 
 def get_cultivars(tag):
     return [
-        CultivarTag(c) for c in tag.find_all('div',
-                                             class_='Cultivar',
-                                             id=lambda x: x != 'heirloom-tomato-intro',
-                                             recursive=False)
+        CultivarTag(c) for c in tag.find_all(
+            'div',
+            class_='Cultivar',
+            id=lambda x: x != 'heirloom-tomato-intro',
+            recursive=False
+        )
     ]
 
 
@@ -586,6 +588,9 @@ class CNScraper:
             self._dbdict['description'] = tags_to_str(self.intro.contents)
         except AttributeError:
             self._dbdict['description'] = ''
+        heirloom = self.main.find('div', id='heirloom-tomato-intro')
+        if heirloom:
+            self._dbdict['description'] = str(heirloom)
         self._dbdict['subtitle'] = str_contents(self.header_h2)
         self._dbdict['botanical_names'] = str_contents(self.header_h3)
         self._dbdict['slug'] = self.url.split('/')[-1].replace('.html', '')

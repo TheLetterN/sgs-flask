@@ -17,11 +17,10 @@ Copyright Swallowtail Garden Seeds, Inc
 {% if cultivar.active and cultivar.visible or current_user.can(Permission.MANAGE_SEEDS) %}
 <div class="Cultivar">
 	<img alt="{{ cultivar.fullname }}" class="Cultivar_img" src="{% if cultivar.thumbnail %}{{ cultivar.thumbnail.url }}{% else %}{{ url_for('static', filename='images/assets/default_thumb.jpg') }}{% endif %}">
-	{% if not idx_slug %}{% set idx_slug = cultivar.common_name.index.slug %}{% endif %}
-	{% if not cn_slug %}{% set cn_slug = cultivar.common_name.slug %}{% endif %}
+  {% if cultivar.favorite %}<span class="Cultivar_span_best_seller"></span>{% endif %}
 	{% if cultivar.new_for %}<span class="Cultivar_span_new">New for {{ cultivar.new_for }}</span>{% endif %}
 	<small class="Cultivar_small">{% if cultivar.packets[0] %}{{ cultivar.packets[0].sku }}{% endif %}</small>
-	<h3 class="Cultivar_h3" id="{{ cultivar.slug }}">{% if config.SHOW_CULTIVAR_PAGES %}<a href="{{ url_for('seeds.cultivar', idx_slug=idx_slug, cn_slug=cn_slug, cv_slug=cultivar.slug)}}">{{ hyphenate(cultivar.name)|safe }}</a>{% else %}{{ hyphenate(cultivar.name)|safe }}{% endif %}
+  <h3 class="Cultivar_h3" id="{{ cultivar.slug }}">{{ hyphenate(cultivar.name)|safe }}
 		<em class="Cultivar_em">{% if cultivar.subtitle %}{{ cultivar.subtitle }}{% else %}{{ cultivar.common_name.header }}{% endif %}</em>
 		{% if cultivar.botanical_name %}
 		<em class="Cultivar_em2">{{ cultivar.botanical_name|safe }}</em>
@@ -47,23 +46,6 @@ Copyright Swallowtail Garden Seeds, Inc
     <span class="Cultivar_do_not_ship">{{ cultivar.noship_states_html|safe }}</span>
     {% endif %} 
   {% if cultivar.packets %}
-  {# BEGIN old add to cart form #}
-  {#
-  <div class="packet-info">
-    {{ packet.quantity.html_value|safe }} {{ packet.quantity.units }} - ${{ packet.price }}
-  </div>
-  {% if cultivar.in_stock %}
-  <form class="add-to-cart-form" method="POST" action="{{ url_for('shop.add_to_cart', product_number=packet.sku, origin=cultivar.url) }}">
-    {{ packet.form.hidden_tag() }}
-    <div class="add-to-cart-fields">
-      Qty: {{ packet.form.quantity(class='add-to-cart-quantity') }} {{ packet.form.submit(class='add-to-cart-submit') }}
-    </div>
-  </form>
-  {% else %}
-    <div class="add-to-cart-out-of-stock">OUT OF STOCK</div>
-  {% endif %}
-  #}
-  {# END old add to cart form #}
   {# BEGIN Snipcart add to cart form #}
     {% if config['USE_SNIPCART'] %}
       {% for packet in cultivar.packets %}
@@ -83,6 +65,9 @@ Copyright Swallowtail Garden Seeds, Inc
 			<li>
         {{ flipper('featured') }}
 			</li>
+      <li>
+        {{ flipper('favorite') }}
+      </li>
 			<li>
         {{ flipper('in stock') }}
 			</li>

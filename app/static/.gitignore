@@ -1,0 +1,11 @@
+*
+!.gitignore
+!images/
+images/*
+!images/assets/
+!css/
+css/*
+!css/*.css
+!scripts/
+scripts/*
+!scripts/*.js

@@ -22,29 +22,6 @@ Copyright Swallowtail Garden Seeds, Inc
 <title>{{ cn.header }} | {{ count }} varieties</title>
 <link rel="canonical" href="{{ url_for('seeds.common_name', idx_slug=cn.index.slug, cn_slug=cn.slug, _external=True) }}">
 {% endblock %}
-{% block subnav %}
-{# BEGIN onpage nav #}
-{% if cn.child_sections %}
-<div class="onpagenav">
-	{% for sec in cn.child_sections %}
-	{% if sec.has_public_cultivars or sec.children or current_user.can(Permission.MANAGE_SEEDS) %}
-	<a href="#{{ slugify(sec.name) }}"><h2 class="button100">{{ sec.name }}</h2></a>
-	{% if sec.children %}
-	{% for subsec in sec.children %}
-	{% if subsec.has_public_cultivars or current_user.can(Permission.MANAGE_SEEDS) %}
-	<a href="#{{ slugify(subsec.name) }}"><h2 class="button50">{{ subsec.name }}</h2></a>
-	{% endif %}
-	{% endfor %}
-	{% endif %}
-	{% endif %}
-	{% endfor %}
-	{% if individuals %}
-	<a class="to-indv-varieties" href="#individual-varieties"><h2 class="button100">Individual {{ cn.arranged_name }} Varieties</h2></a>
-	{% endif %}
-</div>
-	{% endif %}
-{# END onpage nav #}
-{% endblock %}
 {% block main %}
 {% if current_user.can(Permission.MANAGE_SEEDS) %}
 <div class="admin">
@@ -54,14 +31,14 @@ Copyright Swallowtail Garden Seeds, Inc
 {# BEGIN common name page header #}
 <div class="Header">
 	<h1 class="Header_h1">{{ cn.header }}</h1>
-	{% if cn.synonyms %}
-	<h2 class="Header_h2">{{ cn.synonyms_string }}</h2>
+	{% if cn.subtitle %}
+	<h2 class="Header_h2">{{ cn.subtitle }}</h2>
 	{% endif %}
 	{% if cn.botanical_names %}
-	<h3 class="Header_h3">{{ cn.html_botanical_names|safe }}</h3>
+	<h3 class="Header_h3">{{ cn.botanical_names|safe }}</h3>
 	{% endif %}
 	{% if cn.instructions %}
-	<p class="Header_p"><a href="#{{ cn.slug }}-instructions">How to plant {{ cn.arranged_name }} seeds</a></p>
+  <p class="Header_p{% if cn.sunlight %} {{ cn.sunlight }}{% endif %}"><a href="#how-to-plant-{{ cn.slug }}-seeds">How to plant {{ cn.arranged_name }} seeds</a></p>
 	{% endif %}
 	{% if cn.description %}
 	<div class="Introduction">{{ cn.description|safe }}</div>
@@ -116,7 +93,7 @@ Copyright Swallowtail Garden Seeds, Inc
 </div>
 {% endif %}
 {% if cn.instructions %}
-<div id="{{ cn.slug }}-instructions" class="Growing">
+<div id="how-to-plant-{{ cn.slug }}-seeds" class="Growing">
 	<h2 class="Growing_h2">How to Plant {{ cn.arranged_name }} Seeds</h2>
 		{{ cn.instructions|indent(6)|safe }}
 </div>

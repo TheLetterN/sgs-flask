@@ -20,6 +20,13 @@ from app.seeds.models import (
 STATIC = Path(Path.cwd(), 'app', 'static')
 
 
+def str_contents(tag):
+    try:
+        return ' '.join(''.join(str(c) for c in tag.contents).split())
+    except AttributeError:
+        return None
+
+
 def first_text(tag):
     try:
         return next(
@@ -281,20 +288,19 @@ def generate_cultivars(cn, l):
         cv.subtitle = d['subtitle']
         cv.botanical_name = d['botanical_names']
         cv.description = d['description']
-        cv.open_pollinated = d['open_pollinated'] or False
-        cv.days_to_maturity = d['days_to_maturity']
+        cv.vegetable_info = d['vegetable_info']
         try:
             cv.new_for = int(d['new_for'])
         except ValueError:
             pass
         cv.featured = d['favorite']
+        cv.favorite = d['favorite']
         cv.in_stock = d['packets'][0]['in_stock']
         if 'organic' in cv.description.lower():
             cv.organic = True
         cv.taxable = d['packets'][0]['taxable']
         cv.images = [download_image(i) for i in d['images']]
         cv.thumbnail = cv.images[0]
-        #TODO: Vegetable data
         cv.packets = list(generate_packets(d['packets']))
         yield cv
 
@@ -307,14 +313,6 @@ def generate_packets(l):
         pkt.price = d['price']
         pkt.amount = d['amount']
         yield pkt
-
-
-def add_packet_to_database(cv, d):
-    pkt = Packet.get_or_create(d['sku'])
-    db.session.add(pkt)
-    if pkt not in cv.packets:
-        cv.packets.append(pkt)
-    #TODO: finish this
 
 
 class CultivarTag:
@@ -374,18 +372,6 @@ class CultivarTag:
             self.create_dbdict()
         return self._dbdict
 
-    @property
-    def veg_op(self):
-        return self.veg_em and 'OP' in str(self.veg_em)
-
-    @property
-    def veg_dtm(self):
-        if self.veg_em and 'days' in str(self.veg_em):
-            return next(
-                s for s in str(self.veg_em) if any(c.isdigit() for c in s)
-            )
-        return None
-
     def create_dbdict(self):
         print('Creating dbdict for cultivar "{}"...'.format(self.h3))
         self._dbdict['name'] = first_text(self.h3)
@@ -398,8 +384,7 @@ class CultivarTag:
             i['src'].replace('\n', '') for i in self.images
         ]
         self._dbdict['packets'] = self.get_packet_dicts()
-        self._dbdict['open_pollinated'] = self.veg_op
-        self._dbdict['days_to_maturity'] = self.veg_dtm
+        self._dbdict['vegetable_info'] = str_contents(self.veg_em)
 
 
 class SectionTag:
@@ -601,8 +586,8 @@ class CNScraper:
             self._dbdict['description'] = tags_to_str(self.intro.contents)
         except AttributeError:
             self._dbdict['description'] = ''
-        self._dbdict['subtitle'] = first_text(self.header_h2)
-        self._dbdict['botanical_names'] = first_text(self.header_h3)
+        self._dbdict['subtitle'] = str_contents(self.header_h2)
+        self._dbdict['botanical_names'] = str_contents(self.header_h3)
         self._dbdict['slug'] = self.url.split('/')[-1].replace('.html', '')
         try:
             self._dbdict['sunlight'] = next(

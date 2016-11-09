@@ -156,7 +156,7 @@ class Anonymous(AnonymousUserMixin):
         return False
 
 db = SQLAlchemy()
-make_searchable()
+make_searchable(options={'remove_symbols': '@"<>-'})
 mail = Mail()
 
 

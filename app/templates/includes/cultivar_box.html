@@ -24,10 +24,11 @@ Copyright Swallowtail Garden Seeds, Inc
 	<h3 class="Cultivar_h3" id="{{ cultivar.slug }}">{% if config.SHOW_CULTIVAR_PAGES %}<a href="{{ url_for('seeds.cultivar', idx_slug=idx_slug, cn_slug=cn_slug, cv_slug=cultivar.slug)}}">{{ hyphenate(cultivar.name)|safe }}</a>{% else %}{{ hyphenate(cultivar.name)|safe }}{% endif %}
 		<em class="Cultivar_em">{% if cultivar.subtitle %}{{ cultivar.subtitle }}{% else %}{{ cultivar.common_name.header }}{% endif %}</em>
 		{% if cultivar.botanical_name %}
-		<em class="Cultivar_em2">{{ cultivar.botanical_name.fullname|safe }}</em>
+		<em class="Cultivar_em2">{{ cultivar.botanical_name|safe }}</em>
 		{% endif %}
-		{% if cultivar.vegetable_data %}
-		<em class="Cultivar_em2">{% if cultivar.vegetable_data.open_pollinated %}<abbr title="Open Pollinated">(OP)</abbr> {% endif %}{% if cultivar.vegetable_data.days_to_maturity %}{{ cultivar.vegetable_data.days_to_maturity }}{% endif %}
+		{% if cultivar.vegetable_info %}
+    <em class="Cultivar_em2">
+      {{ cultivar.vegetable_info|safe }}
 		</em>
 		{% endif %}
   </h3>

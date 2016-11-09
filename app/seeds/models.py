@@ -646,7 +646,6 @@ class CommonName(db.Model, TimestampMixin, OrderingListMixin):
         botanical_names: Botanical names belonging to given `CommonName`.
         sections: `Section` instances belonging to given `CommonName`.
         cultivars: `Cultivar` instances belonging to given `CommonName`.
-        synonyms: Synonyms of given `CommonName`.
     """
     query_class = CommonNameQuery
     __tablename__ = 'common_names'
@@ -678,7 +677,6 @@ class CommonName(db.Model, TimestampMixin, OrderingListMixin):
     botanical_names = db.Column(db.UnicodeText)
     description = db.Column(db.UnicodeText)
     instructions = db.Column(db.UnicodeText)
-    synonyms = db.Column(db.UnicodeText)
     visible = db.Column(db.Boolean)
     gw_common_names = db.relationship(
         'CommonName',
@@ -1402,17 +1400,15 @@ class Cultivar(db.Model, TimestampMixin, OrderingListMixin):
         back_populates='cultivars'
     )
     botanical_name = db.Column(db.UnicodeText)
+    vegetable_info = db.Column(db.UnicodeText)
     description = db.Column(db.UnicodeText)
-    synonyms = db.Column(db.UnicodeText)
     new_for = db.Column(db.Integer)
     featured = db.Column(db.Boolean, default=False)
+    favorite = db.Column(db.Boolean, default=False)
     active = db.Column(db.Boolean)
     in_stock = db.Column(db.Boolean)
     visible = db.Column(db.Boolean)
-    organic = db.Column(db.Boolean)
     taxable = db.Column(db.Boolean)
-    open_pollinated = db.Column(db.Boolean)
-    days_to_maturity = db.Column(db.UnicodeText)
     thumbnail_id = db.Column(db.Integer, db.ForeignKey('images.id'))
     thumbnail = db.relationship(
         'Image',
@@ -1477,6 +1473,7 @@ class Cultivar(db.Model, TimestampMixin, OrderingListMixin):
         'name',
         'subtitle',
         'botanical_name',
+        'vegetable_info',
         'description'
     ))
 

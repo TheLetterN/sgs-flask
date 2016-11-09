@@ -13,8 +13,10 @@ along with this program.  If not, see
 Copyright Swallowtail Garden Seeds, Inc
 #}
 {# Breadcrumbs need to be indented 6 spaces to fit page formatting. #}
-<ol class="crumbs">
-	{% for crumb in crumbs %}
-	<li>{{ crumb|safe }}</li>
-	{% endfor %}
-</ol>
+<div class="breadcrumbs">
+  <ol class="breadcrumb">
+    {% for crumb in crumbs %}
+    <li{% if loop.last %}class="active"{% endif %}>{{ crumb|safe }}</li>
+    {% endfor %}
+  </ol>
+</div>

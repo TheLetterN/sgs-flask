@@ -7,7 +7,7 @@ a{background:transparent}
 a:active,a:hover{outline:0}
 b,strong{font-weight:700}
 dfn{font-style:italic}
-mark{background:#fff;color:#141823}
+mark{background:#fcfcfc;color:#141823}
 small{font-size:70%}
 img{border:0}
 svg:not(:root){overflow:hidden}
@@ -25,9 +25,9 @@ html{font-size:62.5%}
 body{font-size:1.6em;line-height:1.5}
 @media all and (min-width:20em){
 /*begin keep tight*/
-.bold{font-weight:700;}.fs110{font-size:1.1em;}.fs95{font-size:.95em}.fs90,.fs90-{font-size:.9em}.fs85{font-size:.85em}.fs80{font-size:.80em}.margin-top-25{margin-top:.25em}.margin-top-50{margin-top:.5em}.margin-top-75{margin-top:.75em}.margin-top-100{margin-top:1em}.margin-top-150{margin-top:1.5em}.margin-top-200{margin-top:2em}.margin-top-250{margin-top:2.5em}.margin-top-300{margin-top:3em}.margin-bottom-25{margin-bottom:.25em}.margin-bottom-50{margin-bottom:.5em}.margin-bottom-75{margin-bottom:.75em}.margin-bottom-100{margin-bottom:1em}.margin-bottom-150{margin-bottom:1.5em}.margin-bottom-200{margin-bottom:2em}.margin-bottom-250{margin-bottom:2.5em}.margin-bottom-300{margin-bottom:3em}.padding-bottom-50{padding-bottom:.5em}.padding-bottom-75{padding-bottom:.75em}.padding-bottom-100{padding-bottom:1em}.padding-bottom-150{padding-bottom:1.5em}.padding-bottom-200{padding-bottom:2em}
+.highlight{color:#b34141;font-weight:700;}.text-align-left{text-align:left;}.bold{font-weight:700;}.fs110{font-size:1.1em;}.fs95{font-size:.95em}.fs90,.fs90-{font-size:.9em}.fs85{font-size:.85em}.fs80{font-size:.80em}.margin-top-25{margin-top:.25em}.margin-top-50{margin-top:.5em}.margin-top-75{margin-top:.75em}.margin-top-100{margin-top:1em}.margin-top-150{margin-top:1.5em}.margin-top-200{margin-top:2em}.margin-top-250{margin-top:2.5em}.margin-top-300{margin-top:3em}.margin-bottom-25{margin-bottom:.25em}.margin-bottom-50{margin-bottom:.5em}.margin-bottom-75{margin-bottom:.75em}.margin-bottom-100{margin-bottom:1em}.margin-bottom-150{margin-bottom:1.5em}.margin-bottom-200{margin-bottom:2em}.margin-bottom-250{margin-bottom:2.5em}.margin-bottom-300{margin-bottom:3em}.padding-bottom-50{padding-bottom:.5em}.padding-bottom-75{padding-bottom:.75em}.padding-bottom-100{padding-bottom:1em}.padding-bottom-150{padding-bottom:1.5em}.padding-bottom-200{padding-bottom:2em}
 /*end keep tight*/
-#container{background:#fff}
+#container{background:#fcfcfc}
 .Page_header,.Footer{position:relative;clear:both}
 .Page_header{font-family:"Droid Sans","Lucida Sans Unicode",Helvetica,Arial,sans-serif;font-size:.97em}
 .Page_header-contact-bar{text-align:center;padding:.5em 0;margin:0 0 .75em 0;font-weight:700;background:#6ea746;color:#fff}
@@ -74,18 +74,11 @@ em{display:block;font-weight:400;font-size:.95em}
 /*the style below affects the free shipping notice*/
 p span{color:#141823;font-weight:700}
 /*the style above affects the free shipping notice*/
-.group b,.group strong{font-weight:400}
-/*delete .crumbs when sure schema completely removed*/
-.crumbs li{display:inline-block;padding:0 .3em}
-.crumbs{font-size:.85em}
-.crumbs a:link{color:#436fab;font-weight:400;border:none;text-decoration:underline}
-.crumbs a:visited{color:#436fab}
-.crumbs a:hover{border:0}
-/*delete .crumbs when sure schema completely removed*/
+b,strong{font-weight:400}
 .breadcrumbs{padding:.15em 0}
 .breadcrumb li{display:inline;font-size:.85em}
-.breadcrumb a:link{font-weight:400;border:none}
-.breadcrumb li::after{content:"\2215";padding-left:.1em;margin-right:-.2em}
+.breadcrumb a:link{font-weight:400;border:none;margin-right:-.1em}
+.breadcrumb li::after{content:"\203A";padding-left:.1em;margin-right:0}
 .breadcrumb li.active{font-size:.8em}
 .breadcrumb li.active::after{content:none}
 .fb-like{min-height:1.5em;margin-top:.6em}
@@ -93,7 +86,7 @@ p span{color:#141823;font-weight:700}
 .page-navigation{margin-top:.25em}
 .page-navigation a:link{padding-bottom:.25em;font-size:.85em;margin:.25em .25em;display:inline-block}
 .onpagenav{padding:0;text-align:center;border:0;margin:0;overflow:auto}
-h2[class^="button"]{color:#4e7bba;font-weight:700;display:inline-block;float:left;font-size:.8em;background:#f0f6ec;padding:.35em .625em .25em;white-space:nowrap;outline:0;text-decoration:underline;margin:1em 0 0 0}
+h2[class^="button"]{color:#4e7bba;font-weight:700;display:inline-block;float:left;font-size:.8em;/*background:#f0f6ec;*/padding:.35em .625em .25em;white-space:nowrap;outline:0;text-decoration:underline;margin:1em 0 0 0}
 h2[class^="button"]::after{content:"\00BB";margin-left:.25em}
 .onpagenav_h2-font-size-mod{font-size:.75em;padding:.2em;margin-bottom:0;margin-top:-.005em;color:#292e37}
 h2[class^="button"]:hover{color:#466ea7;text-decoration:none}
@@ -105,7 +98,7 @@ h2[class^="button"]:hover{color:#466ea7;text-decoration:none}
 .button66{width:66.6666%}
 .button100{width:99.9999%}
 .Series h2[class^="button"]{margin:0}
-/*end onpagenav*/
+/*end onpagenav is it being used?*/
 .Header{margin-bottom:1em}
 .Header_h1{font-size:2em}
 .Header_p{margin-top:-1.75em;margin-left:.1em;font-size:.85em}
@@ -147,19 +140,26 @@ h2[class^="button"]:hover{color:#466ea7;text-decoration:none}
 .Series_p-p{margin-top:-.75em}
 .Series_em{font-size:.85em;display:block;line-height:1.1;margin-top:-.05em}
 .Series_em2{font-size:.5em;display:block;font-family:"Droid Sans","Lucida Sans Unicode",Helvetica,Arial,sans-serif}
-.Cultivar{margin-bottom:1.5em;margin-top:2em;overflow:hidden}
-.Cultivar_img{width:100%;height:auto;margin-top:.1em;margin-bottom:-.5em;max-width:15.625em}
+.Cultivar{margin-bottom:-1.5em;margin-top:2em;overflow:hidden}
+.Cultivar_img{width:100%;height:auto;margin-top:.1em;margin-bottom:.25em;max-width:250px;}
+.Cultivar_img.tall-adjustment,.Cultivar_img-portrait {margin-top:.1em;margin-bottom:.25em;width:100%;height:auto;max-width:250px;}
+.Cultivar_img-portrait {margin-top:.1em;margin-bottom:.25em;width:100%;height:auto;max-width:250px;}
+
 .Cultivar_span_new{font-size:.95em;color:#b34141;font-weight:700;display:block;margin:0}
-.Cultivar_span_best_seller::before{font-size:.9em;color:#b34141;font-weight:700;display:block;margin:.0 0 0 1.2em;content: "\2605 Customer Favorite"}
-.Cultivar_h3{margin-top:.8em}
+.Cultivar_span_best_seller::before{font-size:.9em;color:#b34141;font-weight:700;display:block;margin:.0 0 0 1.2em;content: "\2605 Best Seller"}
+.Cultivar_h3{margin-top:.8em;font-size:1.5em}
 .Cultivar_em{line-height:.9;font-style:italic;font-size:1em;display:block;color:#141823;font-weight:400}
 .Cultivar_em2{font-size:.8em;display:block;margin-top:.25em;font-family:"Droid Sans","Lucida Sans Unicode",Helvetica,Arial,sans-serif}
-.Cultivar_p{margin:.5em auto .75em}
+.Cultivar_p{margin:-.75em  auto .75em}
 .Cultivar_p_span{display:inline-block;font-weight:400}
 .Cultivar_p-p{margin-top:-.25em}
 .Cultivar_p em,.Cultivar_p-p em{display:inline;font-weight:700}
 .Cultivar_do_not_ship{color:#141823;font-size:.85em;display:block;font-weight:700;font-style:italic;margin-top:-.95em;margin-left:1.3em;margin-bottom:1em}
+/*is this needed?*/
 .Cultivar_p.margin-top_1em{margin-top:1em}
+/*separates .Cultivar divs*/
+hr.style-hr {height:30px;border-style:solid;border-color:#7b7979;border-width:2px 0 0 0;border-radius: 20px;}
+hr.style-hr:before {display:block;content:"";height:30px;margin-top:-31px;border-style:solid;border-color:#7b7979;border-width:0 0 2px 0;border-radius:20px;}
 /*begin cart*/
 .Cultivar_table{text-align:center;display:block;margin-bottom:1.5em}
 .Cultivar_table_size_price{background:#f4f6f8;padding:.2em;font-size:.95em}
@@ -167,19 +167,24 @@ h2[class^="button"]:hover{color:#466ea7;text-decoration:none}
 .Cultivar_button_submit:hover{background:#466ea7}
 .Cultivar_button_submit:disabled{background:#616161;opacity:.8}
 .Cultivar_button_submit a:active{position:relative;top:1px;left:1px}
+/*prevents Chrome from adding blue outline*/
 .Cultivar_button_submit:focus {outline:none;}
 .Cultivar_table_text{min-width:2.75em;width:66%;border:1px solid #7e7e7e;text-align:center;height:2em;font-weight:400}
-.Cultivar_table_text:focus{border:1px solid #141823}
+/*outline:none,prevents Chrome from adding a blue outline*/
+.Cultivar_table_text:focus{border:1px solid #141823;outline:none;}
 .Cultivar_table_qty{background:#f4f6f8;width:25%;vertical-align:middle;text-align:right;padding-right:.5em;border:0;font-weight:400;letter-spacing:.005em;font-size:.95em}
 .Cultivar_table_th{background:#f4f6f8;width:25%;vertical-align:middle;text-align:left;font-size:.95em}
 .Cultivar_table_th2{background:#f4f6f8;width:50%;height:2.3em;text-align:left}
 /*end cart*/
 .RelatedLinks{margin-bottom:2.5em;margin-top:2.5em;padding:.5em}
-.RelatedLinks_p{margin-bottom:.5em}
+.RelatedLinks.navigation {margin-bottom:-1.25em;margin-top:-.5em;}
+.RelatedLinks_h2 {margin-bottom:.5em;font-size:1.15em;}
+.RelatedLinks_p{margin-bottom:0em}
 .RelatedLinks a:link{text-decoration:none;border-bottom:none}
 .RelatedLinks_figure{display:inline-block;vertical-align:top;width:7.25em;margin:.3125em 0 .5em}
 .RelatedLinks_figcaption{line-height:1.2;text-align:center;width:95%;font-size:.8em;display:inline-block;font-weight:700;margin:0 0 0 -.13em}
-.RelatedLinks_img{margin-bottom:.15em;width:100%;height:auto;max-width:100px}
+.RelatedLinks_figcaption.navigation-caption{margin-left:.22em;}
+.RelatedLinks_img{margin-bottom:-.2em;width:100%;height:auto;max-width:100px}
 .RelatedLinks_img:hover{outline:0;border:1px solid #4b43ab}
 .Growing{margin-top:2em;margin-bottom:2em;padding:0}
 .Growing span{color:#141823;font-weight:700}
@@ -191,7 +196,7 @@ h2[class^="button"]:hover{color:#466ea7;text-decoration:none}
 .Sidebar{display:none}
 .Footer{border-top:1px solid #e3e3e3;padding:.5em;text-align:center;font-family:"Droid sans","Lucida Sans Unicode",Helvetica,Arial,sans-serif}
 .Footer_site-map-link:link,.Footer_site-map-link:visited{display:inline-block;text-decoration:none;color:#62943e;font-size:1em;border-bottom:1px solid #6ea746;font-weight:700;margin-bottom:.25em}
-.Footer_site-map-link:hover{color:#62943e;border-bottom:1px solid #fff}
+.Footer_site-map-link:hover{color:#62943e;border-bottom:1px solid #fcfcfc}
 .Footer_copyright_p{padding:.35em;font-weight:700;font-size:.75em}
 .Footer_copyright_p2{font-weight:400}
 .Footer_siteseal{margin:.4em}
@@ -207,7 +212,7 @@ h2[class^="button"]:hover{color:#466ea7;text-decoration:none}
 #snipcart-cartitems-continue-top{background:#4e7bba}
 #snipcart-cartitems-continue-top:hover{background:#466ea7}
 #snipcart-actions .js-next{background:#b34141;color:#fff;}
-#snipcart-footer .snip-footer__copyright{background-image: url("http://www.swallowtailgardenseeds.com/images/lock.png")}
+#snipcart-footer .snip-footer__copyright{background-image: url("https://www.swallowtailgardenseeds.com/images/lock.png")}
 #snipcart-footer .snip-footer__copyright,#snipcart-footer .snip-footer__highlight{color:#000}
 table.bulk-items{width:96%;margin:2em auto}
 .bulk-items tr{display:block;width:100%;font-size:90%;padding:1em 0;border-bottom:1px solid #e3e3e3}
@@ -246,7 +251,6 @@ body{margin:0 auto;max-width:98%}
 #main{text-align:left;margin-right:1.55em;margin-left:14.9em;float:right;padding:0}
 p{margin:0 1em 0 0;line-height:1.5;color:#141823}
 .group p{font-family:"Lucida Grande","Lucida Sans Unicode","Droid Sans",Tahoma,sans-serif}
-b{font-weight:400}
 h1{font-size:2em;line-height:1}
 h2{font-size:1.625em;line-height:1}
 h3{font-size:1.375em;line-height:1.1}
@@ -261,11 +265,17 @@ h3{font-size:1.375em;line-height:1.1}
 .Section_p{text-align:center;margin:0}
 .Series{border:1px solid #f0f3f6}
 .Series_h2{text-align:left}
-.Series_p{padding-left:.85em;margin-top:-.25em}
+.Series_p{padding-left:.85em;margin-top:-.25em;margin-bottom:.5em;}
 .Series_p-p{padding-left:.85em}
-.Cultivar_table{min-width:25em;margin-bottom:0;width:50%}
-.Cultivar{margin-bottom:4em;margin-top:3em;/*border:1px solid #a8a8a8;*/text-align:left}
-.Cultivar_img{float:left;margin:0 .75em .1em 0;vertical-align:text-top}
+.Cultivar_table{min-width:25em;margin-bottom:0;width:60%}
+.Cultivar_table.clear{clear:both}
+.Cultivar_table_size_price{font-size:.9em;padding-right:11.8em}
+.Cultivar_table_th{width:22%;padding-right:3em}
+.Cultivar_table_text{min-width:5.75em}
+.Cultivar_table_th2{text-align:right}
+.Cultivar_button_submit{margin-right:36%}
+.Cultivar{/*margin-bottom:4em;*/margin-top:3em;/*border:1px solid #a8a8a8;*/text-align:left}
+.Cultivar_img,.Cultivar_img-portrait{float:left;margin:0 .75em .1em 0;vertical-align:text-top}
 .Cultivar_small{display:block;line-height:1.3;margin-bottom:-1.6em;margin-left:1.6em;color:#873557;font-size:.7em}
 .Cultivar_h3{margin-left:.75em}
 .Cultivar_em{line-height:.9;font-style:italic;font-size:.9em;display:block;color:#141823;font-weight:400}
@@ -282,13 +292,10 @@ h3{font-size:1.375em;line-height:1.1}
 .Growing_p-p-p{padding:0 .8em 1em 1em;text-align:left;margin-top:-.5em}
 .Growing_img{-ms-transform:rotate(-15deg);-webkit-transform:rotate(-15deg);transform:rotate(-15deg);float:right;margin-top:2em;margin-left:1em;max-width:100px;height:auto;width:100%}
 .Growing_img-straight{float:right;margin-top:2em;margin-left:.5em;max-width:150px;height:auto;width:100%}
-/*.Growing_h2::before{content: "\1f331";font-size:1em;margin-right:.15em}*/
-/*.Growing_p:first-of-type::before{content: "\1f331";margin-right:.35em}*/
-/*this is needed in both breaks for it to work properly, why?*/
 #back-top{position:fixed;bottom:225px;margin-left:-190px}
 #back-top a{width:100px;display:block;text-align:center;font-size:12px!important;text-transform:uppercase;text-decoration:none;color:#bbb;transition:1s}
 #back-top a:hover{color:#b34141}
-#back-top span{width:100px;height:100px;display:block;margin-bottom:7px;background:#a5a5a5 url(http://www.swallowtailgardenseeds.com/assets/up-arrow.png) no-repeat center center;border-radius:15px;transition:1s}
+#back-top span{width:100px;height:100px;display:block;margin-bottom:7px;background:#a5a5a5 url(https://www.swallowtailgardenseeds.com/assets/up-arrow.png) no-repeat center center;border-radius:15px;transition:1s}
 #back-top a:hover span{background:#b34141}
 .Sidebar{display:block;float:left;width:13.1em;margin-right:-13.1em;padding:.45em .3em}
 .Sidebar_new-seeds{display:block;padding:.5em;margin:.5em .35em 1em;border:1px solid #832f2f;transition:.05s;font-weight:700;text-align:center}
@@ -300,6 +307,7 @@ h3{font-size:1.375em;line-height:1.1}
 .Sidebar_social_image:hover{border:1px solid #b34141;opacity:.95}
 /*styling for sidebar free shipping message*/
 .Sidebar_special-info{margin:.5em 0;padding:.5em 0;background:#f0f3f6;border:solid 1px #d8dadd;text-align:center;font-weight:700;color:#141823}
+.Sidebar_special-info a:link{color:#b34141;font-weight:700;}
 .Sidebar_special-info span{white-space:nowrap;color:#141823}
 /*controls font size for sidebar section name only*/
 .Sidebar_nav-section-name-span{font-size:1.15em}
@@ -323,4 +331,5 @@ ul.Sidebar_subnav li span{font-size:.95em}
 @media all and (min-width:55em){
 #container{max-width:1200px}
 .Google_search{margin-left:10%}
+.Cultivar_img{max-width:300px;}
 }

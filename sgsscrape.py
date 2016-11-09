@@ -97,12 +97,24 @@ def scrape_index(url):
     return idx
 
 
-def save_index(idx):
+def save_index(idx, filename=None):
     print('Saving {} index...'.format(idx.dbdict['slug']))
-    p = Path('/tmp', '{}.json'.format(idx.dbdict['slug']))
+    if not filename:
+        p = Path('/tmp', '{}.json'.format(idx.dbdict['slug']))
+    else:
+        p = Path(filename)
     with p.open('w', encoding='utf-8') as ofile:
         ofile.write(idx.json)
     print('Saved {} to: {}'.format(idx.dbdict['slug'], p))
+
+
+def load_index(slug, filename=None):
+    if not filename:
+        p = Path('/tmp', '{}.json'.format(slug))
+    else:
+        p = Path(filename)
+    with p.open('r', encoding='utf-8') as ifile:
+        return json.loads(ifile.read())
 
 
 def download_image(url):
@@ -118,7 +130,11 @@ def download_image(url):
             with fullname.open('wb') as ofile:
                 ofile.write(img_file.content)
         else:
-            img_file.raise_for_status()
+            try:
+                img_file.raise_for_status()
+            except requests.HTTPError as e:
+                with open('/tmp/404.log', 'a', encoding='utf-8') as ofile:
+                    ofile.write('{}\n'.format(e))
     img = Image.get_or_create(filename=str(relname))
     db.session.add(img)
     return img
@@ -130,10 +146,14 @@ def scrape_annuals():
     )
 
 
-def save_annuals(ann=None):
+def save_annuals(ann=None, filename=None):
     if not ann:
         ann = scrape_annuals()
-    save_index(ann)
+    save_index(ann, filename=filename)
+
+
+def load_annuals(filename=None):
+    return load_index('annuals', filename=filename)
 
 
 def scrape_perennials():
@@ -142,40 +162,74 @@ def scrape_perennials():
     )
 
 
-def save_perennials(per=None):
+def load_perennials(filename=None):
+    return load_index('perennials', filename=filename)
+
+
+def save_perennials(per=None, filename=None):
     if not per:
         per = scrape_perennials()
-    save_index(per)
+    save_index(per, filename=filename)
 
 
 def scrape_vines():
     return scrape_index('https://www.swallowtailgardenseeds.com/vines/')
 
 
-def save_vines(vin=None):
+def save_vines(vin=None, filename=None):
     if not vin:
         vin = scrape_vines()
-    save_index(vin)
+    save_index(vin, filename=filename)
+
+
+def load_vines(filename=None):
+    return load_index('vines', filename=filename)
 
 
 def scrape_vegetables():
     return scrape_index('https://www.swallowtailgardenseeds.com/vegetables/')
 
 
-def save_vegetables(veg=None):
+def save_vegetables(veg=None, filename=None):
     if not veg:
         veg = scrape_vegetables()
-    save_index(veg)
+    save_index(veg, filename=filename)
+
+
+def load_vegetables(filename=None):
+    return load_index('vegetables', filename=filename)
 
 
 def scrape_herbs():
     return scrape_index('https://www.swallowtailgardenseeds.com/herbs/')
 
 
-def save_herbs(herb=None):
+def save_herbs(herb=None, filename=None):
     if not herb:
         herb = scrape_herbs()
-    save_index(herb)
+    save_index(herb, filename=filename)
+
+
+def load_herbs(filename=None):
+    return load_index('herbs', filename=filename)
+
+
+def save_all():
+    save_annuals()
+    save_perennials()
+    save_vines()
+    save_vegetables()
+    save_herbs()
+
+
+def load_all():
+    return (
+        load_annuals(),
+        load_perennials(),
+        load_vines(),
+        load_vegetables(),
+        load_herbs()
+    )
 
 
 def add_index_to_database(d):
@@ -227,6 +281,8 @@ def generate_cultivars(cn, l):
         cv.subtitle = d['subtitle']
         cv.botanical_name = d['botanical_names']
         cv.description = d['description']
+        cv.open_pollinated = d['open_pollinated'] or False
+        cv.days_to_maturity = d['days_to_maturity']
         try:
             cv.new_for = int(d['new_for'])
         except ValueError:
@@ -251,7 +307,6 @@ def generate_packets(l):
         pkt.price = d['price']
         pkt.amount = d['amount']
         yield pkt
-
 
 
 def add_packet_to_database(cv, d):
@@ -339,7 +394,9 @@ class CultivarTag:
         self._dbdict['description'] = tags_to_str(self.ps)
         self._dbdict['new_for'] = '2017' if self.new_for else ''
         self._dbdict['favorite'] = True if self.favorite else False
-        self._dbdict['images'] = [i['src'] for i in self.images]
+        self._dbdict['images'] = [
+            i['src'].replace('\n', '') for i in self.images
+        ]
         self._dbdict['packets'] = self.get_packet_dicts()
         self._dbdict['open_pollinated'] = self.veg_op
         self._dbdict['days_to_maturity'] = self.veg_dtm

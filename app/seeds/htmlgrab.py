@@ -43,8 +43,7 @@ from app.seeds.models import (
     Cultivar,
     Image,
     Index,
-    Packet,
-    VegetableData
+    Packet
 )
 from app.shop.models import Country
 
@@ -58,6 +57,12 @@ class Quantity:
     #TMP: This module is broken until Quantity stuff is removed.
     def __init__(self):
         raise NotImplementedError('The Quantity table no longer exists.'
+                                  'Please remove it from this module.')
+
+class VegetableData:
+    #TMP: This module is broken until VegetableData is removed.
+    def __init__(self):
+        raise NotImplementedError('The VegetableData table no longer exists.'
                                   'Please remove it from this module.')
 
 def save_batch(lines, index, directory=None, pages_dir=None):

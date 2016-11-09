@@ -1411,6 +1411,8 @@ class Cultivar(db.Model, TimestampMixin, OrderingListMixin):
     visible = db.Column(db.Boolean)
     organic = db.Column(db.Boolean)
     taxable = db.Column(db.Boolean)
+    open_pollinated = db.Column(db.Boolean)
+    days_to_maturity = db.Column(db.UnicodeText)
     thumbnail_id = db.Column(db.Integer, db.ForeignKey('images.id'))
     thumbnail = db.relationship(
         'Image',
@@ -1421,14 +1423,6 @@ class Cultivar(db.Model, TimestampMixin, OrderingListMixin):
         'Image',
         secondary=cultivars_to_images,
         back_populates='cultivars'
-    )
-    vegetable_data_id = db.Column(
-        db.Integer,
-        db.ForeignKey('vegetable_data.id')
-    )
-    vegetable_data = db.relationship(
-        'VegetableData',
-        back_populates='cultivar'
     )
     packets = db.relationship(
         'Packet',
@@ -2030,38 +2024,6 @@ class Image(db.Model, TimestampMixin):
             img = Pimage.open(self.full_path)
             self.width = img.width
             self.height = img.height
-
-
-class VegetableData(db.Model):
-    """Table for vegetable-specific data.
-
-    In addition to the usual information, vegetables often have an estimate
-    for number of days it takes to reach the first harvest, and whether or not
-    the plants are open pollinated.
-
-    Attributes:
-        open_pollinated: Whether or not the vegetable is open pollinated.
-        hybrid: Whether or not a vegetable is hybrid.
-        days_to_maturity: A string containing the number of days (or a range
-            of the number of days) it is estimated to take for the plant to be
-            ready to harvest.
-        cultivar: The `Cultivar` that the given `VegetableData` belongs to.
-    """
-    __tablename__ = 'vegetable_data'
-    id = db.Column(db.Integer, primary_key=True)
-    open_pollinated = db.Column(db.Boolean)
-    hybrid = db.Column(db.Boolean)
-    # TODO: Make custom comparator for days_to_maturity.
-    days_to_maturity = db.Column(db.UnicodeText)
-    cultivar = db.relationship(
-        'Cultivar',
-        uselist=False,
-        back_populates='vegetable_data'
-    )
-
-    def __init__(self, open_pollinated=False, days_to_maturity=None):
-        self.open_pollinated = open_pollinated
-        self.days_to_maturity = days_to_maturity
 
 
 @event.listens_for(SignallingSession, 'before_attach')

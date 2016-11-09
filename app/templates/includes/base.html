@@ -22,7 +22,7 @@ Copyright Swallowtail Garden Seeds, Inc
 <html lang="en">
 	<head>
 		<meta charset="utf-8">
-		<link rel='stylesheet' href='http://fonts.googleapis.com/css?family=Droid+Serif:400,700,400italic,700italic%7cDroid+Sans:400,700'>
+		<link rel='stylesheet' href='https://fonts.googleapis.com/css?family=Droid+Serif:400,700,400italic,700italic%7cDroid+Sans:400,700'>
 		<meta name="viewport" content="width=device-width, initial-scale=1">
 		<link rel="shortcut icon" href="{{ url_for('static', filename='images/assets/favicon.ico') }}">
 		{% if not config['ALLOW_CRAWLING'] %}
@@ -64,6 +64,9 @@ Copyright Swallowtail Garden Seeds, Inc
 		{% include "includes/main_nav.html" %}
 		{% block subnav %}{% endblock %}
 		{% include "includes/admin_nav.html" -%}
+    <div>
+      <p class="Global_message-box">Orders placed today ship INSERT DATE HERE DUMMY.<span> | Shipping $4.95 U.S. | $6.95 international. | <span>Free shipping - U.S. orders over $40.</span></span>
+    </div>
 		<div id="main" class="group" role="main">
 			{% if crumbs %}
 			{% include "includes/breadcrumbs.html" %}
@@ -73,9 +76,6 @@ Copyright Swallowtail Garden Seeds, Inc
 			{% endblock %}
 		</div>
     <div class="Sidebar">
-			<p class="Sidebar_global-message-box">
-				<b>Orders placed today will ship<br>on Wednesday, July 20th.</b>
-			</p>
 			<div class="Sidebar_social">
 				<a href="https://www.facebook.com/swallowtailgardenseeds" target="_blank">
 					<img class="Sidebar_social_image" src="{{ url_for('static', filename='images/assets/social/facebook.jpg') }}" alt="Like us on Facebook."></a>
@@ -99,7 +99,7 @@ Copyright Swallowtail Garden Seeds, Inc
 			</p>
 			<p class="Footer_copyright_p Footer_copyright_p2">Copyright pertains to all images, none of which may be reproduced in any form without<br class="no-mobile-display"> the expressed written consent of Swallowtail Garden Seeds.
 			</p>
-			<a href="https://seal.godaddy.com/verifySeal?sealID=FgdBKY27IIpHp2q5LkxzgzlbX27e0tqGEF9J5PgG2j7VUTmpgtsRrz" onclick="return popitup('https://seal.godaddy.com/verifySeal?sealID=FgdBKY27IIpHp2q5LkxzgzlbX27e0tqGEF9J5PgG2j7VUTmpgtsRrz')"><img class="Footer_siteseal" src="http://www.swallowtailgardenseeds.com/image-assets/site-seal.gif" alt="Go Daddy Site Seal"></a>
+			<a href="https://seal.godaddy.com/verifySeal?sealID=FgdBKY27IIpHp2q5LkxzgzlbX27e0tqGEF9J5PgG2j7VUTmpgtsRrz" onclick="return popitup('https://seal.godaddy.com/verifySeal?sealID=FgdBKY27IIpHp2q5LkxzgzlbX27e0tqGEF9J5PgG2j7VUTmpgtsRrz')"><img class="Footer_siteseal" src="https://www.swallowtailgardenseeds.com/image-assets/site-seal.gif" alt="Go Daddy Site Seal"></a>
     </div>
   </div>
 <script src="{{ url_for('static', filename='scripts/scripts.js') }}"></script>

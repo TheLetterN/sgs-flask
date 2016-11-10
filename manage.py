@@ -35,13 +35,30 @@ from app import create_app, db, mail, Permission
 from app.auth.models import User
 from app.seeds.excel import SeedsWorkbook
 from app.seeds.models import Cultivar
+from sgsscrape import add_index_to_database, load_all, save_all
 
 app = create_app(os.getenv('SGS_MODE') or 'default')
 manager = Manager(app)
 migrate = Migrate(app, db)
 
+
 def make_shell_context():
     return dict(app=app, db=db, mail=mail)
+
+
+@manager.command
+def scrape():
+    save_all()
+
+
+@manager.command
+def populate():
+    try:
+        for i in load_all():
+            add_index_to_database(i)
+    except FileNotFoundError:
+        print('No scraped data found! Please run "manage.py scrape" to scrape '
+              'the website, then try again.')
 
 
 @manager.option(

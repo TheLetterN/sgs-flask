@@ -1928,7 +1928,7 @@ def common_name(idx_slug=None, cn_slug=None):
         abort(404)
 
 
-@seeds.route('/<idx_slug>/<cn_slug>/<cv_slug>')
+@seeds.route('/<idx_slug>/<cn_slug>/<cv_slug>.html')
 def cultivar(idx_slug=None, cn_slug=None, cv_slug=None):
     """Display a page for a given cultivar."""
     if idx_slug and cn_slug and cv_slug:

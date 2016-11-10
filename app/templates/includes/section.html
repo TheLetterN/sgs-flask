@@ -18,9 +18,11 @@ Copyright Swallowtail Garden Seeds, Inc
 <section class="{{ class_prefix|lower }}-{{ sec.slug }}">
   <div class="{{ class_prefix }}" id="{{ sec.slug }}">
 		<h2 class="{{ class_prefix }}_h2">{{ sec.name }}
-			<em class="{{ class_prefix }}_em">{% if sec.subtitle %}{{ sec.subtitle }}{% else %}{{ sec.common_name.header }}{% endif %}</em>
-			{% if sec.botanical_name %}
-			<em class="{{ class_prefix }}_em2">{{ sec.botanical_name.name }}</em>
+      {% if sec.subtitle %}
+      <em class="{{ class_prefix }}_em">{{ sec.subtitle }}</em>
+      {% endif %}
+			{% if sec.botanical_names %}
+			<em class="{{ class_prefix }}_em2">{{ sec.botanical_names }}</em>
 			{% endif %}
 		</h2>
   {% if current_user.can(Permission.MANAGE_SEEDS) %}

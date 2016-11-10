@@ -187,7 +187,6 @@ def create_app(config_name):
     mail.init_app(app)
 
     from .auth import auth as auth_blueprint
-    from .main import main as main_blueprint
     from .seeds import seeds as seeds_blueprint
     from .shop import shop as shop_blueprint
     from .shop.models import Order

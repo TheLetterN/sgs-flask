@@ -44,9 +44,14 @@ def make_shell_context():
     return dict(app=app, db=db, mail=mail)
 
 
-@manager.command
-def create():
-    """Create a new database and add an admin user."""
+@manager.option(
+    '-f',
+    '--fast',
+    action='store_true',
+    help='Skip admin account creation and create default admin account.'
+)
+def resetdb(fast=False):
+    """Erase db and/or create a new one with an admin account."""
     from pycountry import countries
     from app.auth import models as auth_models
     from app.seeds import models as seeds_models
@@ -163,16 +168,21 @@ def create():
                 '... }, ... }'.format(rfile.absolute())
             )
         print('Creating first administrator account...')
-        admin.name = input('Enter name for admin account: ')
-        admin.email = input('Enter email address for admin account: ')
-        while True:
-            pw = getpass('Enter new password: ')
-            pwc = getpass('Confirm new password: ')
-            if pwc != pw:
-                print('Passwords do not match! Please try again.')
-            else:
-                break
-        admin.set_password(pw)
+        if fast:
+            admin.name = 'admin'
+            admin.email = 'admin@localhost'
+            admin.set_password('sgsadmin')  # Very secure!
+        else:
+            admin.name = input('Enter name for admin account: ')
+            admin.email = input('Enter email address for admin account: ')
+            while True:
+                pw = getpass('Enter new password: ')
+                pwc = getpass('Confirm new password: ')
+                if pwc != pw:
+                    print('Passwords do not match! Please try again.')
+                else:
+                    break
+            admin.set_password(pw)
         admin.grant_permission(Permission.MANAGE_SEEDS)
         admin.grant_permission(Permission.MANAGE_USERS)
         admin.confirmed = True

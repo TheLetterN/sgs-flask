@@ -206,6 +206,10 @@ class AddCommonNameForm(Form):
         'Common Name',
         validators=[DataRequired(), Length(max=254)]
     )
+    list_as = StrippedStringField(
+        'List As',
+        validators=[Length(max=254)]
+    )
     subtitle = StrippedStringField(
         'Subtitle',
         validators=[Length(max=254)]

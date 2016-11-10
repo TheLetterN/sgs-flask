@@ -664,6 +664,7 @@ class CommonName(db.Model, TimestampMixin, OrderingListMixin):
     index_id = db.Column(db.Integer, db.ForeignKey('indexes.id'))
     index = db.relationship('Index', back_populates='common_names')
     name = db.Column(db.UnicodeText)
+    list_as = db.Column(db.UnicodeText)
     slug = db.Column(db.UnicodeText)
 
     # Data Optional
@@ -729,6 +730,7 @@ class CommonName(db.Model, TimestampMixin, OrderingListMixin):
     # Search
     search_vector = db.Column(TSVectorType(
         'name',
+        'list_as',
         'subtitle',
         'description',
         'instructions',

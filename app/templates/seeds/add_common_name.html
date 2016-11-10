@@ -35,10 +35,13 @@
             <fieldset>
               <legend>Add Common Name</legend>
               <li>
-                {{ form_field(form.name, dbifiable=True)|indent(16)|safe }}
+                {{ form_field(form.name)|indent(16)|safe }}
               </li>
               <li>
-                {{ form_field(form.subtitle, dbifiable=True)|indent(16)|safe }}
+                {{ form_field(form.list_as)|indent(16)|safe }}
+              </li>
+              <li>
+                {{ form_field(form.subtitle)|indent(16)|safe }}
               </li>
               <li>
                 {{ form_field(form.thumbnail)|indent(16)|safe }}
@@ -84,6 +87,9 @@
         </form>
 {% endblock %}
 {% block scripts %}
-{% from "includes/dbify_input.html" import dbify_input %}
-{{ dbify_input(input_name=form.name.name)|safe }}
+<script src="{{ url_for('static', filename='scripts/form-helpers.js') }}"></script>
+<script>
+  populate_on_blur("{{ form.name.id }}", "{{ form.list_as.id }}");
+  populate_on_blur("{{ form.name.id }}", "{{ form.subtitle.id }}", { postfix: " Seeds" });
+</script>
 {% endblock %}

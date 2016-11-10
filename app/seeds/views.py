@@ -459,9 +459,11 @@ def add_common_name(idx_id=None):
         messages.append('Creating new common name "{0}" and adding it to '
                         'index "{1}":'.format(cn.name, idx.name))
         if form.subtitle.data:
-            # TODO: Handle default data.
             cn.subtitle = form.subtitle.data
             messages.append('Subtitle set to: <p>{}</p>'.format(cn.subtitle))
+        if form.list_as.data:
+            cn.list_as = form.list_as.data
+            messages.append('Will be listed as: <p>{}</p>'.format(cn.list_as))
         if form.thumbnail.data:
             add_thumbnail(form.thumbnail, cn, messages)
         if form.botanical_names.data:

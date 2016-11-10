@@ -193,8 +193,7 @@ def create_app(config_name):
     from .shop.models import Order
 
     app.register_blueprint(auth_blueprint, url_prefix='/auth')
-    app.register_blueprint(main_blueprint)
-    app.register_blueprint(seeds_blueprint, url_prefix='/seeds')
+    app.register_blueprint(seeds_blueprint)
     app.register_blueprint(shop_blueprint, url_prefix='/shop')
 
     stripe.api_key = app.config.get('STRIPE_SECRET_KEY')

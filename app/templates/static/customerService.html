@@ -19,7 +19,7 @@ Copyright Swallowtail Garden Seeds, Inc
 {# i.e. localhost:5000/example.html in testing/dev mode renders this template. #}
 {% block head %}
 <title>Test Page Please Ignore</title>
-<link rel="canonical" href="{{ url_for('main.static_html', page=page,  _external=True) }}">
+<link rel="canonical" href="{{ url_for('seeds.static_html', page=page,  _external=True) }}">
 {% endblock %}
 {% block main %}
 <h1>Test Page Please Ignore</h1>

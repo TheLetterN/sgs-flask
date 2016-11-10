@@ -389,6 +389,21 @@ def _dbify():
     return jsonify(result=dbify(text))
 
 
+@seeds.route('/')
+def home():
+    """Home page."""
+    return render_template('seeds/home.html')
+
+
+@seeds.route('/<page>.html')
+def static_html(page):
+    """Display a page generated from html files in app/static/html"""
+    try:
+        return render_template('static/' + page + '.html', page=page)
+    except TemplateNotFound:
+        abort(404)
+
+
 @seeds.route('/add_index', methods=['GET', 'POST'])
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
@@ -1864,13 +1879,6 @@ def manage():
     return render_template('seeds/manage.html', pending=pending, lc=lc)
 
 
-@seeds.route('/')
-def home():
-    """Home page for seeds section."""
-    indexes = Index.query.all()
-    return render_template('seeds/home.html', indexes=indexes)
-
-
 @seeds.route('/<idx_slug>')
 def index(idx_slug=None):
     """Display an `Index`."""
@@ -1941,7 +1949,7 @@ def cultivar(idx_slug=None, cn_slug=None, cv_slug=None):
     abort(404)
 
 
-@seeds.route('flip_cultivar_bool/<int:cv_id>/<attr>')
+@seeds.route('/flip_cultivar_bool/<int:cv_id>/<attr>')
 @permission_required(Permission.MANAGE_SEEDS)
 def flip_cultivar_bool(cv_id, attr):
     """Toggle a boolean attribute of a `Cultivar`."""

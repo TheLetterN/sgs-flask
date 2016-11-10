@@ -19,7 +19,7 @@ Copyright Swallowtail Garden Seeds, Inc
 {# i.e. localhost:5000/example.html in testing/dev mode renders this template. #}
 {% block head %}
 <title>Swallowtail Garden Seeds - Site Map</title>
-<link rel="canonical" href="{{ url_for('main.static_html', page=page,  _external=True) }}">
+<link rel="canonical" href="{{ url_for('seeds.static_html', page=page,  _external=True) }}">
 <style>	
 #main a{border-bottom:none}
 .Sitemap-h1{margin-bottom:1em;}

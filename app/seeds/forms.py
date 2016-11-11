@@ -54,6 +54,26 @@ from app.seeds.models import USDollar as USDollar_
 IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png']
 
 
+SUNLIGHT_CHOICES = [
+    ('', 'N/A'),
+    ('sun-or-part-shade-before',
+     '\U0001F315 \U0001F313  full sun to part shade'),
+    ('sun-before', '\U0001F315  full sun'),
+    ('sun-or-part-shade-or-light-shade-before',
+     ('\U0001F315 \U0001F313 \U0001F311  full sun in mild climates, part '
+      'shade to light shade elsewhere')),
+    ('part-shade-before', '\U0001F313  part shade'),
+    ('part-shade-or-shade-before',
+     '\U0001F313 \U0001F311  part shade to light shade'),
+    ('part-shade-or-full-shade-before',
+     '\U0001F313 \U0001F311  part shade to full shade'),
+    ('sun-part-shade-where-hot-before',
+     '\U0001F315 \U0001F313  full sun, part shade in hot climates'),
+    ('sun-part-shade-before',
+     '\U0001F315 \U0001F313 \U0001F311  full sun, part shade, or light shade')
+]
+
+
 # Module functions
 def select_field_choices(model=None,
                          items=None,
@@ -196,7 +216,6 @@ class AddCommonNameForm(Form):
         thumbnail: FileField for thumbnail image.
         description: Text field for the optional description of a `CommonName`.
         instructions: Text field for optional planting instructions.
-        synonyms: Text field for optional synonyms of added `CommonName`.
         next_page: Radio field to select page to redirect to after submitting
             a `CommonName`.
 
@@ -211,13 +230,14 @@ class AddCommonNameForm(Form):
         validators=[Length(max=254)]
     )
     subtitle = StrippedStringField(
-        'Subtitle',
+        'Subtitle/Synonyms',
         validators=[Length(max=254)]
     )
     botanical_names = StrippedStringField(
         'Botanical Name(s)',
         validators=[Length(max=508)]
     )
+    sunlight = SelectField('Sunlight', choices=SUNLIGHT_CHOICES) 
     thumbnail = SecureFileField(
         'Thumbnail Image',
         validators=[FileAllowed(IMAGE_EXTENSIONS, 'Images only!')]
@@ -229,10 +249,6 @@ class AddCommonNameForm(Form):
     instructions = StrippedTextAreaField(
         'Planting Instructions',
         validators=[Length(max=5120)])
-    synonyms = StrippedStringField(
-        'Synonyms',
-        validators=[Length(max=5120), ListItemLength(maximum=254)]
-    )
     pos = SelectField('Position', coerce=int)
     visible = BooleanField('Show on auto-generated pages', default='checked')
     gw_common_names_ids = SelectMultipleField(

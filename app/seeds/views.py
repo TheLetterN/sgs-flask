@@ -471,6 +471,11 @@ def add_common_name(idx_id=None):
             messages.append(
                 'Botanical names set to: <p>{}</p>'.format(cn.botanical_names)
             )
+        if form.sunlight.data:
+            cn.sunlight = form.sunlight.data
+            messages.append(
+                'Sunlight set to: <p>{}</p>'.format(cn.sunlight)
+            )
         if form.description.data:
             cn.description = form.description.data
             messages.append('Description set to: <p>{0}</p>'
@@ -479,10 +484,6 @@ def add_common_name(idx_id=None):
             cn.instructions = form.instructions.data
             messages.append('Planting instructions set to: <p>{0}</p>'
                             .format(cn.instructions))
-        if form.synonyms.data:
-            cn.synonyms_string = form.synonyms.data
-            messages.append('Synonyms set to: "{0}".'
-                            .format(cn.synonyms_string))
         if form.pos.data == -1:
             idx.common_names.insert(0, cn)
             messages.append('Will be listed before other common names.')

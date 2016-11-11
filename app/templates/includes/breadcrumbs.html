@@ -16,7 +16,7 @@ Copyright Swallowtail Garden Seeds, Inc
 <div class="breadcrumbs">
   <ol class="breadcrumb">
     {% for crumb in crumbs %}
-    <li{% if loop.last %}class="active"{% endif %}>{{ crumb|safe }}</li>
+    <li{% if loop.last %} class="active"{% endif %}>{{ crumb|safe }}</li>
     {% endfor %}
   </ol>
 </div>

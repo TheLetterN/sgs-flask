@@ -13,7 +13,7 @@ function populate_on_blur(source_id, target_id, options) {
     var prefix = options.prefix || "";
     var postfix = options.postfix || "";
     $(source_id).on('blur', function () {
-        if (!$(target_id).val()) {
+        if (!$(target_id).val() && $(source_id).val()) {
             $(target_id).val(prefix + $(source_id).val() + postfix);
         }
     });

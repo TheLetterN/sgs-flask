@@ -736,10 +736,23 @@ class EditCommonNameForm(Form):
         'Common Name',
         validators=[DataRequired(), Length(max=254)]
     )
+    list_as = StrippedStringField(
+        'List As',
+        validators=[Length(max=254)]
+    )
+    subtitle = StrippedStringField(
+        'Subtitle/Synonyms',
+        validators=[Length(max=254)]
+    )
     thumbnail = SecureFileField(
         'New Thumbnail',
         validators=[FileAllowed(IMAGE_EXTENSIONS, 'Images only!')]
     )
+    botanical_names = StrippedStringField(
+        'Botanical Name(s)',
+        validators=[Length(max=254)]
+    )
+    sunlight = SelectField('Sunlight', choices=SUNLIGHT_CHOICES)
     description = StrippedTextAreaField(
         'Description',
         validators=[Length(max=5120)]
@@ -747,10 +760,6 @@ class EditCommonNameForm(Form):
     instructions = StrippedTextAreaField(
         'Planting Instructions',
         validators=[Length(max=5120)]
-    )
-    synonyms_string = StrippedStringField(
-        'Synonyms',
-        validators=[Length(max=5120), ListItemLength(maximum=254)]
     )
     pos = SelectField('Position', coerce=int)
     gw_common_names_ids = SelectMultipleField(

@@ -891,9 +891,26 @@ def edit_common_name(cn_id=None):
             edited = True
             cn.name = form.name.data
             messages.append('Name changed to: "{0}".'.format(cn.name))
+        if form.list_as.data != cn.list_as:
+            edited = True
+            cn.list_as = form.list_as.data
+            messages.append('Will now be listed as: "{}".'.format(cn.list_as))
+        if form.subtitle.data != cn.subtitle:
+            edited = True
+            cn.subtitle = form.subtitle.data
+            messages.append('Subtitle changed to: "{}".'.format(cn.subtitle))
         if form.thumbnail.data:
             edited = True
             edit_thumbnail(form.thumbnail, cn, messages)
+        if form.botanical_names.data != cn.botanical_names:
+            edited = True
+            cn.botanical_names = form.botanical_names.data
+            messages.append('Botanical names changed to: "{}".'
+                            .format(cn.botanical_names))
+        if form.sunlight.data != cn.sunlight:
+            edited = True
+            cn.sunlight = form.sunlight.data
+            messages.append('Sunlight changed to: "{}".'.format(cn.sunlight))
         if not form.description.data:
             form.description.data = None
         if form.description.data != cn.description:
@@ -916,15 +933,6 @@ def edit_common_name(cn_id=None):
             else:
                 cn.instructions = None
                 messages.append('Planting instructions cleared.')
-        if form.synonyms_string.data != cn.synonyms_string:
-            edited = True
-            if form.synonyms_string.data:
-                cn.synonyms_string = form.synonyms_string.data
-                messages.append('Synonyms changed to: "{0}".'
-                                .format(cn.synonyms_string))
-            else:
-                cn.synonyms_string = None
-                messages.append('Synonyms cleared.')
         if idx is cn.index:
             cns = idx.common_names
             cn_index = cns.index(cn)

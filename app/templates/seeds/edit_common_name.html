@@ -37,7 +37,13 @@
               {{ form_field(form.index_id)|indent(14)|safe }}
             </li>
             <li>
-              {{ form_field(form.name, dbifiable=True)|indent(14)|safe }}
+              {{ form_field(form.name)|indent(14)|safe }}
+            </li>
+            <li>
+              {{ form_field(form.list_as)|safe }}
+            </li>
+            <li>
+              {{ form_field(form.subtitle)|safe }}
             </li>
             <div>Current thumbnail:</div>
             <div><img src="{{ cn.thumbnail.url }}" class="existing_image"></div>
@@ -45,13 +51,16 @@
               {{ form_field(form.thumbnail)|indent(14)|safe }}
             </li>
             <li>
+              {{ form_field(form.botanical_names)|safe }}
+            </li>
+            <li>
+              {{ form_field(form.sunlight)|safe }}
+            </li>
+            <li>
               {{ form_field(form.description)|indent(14)|safe }}
             </li>
             <li>
               {{ form_field(form.instructions)|indent(14)|safe }}
-            </li>
-            <li>
-              {{ form_field(form.synonyms_string)|indent(14)|safe }}
             </li>
             <li>
               {{ form_field(form.pos)|indent(14)|safe }}

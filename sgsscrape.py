@@ -249,6 +249,9 @@ def add_index_to_database(d):
     idx.slug = d['slug']
     idx.description = d['description']
     idx.common_names = list(generate_common_names(idx, d['common_names']))
+    db.session.flush()
+    idx.common_names = sorted(idx.common_names, key=lambda x: x.list_as)
+    idx.common_names.reorder()
     db.session.commit()
     print('Finished adding {} to the database.'.format(d['name']))
     
@@ -257,6 +260,7 @@ def generate_common_names(idx, l):
     for d in l:
         cn = CommonName.get_or_create(d['name'], idx)
         db.session.add(cn)
+        cn.list_as = d['list_as']
         cn.slug = d['slug']
         cn.subtitle = d['subtitle']
         cn.sunlight = d['sunlight']
@@ -562,6 +566,8 @@ class CNScraper:
         self.comments = extract_comments(self.main)
         self.growing_divs = self.main.find_all('div', class_='Growing')
         self.growing = self.growing_divs[-1] if self.growing_divs else None
+        self.sidenav = self.soup.find('div', class_='Sidebar')
+        self.sn_link = self.sidenav.find_all('a', href=self.url)[-1]
         try:
             self.growing.h2.extract()
         except AttributeError:
@@ -584,6 +590,7 @@ class CNScraper:
     def create_dbdict(self):
         print('Creating dbdict for "{}"...'.format(self.url))
         self._dbdict['name'] = clean_title(first_text(self.header_h1))
+        self._dbdict['list_as'] = self.sn_link.text.strip()
         try:
             self._dbdict['description'] = tags_to_str(self.intro.contents)
         except AttributeError:

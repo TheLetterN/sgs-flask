@@ -26,7 +26,7 @@
     {% if cn['URL'] == current_url %}
     <span class="current-page">{{ cn['Name'] }}</span>
     {% else %}
-    <a href="{{ cn['URL'] }}">{{ cn['Name'] }}</a>
+    <a href="{{ cn['URL'] }}">{{ cn['List As'] }}</a>
     {% endif %}
   </li>
   {% endfor %}

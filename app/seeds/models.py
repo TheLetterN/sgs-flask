@@ -253,10 +253,10 @@ def populate_db_from_json(filename):
 
 # Module-level Functions
 
-def save_nav_data_json(json_file=None):
+def save_nav_data(json_file=None):
     if not json_file:
         json_file = Path(
-            current_app.config.get('JSON_FOLDER'), 'nav_data.json'
+            current_app.config.get('DATA_FOLDER'), 'nav_data.json'
         )
         if not json_file.parent.exists():
             json_file.parent.mkdir(parents=True)
@@ -279,6 +279,7 @@ def save_nav_data_json(json_file=None):
             cnd = dict()
             cnd['Position'] = cn.idx_pos
             cnd['Name'] = cn.name
+            cnd['List As'] = cn.list_as
             cnd['URL'] = cn.url
             try:
                 cnd['Thumbnail'] = cn.thumbnail.url
@@ -291,11 +292,11 @@ def save_nav_data_json(json_file=None):
 
 
 @event.listens_for(SignallingSession, 'before_commit')
-def save_nav_data_json_before_commit(session):
+def save_nav_data_before_commit(session):
     """Save nav data if a commit would change a nav url."""
     if (any(isinstance(obj, Index) for obj in db.session) or
             any(isinstance(obj, CommonName) for obj in db.session)):
-        save_nav_data_json()
+        save_nav_data()
 
 
 # Models

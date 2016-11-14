@@ -111,7 +111,7 @@ def list_to_english(items, last_delimiter=', and '):
 def load_nav_data(json_file=None):
     if not json_file:
         json_file = Path(
-            current_app.config.get('JSON_FOLDER'), 'nav_data.json'
+            current_app.config.get('DATA_FOLDER'), 'nav_data.json'
         )
     else:
         json_file = Path(json_file)

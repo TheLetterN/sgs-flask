@@ -1020,6 +1020,8 @@ def before_common_name_insert_or_update(mapper, connection, target):
     """Run tasks best done before flushing a `CommonName` to the database."""
     if not target.slug:
         target.slug = target.make_slug()
+    if not target.list_as:
+        target.list_as = target.name
 
 
 class SectionQuery(BaseQuery, SearchQueryMixin):

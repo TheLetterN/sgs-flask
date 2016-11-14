@@ -22,7 +22,6 @@ from flask_wtf import Form
 from flask_wtf.file import FileAllowed
 from wtforms import (
     BooleanField,
-    DateField,
     HiddenField,
     RadioField,
     SelectField,
@@ -30,6 +29,7 @@ from wtforms import (
     SubmitField,
     ValidationError
 )
+from wtforms.fields.html5 import DateField
 from wtforms.validators import DataRequired, Length, Optional
 from app.form_helpers import (
     BeginsWith,
@@ -1328,3 +1328,37 @@ class SelectPacketForm(Form):
         self.packet.choices = select_field_choices(model=Packet,
                                                    order_by='sku',
                                                    title_attribute='info')
+
+
+class EditShipDateForm(Form):
+    """Form for editing the expected ship date for domestic orders."""
+    ship_date = DateField('Orders from today ship on', format='%m/%d/%Y')
+    submit = SubmitField('Submit')
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.ship_date.data:
+            today = datetime.date.today()
+            wd = today.isoweekday()
+            if wd < 5:
+                ship_date = today + datetime.timedelta(days=1)
+            elif wd == 5:
+                ship_date = today + datetime.timedelta(days=3)
+            else:
+                ship_date = today + datetime.timedelta(days=2)
+            self.ship_date.data = ship_date
+
+
+class EditRatesForm(Form):
+    """Form for editing rates and dates."""
+    free_shipping_threshold = StrippedStringField(
+        'Free shipping for orders over'
+    )
+    usps_first_class = StrippedStringField('USPS First-Class (Domestic)')
+    usps_priority = StrippedStringField('USPS Priority (Domestic)')
+    itl_first_class = StrippedStringField(
+            'USPS First-Class (International)'
+    )
+    itl_priority = StrippedStringField('USPS Priority (International)')
+    submit = SubmitField('Submit')
+

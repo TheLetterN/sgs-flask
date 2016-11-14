@@ -25,6 +25,7 @@ This is the main application module for SGS Flask, a Flask implementation
 of the website for Swallowtail Garden Seeds.
 """
 
+import datetime
 import json
 from pathlib import Path
 
@@ -197,6 +198,35 @@ def create_app(config_name):
 
     stripe.api_key = app.config.get('STRIPE_SECRET_KEY')
 
+    # Get ship date
+    try:
+        with open('data/ship_date.dat', 'r', encoding='utf-8') as ifile:
+            s = ifile.read().strip()
+            sd = datetime.datetime.strptime(s, '%m/%d/%Y').date()
+    except FileNotFoundError:
+        print(
+            'WARNING: No ship_date.dat found in data! Using estimated '
+            'ship date instead, which may be incorrect.'
+        )
+        today = datetime.date.today()
+        wd = today.isoweekday()
+        if wd < 5:
+            sd = today + datetime.timedelta(days=1)
+        elif wd == 5:
+            sd = today + datetime.timedelta(days=3)
+        else:
+            sd = today + datetime.timedelta(days=2)
+    wd_month = sd.strftime('%A, %B')
+    if sd.day %10 == 1 and sd.day %100 != 11:
+        suffix = 'st'
+    elif sd.day %10 == 2 and sd.day %100 != 12:
+        suffix = 'nd'
+    elif sd.day %10 == 3 and sd.day %100 != 13:
+        suffix = 'rd'
+    else:
+        suffix = 'th'
+    ship_date = '{} {}{}'.format(wd_month, sd.day, suffix)
+
     # Add redirects
     rdf = RedirectsFile(app.config.get('REDIRECTS_FILE'))
     if rdf.exists():
@@ -217,6 +247,7 @@ def create_app(config_name):
             return 0
 
     # Make things available to Jinja
+    app.add_template_global(ship_date, 'ship_date')
     app.add_template_global(hyphenate, 'hyphenate')
     app.add_template_global(Permission, 'Permission')
     app.add_template_global(pluralize, 'pluralize')

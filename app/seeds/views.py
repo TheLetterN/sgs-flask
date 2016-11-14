@@ -59,6 +59,7 @@ from app.seeds.forms import (
     EditPacketForm,
     EditCultivarForm,
     EditSectionForm,
+    EditShipDateForm,
     RemoveIndexForm,
     RemoveCommonNameForm,
     RemovePacketForm,
@@ -1974,6 +1975,20 @@ def flip_cultivar_bool(cv_id, attr):
         flash('"{}" is no longer set as {}.'.format(cv.fullname, attr))
     db.session.commit()
     return redirect(request.args.get('origin') or url_for('seeds.manage'))
+
+
+@seeds.route('/edit_ship_date', methods=['GET', 'POST'])
+@permission_required(Permission.MANAGE_SEEDS)
+def edit_ship_date():
+    """Edit the expected date of shipment for orders."""
+    form = EditShipDateForm()
+    if form.validate_on_submit():
+        ship_date = form.ship_date.data.strftime('%m/%d/%Y')
+        with open('data/ship_date.dat', 'w', encoding='utf-8') as ofile:
+            ofile.write(ship_date)
+        flash('Ship date set to {}.'.format(ship_date))
+        return redirect(request.args.get('origin') or url_for('seeds.manage'))
+    return render_template('seeds/edit_ship_date.html', form=form)
 
 
 # Functions and views for moving objects in ordering_list collections.

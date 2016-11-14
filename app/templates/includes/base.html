@@ -65,7 +65,7 @@ Copyright Swallowtail Garden Seeds, Inc
 		{% block subnav %}{% endblock %}
 		{% include "includes/admin_nav.html" -%}
     <div>
-      <p class="Global_message-box">Orders placed today ship INSERT DATE HERE DUMMY.<span> | Shipping $4.95 U.S. | $6.95 international. | <span>Free shipping - U.S. orders over $40.</span></span>
+      <p class="Global_message-box">Orders placed today ship {{ ship_date }}.{% if current_user.can(Permission.MANAGE_SEEDS) %} [<a href='{{ url_for('seeds.edit_ship_date', origin=request.path) }}'>edit</a>]{% endif %}<span> | Shipping $4.95 U.S. | $6.95 international. | <span>Free shipping - U.S. orders over $40.</span></span>
     </div>
 		<div id="main" class="group" role="main">
 			{% if crumbs %}

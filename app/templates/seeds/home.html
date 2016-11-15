@@ -46,6 +46,11 @@ Copyright Swallowtail Garden Seeds, Inc
 </style>
 {% endblock %}
 {% block main %}
+{% if current_user.can(Permission.MANAGE_SEEDS) %}
+<div class="admin-links">
+  <a href="{{ url_for('seeds.add_index') }}">Add an Index</a>
+</div>
+{% endif %}
 <div class="Home_header">
 	<h3 class="Home_header-h3"><span class="Home_header-span">2016 Seed Catalog</span></h3>
 	<h1 class="Home_header-h1">Swallowtail Garden&nbsp;Seeds</h1>
@@ -54,23 +59,23 @@ Copyright Swallowtail Garden Seeds, Inc
 <div class="Home_link-boxes">
 	<div class="Home_link-box" id="Home_annual-flower-seeds-image">
 		<h2 class="Home_link-box-caption">Annual Flower Seeds</h2>
-		<a class="Home_link-box-link" title="Annual flowers" href="http://www.swallowtailgardenseeds.com/annualsA-Z.html"></a>
+    <a class="Home_link-box-link" title="Annual flowers" href="{{ url_for('seeds.index', idx_slug='annuals') }}"></a>
 	</div>
 	<div class="Home_link-box" id="Home_perennial-flower-seeds-image">
 		<h2 class="Home_link-box-caption">Perennial Flower Seeds</h2>
-		<a class="Home_link-box-link" title="Perennial flowers" href="http://www.swallowtailgardenseeds.com/perennialsA-Z.html"></a>
+    <a class="Home_link-box-link" title="Perennial flowers" href="{{ url_for('seeds.index', idx_slug='perennials') }}"></a>
 	</div>
 	<div class="Home_link-box" id="Home_flowering-vine-seeds-image">
 		<h2 class="Home_link-box-caption">Flowering Vine Seeds</h2>
-		<a class="Home_link-box-link" title="Flowering vines" href="http://www.swallowtailgardenseeds.com/vinesaz.html"></a>
+    <a class="Home_link-box-link" title="Flowering vines" href="{{ url_for('seeds.index', idx_slug='vines') }}"></a>
 	</div>
 	<div class="Home_link-box" id="Home_vegetable-seeds-image">
 		<h2 class="Home_link-box-caption">Vegetable Seeds</h2>
-		<a class="Home_link-box-link" title="Vegetables" href="http://www.swallowtailgardenseeds.com/vegetablesaz.html"></a>
+    <a class="Home_link-box-link" title="Vegetables" href="{{ url_for('seeds.index', idx_slug='vegetables') }}"></a>
 	</div>
 	<div class="Home_link-box" id="Home_herb-seeds-image">
 		<h2 class="Home_link-box-caption">Herb Seeds</h2>
-		<a class="Home_link-box-link" title="Culinary and medicinal herbs" href="http://www.swallowtailgardenseeds.com/herbsaz.html"></a>
+    <a class="Home_link-box-link" title="Culinary and medicinal herbs" href="{{ url_for('seeds.index', idx_slug='herbs') }}"></a>
 	</div>
 	<div class="Home_link-box" id="Home_bulk-seed-sales-image">
 		<h2 class="Home_link-box-caption">Bulk Seed Sales</h2>

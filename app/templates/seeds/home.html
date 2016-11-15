@@ -31,12 +31,9 @@ Copyright Swallowtail Garden Seeds, Inc
 .Home_link-box{display:inline-block;position:relative;vertical-align:top;margin:0 1.2em 2.25em 1.2em;width:195px;height:260px;border:1px solid #873557}
 .Home_link-box-caption{font-family:"Droid sans","Lucida Sans Unicode",Helvetica,Arial,sans-serif;display:block;color:#242424;background:#fff;padding:.3em 0;margin:0;text-align:center;border-bottom:1px solid #873557;font-size:1em}
 .Home_link-box-link{position:absolute;top:0px;left:0px;width:100%;height:100%}
-#Home_annual-flower-seeds-image{background:url(https://www.swallowtailgardenseeds.com/images/index-image-links/annual-flower-seeds4.jpg);background-size:101%}
-#Home_perennial-flower-seeds-image{background:url(https://www.swallowtailgardenseeds.com/images/index-image-links/perennial-flower-seeds.jpg);background-size:101%}
-#Home_flowering-vine-seeds-image{background:url(https://www.swallowtailgardenseeds.com/images/index-image-links/flowering-vine-seeds2.jpg);background-size:101%}
-#Home_vegetable-seeds-image{background:url(https://www.swallowtailgardenseeds.com/images/index-image-links/vegetable-seeds2.jpg);background-size:101%}
-#Home_herb-seeds-image{background:url(https://www.swallowtailgardenseeds.com/images/index-image-links/herb-seeds2.jpg);background-size:101%}
-#Home_bulk-seed-sales-image{background:url(https://www.swallowtailgardenseeds.com/images/index-image-links/bulk-catalog3.jpg);background-size:101%}
+{% for idx in nav_data %}
+#Home_{{ idx['id'] }}-seeds-image{background:url({{ idx['Thumbnail'] }});background-size:101%}
+{% endfor %}
 }
 @media all and (min-width:48em){
 .Home_header{text-align:left}
@@ -60,29 +57,11 @@ Copyright Swallowtail Garden Seeds, Inc
 	<h3 class="Home_header-h3">1,700+ varieties of flower, vegetable, and herb seeds.</h3>
 </div>
 <div class="Home_link-boxes">
-	<div class="Home_link-box" id="Home_annual-flower-seeds-image">
-		<h2 class="Home_link-box-caption">Annual Flower Seeds</h2>
-    <a class="Home_link-box-link" title="Annual flowers" href="{{ url_for('seeds.index', idx_slug='annuals') }}"></a>
-	</div>
-	<div class="Home_link-box" id="Home_perennial-flower-seeds-image">
-		<h2 class="Home_link-box-caption">Perennial Flower Seeds</h2>
-    <a class="Home_link-box-link" title="Perennial flowers" href="{{ url_for('seeds.index', idx_slug='perennials') }}"></a>
-	</div>
-	<div class="Home_link-box" id="Home_flowering-vine-seeds-image">
-		<h2 class="Home_link-box-caption">Flowering Vine Seeds</h2>
-    <a class="Home_link-box-link" title="Flowering vines" href="{{ url_for('seeds.index', idx_slug='vines') }}"></a>
-	</div>
-	<div class="Home_link-box" id="Home_vegetable-seeds-image">
-		<h2 class="Home_link-box-caption">Vegetable Seeds</h2>
-    <a class="Home_link-box-link" title="Vegetables" href="{{ url_for('seeds.index', idx_slug='vegetables') }}"></a>
-	</div>
-	<div class="Home_link-box" id="Home_herb-seeds-image">
-		<h2 class="Home_link-box-caption">Herb Seeds</h2>
-    <a class="Home_link-box-link" title="Culinary and medicinal herbs" href="{{ url_for('seeds.index', idx_slug='herbs') }}"></a>
-	</div>
-	<div class="Home_link-box" id="Home_bulk-seed-sales-image">
-		<h2 class="Home_link-box-caption">Bulk Seed Sales</h2>
-		<a class="Home_link-box-link" title="Wholesale seed sales" rel="nofollow" href="https://shop.swallowtailgardenseeds.com/bulk"></a>
-	</div>
+  {% for idx in nav_data %}
+  <div class="Home_link-box" id="Home_{{ idx['id'] }}-seeds-image">
+    <h2 class="Home_link-box-caption">{{ idx['Name'] }} Seeds</h2>
+    <a class="Home_link-box-link" title="{{ idx['Header'] }}" href="{{ url_for('seeds.index', idx_slug=idx['Slug']) }}"></a>
+  </div>
+  {% endfor %}
 </div>
 {% endblock %}

@@ -248,6 +248,31 @@ def add_index_to_database(d):
     db.session.flush()
     idx.slug = d['slug']
     idx.description = d['description']
+    if 'annual' in idx.slug:
+        idx.thumbnail = download_image(
+            'https://www.swallowtailgardenseeds.com/images/index-image-links'
+            '/annual-flower-seeds4.jpg'
+        )
+    elif 'perennial' in idx.slug:
+        idx.thumbnail = download_image(
+            'https://www.swallowtailgardenseeds.com/images/index-image-links'
+            '/perennial-flower-seeds.jpg'
+        )
+    elif 'vine' in idx.slug:
+        idx.thumbnail = download_image(
+            'https://www.swallowtailgardenseeds.com/images/index-image-links'
+            '/flowering-vine-seeds2.jpg'
+        )
+    elif 'vegetable' in idx.slug:
+        idx.thumbnail = download_image(
+            'https://www.swallowtailgardenseeds.com/images/index-image-links'
+            '/vegetable-seeds2.jpg'
+        )
+    elif 'herb' in idx.slug:
+        idx.thumbnail = download_image(
+            'https://www.swallowtailgardenseeds.com/images/index-image-links'
+            '/herb-seeds2.jpg'
+        )
     idx.common_names = list(generate_common_names(idx, d['common_names']))
     db.session.flush()
     idx.common_names = sorted(idx.common_names, key=lambda x: x.list_as)

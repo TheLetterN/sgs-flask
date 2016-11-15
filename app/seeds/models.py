@@ -1863,6 +1863,11 @@ class CustomPage(db.Model, TimestampMixin):
     )
 
 
+class ImageQuery(BaseQuery, SearchQueryMixin):
+    pass
+
+
+
 class Image(db.Model, TimestampMixin):
     """Table for image information.
 
@@ -1882,6 +1887,7 @@ class Image(db.Model, TimestampMixin):
 
     """
     __tablename__ = 'images'
+    query_class = ImageQuery
     id = db.Column(db.Integer, primary_key=True)
     filename = db.Column(db.UnicodeText, unique=True)
     width = db.Column(db.Integer)
@@ -1904,6 +1910,8 @@ class Image(db.Model, TimestampMixin):
         secondary=cultivars_to_images,
         back_populates='images'
     )
+    # Search
+    search_vector = db.Column(TSVectorType('filename'))
 
     def __init__(self, filename=None, make_unique=False):
         if filename:

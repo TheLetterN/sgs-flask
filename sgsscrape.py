@@ -295,6 +295,9 @@ def generate_common_names(idx, l):
         cn.instructions = d['instructions']
         cn.cultivars = list(generate_cultivars(cn, d['cultivars']))
         cn.sections = list(generate_sections(cn, d['sections']))
+        db.session.flush()
+        cn.child_sections.reorder()
+        cn.child_cultivars.reorder()
         yield cn
 
 
@@ -307,6 +310,9 @@ def generate_sections(cn, l):
         sec.description = d['description']
         sec.cultivars = list(generate_cultivars(cn, d['cultivars']))
         sec.children = list(generate_sections(cn, d['subsections']))
+        db.session.flush()
+        sec.child_cultivars.reorder()
+        sec.children.reorder()
         yield sec
 
 

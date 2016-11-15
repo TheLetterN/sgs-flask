@@ -36,11 +36,10 @@
             <li>
               {{ form_field(form.common_name_id)|indent(14)|safe }}
             </li>
-              {{ form_field(form.name, dbifiable=True)|indent(14)|safe }}
+              {{ form_field(form.name)|indent(14)|safe }}
             </li>
             <li>
-              {{ form_field(form.subtitle, dbifiable=True)|indent(14)|safe }}
-              <div>Default will be '&lt;common name&gt; Seeds'</div>
+              {{ form_field(form.subtitle)|indent(14)|safe }}
             </li>
             <li>
               {{ form_field(form.botanical_name)|indent(14)|safe }}
@@ -105,9 +104,4 @@
           </li>
         </ol>
       </form>
-{% endblock %}
-{% block scripts %}
-{% from "includes/dbify_input.html" import dbify_input %}
-{{ dbify_input(input_name=form.name.name)|safe }}
-{{ dbify_input(input_name=form.subtitle.name)|safe }}
 {% endblock %}

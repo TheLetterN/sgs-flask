@@ -52,7 +52,7 @@ a.move_button:hover{opacity:1;transition:.25s;}
 {% endif %}
 <h1 class="Index_pages-h1">{{ index.header }}</h1>
 {% if index.description %}
-<p class="Index_pages-intro">{{ index.description|safe }}</p>
+{{ index.description|safe }}
 {% endif %}
 <div class="Index_pages-image-links-wrapper">
 	{% if index.common_names %}

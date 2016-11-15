@@ -51,9 +51,6 @@ a.move_button:hover{opacity:1;transition:.25s;}
 </div>
 {% endif %}
 <h1 class="Index_pages-h1">{{ index.header }}</h1>
-{% if index.thumbnail %}
-<img src="{{ index.thumbnail.url }}">
-{% endif %}
 {% if index.description %}
 <p class="Index_pages-intro">{{ index.description|safe }}</p>
 {% endif %}

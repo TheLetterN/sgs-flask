@@ -20,7 +20,7 @@ Copyright Swallowtail Garden Seeds, Inc
   {% if cultivar.favorite %}<span class="Cultivar_span_best_seller"></span>{% endif %}
 	{% if cultivar.new_for %}<span class="Cultivar_span_new">New for {{ cultivar.new_for }}</span>{% endif %}
 	<small class="Cultivar_small">{% if cultivar.packets[0] %}{{ cultivar.packets[0].sku }}{% endif %}</small>
-  <h3 class="Cultivar_h3" id="{{ cultivar.slug }}">{{ hyphenate(cultivar.name)|safe }}
+  <h3 class="Cultivar_h3" id="{{ cultivar.slug }}">{{ cultivar.name|safe }}
 		<em class="Cultivar_em">{% if cultivar.subtitle %}{{ cultivar.subtitle }}{% else %}{{ cultivar.common_name.header }}{% endif %}</em>
 		{% if cultivar.botanical_name %}
 		<em class="Cultivar_em2">{{ cultivar.botanical_name|safe }}</em>

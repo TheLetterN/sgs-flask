@@ -30,7 +30,6 @@ import json
 from pathlib import Path
 
 
-import pyphen
 import stripe
 from flask import Flask, current_app, render_template, session
 from flask_login import AnonymousUserMixin, current_user, LoginManager
@@ -43,10 +42,6 @@ from sqlalchemy_searchable import make_searchable
 from config import CONFIG
 from .pending import Pending
 from .redirects import RedirectsFile
-
-
-# Initialize the hyphenator here so the cache will be global.
-hyphenator = pyphen.Pyphen(lang='en_US')
 
 
 def html_fractions(s):
@@ -82,14 +77,6 @@ def html_fractions(s):
     ).replace(
         '7/8', '&#8542;'
     )
-
-
-def hyphenate(text):
-    """Return a soft-hyphenated version of text."""
-    if text:
-        return hyphenator.inserted(text, hyphen='&shy;')
-    else:
-        return text
 
 
 def list_to_english(items, last_delimiter=', and '):
@@ -248,7 +235,6 @@ def create_app(config_name):
 
     # Make things available to Jinja
     app.add_template_global(ship_date, 'ship_date')
-    app.add_template_global(hyphenate, 'hyphenate')
     app.add_template_global(Permission, 'Permission')
     app.add_template_global(pluralize, 'pluralize')
     app.add_template_global(load_nav_data, 'load_nav_data')

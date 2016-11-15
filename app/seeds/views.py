@@ -30,7 +30,7 @@ from flask import (
 )
 from flask_login import login_required
 
-from app import db, list_to_english, Permission
+from app import db, format_ship_date, list_to_english, Permission
 from app.breadcrumbs import Crumbler
 from app.decorators import permission_required
 from app.pending import Pending
@@ -1983,7 +1983,9 @@ def edit_ship_date():
     """Edit the expected date of shipment for orders."""
     form = EditShipDateForm()
     if form.validate_on_submit():
-        ship_date = form.ship_date.data.strftime('%m/%d/%Y')
+        sd = form.ship_date.data
+        current_app.jinja_env.globals['ship_date'] = format_ship_date(sd)
+        ship_date = sd.strftime('%m/%d/%Y')
         with open('data/ship_date.dat', 'w', encoding='utf-8') as ofile:
             ofile.write(ship_date)
         flash('Ship date set to {}.'.format(ship_date))

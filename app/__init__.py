@@ -110,6 +110,43 @@ def load_nav_data(json_file=None):
     return items
 
 
+def get_ship_date(filename=None):
+    if not filename:
+        filename ='data/ship_date.dat' 
+    try:
+        with open(filename, 'r', encoding='utf-8') as ifile:
+            s = ifile.read().strip()
+            sd = datetime.datetime.strptime(s, '%m/%d/%Y').date()
+    except FileNotFoundError:
+        print(
+            'WARNING: No ship_date.dat found in data! Using estimated '
+            'ship date instead, which may be incorrect.'
+        )
+        today = datetime.date.today()
+        wd = today.isoweekday()
+        if wd < 5:
+            sd = today + datetime.timedelta(days=1)
+        elif wd == 5:
+            sd = today + datetime.timedelta(days=3)
+        else:
+            sd = today + datetime.timedelta(days=2)
+    return sd
+
+
+def format_ship_date(sd):
+    """Format a ship date for display."""
+    wd_month = sd.strftime('%A, %B')
+    if sd.day %10 == 1 and sd.day %100 != 11:
+        suffix = 'st'
+    elif sd.day %10 == 2 and sd.day %100 != 12:
+        suffix = 'nd'
+    elif sd.day %10 == 3 and sd.day %100 != 13:
+        suffix = 'rd'
+    else:
+        suffix = 'th'
+    return '{} {}{}'.format(wd_month, sd.day, suffix)
+
+
 class Permission(object):
     """Permission defines permissions to be used by the User class.
 
@@ -185,34 +222,7 @@ def create_app(config_name):
 
     stripe.api_key = app.config.get('STRIPE_SECRET_KEY')
 
-    # Get ship date
-    try:
-        with open('data/ship_date.dat', 'r', encoding='utf-8') as ifile:
-            s = ifile.read().strip()
-            sd = datetime.datetime.strptime(s, '%m/%d/%Y').date()
-    except FileNotFoundError:
-        print(
-            'WARNING: No ship_date.dat found in data! Using estimated '
-            'ship date instead, which may be incorrect.'
-        )
-        today = datetime.date.today()
-        wd = today.isoweekday()
-        if wd < 5:
-            sd = today + datetime.timedelta(days=1)
-        elif wd == 5:
-            sd = today + datetime.timedelta(days=3)
-        else:
-            sd = today + datetime.timedelta(days=2)
-    wd_month = sd.strftime('%A, %B')
-    if sd.day %10 == 1 and sd.day %100 != 11:
-        suffix = 'st'
-    elif sd.day %10 == 2 and sd.day %100 != 12:
-        suffix = 'nd'
-    elif sd.day %10 == 3 and sd.day %100 != 13:
-        suffix = 'rd'
-    else:
-        suffix = 'th'
-    ship_date = '{} {}{}'.format(wd_month, sd.day, suffix)
+    ship_date = format_ship_date(get_ship_date())
 
     # Add redirects
     rdf = RedirectsFile(app.config.get('REDIRECTS_FILE'))

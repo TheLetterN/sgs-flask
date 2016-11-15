@@ -41,9 +41,12 @@ form.admin input[type=checkbox] + label{display:inline;}
 form.admin input[type=text],form.admin input[type=password],form.admin textarea,form.admin select[multiple]{width:240px;font-family:monospace;color:black;background-color:white;border:1px solid #888;box-sizing:border-box;}
 form.admin input[type=text]:focus,form.admin input[type=password]:focus,form.admin textarea:focus{background-color:#ffff99;}
 form.admin input[type=text]:hover,form.admin input[type=password]:hover,form.admin textarea:hover{border:1px solid #88f;background-color:#ddf;}
-form.admin label:after{content:": ";}
 form.admin input[type=radio] + label:after{content:None;}
 .form_error{background-color:#faa;padding-left:0.4em;padding-right:0.4em;padding-top:0.3em;padding-bottom:0.3em;margin-top:0.2em;margin-bottom:0.2em;max-width:240px;display:block;box-sizing:border-box;}
+.required-field::after {
+    content: '*';
+    color: #f00;
+}
 /* END forms */
 /* BEGIN cultivar admin */
 .cultivar-admin{background:#fff;border:1px solid #aaa;margin-top:.5em;padding:.5em;}

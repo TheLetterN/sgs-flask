@@ -341,7 +341,10 @@ class Index(db.Model, TimestampMixin):
         back_populates='index'
     )
     # Search
-    search_vector = db.Column(TSVectorType('name', 'description'))
+    search_vector = db.Column(
+        TSVectorType('name', 'description',
+                     weights={'name': 'A', 'description': 'B'})
+    )
 
     def __init__(self, name=None, description=None):
         """Construct an instance of Index.
@@ -729,14 +732,24 @@ class CommonName(db.Model, TimestampMixin, OrderingListMixin):
         backref='noship_common_names'
     )
     # Search
-    search_vector = db.Column(TSVectorType(
-        'name',
-        'list_as',
-        'subtitle',
-        'description',
-        'instructions',
-        'botanical_names'
-    ))
+    search_vector = db.Column(
+        TSVectorType(
+            'name',
+            'list_as',
+            'subtitle',
+            'description',
+            'instructions',
+            'botanical_names',
+            weights={
+                'name': 'A',
+                'list_as': 'A',
+                'subtitle': 'B',
+                'botanical_names': 'B',
+                'description': 'C',
+                'instructions': 'D'
+            }
+        )
+    )
 
     def __init__(self,
                  name=None,
@@ -1112,12 +1125,20 @@ class Section(db.Model, TimestampMixin, OrderingListMixin):
         back_populates='parent_section'
     )
     # Search
-    search_vector = db.Column(TSVectorType(
-        'name',
-        'subtitle',
-        'description',
-        'botanical_names'
-    ))
+    search_vector = db.Column(
+        TSVectorType(
+            'name',
+            'subtitle',
+            'description',
+            'botanical_names',
+            weights={
+                'name': 'A',
+                'subtitle': 'B',
+                'botanical_names': 'B',
+                'description': 'C'
+            }
+        )
+    )
 
     def __init__(self,
                  name=None,
@@ -1474,13 +1495,22 @@ class Cultivar(db.Model, TimestampMixin, OrderingListMixin):
         secondary=cultivars_to_countries,
         backref='noship_cultivars'
     )
-    search_vector = db.Column(TSVectorType(
-        'name',
-        'subtitle',
-        'botanical_name',
-        'vegetable_info',
-        'description'
-    ))
+    search_vector = db.Column(
+        TSVectorType(
+            'name',
+            'subtitle',
+            'botanical_name',
+            'vegetable_info',
+            'description',
+            weights={
+                'name': 'A',
+                'subtitle': 'B',
+                'botanical_name': 'B',
+                'vegetable_info': 'C',
+                'description': 'D'
+            }
+        )
+    )
 
     def __init__(self,
                  name=None,

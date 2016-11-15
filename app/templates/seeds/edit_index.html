@@ -33,7 +33,7 @@
         {{ form.hidden_tag() }}
         <ol>
           <li>
-            {{ form_field(form.name, dbifiable=True)|indent(12)|safe }}
+            {{ form_field(form.name)|indent(12)|safe }}
           </li>
           <div>Current thumbnail:</div>
           <div><img src="{{ index.thumbnail.url }}" class="existing_image"></div>
@@ -51,8 +51,4 @@
           </li>
         </ol>
       </form>
-{% endblock %}
-{% block scripts %}
-{% from "includes/dbify_input.html" import dbify_input %}
-{{ dbify_input(input_name=form.name.name)|safe }}
 {% endblock %}

@@ -142,9 +142,7 @@ h2[class^="button"]:hover{color:#466ea7;text-decoration:none}
 .Series_em2{font-size:.5em;display:block;font-family:"Droid Sans","Lucida Sans Unicode",Helvetica,Arial,sans-serif}
 .Cultivar{margin-bottom:-1.5em;margin-top:2em;overflow:hidden}
 .Cultivar_img{width:100%;height:auto;margin-top:.1em;margin-bottom:.25em;max-width:250px;}
-.Cultivar_img.tall-adjustment,.Cultivar_img-portrait {margin-top:.1em;margin-bottom:.25em;width:100%;height:auto;max-width:250px;}
-.Cultivar_img-portrait {margin-top:.1em;margin-bottom:.25em;width:100%;height:auto;max-width:250px;}
-
+.Cultivar_img-portrait,.Cultivar_img-small{margin-top:.1em;margin-bottom:.25em;width:100%;height:auto;max-width:250px;}
 .Cultivar_span_new{font-size:.95em;color:#b34141;font-weight:700;display:block;margin:0}
 .Cultivar_span_best_seller::before{font-size:.9em;color:#b34141;font-weight:700;display:block;margin:.0 0 0 1.2em;content: "\2605 Best Seller"}
 .Cultivar_h3{margin-top:.8em;font-size:1.5em}
@@ -186,7 +184,7 @@ hr.style-hr:before {display:block;content:"";height:30px;margin-top:-31px;border
 .RelatedLinks_figcaption.navigation-caption{margin-left:.22em;}
 .RelatedLinks_img{margin-bottom:-.2em;width:100%;height:auto;max-width:100px}
 .RelatedLinks_img:hover{outline:0;border:1px solid #4b43ab}
-.Growing{margin-top:2em;margin-bottom:2em;padding:0}
+.Growing{margin-top:2em;margin-bottom:2em;padding:0;overflow:auto;}
 .Growing span{color:#141823;font-weight:700}
 .Growing_p{margin:0 auto;padding:.4em;font-size:1em}
 .Growing_p_p{margin-top:1em}
@@ -194,6 +192,7 @@ hr.style-hr:before {display:block;content:"";height:30px;margin-top:-31px;border
 .Growing_img{-ms-transform:rotate(-15deg);-webkit-transform:rotate(-15deg);transform:rotate(-15deg);float:right;margin-top:2em;margin-left:1em;max-width:100px;height:auto;width:100%}
 .Growing_img-straight{float:right;margin-top:2em;margin-left:.5em;max-width:150px;height:auto;width:100%}
 .Sidebar{display:none}
+.Growing_img-planting-introduction{float:left;margin-top:.1em;margin-bottom:.25em;width:100%;height:auto;max-width:75px;}
 .Footer{border-top:1px solid #e3e3e3;padding:.5em;text-align:center;font-family:"Droid sans","Lucida Sans Unicode",Helvetica,Arial,sans-serif}
 .Footer_site-map-link:link,.Footer_site-map-link:visited{display:inline-block;text-decoration:none;color:#62943e;font-size:1em;border-bottom:1px solid #6ea746;font-weight:700;margin-bottom:.25em}
 .Footer_site-map-link:hover{color:#62943e;border-bottom:1px solid #fcfcfc}
@@ -275,7 +274,7 @@ h3{font-size:1.375em;line-height:1.1}
 .Cultivar_table_th2{text-align:right}
 .Cultivar_button_submit{margin-right:36%}
 .Cultivar{/*margin-bottom:4em;*/margin-top:3em;/*border:1px solid #a8a8a8;*/text-align:left}
-.Cultivar_img,.Cultivar_img-portrait{float:left;margin:0 .75em .1em 0;vertical-align:text-top}
+.Cultivar_img,.Cultivar_img-portrait,.Cultivar_img-small{float:left;margin:0 .75em .1em 0;vertical-align:text-top}
 .Cultivar_small{display:block;line-height:1.3;margin-bottom:-1.6em;margin-left:1.6em;color:#873557;font-size:.7em}
 .Cultivar_h3{margin-left:.75em}
 .Cultivar_em{line-height:.9;font-style:italic;font-size:.9em;display:block;color:#141823;font-weight:400}
@@ -292,6 +291,7 @@ h3{font-size:1.375em;line-height:1.1}
 .Growing_p-p-p{padding:0 .8em 1em 1em;text-align:left;margin-top:-.5em}
 .Growing_img{-ms-transform:rotate(-15deg);-webkit-transform:rotate(-15deg);transform:rotate(-15deg);float:right;margin-top:2em;margin-left:1em;max-width:100px;height:auto;width:100%}
 .Growing_img-straight{float:right;margin-top:2em;margin-left:.5em;max-width:150px;height:auto;width:100%}
+.Growing_img-planting-introduction{float:left;margin:-.6em .75em .1em 0;vertical-align:text-top;max-width:85px;}
 #back-top{position:fixed;bottom:225px;margin-left:-190px}
 #back-top a{width:100px;display:block;text-align:center;font-size:12px!important;text-transform:uppercase;text-decoration:none;color:#bbb;transition:1s}
 #back-top a:hover{color:#b34141}
@@ -307,7 +307,9 @@ h3{font-size:1.375em;line-height:1.1}
 .Sidebar_social_image:hover{border:1px solid #b34141;opacity:.95}
 /*styling for sidebar free shipping message*/
 .Sidebar_special-info{margin:.5em 0;padding:.5em 0;background:#f0f3f6;border:solid 1px #d8dadd;text-align:center;font-weight:700;color:#141823}
-.Sidebar_special-info a:link{color:#b34141;font-weight:700;}
+.Sidebar_special-info a.new-link:link{color:#b34141;font-weight:700}
+.Sidebar_special-info a.new-link:visited{color:#b34141}
+.Sidebar_special-info a.new-link:hover{color:#b34141}
 .Sidebar_special-info span{white-space:nowrap;color:#141823}
 /*controls font size for sidebar section name only*/
 .Sidebar_nav-section-name-span{font-size:1.15em}

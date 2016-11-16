@@ -53,7 +53,7 @@ def orblank(var):
 
 
 def tags_to_str(tags):
-    return '\n'.join(str(t) for t in tags)
+    return '\n'.join(str(t) for t in tags).replace('\r', '').replace('\t', '')
 
 
 def get_subsections(tag):

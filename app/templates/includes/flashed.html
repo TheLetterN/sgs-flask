@@ -17,7 +17,20 @@
 #}
 {% with messages = get_flashed_messages(with_categories=true) %}
 
-  {% if messages %}
+{% if messages %}
+{% if config['NOTY_INSTALLED'] %}
+<script>
+  {% for category, message in messages %}
+  noty({
+    text: "{{ message.replace('"', '\\"').replace('\r', '').replace('\n', '\\\n')|safe }}",
+    closeWith: ["button", "click"],
+    theme: "relax",
+    layout: "top",
+    type: "{% if category == 'error' %}error{% elif category == 'warning' %}warning{% else %}success{% endif %}"
+ });
+  {% endfor %}
+</script>
+<noscript>
   {% for category, message in messages %}
     {% if 'Error:' in message or category == 'error' %}
     <div class="flashed_error">{{ message }}
@@ -25,11 +38,26 @@
     <div class="flashed_warning">
       {{ message|indent(12)|safe }}
     {% else %}
-    <div class="flashed_message">
+    <div class="flashed_success">
       {{ message|indent(12)|safe }}
     {% endif %}
     </div>
-  {% endfor %}
+    {% endfor %}
+  </noscript>
+{% else %}
+  {% for category, message in messages %}
+    {% if 'Error:' in message or category == 'error' %}
+    <div class="flashed_error">{{ message }}
+    {% elif 'Warning:' in message or category == 'warning' %}
+    <div class="flashed_warning">
+      {{ message|indent(12)|safe }}
+    {% else %}
+    <div class="flashed_success">
+      {{ message|indent(12)|safe }}
+    {% endif %}
+    </div>
+    {% endfor %}
+{% endif %}
   {% endif %}
 {% endwith %}
 

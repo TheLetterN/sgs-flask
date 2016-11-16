@@ -17,6 +17,7 @@
 
 
 import os
+from pathlib import Path
 from tempfile import gettempdir
 
 BASEDIR = os.path.abspath(os.path.dirname(__file__))
@@ -106,6 +107,7 @@ class Config(object):
         SHOW_CULTIVAR_PAGES = True
     else:
         SHOW_CULTIVAR_PAGES = False
+    NOTY_INSTALLED = Path('app/static/scripts/noty').exists()
 
     # Set SERVER_NAME during dev. Unset if in production!
     SERVER_NAME= os.environ.get('SGS_SERVER_NAME') or 'localhost:5000'

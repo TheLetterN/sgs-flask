@@ -31,6 +31,7 @@ function setupSnip () {
     Snipcart.subscribe('cart.ready', function () {
         Snipcart.api.configure('show_continue_shopping', true);
         Snipcart.api.configure('split_firstname_and_lastname', true);
+        Snipcart.api.configure('show_cart_automatically', false);
         Snipcart.api.configure('credit_cards', [
             {'type': 'visa', 'display': 'Visa'},
             {'type': 'mastercard', 'display': 'Mastercard'},
@@ -61,5 +62,26 @@ function setupSnip () {
             setSnipcartShippingMethods(cart.order.shippingAddress);
         }
     });
-
+    $(document).ready( function () {
+        $('.snipcart-add-item').each( function () {
+            $(this).on('click', function () {
+                var name = $(this).attr('data-item-name');
+                var sku = $(this).attr('data-item-id');
+                var qty = $('#quantity-' + sku).val();
+                if (parseInt(qty) > 1) {
+                    var pkt = 'packets';
+                } else {
+                    var pkt = 'packet';
+                }
+                noty({
+                    closeWith: ['button'],
+                    timeout: 4000,
+                    theme: 'sgs',
+                    layout: 'top',
+                    type: 'alert',
+                    text: 'Added ' + qty + ' ' + pkt + ' of ' + name + ' to your shopping cart.\t[&nbsp;<span class="open-cart" onclick="Snipcart.api.modal.show();">View&nbsp;Cart</span>&nbsp;]'
+                });
+            });
+        });
+    });
 };

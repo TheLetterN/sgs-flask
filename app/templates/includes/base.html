@@ -33,6 +33,10 @@ Copyright Swallowtail Garden Seeds, Inc
     {% if config['USE_SNIPCART'] %}
     <script data-api-key="{{ config['SNIPCART_KEY'] }}" data-cart-custom1-name="Shipping Comments" data-cart-custom1-type="textarea" id="snipcart" src="https://cdn.snipcart.com/scripts/2.0/snipcart.js"></script>
     <link href="https://cdn.snipcart.com/themes/2.0/base/snipcart.min.css" rel="stylesheet" type="text/css"/>
+    {% if config['NOTY_INSTALLED'] %}
+    <script src="{{ url_for('static', filename='scripts/noty/packaged/jquery.noty.packaged.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='scripts/noty/themes/sgs.js') }}"></script>
+    {% endif %}
     <script src="{{ url_for('static', filename='scripts/snipscripts.js') }}"></script>
     <script>
       setupSnip();

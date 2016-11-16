@@ -14,7 +14,7 @@
 /* BEGIN flashed messages */
 .flashed_message,.flashed_error,.flashed_warning{display:block;clear:both;border-top-style:solid;border-bottom-style:solid;border-top-width:1px;border-bottom-width:1px;padding-top:0.5em;padding-bottom:0.5em;padding-left:1.5em;padding-right:1.5em;}
 .flashed_list{padding-left:2em;padding-top:1em;padding-bottom:1em;list-style-type:disc;}
-.flashed_message{background-color:#aaffaa;border-color:#66ff66;}
+.flashed_success{background-color:#aaffaa;border-color:#66ff66;}
 .flashed_error{background-color:#ffaaaa;border-color:#ff6666;}
 .flashed_warning{background-color:#ffee88;border-color:#eedd22;}
 /* END flashed messages */

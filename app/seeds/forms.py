@@ -30,7 +30,7 @@ from wtforms import (
     ValidationError
 )
 from wtforms.fields.html5 import DateField
-from wtforms.validators import DataRequired, Length, Optional
+from wtforms.validators import InputRequired, Length, Optional
 from app.form_helpers import (
     BeginsWith,
     ListItemLength,
@@ -39,6 +39,7 @@ from app.form_helpers import (
     StrippedStringField,
     StrippedTextAreaField
 )
+from app import estimate_ship_date
 from app.redirects import RedirectsFile
 from .models import (
     Section,
@@ -172,7 +173,7 @@ class AddIndexForm(Form):
     """
     name = StrippedStringField(
         'Index Name',
-        validators=[DataRequired(), Length(max=254)]
+        validators=[InputRequired(), Length(max=254)]
     )
     thumbnail = SecureFileField(
         'Thumbnail Image',
@@ -223,7 +224,7 @@ class AddCommonNameForm(Form):
     """
     name = StrippedStringField(
         'Common Name',
-        validators=[DataRequired(), Length(max=254)]
+        validators=[InputRequired(), Length(max=254)]
     )
     list_as = StrippedStringField(
         'List As',
@@ -341,7 +342,7 @@ class AddSectionForm(Form):
     parent = SelectField('Subcategory Of (Optional)', coerce=int)
     name = StrippedStringField(
         'Section Name',
-        validators=[DataRequired(), Length(max=254)]
+        validators=[InputRequired(), Length(max=254)]
     )
     subtitle = StrippedStringField(
         'Subtitle (Leave blank for default.)',
@@ -418,7 +419,7 @@ class AddCultivarForm(Form):
     """
     name = StrippedStringField(
         'Cultivar Name',
-        validators=[DataRequired(), Length(max=254)]
+        validators=[InputRequired(), Length(max=254)]
     )
     subtitle = StrippedStringField(
         'Subtitle',
@@ -549,15 +550,15 @@ class AddPacketForm(Form):
     """
     sku = StrippedStringField(
         'SKU',
-        validators=[DataRequired(), Length(max=32)]
+        validators=[InputRequired(), Length(max=32)]
     )
     price = StrippedStringField(
         'Price in US dollars',
-        validators=[DataRequired(), Length(max=16), USDollar()]
+        validators=[InputRequired(), Length(max=16), USDollar()]
     )
     amount = StrippedStringField(
         'Amount of Seeds',
-        validators=[DataRequired(), Length(max=16)]
+        validators=[InputRequired(), Length(max=16)]
     )
     again = BooleanField('Add another packet after this.')
     submit = SubmitField('Save Packet')
@@ -595,14 +596,14 @@ class AddRedirectForm(Form):
     old_path = StrippedStringField(
         'Old Path',
         validators=[BeginsWith('/'),
-                    DataRequired(),
+                    InputRequired(),
                     Length(max=4096),
                     ReplaceMe()]
     )
     new_path = StrippedStringField(
         'New Path',
         validators=[BeginsWith('/'),
-                    DataRequired(),
+                    InputRequired(),
                     Length(max=4096),
                     ReplaceMe()]
     )
@@ -679,7 +680,7 @@ class EditIndexForm(Form):
     id = HiddenField()
     name = StrippedStringField(
         'Index',
-        validators=[DataRequired(), Length(max=254)]
+        validators=[InputRequired(), Length(max=254)]
     )
     thumbnail = SecureFileField(
         'New Thumbnail',
@@ -731,10 +732,10 @@ class EditCommonNameForm(Form):
     id = HiddenField()
     index_id = SelectField('Index',
                            coerce=int,
-                           validators=[DataRequired()])
+                           validators=[InputRequired()])
     name = StrippedStringField(
         'Common Name',
-        validators=[DataRequired(), Length(max=254)]
+        validators=[InputRequired(), Length(max=254)]
     )
     list_as = StrippedStringField(
         'List As',
@@ -859,7 +860,7 @@ class EditSectionForm(Form):
     common_name_id = SelectField('Select Common Name', coerce=int)
     name = StrippedStringField(
         'Section Name',
-        validators=[DataRequired(), Length(max=254)]
+        validators=[InputRequired(), Length(max=254)]
     )
     subtitle = StrippedStringField(
         'Subtitle (Leave blank for default.)',
@@ -942,7 +943,7 @@ class EditCultivarForm(Form):
     id = HiddenField()
     common_name_id = SelectField('Common Name',
                                  coerce=int,
-                                 validators=[DataRequired()])
+                                 validators=[InputRequired()])
     botanical_name = StrippedStringField(
         'Botanical Name',
         validators=[Length(max=254)]
@@ -952,7 +953,7 @@ class EditCultivarForm(Form):
     taxable = BooleanField('Taxable in California')
     name = StrippedStringField(
         'Cultivar Name',
-        validators=[DataRequired(), Length(max=254)]
+        validators=[InputRequired(), Length(max=254)]
     )
     subtitle = StrippedStringField(
         'Subtitle',
@@ -1095,15 +1096,15 @@ class EditPacketForm(Form):
     cultivar_id = SelectField('Cultivar', coerce=int)
     sku = StrippedStringField(
         'SKU',
-        validators=[DataRequired(), Length(max=32)]
+        validators=[InputRequired(), Length(max=32)]
     )
     price = StrippedStringField(
         'Price in US dollars',
-        validators=[DataRequired(), Length(max=16), USDollar()]
+        validators=[InputRequired(), Length(max=16), USDollar()]
     )
     amount = StrippedStringField(
         'Amount of Seeds',
-        validators=[DataRequired(), Length(max=16)]
+        validators=[InputRequired(), Length(max=16)]
     )
     submit = SubmitField('Save Packet')
 
@@ -1332,21 +1333,24 @@ class SelectPacketForm(Form):
 
 class EditShipDateForm(Form):
     """Form for editing the expected ship date for domestic orders."""
-    ship_date = DateField('Orders from today ship on', format='%m/%d/%Y')
+    ship_date = DateField(
+        'Orders from today ship on',
+        format='%m/%d/%Y', validators=[InputRequired()]
+    )
     submit = SubmitField('Submit')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if not self.ship_date.data:
-            today = datetime.date.today()
-            wd = today.isoweekday()
-            if wd < 5:
-                ship_date = today + datetime.timedelta(days=1)
-            elif wd == 5:
-                ship_date = today + datetime.timedelta(days=3)
-            else:
-                ship_date = today + datetime.timedelta(days=2)
-            self.ship_date.data = ship_date
+            self.ship_date.data = estimate_ship_date()
+
+    def validate_ship_date(self, field):
+        """Make sure ship_date is later than today."""
+        if field.data < datetime.date.today():
+            raise ValidationError(
+                'While shipping orders before they\'re made would be pretty '
+                'neat, it is unfortunately a physical impossibility.'
+            )
 
 
 class EditRatesForm(Form):

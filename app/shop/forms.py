@@ -27,7 +27,7 @@ from wtforms import (
     ValidationError
 )
 from wtforms.fields.html5 import IntegerField
-from wtforms.validators import DataRequired, Length, NumberRange
+from wtforms.validators import InputRequired, Length, NumberRange
 
 from app.form_helpers import Email, StrippedStringField, StrippedTextAreaField
 from app.shop.models import Address, Country
@@ -65,12 +65,12 @@ class ShoppingCartForm(Form):
 class AddressForm(Form):
     first_name = StrippedStringField(
         'First Name',
-        validators=[DataRequired(message='Please enter a first name.'),
+        validators=[InputRequired(message='Please enter a first name.'),
                     Length(max=254)]
     )
     last_name = StrippedStringField(
         'Last Name',
-        validators=[DataRequired(message='Please enter a last name.'),
+        validators=[InputRequired(message='Please enter a last name.'),
                     Length(max=254)]
     )
     business_name = StrippedStringField(
@@ -79,7 +79,7 @@ class AddressForm(Form):
     )
     address_line1 = StrippedStringField(
         'Address Line 1',
-        validators=[DataRequired(message='Please enter an address.'),
+        validators=[InputRequired(message='Please enter an address.'),
                     Length(max=254)]
     )
     address_line2 = StrippedStringField(
@@ -88,7 +88,7 @@ class AddressForm(Form):
     )
     city = StrippedStringField(
         'City',
-        validators=[DataRequired(message='Please enter a city.'),
+        validators=[InputRequired(message='Please enter a city.'),
                     Length(max=254)]
     )
     postalcode = StrippedStringField(
@@ -110,7 +110,7 @@ class AddressForm(Form):
     )
     phone = StrippedStringField(
         'Phone Number',
-        validators=[DataRequired(message='Please enter a phone number.'),
+        validators=[InputRequired(message='Please enter a phone number.'),
                     Length(max=32)]
     )
     fax = StrippedStringField('Fax Number', validators=[Length(max=32)])

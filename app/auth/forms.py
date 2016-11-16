@@ -29,7 +29,7 @@ from wtforms import (
 from wtforms.validators import (
     AnyOf,
     EqualTo,
-    DataRequired,
+    InputRequired,
     Length,
     Optional,
     Regexp
@@ -57,7 +57,7 @@ class DeleteUserForm(Form):
                                   '(without the "") in this field to delete ' +
                                   'this user!')])
     password = PasswordField('Enter Your Password',
-                             validators=[DataRequired()])
+                             validators=[InputRequired()])
     submit = SubmitField('Delete User')
 
 
@@ -114,12 +114,12 @@ class LoginForm(Form):
     """
     password = PasswordField(
         'Password',
-        validators=[DataRequired()])
+        validators=[InputRequired()])
     remember_me = BooleanField('Remember Me')
     submit = SubmitField('Log In')
     login = StringField(
         'Username or Email',
-        validators=[DataRequired(), Length(1, 64)])
+        validators=[InputRequired(), Length(1, 64)])
 
 
 class ManageUserForm(Form):
@@ -185,23 +185,23 @@ class RegistrationForm(Form):
     """
     email = StringField(
         'Email Address',
-        validators=[Email(), DataRequired(), Length(1, 254)])
+        validators=[Email(), InputRequired(), Length(1, 254)])
     email2 = StringField(
         'Confirm Email',
         validators=[EqualTo('email', message='Email addresses do not match!'),
-                    DataRequired()])
+                    InputRequired()])
     password = PasswordField(
         'Password',
-        validators=[DataRequired(), Length(1, 64)])
+        validators=[InputRequired(), Length(1, 64)])
     password2 = PasswordField(
         'Confirm Password',
         validators=[EqualTo('password', message='Passwords do not match!'),
-                    DataRequired()])
+                    InputRequired()])
     submit = SubmitField('Register')
     username = StringField(
         'Username',
         validators=[
-            DataRequired(),
+            InputRequired(),
             Length(1, 64),
             Regexp('^[A-Za-z0-9][A-Za-z0-9_. ]*$', 0,
                    'Username must begin with a letter or number,  and may only'
@@ -238,7 +238,7 @@ class ResendConfirmationForm(Form):
     """
     email = StringField(
         'Email Address',
-        validators=[Email(), DataRequired(), Length(1, 254)])
+        validators=[Email(), InputRequired(), Length(1, 254)])
     submit = SubmitField('Send')
 
     def validate_email(self, field):
@@ -268,10 +268,10 @@ class ResetPasswordForm(Form):
     """
     email = StringField(
         'Email Address',
-        validators=[Email(), DataRequired(), Length(1, 254)])
+        validators=[Email(), InputRequired(), Length(1, 254)])
     password1 = PasswordField(
         'New Password',
-        validators=[DataRequired(), Length(1, 64)])
+        validators=[InputRequired(), Length(1, 64)])
     password2 = PasswordField(
         'Confirm Password',
         validators=[EqualTo('password1', message='Passwords must match!')])
@@ -287,7 +287,7 @@ class ResetPasswordRequestForm(Form):
     """
     email = StringField(
         'Email Address',
-        validators=[Email(), DataRequired(), Length(1, 254)])
+        validators=[Email(), InputRequired(), Length(1, 254)])
     submit = SubmitField('Request Password Reset')
 
     def validate_email(self, field):

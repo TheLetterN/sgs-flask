@@ -110,6 +110,18 @@ def load_nav_data(json_file=None):
     return items
 
 
+def estimate_ship_date():
+    today = datetime.date.today()
+    wd = today.isoweekday()
+    if wd < 5:
+        sd = today + datetime.timedelta(days=1)
+    elif wd == 5:
+        sd = today + datetime.timedelta(days=3)
+    else:
+        sd = today + datetime.timedelta(days=2)
+    return sd
+
+
 def get_ship_date(filename=None):
     if not filename:
         filename ='data/ship_date.dat' 
@@ -122,14 +134,7 @@ def get_ship_date(filename=None):
             'WARNING: No ship_date.dat found in data! Using estimated '
             'ship date instead, which may be incorrect.'
         )
-        today = datetime.date.today()
-        wd = today.isoweekday()
-        if wd < 5:
-            sd = today + datetime.timedelta(days=1)
-        elif wd == 5:
-            sd = today + datetime.timedelta(days=3)
-        else:
-            sd = today + datetime.timedelta(days=2)
+        sd = estimate_ship_date()
     return sd
 
 

@@ -2023,6 +2023,14 @@ def delete_image_file_before_delete(mapper, connection, target):
     """Delete image file of `Image` instance before the instance is deleted."""
     try:
         target.path.unlink()
+        # Don't leave behind empty directories.
+        p = target.path.parent
+        while p != Path(current_app.config.get('STATIC_FOLDER')):
+            try:
+                p.rmdir()
+                p = p.parent
+            except OSError:
+                break
     except FileNotFoundError:
         pass
 

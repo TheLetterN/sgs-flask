@@ -340,7 +340,14 @@ def redirect_cultivar_warning(cultivar,
     )
 
 
-# Thumbnail functions
+# Image functions
+def relative_to_static(filename):
+    """Return filename with path to static removed."""
+    return filename.replace(
+        current_app.config.get('STATIC_FOLDER'), ''
+    ).strip('/')
+
+
 def add_thumbnail(field, obj, messages):
     """Add a thumbnail to the given object.
 
@@ -351,6 +358,16 @@ def add_thumbnail(field, obj, messages):
     obj.thumbnail = Image.from_form_field(field)
     messages.append('Thumbnail uploaded as: "{0}".'
                     .format(obj.thumbnail.filename))
+
+
+def upload_image(file_field, file_path):
+    """Upload an image from a form and return an Image instance."""
+    try:
+        file_path.parent.mkdir(parents=True)
+    except FileExistsError:
+        pass
+    file_field.data.save(str(file_path))
+    return Image.get_or_create(relative_to_static(str(file_path)))
 
 
 def edit_thumbnail(field, obj, messages):
@@ -418,7 +435,14 @@ def add_index():
         messages.append('Creating new index "{0}":'
                         .format(index.name))
         if form.thumbnail.data:
-            add_thumbnail(form.thumbnail, index, messages)
+            index.thumbnail = upload_image(
+                form.thumbnail,
+                form.thumbnail_path
+            )
+            messages.append(
+                'Thumbnail uploaded as "{}".'
+                .format(form.thumbnail_path)
+            )
         if form.description.data:
             index.description = form.description.data
             messages.append('Description set to: <p>{0}</p>'
@@ -804,7 +828,23 @@ def edit_index(idx_id=None):
             messages.append('Name changed to: "{0}".'.format(index.name))
         if form.thumbnail.data:
             edited = True
-            edit_thumbnail(form.thumbnail, index, messages)
+            if index.thumbnail and index.thumbnail.path == form.thumbnail_path:
+                messages.append('Thumbnail file replaced.')
+                form.thumbnail.data.save(str(index.thumbnail.path))
+            else:
+                index.thumbnail = upload_image(
+                    form.thumbnail,
+                    form.thumbnail_path
+                )
+                messages.append(
+                    'New thumbnail saved as "{}".'.format(form.thumbnail_path)
+                )
+        elif form.thumbnail_folder.data != index.thumbnail.subfolder:
+            edited = True
+            index.thumbnail.subfolder = form.thumbnail_folder.data
+            messages.append(
+                'Thumbnail moved to "{}".'.format(index.thumbnail.path)
+            )
         if form.description.data != index.description:
             if form.description.data:
                 edited = True

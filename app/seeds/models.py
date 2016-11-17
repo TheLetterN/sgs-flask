@@ -1899,7 +1899,6 @@ class ImageQuery(BaseQuery, SearchQueryMixin):
     pass
 
 
-
 class Image(db.Model, TimestampMixin):
     """Table for image information.
 
@@ -1908,8 +1907,6 @@ class Image(db.Model, TimestampMixin):
 
     Attributes:
         filename: File name of an image.
-        width: Width of an image in pixels.
-        height: Height of an image in pixels.
 
         index: The `Index` an `Image` is thumbnail for.
         common_name: The `CommonName` an `Image` is thumbnail for.
@@ -1945,11 +1942,9 @@ class Image(db.Model, TimestampMixin):
     # Search
     search_vector = db.Column(TSVectorType('filename'))
 
-    def __init__(self, filename=None, make_unique=False):
+    def __init__(self, filename=None):
         if filename:
             self.filename = filename
-        if make_unique:
-            self.make_unique()
 
     def __repr__(self):
         return '<{0} filename: "{1}">'.format(self.__class__.__name__,
@@ -1970,102 +1965,42 @@ class Image(db.Model, TimestampMixin):
             'filename': self.filename
         }
 
+    @property
+    def subfolder(self):
+        """Return the subfolder of static that the file is in."""
+        return os.path.join(*os.path.split(self.filename)[:-1])
+
+    @subfolder.setter
+    def subfolder(self, val):
+        """Change subfolder for image."""
+        self.rename(self.filename.replace(self.subfolder, val))
+
+    @property
+    def path(self):
+        """Path: The full path to the file this image entry represents."""
+        return Path(current_app.config.get('STATIC_FOLDER'), self.filename)
+
     @classmethod
-    def get_or_create(cls, filename, make_unique=False):
+    def get_or_create(cls, filename):
         """Get an existing `Image` or create it if not present."""
         img = cls.query.filter(cls.filename == filename).one_or_none()
         if not img:
-            img = cls(filename=filename, make_unique=make_unique)
+            img = cls(filename=filename)
             img.created = True
         else:
             img.created = False
         return img
 
-    @classmethod
-    def from_form_field(cls, field, make_unique=True):
-        """Create an Image from data from a wtforms FileField.
-
-        Args:
-            field: The FileField to get data from.
-            make_unique: Whether or not to make sure the created image does
-                not overwrite existing image data. Defaults to True for safety,
-                but can be set False if, for example, one wants to replace an
-                old version of the image with a new one when editing the object
-                it belongs to.
-        """
-        img = cls(filename=field.data.filename,
-                  make_unique=make_unique)
-        field.data.save(img.full_path)
-        img.set_dimensions()
-        return img
-
-    def save_form_field_image(self, field):
-        """Save an image via a wtforms FileField."""
-        field.data.save(self.full_path)
-        self.set_dimensions()
-
-    @property
-    def path(self):
-        """str: The path to the image file relative to the static folder."""
-        return os.path.join('images', 'plants',  self.filename)
-
-    @property
-    def full_path(self):
-        """str: The full path to the file this image entry represents."""
-        return os.path.join(current_app.config.get('PLANT_IMAGES_FOLDER'),
-                            self.filename)
-
-    @property
-    def is_extra_wide(self):
-        """bool: True if the width of image is at least twice its height."""
-        if self.width and self.height:
-            return self.width >= 2 * self.height
-        else:
-            return None
-
-    def delete_file(self):
-        """Deletes the image file associated with this Image object."""
-        os.remove(self.full_path)
+    def rename(self, filename):
+        """Rename Image and move the corresponding file."""
+        op = self.path
+        self.filename = filename
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        op.rename(self.path)
 
     def exists(self):
         """Check whether or not file associated with this Image exists."""
-        return os.path.exists(self.full_path)
-
-    def add_postfix(self, postfix):
-        """Rename an image to add a postfix to it.
-
-        Usually this would be used for when an image with the same filename is
-        added, thus allowing the new image to be renamed instead of overwriting
-        the existing file.
-        """
-        parts = os.path.splitext(self.filename)
-        self.filename = parts[0] + postfix + parts[1]
-
-    def make_unique(self):
-        """Rename an image if it would overwrite an existing image."""
-        old_name = self.filename
-        count = 0
-        while self.exists():
-            count += 1
-            parts = os.path.splitext(old_name)
-            self.filename = parts[0] + '_' + str(count) + parts[1]
-
-    def rename(self, new_name):
-        """Rename an image with new name.
-
-        Args:
-            new_name: The new filename to use.
-        """
-        old_path = self.full_path
-        self.filename = new_name
-        shutil.move(old_path, self.full_path)
-
-    def set_dimensions(self):
-        """Set width and height if the image exists."""
-        if self.exists():
-            img = Pimage.open(self.full_path)
-            self.width = img.width
-            self.height = img.height
+        return self.path.exists()
 
 
 @event.listens_for(SignallingSession, 'before_attach')
@@ -2079,10 +2014,9 @@ def auto_position_before_attach(session, instance):
 def delete_image_file_before_delete(mapper, connection, target):
     """Delete image file of `Image` instance before the instance is deleted."""
     try:
-        target.delete_file()
+        target.path.unlink()
     except FileNotFoundError:
-        print(target.full_path)
-        pass  # If the file doesn't exist, there's no need to delete it.
+        pass
 
 
 if __name__ == '__main__':  # pragma: no cover

@@ -16,10 +16,12 @@
 # Copyright Swallowtail Garden Seeds, Inc
 
 import datetime
+from pathlib import Path
 
 from flask import current_app, Markup, url_for
 from flask_wtf import Form
 from flask_wtf.file import FileAllowed
+from werkzeug import secure_filename
 from wtforms import (
     BooleanField,
     HiddenField,
@@ -179,12 +181,34 @@ class AddIndexForm(Form):
         'Thumbnail Image',
         validators=[FileAllowed(IMAGE_EXTENSIONS, 'Images only!')]
     )
+    thumbnail_folder = StrippedStringField(
+        'Save Thumbnail to Static Subfolder',
+        default='images/index-image-links/',
+        validators=[Length(max=254)]
+    )
     description = StrippedTextAreaField(
         'Description',
         validators=[Length(max=5120)]
     )
     pos = SelectField('Position', coerce=int)
     submit = SubmitField('Save Index')
+
+    @property
+    def thumbnail_path(self):
+        try:
+            return Path(
+                current_app.config.get('STATIC_FOLDER'),
+                self.thumbnail_folder.data,
+                secure_filename(self.thumbnail.data.filename)
+            )
+        except AttributeError:
+            return None
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.pos.choices = position_choices(model=Index, order_by='position')
+        if not self.pos.data:
+            self.pos.data = self.pos.choices[-1][0]
 
     def validate_name(self, field):
         """Raise a ValidationError if an `Index` exists with given name.
@@ -202,11 +226,12 @@ class AddIndexForm(Form):
                        .format(idx.name, idx_url))
             )
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.pos.choices = position_choices(model=Index, order_by='position')
-        if not self.pos.data:
-            self.pos.data = self.pos.choices[-1][0]
+    def validate_thumbnail(self, field):
+        """Raise error if a file with the same (full) name already exists."""
+        if field.data and self.thumbnail_path.exists():
+            raise ValidationError(
+                'A file named "{}" already exists!'.format(self.thumbnail_path)
+            )
 
 
 class AddCommonNameForm(Form):
@@ -686,12 +711,27 @@ class EditIndexForm(Form):
         'New Thumbnail',
         validators=[FileAllowed(IMAGE_EXTENSIONS, 'Images only!')]
     )
+    thumbnail_folder = StrippedStringField(
+        'Thumbnail Subfolder',
+        validators=[Length(max=254)]
+    )
     description = StrippedTextAreaField(
         'Description',
         validators=[Length(max=5120)]
     )
     pos = SelectField('Position', coerce=int)
     submit = SubmitField('Save Index')
+
+    @property
+    def thumbnail_path(self):
+        try:
+            return Path(
+                current_app.config.get('STATIC_FOLDER'),
+                self.thumbnail_folder.data,
+                secure_filename(self.thumbnail.data.filename)
+            )
+        except AttributeError:
+            return None
 
     def validate_name(self, field):
         """Raise ValidationError if changing name would result in clash."""
@@ -717,6 +757,11 @@ class EditIndexForm(Form):
             else:
                 self.pos.data = self.pos.choices[choice_index - 1][0]
         self.pos.choices.pop(choice_index)
+        try:
+            if not self.thumbnail_folder.data:
+                self.thumbnail_folder.data = obj.thumbnail.subfolder
+        except AttributeError:
+            pass
 
 
 class EditCommonNameForm(Form):

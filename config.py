@@ -73,6 +73,8 @@ class Config(object):
         os.path.join(BASEDIR, 'data')
     JSON_FOLDER = os.environ.get('SGS_JSON_FOLDER') or \
         os.path.join(BASEDIR, 'json')
+    STATIC_FOLDER = os.environ.get('SGS_STATIC_FOLDER') or \
+        os.path.join(BASEDIR, 'app', 'static')
     IMAGES_FOLDER = os.environ.get('SGS_IMAGES_FOLDER') or \
         os.path.join(BASEDIR, 'app', 'static', 'images')
     PLANT_IMAGES_FOLDER = os.path.join(IMAGES_FOLDER, 'plants')

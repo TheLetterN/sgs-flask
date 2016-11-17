@@ -16,6 +16,8 @@
 # Copyright Swallowtail Garden Seeds, Inc
 
 
+import os
+
 from flask_wtf.file import FileField
 from validate_email import validate_email
 from werkzeug import secure_filename
@@ -145,6 +147,8 @@ class ReplaceMe(object):
             self.message = 'Field contains data that needs to be replaced. '\
                            'Please replace any sections surrounded by < and '\
                            '> with requested data.'
+        else:
+            self.message = message
 
     def __call__(self, form, field):
         if '<' in field.data and '>' in field.data:
@@ -182,3 +186,12 @@ class StrippedTextAreaField(TextAreaField):
     def process_formdata(self, valuelist):
         super().process_formdata(valuelist)
         self.data = self.data.strip()
+
+
+class SecureFilenameField(StrippedStringField):
+    """A `StringField` for filenames that prevents directory traversal."""
+    def process_formdata(self, valuelist):
+        super().process_formdata(valuelist)
+        parts = os.path.split(self.data)
+        self.data = os.path.join(parts[0], secure_filename(parts[1]))
+        self.data = os.path.normpath('/' + self.data).lstrip('/')

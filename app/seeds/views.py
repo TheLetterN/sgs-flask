@@ -435,13 +435,13 @@ def add_index():
         messages.append('Creating new index "{0}":'
                         .format(index.name))
         if form.thumbnail.data:
-            index.thumbnail = upload_image(
-                form.thumbnail,
-                form.thumbnail_path
+            index.thumbnail = Image.with_upload(
+                filename=form.thumbnail_filename.data,
+                upload=form.thumbnail.data
             )
             messages.append(
-                'Thumbnail uploaded as "{}".'
-                .format(form.thumbnail_path)
+                'Thumbnail uploaded to: app/static/{}'
+                .format(index.thumbnail.filename)
             )
         if form.description.data:
             index.description = form.description.data

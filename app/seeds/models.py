@@ -1991,6 +1991,14 @@ class Image(db.Model, TimestampMixin):
             img.created = False
         return img
 
+    @classmethod
+    def with_upload(cls, filename, upload):
+        """Create an `Image` instance and upload the corresponding file."""
+        img = cls.get_or_create(filename)
+        img.path.parent.mkdir(parents=True, exist_ok=True)
+        upload.save(str(img.path))
+        return img
+
     def rename(self, filename):
         """Rename Image and move the corresponding file."""
         op = self.path

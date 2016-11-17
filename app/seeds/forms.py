@@ -38,6 +38,7 @@ from app.form_helpers import (
     ListItemLength,
     ReplaceMe,
     SecureFileField,
+    SecureFilenameField,
     StrippedStringField,
     StrippedTextAreaField
 )
@@ -170,6 +171,7 @@ class AddIndexForm(Form):
     Attributes:
         name: String field for the name of an `Index`.
         thumbnail: FileField for thumbnail image.
+        thumbnail_filename: String field for thumbnail filename.
         description: Text field for the description of an`Index`.
         pos: Select field for where this `Index` belongs in relation to others.
     """
@@ -181,9 +183,8 @@ class AddIndexForm(Form):
         'Thumbnail Image',
         validators=[FileAllowed(IMAGE_EXTENSIONS, 'Images only!')]
     )
-    thumbnail_folder = StrippedStringField(
-        'Save Thumbnail to Static Subfolder',
-        default='images/index-image-links/',
+    thumbnail_filename = SecureFilenameField(
+        'Save Thumbnail As (in app/static)',
         validators=[Length(max=254)]
     )
     description = StrippedTextAreaField(
@@ -198,10 +199,9 @@ class AddIndexForm(Form):
         try:
             return Path(
                 current_app.config.get('STATIC_FOLDER'),
-                self.thumbnail_folder.data,
-                secure_filename(self.thumbnail.data.filename)
+                self.thumbnail_filename.data
             )
-        except AttributeError:
+        except TypeError:
             return None
 
     def __init__(self, *args, **kwargs):
@@ -226,12 +226,17 @@ class AddIndexForm(Form):
                        .format(idx.name, idx_url))
             )
 
-    def validate_thumbnail(self, field):
+    def validate_thumbnail_filename(self, field):
         """Raise error if a file with the same (full) name already exists."""
-        if field.data and self.thumbnail_path.exists():
-            raise ValidationError(
-                'A file named "{}" already exists!'.format(self.thumbnail_path)
-            )
+        if self.thumbnail.data:
+            try:
+                if self.thumbnail_path.exists():
+                    raise ValidationError(
+                        'A file named "{}" already exists!'
+                        .format(field.data)
+                    )
+            except AttributeError:
+                pass
 
 
 class AddCommonNameForm(Form):

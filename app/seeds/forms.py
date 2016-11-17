@@ -184,7 +184,7 @@ class AddIndexForm(Form):
         validators=[FileAllowed(IMAGE_EXTENSIONS, 'Images only!')]
     )
     thumbnail_filename = SecureFilenameField(
-        'Save Thumbnail As (in app/static)',
+        'Save Thumbnail to Static Files As',
         validators=[Length(max=254)]
     )
     description = StrippedTextAreaField(
@@ -716,8 +716,8 @@ class EditIndexForm(Form):
         'New Thumbnail',
         validators=[FileAllowed(IMAGE_EXTENSIONS, 'Images only!')]
     )
-    thumbnail_folder = StrippedStringField(
-        'Thumbnail Subfolder',
+    thumbnail_filename = SecureFilenameField(
+        'Thumbnail Filename',
         validators=[Length(max=254)]
     )
     description = StrippedTextAreaField(
@@ -732,23 +732,10 @@ class EditIndexForm(Form):
         try:
             return Path(
                 current_app.config.get('STATIC_FOLDER'),
-                self.thumbnail_folder.data,
-                secure_filename(self.thumbnail.data.filename)
+                self.thumbnail_filename.data
             )
-        except AttributeError:
+        except TypeError:
             return None
-
-    def validate_name(self, field):
-        """Raise ValidationError if changing name would result in clash."""
-        idx = Index.query.filter(Index.name == field.data,
-                                 Index.id != self.id.data).one_or_none()
-        if idx:
-            raise ValidationError(Markup(
-                'A different index is already named \'{0}\'. <a href="{1}" '
-                'target="_blank">Click here</a> if you would like to edit it.'
-                .format(idx.name,
-                        url_for('seeds.edit_index', idx_id=self.id))
-            ))
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -763,10 +750,29 @@ class EditIndexForm(Form):
                 self.pos.data = self.pos.choices[choice_index - 1][0]
         self.pos.choices.pop(choice_index)
         try:
-            if not self.thumbnail_folder.data:
-                self.thumbnail_folder.data = obj.thumbnail.subfolder
+            if not self.thumbnail_filename.data:
+                self.thumbnail_filename.data = obj.thumbnail.filename
         except AttributeError:
             pass
+
+    def validate_name(self, field):
+        """Raise ValidationError if changing name would result in clash."""
+        idx = Index.query.filter(Index.name == field.data,
+                                 Index.id != self.id.data).one_or_none()
+        if idx:
+            raise ValidationError(Markup(
+                'A different index is already named \'{0}\'. <a href="{1}" '
+                'target="_blank">Click here</a> if you would like to edit it.'
+                .format(idx.name,
+                        url_for('seeds.edit_index', idx_id=self.id))
+            ))
+
+    def validate_thumbnail_filename(self, field):
+        """Raise error if new thumbnail is uploaded w/o a filename."""
+        if self.thumbnail.data and not field.data:
+            raise ValidationError(
+                'Cannot upload new thumbnail without a filename.'
+            )
 
 
 class EditCommonNameForm(Form):

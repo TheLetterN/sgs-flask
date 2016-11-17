@@ -828,23 +828,30 @@ def edit_index(idx_id=None):
             messages.append('Name changed to: "{0}".'.format(index.name))
         if form.thumbnail.data:
             edited = True
-            if index.thumbnail and index.thumbnail.path == form.thumbnail_path:
-                messages.append('Thumbnail file replaced.')
+            if (index.thumbnail and
+                    index.thumbnail.filename == form.thumbnail_filename.data):
                 form.thumbnail.data.save(str(index.thumbnail.path))
+                messages.append('Thumbnail file replaced.')
             else:
-                index.thumbnail = upload_image(
-                    form.thumbnail,
-                    form.thumbnail_path
+                index.thumbnail = Image.with_upload(
+                    filename=form.thumbnail_filename.data,
+                    upload=form.thumbnail.data
                 )
                 messages.append(
-                    'New thumbnail saved as "{}".'.format(form.thumbnail_path)
+                    'New thumbnail uploaded as "{}".'
+                    .format(index.thumbnail.filename)
                 )
-        elif form.thumbnail_folder.data != index.thumbnail.subfolder:
-            edited = True
-            index.thumbnail.subfolder = form.thumbnail_folder.data
-            messages.append(
-                'Thumbnail moved to "{}".'.format(index.thumbnail.path)
-            )
+        elif form.thumbnail_filename.data:
+            try:
+                if form.thumbnail_filename.data != index.thumbnail.filename:
+                    edited = True
+                    index.thumbnail.rename(form.thumbnail_filename.data)
+                    messages.append(
+                        'Thumbnail renamed as "{}".'
+                        .format(index.thumbnail.filename)
+                    )
+            except AttributeError:
+                pass
         if form.description.data != index.description:
             if form.description.data:
                 edited = True

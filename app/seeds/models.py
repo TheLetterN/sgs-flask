@@ -1999,12 +1999,27 @@ class Image(db.Model, TimestampMixin):
         upload.save(str(img.path))
         return img
 
+    @staticmethod
+    def delete_empty_folders(path):
+        """Delete empty folders in path if present."""
+        if path.is_dir():
+            p = path
+        else:
+            p = path.parent
+        while p != Path(current_app.config.get('STATIC_FOLDER')):
+            try:
+                p.rmdir()
+                p = p.parent
+            except OSError:
+                break
+
     def rename(self, filename):
         """Rename Image and move the corresponding file."""
         op = self.path
         self.filename = filename
         self.path.parent.mkdir(parents=True, exist_ok=True)
         op.rename(self.path)
+        Image.delete_empty_folders(op)
 
     def exists(self):
         """Check whether or not file associated with this Image exists."""
@@ -2023,14 +2038,7 @@ def delete_image_file_before_delete(mapper, connection, target):
     """Delete image file of `Image` instance before the instance is deleted."""
     try:
         target.path.unlink()
-        # Don't leave behind empty directories.
-        p = target.path.parent
-        while p != Path(current_app.config.get('STATIC_FOLDER')):
-            try:
-                p.rmdir()
-                p = p.parent
-            except OSError:
-                break
+        Image.delete_empty_folders(target.path)
     except FileNotFoundError:
         pass
 

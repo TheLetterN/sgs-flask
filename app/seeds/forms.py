@@ -146,6 +146,14 @@ def remove_from_choices(choices, obj):
         pass
 
 
+def image_path(filename):
+    """Return the path to an image with given filename."""
+    try:
+        return Path(current_app.config.get('STATIC_FOLDER'), filename)
+    except TypeError:
+        return None
+
+
 class USDollar(object):
     """Validator to ensure data in fields for USD amounts is parseable."""
     def __init__(self, message=None):
@@ -194,16 +202,6 @@ class AddIndexForm(Form):
     pos = SelectField('Position', coerce=int)
     submit = SubmitField('Save Index')
 
-    @property
-    def thumbnail_path(self):
-        try:
-            return Path(
-                current_app.config.get('STATIC_FOLDER'),
-                self.thumbnail_filename.data
-            )
-        except TypeError:
-            return None
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.pos.choices = position_choices(model=Index, order_by='position')
@@ -230,7 +228,7 @@ class AddIndexForm(Form):
         """Raise error if a file with the same (full) name already exists."""
         if self.thumbnail.data:
             try:
-                if self.thumbnail_path.exists():
+                if image_path(field.data).exists():
                     raise ValidationError(
                         'A file named "{}" already exists!'
                         .format(field.data)
@@ -272,6 +270,10 @@ class AddCommonNameForm(Form):
     thumbnail = SecureFileField(
         'Thumbnail Image',
         validators=[FileAllowed(IMAGE_EXTENSIONS, 'Images only!')]
+    )
+    thumbnail_filename = SecureFilenameField(
+        'Save Thumbnail to Static Files As',
+        validators=[Length(max=254)]
     )
     description = StrippedTextAreaField(
         'Description',
@@ -357,6 +359,18 @@ class AddCommonNameForm(Form):
                         cn.index.name,
                         url_for('seeds.edit_common_name', cn_id=cn.id))
                 ))
+
+    def validate_thumbnail_filename(self, field):
+        """Raise error if a file with the same (full) name already exists."""
+        if self.thumbnail.data:
+            try:
+                if image_path(field.data).exists():
+                    raise ValidationError(
+                        'A file named "{}" already exists!'
+                        .format(field.data)
+                    )
+            except AttributeError:
+                pass
 
 
 class AddSectionForm(Form):
@@ -726,16 +740,6 @@ class EditIndexForm(Form):
     )
     pos = SelectField('Position', coerce=int)
     submit = SubmitField('Save Index')
-
-    @property
-    def thumbnail_path(self):
-        try:
-            return Path(
-                current_app.config.get('STATIC_FOLDER'),
-                self.thumbnail_filename.data
-            )
-        except TypeError:
-            return None
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

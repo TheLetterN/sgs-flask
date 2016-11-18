@@ -47,6 +47,9 @@
                 {{ form_field(form.thumbnail)|indent(16)|safe }}
               </li>
               <li>
+                {{ form_field(form.thumbnail_filename)|safe }}
+              </li>
+              <li>
                 {{ form_field(form.botanical_names)|indent(16)|safe }}
               </li>
               <li>
@@ -87,9 +90,12 @@
         </form>
 {% endblock %}
 {% block scripts %}
-<script src="{{ url_for('static', filename='scripts/form-helpers.js') }}"></script>
-<script>
-  populate_on_blur("{{ form.name.id }}", "{{ form.list_as.id }}");
-  populate_on_blur("{{ form.name.id }}", "{{ form.subtitle.id }}", { postfix: " Seeds" });
-</script>
+    <script src="{{ url_for('static', filename='scripts/form-helpers.js') }}"></script>
+    <script>
+        populate_on_blur("{{ form.name.id }}", "{{ form.list_as.id }}");
+        populate_on_blur("{{ form.name.id }}", "{{ form.subtitle.id }}", { postfix: " Seeds" });
+        $('#thumbnail').on('input', function () {
+          $('#thumbnail_filename').val('image-assets/' + this.value);
+        });
+    </script>
 {% endblock %}

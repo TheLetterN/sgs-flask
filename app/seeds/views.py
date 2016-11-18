@@ -360,16 +360,6 @@ def add_thumbnail(field, obj, messages):
                     .format(obj.thumbnail.filename))
 
 
-def upload_image(file_field, file_path):
-    """Upload an image from a form and return an Image instance."""
-    try:
-        file_path.parent.mkdir(parents=True)
-    except FileExistsError:
-        pass
-    file_field.data.save(str(file_path))
-    return Image.get_or_create(relative_to_static(str(file_path)))
-
-
 def edit_thumbnail(field, obj, messages):
     """Edit a thumbnail based on a new upload.
 
@@ -490,7 +480,14 @@ def add_common_name(idx_id=None):
             cn.list_as = form.list_as.data
             messages.append('Will be listed as: <p>{}</p>'.format(cn.list_as))
         if form.thumbnail.data:
-            add_thumbnail(form.thumbnail, cn, messages)
+            cn.thumbnail = Image.with_upload(
+                filename=form.thumbnail_filename.data,
+                upload=form.thumbnail.data
+            )
+            messages.append(
+                'Thumbnail uploaded to: app/static/{}'
+                .format(index.thumbnail.filename)
+            )
         if form.botanical_names.data:
             cn.botanical_names = form.botanical_names.data
             messages.append(

@@ -486,7 +486,7 @@ def add_common_name(idx_id=None):
             )
             messages.append(
                 'Thumbnail uploaded to: app/static/{}'
-                .format(index.thumbnail.filename)
+                .format(cn.thumbnail.filename)
             )
         if form.botanical_names.data:
             cn.botanical_names = form.botanical_names.data

@@ -169,24 +169,13 @@ class USDollar(object):
                 raise ValidationError(self.message)
 
 
-# Forms
-#
-# Note: `submit` in forms is always the button for form submission, and `field`
-# in validators is always the field being validated.
-class AddIndexForm(Form):
-    """Form for adding a new `Index` to the database.
-
+class AddWithThumbnailForm(Form):
+    """A base for forms for adding data which may include a thumbnail.
+    
     Attributes:
-        name: String field for the name of an `Index`.
-        thumbnail: FileField for thumbnail image.
+        thumbnail: File field for thumbnail image.
         thumbnail_filename: String field for thumbnail filename.
-        description: Text field for the description of an`Index`.
-        pos: Select field for where this `Index` belongs in relation to others.
     """
-    name = StrippedStringField(
-        'Index Name',
-        validators=[InputRequired(), Length(max=254)]
-    )
     thumbnail = SecureFileField(
         'Thumbnail Image',
         validators=[FileAllowed(IMAGE_EXTENSIONS, 'Images only!')]
@@ -194,6 +183,39 @@ class AddIndexForm(Form):
     thumbnail_filename = SecureFilenameField(
         'Save Thumbnail to Static Files As',
         validators=[Length(max=254)]
+    )
+
+    def validate_thumbnail_filename(self, field):
+        """Raise error if a file with the same (full) name already exists."""
+        if self.thumbnail.data:
+            if not field.data:
+                raise ValidationError('Thumbnail must have a filename!')
+            else:
+                try:
+                    if image_path(field.data).exists():
+                        raise ValidationError(
+                            'A file named "{}" already exists!'
+                            .format(field.data)
+                        )
+                except AttributeError:
+                    pass
+
+
+# Forms
+#
+# Note: `submit` in forms is always the button for form submission, and `field`
+# in validators is always the field being validated.
+class AddIndexForm(AddWithThumbnailForm):
+    """Form for adding a new `Index` to the database.
+
+    Attributes:
+        name: String field for the name of an `Index`.
+        description: Text field for the description of an`Index`.
+        pos: Select field for where this `Index` belongs in relation to others.
+    """
+    name = StrippedStringField(
+        'Index Name',
+        validators=[InputRequired(), Length(max=254)]
     )
     description = StrippedTextAreaField(
         'Description',
@@ -224,25 +246,12 @@ class AddIndexForm(Form):
                        .format(idx.name, idx_url))
             )
 
-    def validate_thumbnail_filename(self, field):
-        """Raise error if a file with the same (full) name already exists."""
-        if self.thumbnail.data:
-            try:
-                if image_path(field.data).exists():
-                    raise ValidationError(
-                        'A file named "{}" already exists!'
-                        .format(field.data)
-                    )
-            except AttributeError:
-                pass
 
-
-class AddCommonNameForm(Form):
+class AddCommonNameForm(AddWithThumbnailForm):
     """Form for adding a new `CommonName` to the database.
 
     Attributes:
         name: DBified string field for the name of a `CommonName`.
-        thumbnail: FileField for thumbnail image.
         description: Text field for the optional description of a `CommonName`.
         instructions: Text field for optional planting instructions.
         next_page: Radio field to select page to redirect to after submitting
@@ -267,14 +276,6 @@ class AddCommonNameForm(Form):
         validators=[Length(max=508)]
     )
     sunlight = SelectField('Sunlight', choices=SUNLIGHT_CHOICES) 
-    thumbnail = SecureFileField(
-        'Thumbnail Image',
-        validators=[FileAllowed(IMAGE_EXTENSIONS, 'Images only!')]
-    )
-    thumbnail_filename = SecureFilenameField(
-        'Save Thumbnail to Static Files As',
-        validators=[Length(max=254)]
-    )
     description = StrippedTextAreaField(
         'Description',
         validators=[Length(max=5120)]
@@ -359,18 +360,6 @@ class AddCommonNameForm(Form):
                         cn.index.name,
                         url_for('seeds.edit_common_name', cn_id=cn.id))
                 ))
-
-    def validate_thumbnail_filename(self, field):
-        """Raise error if a file with the same (full) name already exists."""
-        if self.thumbnail.data:
-            try:
-                if image_path(field.data).exists():
-                    raise ValidationError(
-                        'A file named "{}" already exists!'
-                        .format(field.data)
-                    )
-            except AttributeError:
-                pass
 
 
 class AddSectionForm(Form):

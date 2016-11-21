@@ -1104,6 +1104,11 @@ class Section(db.Model, TimestampMixin, OrderingListMixin):
     botanical_names = db.Column(db.UnicodeText)
     subtitle = db.Column(db.UnicodeText)
     description = db.Column(db.UnicodeText)
+    thumbnail_id = db.Column(db.Integer, db.ForeignKey('images.id'))
+    thumbnail = db.relationship(
+        'Image',
+        back_populates='sections_with_thumb'
+    )
     parent_id = db.Column(db.Integer, db.ForeignKey('sections.id'))
     parent = db.relationship(
         'Section', remote_side=[id], back_populates='children'
@@ -1218,15 +1223,6 @@ class Section(db.Model, TimestampMixin, OrderingListMixin):
     @property
     def link_html(self):
         return '<a href="{0}">{1}</a>'.format(self.url, self.fullname)
-
-    @property
-    def thumbnail(self):
-        """Return a random thumbnail from cultivars belonging to `Section`."""
-        if self.cultivars:
-            choices = [c for c in self.cultivars if c.thumbnail]
-            if choices:
-                return random.choice(choices).thumbnail
-        return None
 
     @property
     def parent_collection(self):
@@ -1928,6 +1924,10 @@ class Image(db.Model, TimestampMixin):
         back_populates='thumbnail')
     common_names_with_thumb = db.relationship(
         'CommonName',
+        back_populates='thumbnail'
+    )
+    sections_with_thumb = db.relationship(
+        'Section',
         back_populates='thumbnail'
     )
     cultivars_with_thumb = db.relationship(

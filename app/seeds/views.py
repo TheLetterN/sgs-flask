@@ -583,6 +583,15 @@ def add_section(cn_id=None):
             section.subtitle = form.subtitle.data
             messages.append('Subtitle set to: "{0}"'
                             .format(section.subtitle))
+        if form.thumbnail.data:
+            section.thumbnail = Image.with_upload(
+                filename=form.thumbnail_filename.data,
+                upload=form.thumbnail.data
+            )
+            messages.append(
+                'Thumbnail uploaded to: app/static/{}'
+                .format(section.thumbnail.filename)
+            )
         if form.description.data:
             section.description = form.description.data
             messages.append('Description set to: <p>{0}</p>.'

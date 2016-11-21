@@ -362,7 +362,7 @@ class AddCommonNameForm(AddWithThumbnailForm):
                 ))
 
 
-class AddSectionForm(Form):
+class AddSectionForm(AddWithThumbnailForm):
     """Form for adding a `Section` to the database.
 
     Attributes:
@@ -378,7 +378,7 @@ class AddSectionForm(Form):
         validators=[InputRequired(), Length(max=254)]
     )
     subtitle = StrippedStringField(
-        'Subtitle (Leave blank for default.)',
+        'Subtitle',
         validators=[Length(max=254)]
     )
     description = StrippedTextAreaField(

@@ -348,16 +348,23 @@ def relative_to_static(filename):
     ).strip('/')
 
 
-def add_thumbnail(field, obj, messages):
+def add_thumbnail(form, obj, messages):
     """Add a thumbnail to the given object.
 
     Args:
-        field: The FileField to get image from.
+        form: A form with `thumbnail` and `thumbnail_filename` fields.
+        obj: The object to add the thumbnail to.
         messages: The list to append messages to.
     """
-    obj.thumbnail = Image.from_form_field(field)
-    messages.append('Thumbnail uploaded as: "{0}".'
-                    .format(obj.thumbnail.filename))
+    if form.thumbnail.data:
+        obj.thumbnail = Image.with_upload(
+            filename=form.thumbnail_filename.data,
+            upload=form.thumbnail.data
+        )
+        messages.append(
+            'Thumbnail uploaded to: app/static/{}'
+            .format(obj.thumbnail.filename)
+        )
 
 
 def edit_thumbnail(field, obj, messages):
@@ -424,15 +431,7 @@ def add_index():
         db.session.add(index)
         messages.append('Creating new index "{0}":'
                         .format(index.name))
-        if form.thumbnail.data:
-            index.thumbnail = Image.with_upload(
-                filename=form.thumbnail_filename.data,
-                upload=form.thumbnail.data
-            )
-            messages.append(
-                'Thumbnail uploaded to: app/static/{}'
-                .format(index.thumbnail.filename)
-            )
+        add_thumbnail(form, index, messages)
         if form.description.data:
             index.description = form.description.data
             messages.append('Description set to: <p>{0}</p>'
@@ -479,15 +478,7 @@ def add_common_name(idx_id=None):
         if form.list_as.data:
             cn.list_as = form.list_as.data
             messages.append('Will be listed as: <p>{}</p>'.format(cn.list_as))
-        if form.thumbnail.data:
-            cn.thumbnail = Image.with_upload(
-                filename=form.thumbnail_filename.data,
-                upload=form.thumbnail.data
-            )
-            messages.append(
-                'Thumbnail uploaded to: app/static/{}'
-                .format(cn.thumbnail.filename)
-            )
+        add_thumbnail(form, cn, messages)
         if form.botanical_names.data:
             cn.botanical_names = form.botanical_names.data
             messages.append(
@@ -583,15 +574,7 @@ def add_section(cn_id=None):
             section.subtitle = form.subtitle.data
             messages.append('Subtitle set to: "{0}"'
                             .format(section.subtitle))
-        if form.thumbnail.data:
-            section.thumbnail = Image.with_upload(
-                filename=form.thumbnail_filename.data,
-                upload=form.thumbnail.data
-            )
-            messages.append(
-                'Thumbnail uploaded to: app/static/{}'
-                .format(section.thumbnail.filename)
-            )
+        add_thumbnail(form, section, messages)
         if form.description.data:
             section.description = form.description.data
             messages.append('Description set to: <p>{0}</p>.'
@@ -656,15 +639,7 @@ def add_cultivar(cn_id=None):
             messages.append('Set as taxable in California.')
         else:
             cv.taxable = False
-        if form.thumbnail.data:
-            cv.thumbnail = Image.with_upload(
-                filename=form.thumbnail_filename.data,
-                upload=form.thumbnail.data
-            )
-            messages.append(
-                'Thumbnail uploaded to: app/static/{}'
-                .format(cv.thumbnail.filename)
-            )
+        add_thumbnail(form, cv, messages)
         if form.description.data:
             cv.description = form.description.data
             messages.append('Description set to: <p>{0}</p>'

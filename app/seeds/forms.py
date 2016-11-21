@@ -424,7 +424,7 @@ class AddSectionForm(AddWithThumbnailForm):
                 ))
 
 
-class AddCultivarForm(Form):
+class AddCultivarForm(AddWithThumbnailForm):
     """Form for adding a new `Cultivar` to the database.
 
     Attributes:
@@ -433,7 +433,6 @@ class AddCultivarForm(Form):
             other than '<common name> Seeds'.
         botanical_name: String field for botanical name for cultivar.
         section: Select field for optional `Section` for added `Cultivar`.
-        thumbnail: File field for uploading thumbnail image.
         description: Text field for optional `Cultivar` HTML description.
         synonyms: String field for optional synonyms of this cultivar.
         new_until: Date field for optional date to mark added `Cultivar` as new
@@ -551,22 +550,6 @@ class AddCultivarForm(Form):
                 .format(cv.fullname,
                         url_for('seeds.edit_cultivar', cv_id=cv.id))
             ))
-
-    def validate_thumbnail(self, field):
-        """Raise a ValidationError if file exists with thumbnail's name.
-
-        Raises:
-            ValidationError: If an `Image` with  already exists in database.
-        """
-        if field.data:
-            filename = field.data.filename
-            image = Image.query\
-                .filter(Image.filename == filename)\
-                .one_or_none()
-            if image is not None:
-                raise ValidationError('An image named \'{0}\' already exists! '
-                                      'Please choose a different name.'
-                                      .format(image.filename))
 
 
 class AddPacketForm(Form):

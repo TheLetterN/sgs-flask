@@ -25,6 +25,7 @@
     text: "{{ message.replace('"', '\\"').replace('\r', '').replace('\n', '\\\n')|safe }}",
     closeWith: ["button", "click"],
     theme: "relax",
+    timeout: 6000,
     layout: "top",
     type: "{% if category == 'error' %}error{% elif category == 'warning' %}warning{% else %}success{% endif %}"
  });

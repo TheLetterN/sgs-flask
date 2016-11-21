@@ -657,7 +657,14 @@ def add_cultivar(cn_id=None):
         else:
             cv.taxable = False
         if form.thumbnail.data:
-            add_thumbnail(form.thumbnail, cv, messages)
+            cv.thumbnail = Image.with_upload(
+                filename=form.thumbnail_filename.data,
+                upload=form.thumbnail.data
+            )
+            messages.append(
+                'Thumbnail uploaded to: app/static/{}'
+                .format(cv.thumbnail.filename)
+            )
         if form.description.data:
             cv.description = form.description.data
             messages.append('Description set to: <p>{0}</p>'

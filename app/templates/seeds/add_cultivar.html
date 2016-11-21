@@ -56,6 +56,9 @@
               {{ form_field(form.thumbnail)|indent(14)|safe }}
             </li>
             <li>
+              {{ form_field(form.thumbnail_filename)|safe }}
+            </li>
+            <li>
               {{ form_field(form.description)|indent(14)|safe }}
             </li>
             <li>
@@ -100,4 +103,11 @@
           </li>
         </ol>
       </form>
+{% endblock %}
+{% block scripts %}
+    <script>
+        $('#thumbnail').on('input', function () {
+          $('#thumbnail_filename').val('flowers/{{ form.cn.slug }}/' + this.value);
+        });
+    </script>
 {% endblock %}

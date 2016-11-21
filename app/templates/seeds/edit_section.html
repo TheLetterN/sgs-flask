@@ -28,7 +28,7 @@
 {% endblock %}
 {% block main %}
       <h1>Edit Section: {{ section.name }}</h1>
-      <form class="admin" method="POST">
+      <form class="admin" method="POST" enctype="multipart/form-data">
         {{ form.hidden_tag() }}
         <ol>
           <fieldset>
@@ -44,6 +44,16 @@
             </li>
             <li>
               {{ form_field(form.subtitle)|indent(14)|safe }}
+            </li>
+            <li>
+              <div>Current thumbnail:</div>
+              <div><img src="{{ section.thumbnail.url }}" class="existing_image"></div>
+            </li>
+            <li>
+              {{ form_field(form.thumbnail)|safe }}
+            </li>
+            <li>
+              {{ form_field(form.thumbnail_filename)|safe }}
             </li>
             <li>
               {{ form_field(form.description)|indent(14)|safe }}

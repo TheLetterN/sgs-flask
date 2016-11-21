@@ -55,6 +55,9 @@ from .models import (
 from app.seeds.models import USDollar as USDollar_
 
 
+THIS_YEAR = datetime.date.today().year
+
+
 IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png']
 
 
@@ -469,10 +472,6 @@ class AddCultivarForm(AddWithThumbnailForm):
         validators=[Length(max=5120)]
     )
     pos = SelectField('Position', coerce=int)
-    synonyms = StrippedStringField(
-        'Synonyms',
-        validators=[ListItemLength(maximum=254)]
-    )
     gw_common_names_ids = SelectMultipleField(
         'Common Names',
         render_kw={'size': 10},
@@ -486,6 +485,16 @@ class AddCultivarForm(AddWithThumbnailForm):
     gw_cultivars_ids = SelectMultipleField(
         'Other Cultivars',
         render_kw={'size': 10},
+        coerce=int
+    )
+    new_for = SelectField(
+        'New For',
+        choices=[
+            (0, 'N/A'),
+            (THIS_YEAR, str(THIS_YEAR)),
+            (THIS_YEAR + 1, str(THIS_YEAR + 1))
+        ],
+        default=0,
         coerce=int
     )
     new_until = DateField('New until (leave as-is if not new)',
@@ -757,7 +766,7 @@ class EditIndexForm(EditWithThumbnailForm):
             ))
 
 
-class EditCommonNameForm(Form):
+class EditCommonNameForm(EditWithThumbnailForm):
     """Form for editing an existing common name in the database.
 
     Attributes:
@@ -782,10 +791,6 @@ class EditCommonNameForm(Form):
     subtitle = StrippedStringField(
         'Subtitle/Synonyms',
         validators=[Length(max=254)]
-    )
-    thumbnail = SecureFileField(
-        'New Thumbnail',
-        validators=[FileAllowed(IMAGE_EXTENSIONS, 'Images only!')]
     )
     botanical_names = StrippedStringField(
         'Botanical Name(s)',
@@ -884,7 +889,7 @@ class EditCommonNameForm(Form):
                                           'of 64 characters long!')
 
 
-class EditSectionForm(Form):
+class EditSectionForm(EditWithThumbnailForm):
     """Form for editing a Section to the database.
 
     Attributes:
@@ -956,7 +961,7 @@ class EditSectionForm(Form):
             ))
 
 
-class EditCultivarForm(Form):
+class EditCultivarForm(EditWithThumbnailForm):
     """Form for editing an existing cultivar in the database.
 
     Attributes:
@@ -968,7 +973,6 @@ class EditCultivarForm(Form):
             common name.
         subtitle: DBified string field for optional subtitle.
         description: Text field for HTML description of `Cultivar`.
-        thumbnail: File field for thumbnail upload.
         synonyms_string: String field for synonyms of `Cultivar`.
         new_until: Date field for when `Cultivar` will no longer be marked as
             new, if applicable.
@@ -1002,14 +1006,6 @@ class EditCultivarForm(Form):
         validators=[Length(max=5120)]
     )
     pos = SelectField('Position', coerce=int)
-    thumbnail = SecureFileField(
-        'New Thumbnail',
-        validators=[FileAllowed(IMAGE_EXTENSIONS, 'Images only!')]
-    )
-    synonyms_string = StrippedStringField(
-        'Synonyms',
-        validators=[Length(max=5120), ListItemLength(maximum=254)]
-    )
     gw_common_names_ids = SelectMultipleField(
         'Common Names',
         render_kw={'size': 10},
@@ -1025,10 +1021,16 @@ class EditCultivarForm(Form):
         render_kw={'size': 10},
         coerce=int
     )
-    new_until = DateField('New until (leave as-is if not new)',
-                          format='%m/%d/%Y',
-                          default=datetime.date.today(),
-                          validators=[Optional()])
+    new_for = SelectField(
+        'New For',
+        choices=[
+            (0, 'N/A'),
+            (THIS_YEAR, str(THIS_YEAR)),
+            (THIS_YEAR + 1, str(THIS_YEAR + 1))
+        ],
+        default=0,
+        coerce=int
+    )
     featured = BooleanField('Featured')
     active = BooleanField('Actively replenished')
     visible = BooleanField('Visible on auto-generated pages')

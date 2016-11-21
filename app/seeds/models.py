@@ -1425,6 +1425,7 @@ class Cultivar(db.Model, TimestampMixin, OrderingListMixin):
     )
     botanical_name = db.Column(db.UnicodeText)
     vegetable_info = db.Column(db.UnicodeText)
+    organic = db.Column(db.Boolean, default=False)
     description = db.Column(db.UnicodeText)
     new_for = db.Column(db.Integer)
     featured = db.Column(db.Boolean, default=False)
@@ -1516,7 +1517,7 @@ class Cultivar(db.Model, TimestampMixin, OrderingListMixin):
                  section=None,
                  botanical_name=None,
                  description=None,
-                 new_until=None,
+                 new_for=None,
                  active=None,
                  in_stock=None,
                  invisible=None):
@@ -1531,7 +1532,7 @@ class Cultivar(db.Model, TimestampMixin, OrderingListMixin):
         self.section = section
         self.botanical_name = botanical_name
         self.description = description
-        self.new_until = new_until
+        self.new_for = new_for
         if active is not None:
             self.active = active
         if in_stock is not None:

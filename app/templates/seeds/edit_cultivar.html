@@ -60,10 +60,10 @@
               {{ form_field(form.thumbnail)|indent(14)|safe }}
             </li>
             <li>
-              {{ form_field(form.description)|indent(14)|safe }}
+              {{ form_field(form.thumbnail_filename)|safe }}
             </li>
             <li>
-              {{ form_field(form.synonyms_string)|indent(14)|safe }}
+              {{ form_field(form.description)|indent(14)|safe }}
             </li>
             <li>
               <span class="with-tooltip" data-tooltip="Warning: Position is relative to other cultivars in the lowest-level container this cultivar belongs to (common name is the highest container, followed by section/subsection this cultivar is in) so if common name or section are changed, this cultivar will be listed last in whatever its new parent container is, and will need to be edited again if it needs to be repositioned.">{{ form_field(form.pos)|indent(14)|safe }}</span>
@@ -84,7 +84,7 @@
           <fieldset>
             <legend>Status:</legend>
             <li>
-              {{ form_field(form.new_until)|indent(14)|safe }}
+              {{ form_field(form.new_for)|indent(14)|safe }}
             </li>
             <li>
               {{ form_field(form.featured)|indent(14)|safe }}

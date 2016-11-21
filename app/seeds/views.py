@@ -367,33 +367,45 @@ def add_thumbnail(form, obj, messages):
         )
 
 
-def edit_thumbnail(field, obj, messages):
+def edit_thumbnail(form, obj, messages):
     """Edit a thumbnail based on a new upload.
 
     Args:
         field: The FileField the new thumbnail is uploaded with.
         obj: The object with the thumbnail to edit.
         messages: The list to append messages to.
+
+    Returns:
+        bool: Whether or not the thumbnail was edited.
     """
-    if obj.thumbnail and field.data.filename == obj.thumbnail.filename:
-        obj.thumbnail.save_form_field_image(field)
-        messages.append('New thumbnail has same filename as old, so old file '
-                        'been replaced.')
-    else:
-        if obj.thumbnail:
-            old = obj.thumbnail
-            obj.thumbnail = None
-            if hasattr(obj, 'images'):
-                obj.images.append(old)
-                messages.append('Old thumbnail "{0}" moved to images.'
-                                .format(old.filename))
-            else:
-                messages.append('Old thumbnail "{0}" was deleted.'
-                                .format(old.filename))
-                db.session.delete(old)
-            obj.thumbnail = Image.from_form_field(field)
-            messages.append('Uploading new thumbnail as "{0}".'
-                            .format(obj.thumbnail.filename))
+    edited =False
+    if form.thumbnail.data:
+        edited = True
+        if (obj.thumbnail and
+                obj.thumbnail.filename == form.thumbnail_filename.data):
+            form.thumbnail.data.save(str(obj.thumbnail.path))
+            messages.append('Thumbnail file replaced.')
+        else:
+            obj.thumbnail = Image.with_upload(
+                filename=form.thumbnail_filename.data,
+                upload=form.thumbnail.data
+            )
+            messages.append(
+                'New thumbnail uploaded as "{}".'
+                .format(obj.thumbnail.filename)
+            )
+    elif form.thumbnail_filename.data:
+        try:
+            if form.thumbnail_filename.data != obj.thumbnail.filename:
+                edited = True
+                obj.thumbnail.rename(form.thumbnail_filename.data)
+                messages.append(
+                    'Thumbnail renamed as "{}".'
+                    .format(obj.thumbnail.filename)
+                )
+        except AttributeError:
+            pass
+    return edited
 
 
 # Routes
@@ -661,10 +673,6 @@ def add_cultivar(cn_id=None):
                 messages.append(
                     'Will be listed after "{0}".'.format(after.fullname)
                 )
-        if form.synonyms.data:
-            cv.synonyms_string = form.synonyms.data
-            messages.append('Synonyms set to: "{0}".'
-                            .format(cv.synonyms_string))
         if form.gw_common_names_ids.data:
             cv.gw_common_names = CommonName.from_ids(
                 form.gw_common_names_ids.data
@@ -687,11 +695,9 @@ def add_cultivar(cn_id=None):
                 'Grows with sections/series: {}.'
                 .format(list_to_english(s.fullname for s in cv.gw_sections))
             )
-        if form.new_until.data and form.new_until.data > datetime.date.today():
-            cv.new_until = form.new_until.data
-            messages.append('"{0}" will be marked as new until: {1}'
-                            .format(cv.fullname,
-                                    cv.new_until.strftime('%m/%d/%Y')))
+        if form.new_for.data:
+            cv.new_for = form.new_for.data
+            messages.append('Marked as new for: {}'.format(cv.new_for))
         if form.featured.data:
             cv.featured = True
             messages.append('"{0}" will be featured on its common '
@@ -814,32 +820,7 @@ def edit_index(idx_id=None):
             edited = True
             index.name = form.name.data
             messages.append('Name changed to: "{0}".'.format(index.name))
-        if form.thumbnail.data:
-            edited = True
-            if (index.thumbnail and
-                    index.thumbnail.filename == form.thumbnail_filename.data):
-                form.thumbnail.data.save(str(index.thumbnail.path))
-                messages.append('Thumbnail file replaced.')
-            else:
-                index.thumbnail = Image.with_upload(
-                    filename=form.thumbnail_filename.data,
-                    upload=form.thumbnail.data
-                )
-                messages.append(
-                    'New thumbnail uploaded as "{}".'
-                    .format(index.thumbnail.filename)
-                )
-        elif form.thumbnail_filename.data:
-            try:
-                if form.thumbnail_filename.data != index.thumbnail.filename:
-                    edited = True
-                    index.thumbnail.rename(form.thumbnail_filename.data)
-                    messages.append(
-                        'Thumbnail renamed as "{}".'
-                        .format(index.thumbnail.filename)
-                    )
-            except AttributeError:
-                pass
+        edited = edit_thumbnail(form, index, messages) or edited
         if form.description.data != index.description:
             if form.description.data:
                 edited = True
@@ -935,9 +916,7 @@ def edit_common_name(cn_id=None):
             edited = True
             cn.subtitle = form.subtitle.data
             messages.append('Subtitle changed to: "{}".'.format(cn.subtitle))
-        if form.thumbnail.data:
-            edited = True
-            edit_thumbnail(form.thumbnail, cn, messages)
+        edited = edit_thumbnail(form, cn, messages) or edited
         if form.botanical_names.data != cn.botanical_names:
             edited = True
             cn.botanical_names = form.botanical_names.data
@@ -1113,6 +1092,7 @@ def edit_section(section_id=None):
                                 .format(section.subtitle))
             else:
                 messages.append('Subtitle cleared. (Default will be used.)')
+        edited = edit_thumbnail(form, section, messages) or edited
         if not form.description.data:
             form.description.data = None
         if form.description.data != section.description:
@@ -1253,9 +1233,7 @@ def edit_cultivar(cv_id=None):
             cv.name = form.name.data
             messages.append('(Short) Name changed to: "{0}".'
                             .format(cv.name))
-        if form.thumbnail.data:
-            edited = True
-            edit_thumbnail(form.thumbnail, cv, messages)
+        edited = edit_thumbnail(form, cv, messages) or edited
         if not form.description.data:
             form.description.data = None
         if form.description.data != cv.description:
@@ -1267,14 +1245,6 @@ def edit_cultivar(cv_id=None):
             else:
                 cv.description = None
                 messages.append('Description cleared.')
-        if form.synonyms_string.data != cv.synonyms_string:
-            edited = True
-            cv.synonyms_string = form.synonyms_string.data
-            if form.synonyms_string.data:
-                messages.append('Synonyms set to: "{0}".'
-                                .format(cv.synonyms_string))
-            else:
-                messages.append('Synonyms cleared.')
         if set(form.gw_common_names_ids.data) != set(cv.gw_common_names_ids):
             edited = True
             cv.gw_common_names = CommonName.from_ids(
@@ -1329,19 +1299,17 @@ def edit_cultivar(cv_id=None):
                 cv.move_after(prev)
                 messages.append('Will now be listed after "{0}".'
                                 .format(prev.fullname))
-
-        if (not form.new_until.data or
-                form.new_until.data <= datetime.date.today()):
-            form.new_until.data = None
-        if form.new_until.data != cv.new_until:
+        if not form.new_for.data:
+            form.new_for.data = None
+        if form.new_for.data != cv.new_for:
             edited = True
-            if not form.new_until.data:
-                cv.new_until = None
+            if not form.new_for.data:
+                cv.new_for = None
                 messages.append('No longer marked as new.')
             else:
-                cv.new_until = form.new_until.data
-                messages.append('Marked as new until {0}.'
-                                .format(cv.new_until.strftime('%m/%d/%Y')))
+                cv.new_for = form.new_for.data
+                messages.append('Marked as new for {0}.'
+                                .format(cv.new_for))
         if form.featured.data and not cv.featured:
             edited = True
             cv.featured = True

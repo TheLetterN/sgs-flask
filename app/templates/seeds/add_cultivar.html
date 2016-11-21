@@ -62,9 +62,6 @@
               {{ form_field(form.description)|indent(14)|safe }}
             </li>
             <li>
-              {{ form_field(form.synonyms)|indent(14)|safe }}
-            </li>
-            <li>
               <span class="with-tooltip" data-tooltip="Warning: If section is set, this position will not be used. Instead, this cultivar will be listed last in its section until repositioned by editing.">{{ form_field(form.pos)|indent(14)|safe }}</span>
             </li>
           </fieldset>
@@ -83,7 +80,7 @@
           <fieldset>
             <legend>Status:</legend>
             <li>
-              {{ form_field(form.new_until)|indent(14)|safe }}
+              {{ form_field(form.new_for)|indent(14)|safe }}
             </li>
             <li>
               {{ form_field(form.featured)|indent(14)|safe }}

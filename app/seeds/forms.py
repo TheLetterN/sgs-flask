@@ -169,6 +169,7 @@ class USDollar(object):
                 raise ValidationError(self.message)
 
 
+# Add Forms
 class AddWithThumbnailForm(Form):
     """A base for forms for adding data which may include a thumbnail.
     
@@ -201,10 +202,6 @@ class AddWithThumbnailForm(Form):
                     pass
 
 
-# Forms
-#
-# Note: `submit` in forms is always the button for form submission, and `field`
-# in validators is always the field being validated.
 class AddIndexForm(AddWithThumbnailForm):
     """Form for adding a new `Index` to the database.
 
@@ -685,7 +682,36 @@ class AddRedirectForm(Form):
                             self.old_path.data)))
 
 
-class EditIndexForm(Form):
+# Edit Forms
+class EditWithThumbnailForm(Form):
+    """Base form for editing objects that have thumbnails."""
+    thumbnail = SecureFileField(
+        'New Thumbnail',
+        validators=[FileAllowed(IMAGE_EXTENSIONS, 'Images only!')]
+    )
+    thumbnail_filename = SecureFilenameField(
+        'Thumbnail Filename',
+        validators=[Length(max=254)]
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        obj = kwargs['obj']
+        try:
+            if not self.submit.data:
+                self.thumbnail_filename.data = obj.thumbnail.filename
+        except AttributeError:
+            pass
+
+    def validate_thumbnail_filename(self, field):
+        """Raise error if new thumbnail is uploaded w/o a filename."""
+        if self.thumbnail.data and not field.data:
+            raise ValidationError(
+                'Cannot upload new thumbnail without a filename.'
+            )
+
+
+class EditIndexForm(EditWithThumbnailForm):
     """Form for editing an existing `Index` from the database.
 
     Attributes:
@@ -697,14 +723,6 @@ class EditIndexForm(Form):
     name = StrippedStringField(
         'Index',
         validators=[InputRequired(), Length(max=254)]
-    )
-    thumbnail = SecureFileField(
-        'New Thumbnail',
-        validators=[FileAllowed(IMAGE_EXTENSIONS, 'Images only!')]
-    )
-    thumbnail_filename = SecureFilenameField(
-        'Thumbnail Filename',
-        validators=[Length(max=254)]
     )
     description = StrippedTextAreaField(
         'Description',
@@ -725,11 +743,6 @@ class EditIndexForm(Form):
             else:
                 self.pos.data = self.pos.choices[choice_index - 1][0]
         self.pos.choices.pop(choice_index)
-        try:
-            if not self.thumbnail_filename.data:
-                self.thumbnail_filename.data = obj.thumbnail.filename
-        except AttributeError:
-            pass
 
     def validate_name(self, field):
         """Raise ValidationError if changing name would result in clash."""
@@ -742,13 +755,6 @@ class EditIndexForm(Form):
                 .format(idx.name,
                         url_for('seeds.edit_index', idx_id=self.id))
             ))
-
-    def validate_thumbnail_filename(self, field):
-        """Raise error if new thumbnail is uploaded w/o a filename."""
-        if self.thumbnail.data and not field.data:
-            raise ValidationError(
-                'Cannot upload new thumbnail without a filename.'
-            )
 
 
 class EditCommonNameForm(Form):

@@ -136,6 +136,30 @@ def flash_all(messages, category='message'):
             flash(message, category)
 
 
+def edit_optional_data(field, obj, attr, messages):
+    """Edit a column that may contain no data.
+    
+    Attributes:
+        field: The form to get data from.
+        obj: The object to edit.
+        attr: The attribute of the object to edit as a string.
+        messages: A messages list to append message to.
+    """
+    edited = False
+    if field.data:
+        if getattr(obj, attr) != field.data:
+            edited = True
+            setattr(obj, attr, field.data)
+            messages.append(
+                '{} changed to: {}'.format(field.label.text, field.data)
+            )
+    elif getattr(obj, attr) is not None:  # Also remove blank strings.
+            edited = True
+            setattr(obj, attr, None)
+            messages.append('{} cleared.'.format(field.label.text))
+    return edited
+
+
 def redirect_warning(old_path, links):
     """Generate a message warning that a redirect should be created.
 
@@ -826,16 +850,12 @@ def edit_index(idx_id=None):
             index.name = form.name.data
             messages.append('Name changed to: "{0}".'.format(index.name))
         edited = edit_thumbnail(form, index, messages) or edited
-        if form.description.data != index.description:
-            if form.description.data:
-                edited = True
-                index.description = form.description.data
-                messages.append('Description set to: <p>{0}</p>.'
-                                .format(index.description))
-            elif index.description is not None:
-                edited = True
-                index.description = None
-                messages.append('Description cleared.')
+        edited = edit_optional_data(
+            form.description,
+            index,
+            'description',
+            messages
+        ) or edited
         prev = index.previous
         if prev and form.pos.data == -1:  # Moving to first position.
             edited = True
@@ -917,42 +937,37 @@ def edit_common_name(cn_id=None):
             edited = True
             cn.list_as = form.list_as.data
             messages.append('Will now be listed as: "{}".'.format(cn.list_as))
-        if form.subtitle.data != cn.subtitle:
-            edited = True
-            cn.subtitle = form.subtitle.data
-            messages.append('Subtitle changed to: "{}".'.format(cn.subtitle))
+        edited = edit_optional_data(
+            form.subtitle,
+            cn,
+            'subtitle',
+            messages
+        ) or edited
         edited = edit_thumbnail(form, cn, messages) or edited
-        if form.botanical_names.data != cn.botanical_names:
-            edited = True
-            cn.botanical_names = form.botanical_names.data
-            messages.append('Botanical names changed to: "{}".'
-                            .format(cn.botanical_names))
-        if form.sunlight.data != cn.sunlight:
-            edited = True
-            cn.sunlight = form.sunlight.data
-            messages.append('Sunlight changed to: "{}".'.format(cn.sunlight))
-        if not form.description.data:
-            form.description.data = None
-        if form.description.data != cn.description:
-            edited = True
-            if form.description.data:
-                cn.description = form.description.data
-                messages.append('Description changed to: <p>{0}</p>'
-                                .format(cn.description))
-            else:
-                cn.description = None
-                messages.append('Description cleared.')
-        if not form.instructions.data:
-            form.instructions.data = None
-        if form.instructions.data != cn.instructions:
-            edited = True
-            if form.instructions.data:
-                cn.instructions = form.instructions.data
-                messages.append('Planting instructions set to: <p>{0}</p>'
-                                .format(cn.instructions))
-            else:
-                cn.instructions = None
-                messages.append('Planting instructions cleared.')
+        edited = edit_optional_data(
+            form.botanical_names,
+            cn,
+            'botanical_names',
+            messages
+        ) or edited
+        edited = edit_optional_data(
+            form.sunlight,
+            cn,
+            'sunlight',
+            messages
+        ) or edited 
+        edited = edit_optional_data(
+            form.description,
+            cn,
+            'description',
+            messages
+        ) or edited
+        edited = edit_optional_data(
+            form.instructions,
+            cn,
+            'instructions',
+            messages
+        ) or edited
         if idx is cn.index:
             cns = idx.common_names
             cn_index = cns.index(cn)
@@ -1087,28 +1102,19 @@ def edit_section(section_id=None):
             edited = True
             section.name = form.name.data
             messages.append('Name changed to: "{0}"'.format(section.name))
-        if not form.subtitle.data:
-            form.subtitle.data = None
-        if form.subtitle.data != section.subtitle:
-            edited = True
-            section.subtitle = form.subtitle.data
-            if form.subtitle.data:
-                messages.append('Subtitle changed to: "{0}"'
-                                .format(section.subtitle))
-            else:
-                messages.append('Subtitle cleared. (Default will be used.)')
+        edited = edit_optional_data(
+            form.subtitle,
+            section,
+            'subtitle',
+            messages
+        ) or edited
         edited = edit_thumbnail(form, section, messages) or edited
-        if not form.description.data:
-            form.description.data = None
-        if form.description.data != section.description:
-            edited = True
-            if form.description.data:
-                section.description = form.description.data
-                messages.append('Description changed to: <p>{0}</p>'
-                                .format(section.description))
-            else:
-                section.description = None
-                messages.append('Description cleared.')
+        edited = edit_optional_data(
+            form.description,
+            section,
+            'description',
+            messages
+        ) or edited
         if section.common_name is old_cn and section.parent is old_parent:
             secs = section.parent_collection
             s_index = secs.index(section)
@@ -1194,7 +1200,24 @@ def edit_cultivar(cv_id=None):
             cv.common_name = CommonName.query.get(form.common_name_id.data)
             messages.append('Common name changed to: "{0}".'
                             .format(cv.common_name.name))
+        if cv.name != form.name.data:
+            edited = True
+            cv.name = form.name.data
+            messages.append('(Short) Name changed to: "{0}".'
+                            .format(cv.name))
         old_parent_sec = cv.parent_section
+        edited = edit_optional_data(
+            form.subtitle,
+            cv,
+            'subtitle',
+            messages
+        ) or edited
+        edited = edit_optional_data(
+            form.botanical_name,
+            cv,
+            'botanical_name',
+            messages
+        ) or edited
         if not form.section_id.data:
             form.section_id.data = None
         if form.section_id.data != cv.section_id:
@@ -1223,33 +1246,29 @@ def edit_cultivar(cv_id=None):
             else:
                 cv.taxable = False
                 messages.append('No longer set as taxable.')
-        if form.subtitle.data != cv.subtitle:
-            if form.subtitle.data:
-                edited = True
-                cv.subtitle = form.subtitle.data
-                messages.append('Subtitle changed to: "{0}"'
-                                .format(cv.subtitle))
-            elif cv.subtitle:
-                edited = True
-                cv.subtitle = None
-                messages.append('Subtitle cleared. (Default will be used.)')
-        if cv.name != form.name.data:
-            edited = True
-            cv.name = form.name.data
-            messages.append('(Short) Name changed to: "{0}".'
-                            .format(cv.name))
         edited = edit_thumbnail(form, cv, messages) or edited
-        if not form.description.data:
-            form.description.data = None
-        if form.description.data != cv.description:
-            edited = True
-            if form.description.data:
-                cv.description = form.description.data
-                messages.append('Description changed to: <p>{0}</p>'
-                                .format(cv.description))
-            else:
-                cv.description = None
-                messages.append('Description cleared.')
+        edited = edit_optional_data(
+            form.description,
+            cv,
+            'description',
+            messages
+        ) or edited
+        if old_cn is cv.common_name and old_parent_sec is cv.parent_section:
+            pc = cv.parent_collection
+            cv_index = pc.index(cv)
+            if form.pos.data == -1 and cv_index != 0:
+                edited = True
+                pc.insert(0, pc.pop(cv_index))
+                messages.append(
+                    'Will now be listed first in its parent container.'
+                )
+            elif (form.pos.data != -1 and
+                    (cv_index == 0 or form.pos.data != pc[cv_index - 1].id)):
+                edited = True
+                prev = next(cv for cv in pc if cv.id == form.pos.data)
+                cv.move_after(prev)
+                messages.append('Will now be listed after "{0}".'
+                                .format(prev.fullname))
         if set(form.gw_common_names_ids.data) != set(cv.gw_common_names_ids):
             edited = True
             cv.gw_common_names = CommonName.from_ids(
@@ -1288,33 +1307,12 @@ def edit_cultivar(cv_id=None):
                 )
             else:
                 messages.append('Grows with cultivars cleared.')
-        if old_cn is cv.common_name and old_parent_sec is cv.parent_section:
-            pc = cv.parent_collection
-            cv_index = pc.index(cv)
-            if form.pos.data == -1 and cv_index != 0:
-                edited = True
-                pc.insert(0, pc.pop(cv_index))
-                messages.append(
-                    'Will now be listed first in its parent container.'
-                )
-            elif (form.pos.data != -1 and
-                    (cv_index == 0 or form.pos.data != pc[cv_index - 1].id)):
-                edited = True
-                prev = next(cv for cv in pc if cv.id == form.pos.data)
-                cv.move_after(prev)
-                messages.append('Will now be listed after "{0}".'
-                                .format(prev.fullname))
-        if not form.new_for.data:
-            form.new_for.data = None
-        if form.new_for.data != cv.new_for:
-            edited = True
-            if not form.new_for.data:
-                cv.new_for = None
-                messages.append('No longer marked as new.')
-            else:
-                cv.new_for = form.new_for.data
-                messages.append('Marked as new for {0}.'
-                                .format(cv.new_for))
+        edited = edit_optional_data(
+            form.new_for,
+            cv,
+            'new_for',
+            messages
+        ) or edited
         if form.featured.data and not cv.featured:
             edited = True
             cv.featured = True

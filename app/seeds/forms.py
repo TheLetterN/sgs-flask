@@ -792,7 +792,7 @@ class EditCommonNameForm(EditWithThumbnailForm):
     )
     list_as = StrippedStringField(
         'List As',
-        validators=[Length(max=254)]
+        validators=[InputRequired(), Length(max=254)]
     )
     subtitle = StrippedStringField(
         'Subtitle/Synonyms',
@@ -912,7 +912,7 @@ class EditSectionForm(EditWithThumbnailForm):
         validators=[InputRequired(), Length(max=254)]
     )
     subtitle = StrippedStringField(
-        'Subtitle (Leave blank for default.)',
+        'Subtitle',
         validators=[Length(max=254)]
     )
     description = StrippedTextAreaField(

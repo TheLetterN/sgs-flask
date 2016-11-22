@@ -115,11 +115,27 @@ from app.db_helpers import (
 
 
 # Association Tables
-cultivars_to_custom_pages = db.Table(
-    'cultivars_to_custom_pages',
+indexes_to_images = db.Table(
+    'indexes_to_images',
     db.Model.metadata,
-    db.Column('cultivar_id', db.Integer, db.ForeignKey('cultivars.id')),
-    db.Column('custom_pages_id', db.Integer, db.ForeignKey('custom_pages.id'))
+    db.Column('index_id', db.Integer, db.ForeignKey('indexes.id')),
+    db.Column('images_id', db.Integer, db.ForeignKey('images.id'))
+)
+
+
+common_names_to_images = db.Table(
+    'common_names_to_images',
+    db.Model.metadata,
+    db.Column('common_name_id', db.Integer, db.ForeignKey('common_names.id')),
+    db.Column('images_id', db.Integer, db.ForeignKey('images.id'))
+)
+
+
+sections_to_images = db.Table(
+    'sections_to_images',
+    db.Model.metadata,
+    db.Column('section_id', db.Integer, db.ForeignKey('sections.id')),
+    db.Column('images_id', db.Integer, db.ForeignKey('images.id'))
 )
 
 
@@ -128,6 +144,14 @@ cultivars_to_images = db.Table(
     db.Model.metadata,
     db.Column('cultivar_id', db.Integer, db.ForeignKey('cultivars.id')),
     db.Column('images_id', db.Integer, db.ForeignKey('images.id'))
+)
+
+
+cultivars_to_custom_pages = db.Table(
+    'cultivars_to_custom_pages',
+    db.Model.metadata,
+    db.Column('cultivar_id', db.Integer, db.ForeignKey('cultivars.id')),
+    db.Column('custom_pages_id', db.Integer, db.ForeignKey('custom_pages.id'))
 )
 
 
@@ -335,6 +359,11 @@ class Index(db.Model, TimestampMixin):
     # Data Optional
     thumbnail_id = db.Column(db.Integer, db.ForeignKey('images.id'))
     thumbnail = db.relationship('Image', back_populates='indexes_with_thumb')
+    images = db.relationship(
+        'Image',
+        secondary=indexes_to_images,
+        back_populates='indexes'
+    )
     description = db.Column(db.UnicodeText)
     common_names = db.relationship(
         'CommonName',
@@ -620,6 +649,13 @@ def before_index_insert_or_update(mapper, connection, target):
         target.slug = target.make_slug()
 
 
+@event.listens_for(Index.thumbnail, 'set')
+def index_thumbnail_adds_to_images(target, value, oldvalue, initiator):
+    """Add thumbnail to Index.images when setting it."""
+    if value not in target.images:
+        target.images.append(value)
+
+
 class CommonNameQuery(BaseQuery, SearchQueryMixin):
     pass
 
@@ -680,6 +716,11 @@ class CommonName(db.Model, TimestampMixin, OrderingListMixin):
     thumbnail = db.relationship(
         'Image',
         back_populates='common_names_with_thumb'
+    )
+    images = db.relationship(
+        'Image',
+        secondary=common_names_to_images,
+        back_populates='common_names'
     )
     botanical_names = db.Column(db.UnicodeText)
     description = db.Column(db.UnicodeText)
@@ -1040,6 +1081,13 @@ def before_common_name_insert_or_update(mapper, connection, target):
         target.list_as = target.name
 
 
+@event.listens_for(CommonName.thumbnail, 'set')
+def common_name_thumbnail_adds_to_images(target, value, oldvalue, initiator):
+    """Add thumbnail to CommonName.images when setting it."""
+    if value not in target.images:
+        target.images.append(value)
+
+
 class SectionQuery(BaseQuery, SearchQueryMixin):
     pass
 
@@ -1108,6 +1156,11 @@ class Section(db.Model, TimestampMixin, OrderingListMixin):
     thumbnail = db.relationship(
         'Image',
         back_populates='sections_with_thumb'
+    )
+    images = db.relationship(
+        'Image',
+        secondary=sections_to_images,
+        back_populates='sections'
     )
     parent_id = db.Column(db.Integer, db.ForeignKey('sections.id'))
     parent = db.relationship(
@@ -1317,6 +1370,13 @@ def section_parent_no_loop(target, value, oldvalue, initiator):
         else:
             parents.append(p)
             p = p.parent
+
+
+@event.listens_for(Section.thumbnail, 'set')
+def section_thumbnail_adds_to_images(target, value, oldvalue, initiator):
+    """Add thumbnail to Section.images when setting it."""
+    if value not in target.images:
+        target.images.append(value)
 
 
 @event.listens_for(CommonName.sections, 'append')
@@ -1752,6 +1812,13 @@ def before_cultivar_insert_or_update(mapper, connection, target):
         target.slug = target.make_slug()
 
 
+@event.listens_for(Cultivar.thumbnail, 'set')
+def cultivar_thumbnail_adds_to_images(target, value, oldvalue, initiator):
+    """Add thumbnail to Cultivar.images when setting it."""
+    if value not in target.images:
+        target.images.append(value)
+
+
 @event.listens_for(CommonName.cultivars, 'append')
 def common_name_cultivars_appended(target, value, initiator):
     if not value.parent_section:
@@ -1927,14 +1994,30 @@ class Image(db.Model, TimestampMixin):
     # relationships
     indexes_with_thumb = db.relationship(
         'Index',
-        back_populates='thumbnail')
+        back_populates='thumbnail'
+    )
+    indexes = db.relationship(
+        'Index',
+        secondary=indexes_to_images,
+        back_populates='images'
+    )
     common_names_with_thumb = db.relationship(
         'CommonName',
         back_populates='thumbnail'
     )
+    common_names = db.relationship(
+        'CommonName',
+        secondary=common_names_to_images,
+        back_populates='images'
+    )
     sections_with_thumb = db.relationship(
         'Section',
         back_populates='thumbnail'
+    )
+    sections = db.relationship(
+        'Section',
+        secondary=sections_to_images,
+        back_populates='images'
     )
     cultivars_with_thumb = db.relationship(
         'Cultivar',

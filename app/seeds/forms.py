@@ -574,6 +574,10 @@ class AddPacketForm(Form):
         'SKU',
         validators=[InputRequired(), Length(max=32)]
     )
+    product_name = StrippedStringField(
+        'Product Name',
+        validators=[InputRequired(), Length(max=254)]
+    )
     price = StrippedStringField(
         'Price in US dollars',
         validators=[InputRequired(), Length(max=16), USDollar()]
@@ -588,6 +592,8 @@ class AddPacketForm(Form):
     def __init__(self, cultivar, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.cultivar = cultivar
+        if not self.submit.data:
+            self.product_name.data = self.cultivar.product_name
 
     def validate_sku(self, field):
         """Raise ValidationError if sku already exists in database.
@@ -1137,6 +1143,10 @@ class EditPacketForm(Form):
     sku = StrippedStringField(
         'SKU',
         validators=[InputRequired(), Length(max=32)]
+    )
+    product_name = StrippedStringField(
+        'Product Name',
+        validators=[InputRequired(), Length(max=254)]
     )
     price = StrippedStringField(
         'Price in US dollars',

@@ -752,9 +752,14 @@ def add_packet(cv_id=None):
         db.session.add(packet)
         messages.append('Creating packet with SKU #{0} for cultivar "{1}":'
                         .format(packet.sku, cv.fullname))
+        packet.product_name = form.product_name.data
+        messages.append(
+            'Product name set to: "{}".'.format(packet.product_name)
+        )
         packet.price = form.price.data
         messages.append('Price set to: ${0}.'.format(packet.price))
-        #TODO: Amount
+        packet.amount = form.amount.data
+        messages.append('Amount of seeds: {}'.format(packet.amount))
         db.session.commit()
         messages.append('New packet with SKU #{0} added to the database.'
                         .format(packet.sku))
@@ -1403,7 +1408,6 @@ def edit_packet(pkt_id=None):
             packet.cultivar = Cultivar.query.get(form.cultivar_id.data)
             messages.append('Cultivar changed to: "{0}".'
                             .format(packet.cultivar.fullname))
-        form.sku.data = form.sku.data.strip()
         if form.sku.data != packet.sku:
             edited = True
             packet.sku = form.sku.data
@@ -1412,8 +1416,11 @@ def edit_packet(pkt_id=None):
         if dec_p != packet.price:
             edited = True
             packet.price = dec_p
-            messages.append('Price set to: "${0}".'.format(packet.price))
-        #TODO: Amount
+            messages.append('Price changed to: "${0}".'.format(packet.price))
+        if form.amount.data != packet.amount:
+            edited = True
+            packet.amount = form.amount.data
+            messages.append('Amount changed to: {}'.format(packet.amount))
         if edited:
             db.session.commit()
             messages.append('Changes to "{0}" committed to the database.'

@@ -1608,6 +1608,11 @@ class Cultivar(db.Model, TimestampMixin, OrderingListMixin):
     def gw_links(self):
         return list_to_english((gw.link_html for gw in self.grows_with))
 
+    @property
+    def product_name(self):
+        """Return a default product name for given `Cultivar`."""
+        return '{}, {}'.format(self.common_name.name, self.name).upper()
+
     @classmethod
     def from_ids(cls, ids):
         """Get `Cultivar` instances corresponding to `ids`.

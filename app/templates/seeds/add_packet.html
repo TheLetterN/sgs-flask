@@ -35,13 +35,13 @@
             {{ form_field(form.sku)|indent(12)|safe }}
           </li>
           <li>
-            {{ form_field(form.price)|indent(12)|safe }}
+            {{ form_field(form.product_name)|safe }}
           </li>
           <li>
-            {{ form_field(form.quantity)|indent(12)|safe }}
+            {{ form_field(form.price, placeholder='e.g. 3.50')|safe }}
           </li>
           <li>
-            {{ form_field(form.units)|indent(12)|safe }}
+            {{ form_field(form.amount, placeholder='e.g. 100 seeds, 1/2 oz, 2 grams')|safe }}
           </li>
           <li>
             {{ form_field(form.again)|indent(12)|safe }}

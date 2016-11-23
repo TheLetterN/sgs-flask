@@ -14,21 +14,21 @@ Copyright Swallowtail Garden Seeds, Inc
 #}
 {# nav needs to be indented 6 spaces fit in with page formatting. #}
 <div class="Main_nav" id="Main_nav">
-	<a class="Main_nav-show-hide-links" href="#Main_nav" title="Show Navigation"><span class="menu">&#9776;&nbsp;</span> Show Menu</a>
-	<a class="Main_nav-show-hide-links" id="hide" href="#hide" title="Hide Navigation"><span class="menu">&#9776;&nbsp;</span> Hide Menu</a>
-	<ul class="Main_nav-links">
-		{% for i in nav_data %}
+  <a class="Main_nav-show-hide-links" href="#Main_nav" title="Show Navigation"><span class="menu">&#9776;&nbsp;</span> Show Menu</a>
+  <a class="Main_nav-show-hide-links" id="hide" href="#hide" title="Hide Navigation"><span class="menu">&#9776;&nbsp;</span> Hide Menu</a>
+  <ul class="Main_nav-links">
+    {% for i in nav_data %}
     <li class="Main_nav-{{ i['Slug'][:3] }}-lnk  Main_nav-not-shown-links"><a href="{{ i['URL'] }}">{{ i['Header'] }}</a>
       {# Subnav commented out until ready to style
       {% if i['Common Names'] %}
-			<ul class="Main_nav-drop-down-menu">
-				{% for cn in i['Common Names'] %}
-				<li class="Main_nav-drop-down-items"><a href="{{ cn['URL'] }}">{{ cn['Name'] }}</a></li>
-				{% endfor %}
-			</ul>
+      <ul class="Main_nav-drop-down-menu">
+        {% for cn in i['Common Names'] %}
+        <li class="Main_nav-drop-down-items"><a href="{{ cn['URL'] }}">{{ cn['Name'] }}</a></li>
+        {% endfor %}
+      </ul>
       {% endif %}
       #}
-		</li>
-		{% endfor %}
-	</ul>
+    </li>
+    {% endfor %}
+  </ul>
 </div>

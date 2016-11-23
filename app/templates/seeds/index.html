@@ -47,7 +47,7 @@ a.move_button:hover{opacity:1;transition:.25s;}
 {% block main %}
 {% if current_user.can(Permission.MANAGE_SEEDS) %}
 <div class="admin">
-	<a href="{{ url_for('seeds.edit_index', idx_id=index.id) }}">Edit {{ index.name }}</a> | <a href="{{ url_for('seeds.remove_index', idx_id=index.id) }}">Remove {{ index.name }}</a> | <a href="{{ url_for('seeds.add_common_name', idx_id=index.id) }}">Add a Common Name to {{ index.name }}</a>
+  <a href="{{ url_for('seeds.edit_index', idx_id=index.id) }}">Edit {{ index.name }}</a> | <a href="{{ url_for('seeds.remove_index', idx_id=index.id) }}">Remove {{ index.name }}</a> | <a href="{{ url_for('seeds.add_common_name', idx_id=index.id) }}">Add a Common Name to {{ index.name }}</a>
 </div>
 {% endif %}
 <h1 class="Index_pages-h1">{{ index.header }}</h1>
@@ -55,11 +55,11 @@ a.move_button:hover{opacity:1;transition:.25s;}
 {{ index.description|safe }}
 {% endif %}
 <div class="Index_pages-image-links-wrapper">
-	{% if index.common_names %}
-	{% for cn in index.common_names %}
-	{% if current_user.can(Permission.MANAGE_SEEDS) %}<span class="move_button_wrapper"><a class="move_button backward" title="move backward" href="{{ url_for('seeds.move_common_name', cn_id=cn.id, delta=-1, origin=request.path) }}">&#9664;</a>{% endif %}<a class="Index_pages-image-thumbs" href="{{ url_for('seeds.common_name', idx_slug=index.slug, cn_slug=cn.slug) }}"><figure><img src="{% if cn.thumbnail %}{{ cn.thumbnail.url }}{% else %}{{ url_for('static', filename='images/assets/default_thumb.jpg') }}{% endif %}" alt="{{ cn.name }}"><figcaption>{{ cn.name }} <span class="fig-caption-seeds-block">seeds</span></figcaption></figure></a>{% if current_user.can(Permission.MANAGE_SEEDS) %}<a class="move_button forward" title="move forward" href="{{ url_for('seeds.move_common_name', cn_id=cn.id, delta=1, origin=request.path) }}">&#9654;</a></span>{% endif %}
-	{% endfor %}
-	{% endif %}
+  {% if index.common_names %}
+  {% for cn in index.common_names %}
+  {% if current_user.can(Permission.MANAGE_SEEDS) %}<span class="move_button_wrapper"><a class="move_button backward" title="move backward" href="{{ url_for('seeds.move_common_name', cn_id=cn.id, delta=-1, origin=request.path) }}">&#9664;</a>{% endif %}<a class="Index_pages-image-thumbs" href="{{ url_for('seeds.common_name', idx_slug=index.slug, cn_slug=cn.slug) }}"><figure><img src="{% if cn.thumbnail %}{{ cn.thumbnail.url }}{% else %}{{ url_for('static', filename='images/assets/default_thumb.jpg') }}{% endif %}" alt="{{ cn.name }}"><figcaption>{{ cn.name }} <span class="fig-caption-seeds-block">seeds</span></figcaption></figure></a>{% if current_user.can(Permission.MANAGE_SEEDS) %}<a class="move_button forward" title="move forward" href="{{ url_for('seeds.move_common_name', cn_id=cn.id, delta=1, origin=request.path) }}">&#9654;</a></span>{% endif %}
+  {% endfor %}
+  {% endif %}
 </div>
 {% endblock %}
 {% block detailed_nav %}

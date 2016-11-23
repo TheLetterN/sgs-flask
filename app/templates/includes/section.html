@@ -17,36 +17,36 @@ Copyright Swallowtail Garden Seeds, Inc
 {% if sub %}{% set class_prefix = 'Series' %}{% else %}{% set class_prefix = 'Section' %}{% endif %}
 <section class="{{ class_prefix|lower }}-{{ sec.slug }}">
   <div class="{{ class_prefix }}" id="{{ sec.slug }}">
-		<h2 class="{{ class_prefix }}_h2">{{ sec.name }}
+    <h2 class="{{ class_prefix }}_h2">{{ sec.name }}
       {% if sec.subtitle %}
       <em class="{{ class_prefix }}_em">{{ sec.subtitle }}</em>
       {% endif %}
-			{% if sec.botanical_names %}
-			<em class="{{ class_prefix }}_em2">{{ sec.botanical_names }}</em>
-			{% endif %}
-		</h2>
+      {% if sec.botanical_names %}
+      <em class="{{ class_prefix }}_em2">{{ sec.botanical_names }}</em>
+      {% endif %}
+    </h2>
   {% if current_user.can(Permission.MANAGE_SEEDS) %}
   <div class="admin">
     <a title="move up/backward" href="{{ url_for('seeds.move_section', section_id=sec.id, delta=-1, next=request.path + '#main') }}">&#9650;</a> | <a href="{{ url_for('seeds.edit_section', section_id=sec.id) }}">Edit {{ sec.name }}</a> | <a href="{{ url_for('seeds.remove_section', section_id=sec.id) }}">Remove {{ sec.name }}</a> | <a title="move down/forward" href="{{ url_for('seeds.move_section', section_id=sec.id, delta=1, next=request.path + '#main') }}">&#9660;</a>
   </div>
   {% endif %}
-		{% if sec.description %}
-		{{ sec.description|safe }}
-		{% endif %}
-	</div>
-	<div class="{{ class_prefix }}_cultivars">
-		{% for cv in sec.child_cultivars %}
-		{% if not cv.featured %}
-		{{ cultivar_box(cv)|indent(ind + 2)|safe }}
-		{% endif %}
-		{% endfor %}
-	</div>
-	{% if sec.children %}
-	{% for subsec in sec.children %}
-	{% if subsec.has_public_cultivars or current_user.can(Permission.MANAGE_SEEDS) %}
-	{{ section(subsec, ind=ind + 2, sub=true)|indent(ind + 2)|safe }}
-	{% endif %}
-	{% endfor %}
-	{% endif %}
+    {% if sec.description %}
+    {{ sec.description|safe }}
+    {% endif %}
+  </div>
+  <div class="{{ class_prefix }}_cultivars">
+    {% for cv in sec.child_cultivars %}
+    {% if not cv.featured %}
+    {{ cultivar_box(cv)|indent(ind + 2)|safe }}
+    {% endif %}
+    {% endfor %}
+  </div>
+  {% if sec.children %}
+  {% for subsec in sec.children %}
+  {% if subsec.has_public_cultivars or current_user.can(Permission.MANAGE_SEEDS) %}
+  {{ section(subsec, ind=ind + 2, sub=true)|indent(ind + 2)|safe }}
+  {% endif %}
+  {% endfor %}
+  {% endif %}
 </section>
 {% endmacro %}

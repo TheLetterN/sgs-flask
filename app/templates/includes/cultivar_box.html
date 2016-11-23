@@ -16,27 +16,27 @@ Copyright Swallowtail Garden Seeds, Inc
 {% macro cultivar_box(cultivar) %}
 {% if cultivar.active and cultivar.visible or current_user.can(Permission.MANAGE_SEEDS) %}
 <div class="Cultivar">
-	<img alt="{{ cultivar.fullname }}" class="Cultivar_img" src="{% if cultivar.thumbnail %}{{ cultivar.thumbnail.url }}{% else %}{{ url_for('static', filename='images/assets/default_thumb.jpg') }}{% endif %}">
+  <img alt="{{ cultivar.fullname }}" class="Cultivar_img" src="{% if cultivar.thumbnail %}{{ cultivar.thumbnail.url }}{% else %}{{ url_for('static', filename='images/assets/default_thumb.jpg') }}{% endif %}">
   {% if cultivar.favorite %}<span class="Cultivar_span_best_seller"></span>{% endif %}
-	{% if cultivar.new_for %}<span class="Cultivar_span_new">New for {{ cultivar.new_for }}</span>{% endif %}
-	<small class="Cultivar_small">{% if cultivar.packets[0] %}{{ cultivar.packets[0].sku }}{% endif %}</small>
+  {% if cultivar.new_for %}<span class="Cultivar_span_new">New for {{ cultivar.new_for }}</span>{% endif %}
+  <small class="Cultivar_small">{% if cultivar.packets[0] %}{{ cultivar.packets[0].sku }}{% endif %}</small>
   <h3 class="Cultivar_h3" id="{{ cultivar.slug }}">{{ cultivar.name|safe }}
-		{% if cultivar.subtitle %}<em class="Cultivar_em">{{ cultivar.subtitle }}</em>{% endif %}
-		{% if cultivar.botanical_name %}
-		<em class="Cultivar_em2">{{ cultivar.botanical_name|safe }}</em>
-		{% endif %}
-		{% if cultivar.vegetable_info %}
+    {% if cultivar.subtitle %}<em class="Cultivar_em">{{ cultivar.subtitle }}</em>{% endif %}
+    {% if cultivar.botanical_name %}
+    <em class="Cultivar_em2">{{ cultivar.botanical_name|safe }}</em>
+    {% endif %}
+    {% if cultivar.vegetable_info %}
     <em class="Cultivar_em2">
       {{ cultivar.vegetable_info|safe }}
-		</em>
-		{% endif %}
+    </em>
+    {% endif %}
   </h3>
   {% if cultivar.organic %}
   <h4 class="Cultivar_organic">Organically grown.</h4>
   {% endif %}
-	{% if cultivar.description %}
-		{{ cultivar.description|safe }}
-		{% endif %}
+  {% if cultivar.description %}
+    {{ cultivar.description|safe }}
+    {% endif %}
     {% if cultivar.grows_with %}
   <p class="Cultivar_p">
     Grows nicely with {{ cultivar.gw_links|safe }}.
@@ -55,48 +55,48 @@ Copyright Swallowtail Garden Seeds, Inc
   {# END Snipcart add to cart form #}
     {% endif %}
   {# Cultivar admin below #}
-	{% if current_user.can(Permission.MANAGE_SEEDS) %}
+  {% if current_user.can(Permission.MANAGE_SEEDS) %}
   {% macro flipper(attr) %}
   {{ cultivar.fullname }} is <em class="status-{% if cultivar[attr] %}true{% else %}false{% endif %}">{% if not cultivar[attr] %}not {% endif %}{{ attr }}</em><a class="toggle-{% if cultivar[attr] %}false{% else %}true{% endif %}" href="{{ url_for('seeds.flip_cultivar_bool', cv_id=cultivar.id, attr=attr, origin=request.path + '#' + cultivar.slug) }}">Set as {% if cultivar[attr] %}not {% endif %}{{ attr }}</a>
   {% endmacro %}
-	<div class="cultivar-admin">
-		<h3>ADMIN - Options for {{ cultivar.fullname }}:</h3>
-		<ul class="cultivar-status">
-			<li>
+  <div class="cultivar-admin">
+    <h3>ADMIN - Options for {{ cultivar.fullname }}:</h3>
+    <ul class="cultivar-status">
+      <li>
         {{ flipper('featured') }}
-			</li>
+      </li>
       <li>
         {{ flipper('favorite') }}
       </li>
-			<li>
+      <li>
         {{ flipper('in stock') }}
-			</li>
-			<li>
+      </li>
+      <li>
         {{ flipper('active') }}
-			</li>
-			<li>
+      </li>
+      <li>
         {{ flipper('visible') }}
-			</li>
+      </li>
       <li>
         {{ flipper('taxable') }}
       </li>
-		</ul>
+    </ul>
     <a title="move up/backward" href="{{ url_for('seeds.move_cultivar', cv_id=cultivar.id, delta=-1, origin=request.path + '#{}'.format(cultivar.slug)) }}">&#9650;</a> | <a href="{{ url_for('seeds.edit_cultivar', cv_id=cultivar.id) }}">Edit {{ cultivar.fullname }}</a> | <a href="{{ url_for('seeds.remove_cultivar', cv_id=cultivar.id) }}">Remove {{ cultivar.fullname }}</a> | <a title="move down/forward" href="{{ url_for('seeds.move_cultivar', cv_id=cultivar.id, delta=1, origin=request.path + '#{}'.format(cultivar.slug)) }}">&#9660;</a>
-		<div class="packet-admin">
-			<h4>Packets for {{ cultivar.fullname }}:</h4>
-			{% if cultivar.packets %}
-			<ul class="packet-options">
-				{% for packet in cultivar.packets %}
-				<li>
-					{{ packet.info }}: <a href="{{ url_for('seeds.edit_packet', pkt_id=packet.id) }}">Edit</a> | <a href="{{ url_for('seeds.remove_packet', pkt_id=packet.id) }}">Remove</a>
-				</li>
-				{% endfor %}
-			</ul>
-			{% endif %}
-			<a href="{{ url_for('seeds.add_packet', cv_id=cultivar.id) }}">Add Packet</a>
-		</div>
-	</div>
-	{% endif %}
+    <div class="packet-admin">
+      <h4>Packets for {{ cultivar.fullname }}:</h4>
+      {% if cultivar.packets %}
+      <ul class="packet-options">
+        {% for packet in cultivar.packets %}
+        <li>
+          {{ packet.info }}: <a href="{{ url_for('seeds.edit_packet', pkt_id=packet.id) }}">Edit</a> | <a href="{{ url_for('seeds.remove_packet', pkt_id=packet.id) }}">Remove</a>
+        </li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+      <a href="{{ url_for('seeds.add_packet', cv_id=cultivar.id) }}">Add Packet</a>
+    </div>
+  </div>
+  {% endif %}
   <hr class="style-hr">
 </div>
 {% endif %}

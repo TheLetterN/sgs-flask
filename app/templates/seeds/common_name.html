@@ -30,19 +30,19 @@ Copyright Swallowtail Garden Seeds, Inc
 {% endif %}
 {# BEGIN common name page header #}
 <div class="Header">
-	<h1 class="Header_h1">{{ cn.header }}</h1>
-	{% if cn.subtitle %}
-	<h2 class="Header_h2">{{ cn.subtitle }}</h2>
-	{% endif %}
-	{% if cn.botanical_names %}
-	<h3 class="Header_h3">{{ cn.botanical_names|safe }}</h3>
-	{% endif %}
-	{% if cn.instructions %}
+  <h1 class="Header_h1">{{ cn.header }}</h1>
+  {% if cn.subtitle %}
+  <h2 class="Header_h2">{{ cn.subtitle }}</h2>
+  {% endif %}
+  {% if cn.botanical_names %}
+  <h3 class="Header_h3">{{ cn.botanical_names|safe }}</h3>
+  {% endif %}
+  {% if cn.instructions %}
   <p class="Header_p{% if cn.sunlight %} {{ cn.sunlight }}{% endif %}"><a href="#how-to-plant-{{ cn.slug }}-seeds">How to plant {{ cn.arranged_name }} seeds</a></p>
-	{% endif %}
-	{% if cn.description %}
-	<div class="Introduction">{{ cn.description|safe }}</div>
-	{% endif %}
+  {% endif %}
+  {% if cn.description %}
+  <div class="Introduction">{{ cn.description|safe }}</div>
+  {% endif %}
     {% if cn.noship_states %}
     <span class="Cultivar_do_not_ship">{{ cn.noship_states_html|safe }}</span>
     {% endif %} 
@@ -50,9 +50,9 @@ Copyright Swallowtail Garden Seeds, Inc
 {# END common name page header #}
 {% if featured %}
 <div class="featured">
-	{% for cv in featured %}
-	{{ cultivar_box(cv)|indent(8)|safe }}
-	{% endfor %}
+  {% for cv in featured %}
+  {{ cultivar_box(cv)|indent(8)|safe }}
+  {% endfor %}
 </div>
 {% endif %}
 {% if cn.child_sections %}
@@ -65,16 +65,16 @@ Copyright Swallowtail Garden Seeds, Inc
 {% if individuals %}
 {% if cn.sections %}
 <div class="cn-group-header cn-individuals-header">
-	<h2 id="individual-varieties">Individual {{ cn.arranged_name }} Varieties</h2>
-	<a class="to-planting-instructions" href="#{{ cn.slug }}-instructions">How to plant {{ cn.arranged_name }} seeds</a>
+  <h2 id="individual-varieties">Individual {{ cn.arranged_name }} Varieties</h2>
+  <a class="to-planting-instructions" href="#{{ cn.slug }}-instructions">How to plant {{ cn.arranged_name }} seeds</a>
 </div>
 {% endif %}
 <div class="cultivar-group cn-individual-cultivars">
-	{% for cv in individuals %}
-	{% if not cv.featured %}
-	{{ cultivar_box(cv)|indent(8)|safe }}
-	{% endif %}
-	{% endfor %}
+  {% for cv in individuals %}
+  {% if not cv.featured %}
+  {{ cultivar_box(cv)|indent(8)|safe }}
+  {% endif %}
+  {% endfor %}
 </div>
 {% endif %}
 {% set gws = cn.grows_with %}
@@ -94,8 +94,8 @@ Copyright Swallowtail Garden Seeds, Inc
 {% endif %}
 {% if cn.instructions %}
 <div id="how-to-plant-{{ cn.slug }}-seeds" class="Growing">
-	<h2 class="Growing_h2">How to Plant {{ cn.arranged_name }} Seeds</h2>
-		{{ cn.instructions|indent(6)|safe }}
+  <h2 class="Growing_h2">How to Plant {{ cn.arranged_name }} Seeds</h2>
+    {{ cn.instructions|indent(6)|safe }}
 </div>
 {% endif %}
 {% endblock %}

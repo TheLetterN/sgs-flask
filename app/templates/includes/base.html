@@ -20,15 +20,15 @@ Copyright Swallowtail Garden Seeds, Inc
 {% set nav_data = load_nav_data() %}
 <!DOCTYPE html>
 <html lang="en">
-	<head>
-		<meta charset="utf-8">
-		<link rel='stylesheet' href='https://fonts.googleapis.com/css?family=Droid+Serif:400,700,400italic,700italic%7cDroid+Sans:400,700'>
-		<meta name="viewport" content="width=device-width, initial-scale=1">
-		<link rel="shortcut icon" href="{{ url_for('static', filename='images/assets/favicon.ico') }}">
-		{% if not config['ALLOW_CRAWLING'] %}
+  <head>
+    <meta charset="utf-8">
+    <link rel='stylesheet' href='https://fonts.googleapis.com/css?family=Droid+Serif:400,700,400italic,700italic%7cDroid+Sans:400,700'>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='images/assets/favicon.ico') }}">
+    {% if not config['ALLOW_CRAWLING'] %}
     <!-- ALLOW_CRAWLING is set to False. Please set it to True if you want pages to be crawled by robots! -->
-		<meta name="robots" content="noindex, nofollow">
-		{% endif %}
+    <meta name="robots" content="noindex, nofollow">
+    {% endif %}
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.2/jquery.min.js"></script>
     {% if config['USE_SNIPCART'] %}
     <script data-api-key="{{ config['SNIPCART_KEY'] }}" data-cart-custom1-name="Shipping Comments" data-cart-custom1-type="textarea" id="snipcart" src="https://cdn.snipcart.com/scripts/2.0/snipcart.js"></script>
@@ -42,22 +42,22 @@ Copyright Swallowtail Garden Seeds, Inc
       setupSnip();
     </script>
     {% endif %}
-		{% block head %}{% endblock %}
-		<link rel="stylesheet" href="{{ url_for('static', filename='css/present.css') }}">
-		<link rel="stylesheet" href="{{ url_for('static', filename='css/database.css') }}">
-	</head>
+    {% block head %}{% endblock %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/present.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/database.css') }}">
+  </head>
   <body class="twoColFixLtHdr">
     <div id="container">
     {# BEGIN Page Header #}
-		<div class="Page_header">
+    <div class="Page_header">
       <p class="Page_header-contact-bar">Toll Free: 1-877-489-7333 <br class="no-desktop-display"><a class="Page_header-contact-bar-email-link" href="mailto:info@swallowtailgardenseeds.com">info@swallowtailgardenseeds.com</a>
 </p>
 <a href="{{ url_for('seeds.home') }}"><img class="Page_header-logo" src="{{ url_for('static', filename='images/assets/sgs-banner-5.png') }}" alt="Swallowtail Garden Seeds"></a>
 <div class="seal-and-cart">
-	<div class="AuthorizeNetSeal">
+  <div class="AuthorizeNetSeal">
 <script type="text/javascript">var ANS_customer_id="0f84e04a-1465-4077-ab7b-944e58fc6b0c";</script>
 <script type="text/javascript" src="//verify.authorize.net/anetseal/seal.js"></script>
-	</div>
+  </div>
     {% if config['USE_SNIPCART'] %}
   <a rel="nofollow" class="snipcart-checkout" href="#"><img class="Page_header-cart" src="{{ url_for('static', filename='images/assets/cart.png') }}" alt="View Your Shopping Cart" title="View Your Shopping Cart"></a>
     {% endif %}
@@ -65,52 +65,52 @@ Copyright Swallowtail Garden Seeds, Inc
 <div class="Google_search"><div class="gcse-searchbox-only"></div></div>
     </div>
     {# END Page Header #}
-		{% include "includes/main_nav.html" %}
-		{% block subnav %}{% endblock %}
-		{% include "includes/admin_nav.html" -%}
+    {% include "includes/main_nav.html" %}
+    {% block subnav %}{% endblock %}
+    {% include "includes/admin_nav.html" -%}
     <div>
       <p class="Global_message-box">Orders placed today ship {{ ship_date }}.{% if current_user.can(Permission.MANAGE_SEEDS) %} [<a href='{{ url_for('seeds.edit_ship_date', origin=request.path) }}'>edit</a>]{% endif %}<span> | Shipping $4.95 U.S. | $6.95 international. | <span>Free shipping - U.S. orders over $40.</span></span>
     </div>
-		<div id="main" class="group" role="main">
-			{% if crumbs %}
-			{% include "includes/breadcrumbs.html" %}
-			{% endif %}
+    <div id="main" class="group" role="main">
+      {% if crumbs %}
+      {% include "includes/breadcrumbs.html" %}
+      {% endif %}
       {% include "includes/flashed.html" %}
-			{% block main %}
-			{% endblock %}
+      {% block main %}
+      {% endblock %}
       <!--temp fix for margin left issue on pages without multi-line <p>s-->
       <div>
         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       </div>
-		</div>
-    <div class="Sidebar">
-			<div class="Sidebar_social">
-				<a href="https://www.facebook.com/swallowtailgardenseeds" target="_blank">
-					<img class="Sidebar_social_image" src="{{ url_for('static', filename='images/assets/social/facebook.jpg') }}" alt="Like us on Facebook."></a>
-				<a href="https://www.pinterest.com/swallowtailseed/" target="_blank">
-					<img class="Sidebar_social_image" src="{{ url_for('static', filename='images/assets/social/pinterest.jpg') }}" alt="Check out our pins and boards on Pinterest."></a>
-				<a href="https://www.flickr.com/photos/swallowtailgardenseeds/" target="_blank">
-					<img class="Sidebar_social_image" src="{{ url_for('static', filename='images/assets/social/flickr.jpg') }}" alt="View our photos on Flickr."></a>
-				<a href="https://twitter.com/swallowtailg" target="_blank">
-					<img class="Sidebar_social_image" src="{{ url_for('static', filename='images/assets/social/twitter.jpg') }}" alt="Follow us on Twitter."></a>
-				<a href="https://www.instagram.com/swallowtailgardenseeds/" target="_blank">
-					<img class="Sidebar_social_image" src="{{ url_for('static', filename='images/assets/social/instagram.jpg') }}" alt="Follow us on Instagram."></a>
-			</div>
-			{% from 'includes/make_detailed_nav.html' import make_detailed_nav %}
-			{% block detailed_nav %}
-			{{ make_detailed_nav(nav_data) }}
-			{% endblock %}
     </div>
-		<div class="Footer">
-			<a class="Footer_site-map-link" href="{{ url_for('seeds.static_html', page='site-map',  _external=True) }}">Site Map</a>
-			<p class="Footer_copyright_p">Copyright&nbsp;&#169;&nbsp;2016 Swallowtail&nbsp;Garden&nbsp;Seeds - All&nbsp;Rights&nbsp;Reserved
-			</p>
-			<p class="Footer_copyright_p Footer_copyright_p2">Copyright pertains to all images, none of which may be reproduced in any form without<br class="no-mobile-display"> the expressed written consent of Swallowtail Garden Seeds.
-			</p>
-			<a href="https://seal.godaddy.com/verifySeal?sealID=FgdBKY27IIpHp2q5LkxzgzlbX27e0tqGEF9J5PgG2j7VUTmpgtsRrz" onclick="return popitup('https://seal.godaddy.com/verifySeal?sealID=FgdBKY27IIpHp2q5LkxzgzlbX27e0tqGEF9J5PgG2j7VUTmpgtsRrz')"><img class="Footer_siteseal" src="https://www.swallowtailgardenseeds.com/image-assets/site-seal.gif" alt="Go Daddy Site Seal"></a>
+    <div class="Sidebar">
+      <div class="Sidebar_social">
+        <a href="https://www.facebook.com/swallowtailgardenseeds" target="_blank">
+          <img class="Sidebar_social_image" src="{{ url_for('static', filename='images/assets/social/facebook.jpg') }}" alt="Like us on Facebook."></a>
+        <a href="https://www.pinterest.com/swallowtailseed/" target="_blank">
+          <img class="Sidebar_social_image" src="{{ url_for('static', filename='images/assets/social/pinterest.jpg') }}" alt="Check out our pins and boards on Pinterest."></a>
+        <a href="https://www.flickr.com/photos/swallowtailgardenseeds/" target="_blank">
+          <img class="Sidebar_social_image" src="{{ url_for('static', filename='images/assets/social/flickr.jpg') }}" alt="View our photos on Flickr."></a>
+        <a href="https://twitter.com/swallowtailg" target="_blank">
+          <img class="Sidebar_social_image" src="{{ url_for('static', filename='images/assets/social/twitter.jpg') }}" alt="Follow us on Twitter."></a>
+        <a href="https://www.instagram.com/swallowtailgardenseeds/" target="_blank">
+          <img class="Sidebar_social_image" src="{{ url_for('static', filename='images/assets/social/instagram.jpg') }}" alt="Follow us on Instagram."></a>
+      </div>
+      {% from 'includes/make_detailed_nav.html' import make_detailed_nav %}
+      {% block detailed_nav %}
+      {{ make_detailed_nav(nav_data) }}
+      {% endblock %}
+    </div>
+    <div class="Footer">
+      <a class="Footer_site-map-link" href="{{ url_for('seeds.static_html', page='site-map',  _external=True) }}">Site Map</a>
+      <p class="Footer_copyright_p">Copyright&nbsp;&#169;&nbsp;2016 Swallowtail&nbsp;Garden&nbsp;Seeds - All&nbsp;Rights&nbsp;Reserved
+      </p>
+      <p class="Footer_copyright_p Footer_copyright_p2">Copyright pertains to all images, none of which may be reproduced in any form without<br class="no-mobile-display"> the expressed written consent of Swallowtail Garden Seeds.
+      </p>
+      <a href="https://seal.godaddy.com/verifySeal?sealID=FgdBKY27IIpHp2q5LkxzgzlbX27e0tqGEF9J5PgG2j7VUTmpgtsRrz" onclick="return popitup('https://seal.godaddy.com/verifySeal?sealID=FgdBKY27IIpHp2q5LkxzgzlbX27e0tqGEF9J5PgG2j7VUTmpgtsRrz')"><img class="Footer_siteseal" src="https://www.swallowtailgardenseeds.com/image-assets/site-seal.gif" alt="Go Daddy Site Seal"></a>
     </div>
   </div>
 <script src="{{ url_for('static', filename='scripts/scripts.js') }}"></script>
-		{% block scripts %}{% endblock %}
-	</body>
+    {% block scripts %}{% endblock %}
+  </body>
 </html>

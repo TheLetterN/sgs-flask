@@ -32,7 +32,7 @@
         {{ form.hidden_tag() }}
         <ol>
           <li>
-            {{ form_field(form.sku)|indent(12)|safe }}
+            {{ form_field(form.sku, placeholder='e.g. PR08217')|safe }}
           </li>
           <li>
             {{ form_field(form.product_name)|safe }}
@@ -44,7 +44,7 @@
             {{ form_field(form.amount, placeholder='e.g. 100 seeds, 1/2 oz, 2 grams')|safe }}
           </li>
           <li>
-            {{ form_field(form.again)|indent(12)|safe }}
+            {{ form_field(form.again)|safe }}
           </li>
           <li>
             {{ form.submit }}

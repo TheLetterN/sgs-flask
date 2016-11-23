@@ -524,6 +524,8 @@ class AddCultivarForm(AddWithThumbnailForm):
         super().__init__(*args, **kwargs)
         self.cn = cn
         self.set_selects()
+        if not self.submit.data:
+            self.subtitle.data = self.cn.name
 
     def set_selects(self):
         """Sets indexes, and common_names from db."""

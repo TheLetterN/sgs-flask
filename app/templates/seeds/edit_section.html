@@ -30,9 +30,9 @@
       <h1>Edit Section: {{ section.name }}</h1>
       <form class="admin" method="POST" enctype="multipart/form-data">
         {{ form.hidden_tag() }}
-        <ol>
-          <fieldset>
-            <legend>Edit Section</legend>
+        <fieldset>
+          <legend>Section Info</legend>
+          <ol>
             <li>
               {{ form_field(form.common_name_id)|indent(14)|safe }}
             </li>
@@ -46,25 +46,44 @@
               {{ form_field(form.subtitle)|indent(14)|safe }}
             </li>
             <li>
-              <div>Current thumbnail:</div>
-              <div><img src="{{ section.thumbnail.url }}" class="existing_image"></div>
+              {{ form_field(form.description)|indent(14)|safe }}
             </li>
+            <li>
+              <span class="with-tooltip" data-tooltip="Warning: Position is relative to other sections in the lowest-level container this section belongs to (common name is the highest level, followed by parent section) so if the parent container (parent section or common name) changes, these choices will be invalid. As such, this select will be ignored if common name or parent section are changed, and this section will be inserted last into the sections belonging to its new container.">{{ form_field(form.pos)|indent(14)|safe }}</span>
+            </li>
+          </ol>
+        </fieldset>
+        <fieldset>
+          <legend>Select Thumbnail</legend>
+          <ol>
+            <li>
+              {{ form_field(form.thumbnail_id, show_label=False)|safe }}
+              <div><img src="{{ section.thumbnail.url }}" id="selected-thumbnail"></div>
+            </li>
+          </ol>
+        </fieldset>
+        <fieldset>
+          <legend>Or Edit/Replace Thumbnail</legend>
             <li>
               {{ form_field(form.thumbnail)|safe }}
             </li>
             <li>
               {{ form_field(form.thumbnail_filename)|safe }}
             </li>
-            <li>
-              {{ form_field(form.description)|indent(14)|safe }}
-            </li>
-            <li>
-              <span class="with-tooltip" data-tooltip="Warning: Position is relative to other sections in the lowest-level container this section belongs to (common name is the highest level, followed by parent section) so if the parent container (parent section or common name) changes, these choices will be invalid. As such, this select will be ignored if common name or parent section are changed, and this section will be inserted last into the sections belonging to its new container.">{{ form_field(form.pos)|indent(14)|safe }}</span>
-            </li>
-          </fieldset>
+          </ol>
+        </fieldset>
+        <ol>
           <li>
             {{ form.submit }}
           </li>
         </ol>
       </form>
+{% endblock %}
+{% block scripts %}
+<script>
+  var image_urls = {{ form.image_urls|tojson }};
+  $('#thumbnail_id').on('change', function () {
+    $('#selected-thumbnail').attr('src', image_urls[$(this).val()]);
+  });
+</script>
 {% endblock %}

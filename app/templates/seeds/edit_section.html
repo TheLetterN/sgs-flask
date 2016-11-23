@@ -37,7 +37,7 @@
               {{ form_field(form.common_name_id)|indent(14)|safe }}
             </li>
             <li>
-              <span class="with-tooltip" data-tooltip="Warning: Changing this will only work if common name remains the same, otherwise this section will be a top-level section in the new common name until edited.">{{ form_field(form.parent_id)|indent(14)|safe }}</span>
+              {{ form_field(form.parent_id, tooltip='Warning: Changing this will only work if common name remains the same, otherwise this section will be a top-level section in the new common name until edited.')|indent(14)|safe }}
             </li>
             <li>
               {{ form_field(form.name)|indent(14)|safe }}
@@ -49,7 +49,7 @@
               {{ form_field(form.description)|indent(14)|safe }}
             </li>
             <li>
-              <span class="with-tooltip" data-tooltip="Warning: Position is relative to other sections in the lowest-level container this section belongs to (common name is the highest level, followed by parent section) so if the parent container (parent section or common name) changes, these choices will be invalid. As such, this select will be ignored if common name or parent section are changed, and this section will be inserted last into the sections belonging to its new container.">{{ form_field(form.pos)|indent(14)|safe }}</span>
+              {{ form_field(form.pos, tooltip='Warning: Position is relative to other sections in the lowest-level container this section belongs to (common name is the highest level, followed by parent section) so if the parent container (parent section or common name) changes, these choices will be invalid. As such, this select will be ignored if common name or parent section are changed, and this section will be inserted last into the sections belonging to its new container.')|indent(14)|safe }}
             </li>
           </ol>
         </fieldset>

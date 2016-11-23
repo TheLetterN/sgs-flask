@@ -70,13 +70,32 @@ form.admin input[type=radio] + label:after{content:None;}
 div.last_commit{text-align:center;}
 /* END last commit */
 /* BEGIN tooltips */
-.with-tooltip {
+.tooltip {
     display: inline;
     position: relative;
 }
-.with-tooltip:hover:after {
+.tooltip:hover:after {
+    background: #ffa;
+    border-radius: 5px;
+    border: 1px solid #ed9;
+    bottom: 26px;
+    color: #000;
     content: attr(data-tooltip);
-    margin: 0 .5em;
+    left: 20%;
+    padding: 5px 15px;
+    position: absolute;
+    z-index: 98;
+    width: 300px;
+}
+.tooltip:hover:before {
+    border: solid;
+    border-color: #ed9 transparent;
+    border-width: 6px 6px 0 6px;
+    bottom: 20px;
+    content: "";
+    left: 50%;
+    position: absolute;
+    z-index: 99;
 }
 /* END tooltips */
 .dbify-button {

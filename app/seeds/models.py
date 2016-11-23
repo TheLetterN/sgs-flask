@@ -652,7 +652,7 @@ def before_index_insert_or_update(mapper, connection, target):
 @event.listens_for(Index.thumbnail, 'set')
 def index_thumbnail_adds_to_images(target, value, oldvalue, initiator):
     """Add thumbnail to Index.images when setting it."""
-    if value not in target.images:
+    if value and value not in target.images:
         target.images.append(value)
 
 
@@ -1084,7 +1084,7 @@ def before_common_name_insert_or_update(mapper, connection, target):
 @event.listens_for(CommonName.thumbnail, 'set')
 def common_name_thumbnail_adds_to_images(target, value, oldvalue, initiator):
     """Add thumbnail to CommonName.images when setting it."""
-    if value not in target.images:
+    if value and value not in target.images:
         target.images.append(value)
 
 
@@ -1375,7 +1375,7 @@ def section_parent_no_loop(target, value, oldvalue, initiator):
 @event.listens_for(Section.thumbnail, 'set')
 def section_thumbnail_adds_to_images(target, value, oldvalue, initiator):
     """Add thumbnail to Section.images when setting it."""
-    if value not in target.images:
+    if value and value not in target.images:
         target.images.append(value)
 
 
@@ -1815,7 +1815,7 @@ def before_cultivar_insert_or_update(mapper, connection, target):
 @event.listens_for(Cultivar.thumbnail, 'set')
 def cultivar_thumbnail_adds_to_images(target, value, oldvalue, initiator):
     """Add thumbnail to Cultivar.images when setting it."""
-    if value not in target.images:
+    if value and value not in target.images:
         target.images.append(value)
 
 

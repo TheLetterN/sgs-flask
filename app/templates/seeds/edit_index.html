@@ -31,27 +31,51 @@
       <h1>Edit Index</h1>
       <form class="admin" method="POST" enctype="multipart/form-data">
         {{ form.hidden_tag() }}
+        <fieldset>
+          <legend>Index Information</legend>
+          <ol>
+            <li>
+              {{ form_field(form.name)|indent(12)|safe }}
+            </li>
+            <li>
+              {{ form_field(form.description)|indent(12)|safe }}
+            </li>
+            <li>
+              {{ form_field(form.pos)|indent(12)|safe }}
+            </li>
+          </ol>
+        </fieldset>
+        <fieldset>
+          <legend>Select Thumbnail</legend>
+          <ol>
+            <li>
+              {{ form_field(form.thumbnail_id, show_label=False)|safe }}
+              <div><img src="{{ index.thumbnail.url }}" id="selected-thumbnail"></div>
+            </li>
+          </ol>
+        </fieldset>
+        <fieldset>
+          <legend>Or Edit/Replace Thumbnail</legend>
+            <li>
+              {{ form_field(form.thumbnail)|safe }}
+            </li>
+            <li>
+              {{ form_field(form.thumbnail_filename)|safe }}
+            </li>
+          </ol>
+        </fieldset>
         <ol>
-          <li>
-            {{ form_field(form.name)|indent(12)|safe }}
-          </li>
-          <div>Current thumbnail:</div>
-          <div><img src="{{ index.thumbnail.url }}" class="existing_image"></div>
-          <li>
-            {{ form_field(form.thumbnail)|indent(14)|safe }}
-          </li>
-          <li>
-            {{ form_field(form.thumbnail_filename)|safe }}
-          </li>
-          <li>
-            {{ form_field(form.description)|indent(12)|safe }}
-          </li>
-          <li>
-            {{ form_field(form.pos)|indent(12)|safe }}
-          </li>
           <li>
             {{ form.submit }}
           </li>
         </ol>
       </form>
+{% endblock %}
+{% block scripts %}
+<script>
+  var image_urls = {{ form.image_urls|tojson }};
+  $('#thumbnail_id').on('change', function () {
+    $('#selected-thumbnail').attr('src', image_urls[$(this).val()]);
+  });
+</script>
 {% endblock %}

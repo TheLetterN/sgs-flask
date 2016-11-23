@@ -129,6 +129,13 @@ def position_choices(**kwargs):
     return choices
 
 
+def image_choices(images):
+    """Return a list of choices for images in a collection."""
+    choices = [(i.id, i.filename) for i in images]
+    choices.insert(0, (0, 'None'))
+    return choices
+
+
 def remove_from_choices(choices, obj):
     """Remove the choice pointing to `obj` from a list of select choices.
 
@@ -708,15 +715,29 @@ class EditWithThumbnailForm(Form):
         'Thumbnail Filename',
         validators=[Length(max=254)]
     )
+    thumbnail_id = SelectField('Choose a Thumbnail', coerce=int)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         obj = kwargs['obj']
-        try:
-            if not self.submit.data:
+        self.thumbnail_id.choices = [
+            (
+                i.id, 
+                '{}{}'.format(
+                    ('Current: ' if obj.thumbnail and
+                     i.id == obj.thumbnail.id else ''),
+                    i.filename
+                )
+            ) for i in obj.images
+        ]
+        self.thumbnail_id.choices.insert(0, (0, 'None'))
+        self.image_urls = {i.id: i.url for i in obj.images}
+        self.image_urls[0] = ''
+        if not self.submit.data:
+            try:
                 self.thumbnail_filename.data = obj.thumbnail.filename
-        except AttributeError:
-            pass
+            except AttributeError:
+                pass
 
     def validate_thumbnail_filename(self, field):
         """Raise error if new thumbnail is uploaded w/o a filename."""

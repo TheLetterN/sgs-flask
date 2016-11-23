@@ -403,7 +403,21 @@ def edit_thumbnail(form, obj, messages):
         bool: Whether or not the thumbnail was edited.
     """
     edited =False
-    if form.thumbnail.data:
+    if not form.thumbnail_id.data:
+        form.thumbnail_id.data = None
+    if form.thumbnail_id.data != obj.thumbnail_id:
+        edited = True
+        if form.thumbnail_id.data:
+            obj.thumbnail = next(
+                i for i in obj.images if i.id == form.thumbnail_id.data
+            )
+            messages.append(
+                'Thumbnail changed to: {}'.format(obj.thumbnail.filename)
+            )
+        else:
+            obj.thumbnail = None
+            messages.append('Thumbnail unset.')
+    elif form.thumbnail.data:
         edited = True
         if (obj.thumbnail and
                 obj.thumbnail.filename == form.thumbnail_filename.data):

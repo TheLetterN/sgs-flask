@@ -192,7 +192,12 @@ class AddWithThumbnailForm(Form):
         validators=[FileAllowed(IMAGE_EXTENSIONS, 'Images only!')]
     )
     thumbnail_filename = SecureFilenameField(
-        'Save Thumbnail to Static Files As',
+        'Thumbnail Filename',
+        tooltip=(
+            'Files will be saved in app/static, and filenames may include '
+            'subdirectories (e.g. images/flowers/hibiscus.jpg) which will be '
+            'created if needed.'
+        ),
         validators=[Length(max=254)]
     )
 

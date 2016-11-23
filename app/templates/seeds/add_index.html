@@ -33,19 +33,19 @@
         {{ form.hidden_tag() }}
         <ol>
           <li>
-            {{ form_field(form.name)|indent(12)|safe }}
+            {{ form_field(form.name, placeholder='e.g. Annual Flower')|safe }}
           </li>
           <li>
-            {{ form_field(form.thumbnail)|indent(12)|safe }}
+            {{ form_field(form.thumbnail)|safe }}
           </li>
           <li>
             {{ form_field(form.thumbnail_filename)|safe }}
           </li>
           <li>
-            {{ form_field(form.description)|indent(12)|safe }}
+            {{ form_field(form.description)|safe }}
           </li>
           <li>
-            {{ form_field(form.pos)|indent(12)|safe }}
+            {{ form_field(form.pos)|safe }}
           </li>
           <li>
             {{ form.submit }}
@@ -54,9 +54,9 @@
       </form>
 {% endblock %}
 {% block scripts %}
-    <script>
-        $('#thumbnail').on('input', function () {
-          $('#thumbnail_filename').val('images/index-image-links/' + this.value);
-        });
-    </script>
+<script>
+  $('#thumbnail').on('input', function () {
+    $('#thumbnail_filename').val('images/index-image-links/' + this.value);
+  });
+</script>
 {% endblock %}

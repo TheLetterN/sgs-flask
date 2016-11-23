@@ -16,6 +16,7 @@
    Copyright Swallowtail Garden Seeds, Inc 
 #}
 {% macro form_field(field, show_label=True, tooltip=None) %}
+{% if not tooltip and field.tooltip %}{% set tooltip = field.tooltip %}{%endif %}
 {% if tooltip %}<span class="tooltip" data-tooltip="{{ tooltip }}">{% endif %}{% if show_label %}{% if field.flags.required %}{{ field.label(class_='required-field') }}{% else %}{{ field.label }}{% endif %}: {% endif %}{{ field(**kwargs) }}{% if tooltip %}</span>{% endif %}
 {% if field.errors %}{% for error in field.errors %}
 <div class="form_error">{{ error }}</div>

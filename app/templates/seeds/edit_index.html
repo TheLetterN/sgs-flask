@@ -77,5 +77,11 @@
   $('#thumbnail_id').on('change', function () {
     $('#selected-thumbnail').attr('src', image_urls[$(this).val()]);
   });
+  $('#thumbnail').on('input', function () {
+    var $fn = $('#thumbnail_filename');
+    if (!$fn.val()) {
+      $fn.val('images/index-image-links/' + this.value);
+    }
+  });
 </script>
 {% endblock %}

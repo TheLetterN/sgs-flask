@@ -190,6 +190,10 @@ class StrippedTextAreaField(TextAreaField):
 
 class SecureFilenameField(StrippedStringField):
     """A `StringField` for filenames that prevents directory traversal."""
+    def __init__(self, *args, tooltip=None,  **kwargs):
+        self.tooltip = tooltip
+        super().__init__(*args, **kwargs)
+
     def process_formdata(self, valuelist):
         super().process_formdata(valuelist)
         parts = os.path.split(self.data)

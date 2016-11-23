@@ -16,22 +16,26 @@
    Copyright Swallowtail Garden Seeds, Inc 
 #}
 {% macro make_detailed_nav(items, idx_slug=None, current_url=None) %}
-<ul class="Sidebar_nav">
+      <ul class="Sidebar_nav">
 {% for item in items  %}
-<li><a href="{{ item['URL'] }}">{{ item['Header'] }}</a></li>
-{% if item['Slug'] == idx_slug %}
-<ul class="Sidebar_subnav">
+        <li>
+          <a href="{{ item['URL'] }}">{{ item['Header'] }}</a>
+        </li>
+  {% if item['Slug'] == idx_slug %}
+        <li>
+          <ul class="Sidebar_subnav">
   {% for cn in item['Common Names'] %}
-  <li>
+            <li>
     {% if cn['URL'] == current_url %}
-    <span class="current-page">{{ cn['Name'] }}</span>
+              <span class="current-page">{{ cn['Name'] }}</span>
     {% else %}
-    <a href="{{ cn['URL'] }}">{{ cn['List As'] }}</a>
+              <a href="{{ cn['URL'] }}">{{ cn['List As'] }}</a>
     {% endif %}
-  </li>
+            </li>
   {% endfor %}
-</ul>
+          </ul>
+        </li>
 {% endif %}
 {% endfor %}
-</ul>
+      </ul>
 {% endmacro %}

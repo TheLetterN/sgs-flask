@@ -17,7 +17,7 @@
 
 
 from flask_login import current_user
-from flask_wtf import Form
+from flask_wtf import FlaskForm
 from wtforms import (
     BooleanField,
     PasswordField,
@@ -39,7 +39,7 @@ from app.form_helpers import Email
 from app.auth.models import User
 
 
-class DeleteUserForm(Form):
+class DeleteUserForm(FlaskForm):
     """Form to confirm deleting a user from the database.
 
     Attributes:
@@ -61,7 +61,7 @@ class DeleteUserForm(Form):
     submit = SubmitField('Delete User')
 
 
-class EditUserForm(Form):
+class EditUserForm(FlaskForm):
     """Form for editing user's information.
 
     Attributes:
@@ -102,7 +102,7 @@ class EditUserForm(Form):
             raise ValidationError('Password is incorrect!')
 
 
-class LoginForm(Form):
+class LoginForm(FlaskForm):
     """Form for logging in.
 
     Attributes:
@@ -122,7 +122,7 @@ class LoginForm(Form):
         validators=[InputRequired(), Length(1, 64)])
 
 
-class ManageUserForm(Form):
+class ManageUserForm(FlaskForm):
     """Form to allow user with MANAGE_USERS permission to edit user data.
 
     Attributes:
@@ -172,7 +172,7 @@ class ManageUserForm(Form):
     submit = SubmitField('Submit Changes')
 
 
-class RegistrationForm(Form):
+class RegistrationForm(FlaskForm):
     """Form for new users to register accounts.
 
     Attributes:
@@ -229,7 +229,7 @@ class RegistrationForm(Form):
                                   ' please choose another.')
 
 
-class ResendConfirmationForm(Form):
+class ResendConfirmationForm(FlaskForm):
     """Form for sending a new confirmation email.
 
     Attributes:
@@ -257,7 +257,7 @@ class ResendConfirmationForm(Form):
                                   'address has already been confirmed!')
 
 
-class ResetPasswordForm(Form):
+class ResetPasswordForm(FlaskForm):
     """Form for resetting a user's password.
 
     Attributes:
@@ -278,7 +278,7 @@ class ResetPasswordForm(Form):
     submit = SubmitField('Reset Password')
 
 
-class ResetPasswordRequestForm(Form):
+class ResetPasswordRequestForm(FlaskForm):
     """Form for the user to request a password reset.
 
     Attributes:
@@ -303,7 +303,7 @@ class ResetPasswordRequestForm(Form):
                                   'email address!')
 
 
-class SelectUserForm(Form):
+class SelectUserForm(FlaskForm):
     """Form for selecting a user from the database to use with other forms.
 
     Attributes:

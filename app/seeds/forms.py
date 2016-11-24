@@ -19,7 +19,7 @@ import datetime
 from pathlib import Path
 
 from flask import current_app, Markup, url_for
-from flask_wtf import Form
+from flask_wtf import FlaskForm
 from flask_wtf.file import FileAllowed
 from werkzeug import secure_filename
 from wtforms import (
@@ -180,7 +180,7 @@ class USDollar(object):
 
 
 # Add Forms
-class AddWithThumbnailForm(Form):
+class AddWithThumbnailForm(FlaskForm):
     """A base for forms for adding data which may include a thumbnail.
     
     Attributes:
@@ -575,7 +575,7 @@ class AddCultivarForm(AddWithThumbnailForm):
             ))
 
 
-class AddPacketForm(Form):
+class AddPacketForm(FlaskForm):
     """Form for adding a packet to a cultivar.
 
     Attributes:
@@ -630,7 +630,7 @@ class AddPacketForm(Form):
             )
 
 
-class AddRedirectForm(Form):
+class AddRedirectForm(FlaskForm):
     """Form for adding a redirect to the application.
 
     Attributes:
@@ -715,7 +715,7 @@ class AddRedirectForm(Form):
 
 
 # Edit Forms
-class EditWithThumbnailForm(Form):
+class EditWithThumbnailForm(FlaskForm):
     """Base form for editing objects that have thumbnails."""
     thumbnail_id = SelectField('Choose a Thumbnail', coerce=int)
     thumbnail = SecureFileField(
@@ -1175,7 +1175,7 @@ class EditCultivarForm(EditWithThumbnailForm):
                                           'of 64 characters long!')
 
 
-class EditPacketForm(Form):
+class EditPacketForm(FlaskForm):
     """Form for adding a packet to a cultivar.
 
     Attributes:
@@ -1233,7 +1233,7 @@ class EditPacketForm(Form):
             ))
 
 
-class RemoveIndexForm(Form):
+class RemoveIndexForm(FlaskForm):
     """Form for removing an `Index` from the database.
 
     Attributes:
@@ -1259,7 +1259,7 @@ class RemoveIndexForm(Form):
         self.move_to.choices = select_field_choices(items=idxs)
 
 
-class RemoveCommonNameForm(Form):
+class RemoveCommonNameForm(FlaskForm):
     """Form for removing a `CommonName` from the database.
 
     Attributes:
@@ -1292,7 +1292,7 @@ class RemoveCommonNameForm(Form):
         )
 
 
-class RemoveSectionForm(Form):
+class RemoveSectionForm(FlaskForm):
     """Form for removing a `Section` from the database.
 
     Attributes:
@@ -1302,7 +1302,7 @@ class RemoveSectionForm(Form):
     submit = SubmitField('Remove Section')
 
 
-class RemoveCultivarForm(Form):
+class RemoveCultivarForm(FlaskForm):
     """Form for removing a `Cultivar` from the database.
 
     Attributes:
@@ -1316,7 +1316,7 @@ class RemoveCultivarForm(Form):
     submit = SubmitField('Remove Cultivar')
 
 
-class RemovePacketForm(Form):
+class RemovePacketForm(FlaskForm):
     """Form for removing a `Packet` from the database.
 
     Attributes:
@@ -1326,7 +1326,7 @@ class RemovePacketForm(Form):
     submit = SubmitField('Remove Packet')
 
 
-class SelectIndexForm(Form):
+class SelectIndexForm(FlaskForm):
     """Form for selecting an index.
 
     Attributes:
@@ -1344,7 +1344,7 @@ class SelectIndexForm(Form):
         self.index.choices = select_field_choices(model=Index)
 
 
-class SelectCommonNameForm(Form):
+class SelectCommonNameForm(FlaskForm):
     """Form for selecting a common name.
 
     Attributes:
@@ -1366,7 +1366,7 @@ class SelectCommonNameForm(Form):
         )
 
 
-class SelectSectionForm(Form):
+class SelectSectionForm(FlaskForm):
     """Form for selecting a section.
 
     Attributes:
@@ -1385,7 +1385,7 @@ class SelectSectionForm(Form):
                                                     order_by='name')
 
 
-class SelectCultivarForm(Form):
+class SelectCultivarForm(FlaskForm):
     """Form for selecting a cultivar.
 
     Attributes:
@@ -1407,7 +1407,7 @@ class SelectCultivarForm(Form):
         )
 
 
-class SelectPacketForm(Form):
+class SelectPacketForm(FlaskForm):
     """Form for selecting a packet.
 
     Attributes:
@@ -1427,7 +1427,7 @@ class SelectPacketForm(Form):
                                                    title_attribute='info')
 
 
-class EditShipDateForm(Form):
+class EditShipDateForm(FlaskForm):
     """Form for editing the expected ship date for domestic orders."""
     ship_date = DateField(
         'Orders from today ship on',
@@ -1449,7 +1449,7 @@ class EditShipDateForm(Form):
             )
 
 
-class EditRatesForm(Form):
+class EditRatesForm(FlaskForm):
     """Form for editing rates and dates."""
     free_shipping_threshold = StrippedStringField(
         'Free shipping for orders over'

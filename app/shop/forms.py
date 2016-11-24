@@ -16,7 +16,7 @@
 # Copyright Swallowtail Garden Seeds, Inc
 
 
-from flask_wtf import Form
+from flask_wtf import FlaskForm
 from wtforms import (
     BooleanField,
     FieldList,
@@ -33,7 +33,7 @@ from app.form_helpers import Email, StrippedStringField, StrippedTextAreaField
 from app.shop.models import Address, Country
 
 
-class AddProductForm(Form):
+class AddProductForm(FlaskForm):
     """Form for adding a product to a customer's shopping cart."""
     quantity = IntegerField(
         'Quantity',
@@ -44,7 +44,7 @@ class AddProductForm(Form):
     submit = SubmitField('Add to Cart')
 
 
-class ShoppingCartLineForm(Form):
+class ShoppingCartLineForm(FlaskForm):
     """Form for a line in the shopping cart."""
     quantity = IntegerField(
         'Quantity',
@@ -55,14 +55,14 @@ class ShoppingCartLineForm(Form):
     product_label = HiddenField()
 
 
-class ShoppingCartForm(Form):
+class ShoppingCartForm(FlaskForm):
     """Form for shopping cart data."""
     lines = FieldList(FormField(ShoppingCartLineForm))
     save = SubmitField('Save Changes')
     checkout = SubmitField('Checkout')
 
 
-class AddressForm(Form):
+class AddressForm(FlaskForm):
     first_name = StrippedStringField(
         'First Name',
         validators=[InputRequired(message='Please enter a first name.'),
@@ -283,7 +283,7 @@ class AddressForm(Form):
         self.fax.data = addr.fax
 
 
-class CheckoutForm(Form):
+class CheckoutForm(FlaskForm):
     billing_address = FormField(AddressForm)
     shipping_address = FormField(AddressForm)
     shipping_comments = StrippedTextAreaField(
@@ -294,7 +294,7 @@ class CheckoutForm(Form):
     review_order = SubmitField('Review Order')
 
 
-class ShippingForm(Form):
+class ShippingForm(FlaskForm):
     address = FormField(AddressForm)
     comments = StrippedTextAreaField(
         'Shipping Comments',
@@ -304,12 +304,12 @@ class ShippingForm(Form):
     proceed = SubmitField('Proceed to Billing')
 
 
-class BillingForm(Form):
+class BillingForm(FlaskForm):
     same_as_shipping = BooleanField('Same as shipping address')
     address = FormField(AddressForm)
     stripeToken = HiddenField('stripeToken')  # Stripe needs this camelcase.
     proceed = SubmitField('Review Order')
 
 
-class ConfirmOrderForm(Form):
+class ConfirmOrderForm(FlaskForm):
     proceed = SubmitField('Place Order')

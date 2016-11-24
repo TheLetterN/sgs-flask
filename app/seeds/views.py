@@ -114,6 +114,9 @@ class NotEnabledError(RuntimeError):
     def __init__(self, message):
         self.message = message
 
+def origin():
+    """Get the 'origin' request arg if present."""
+    return request.args.get('origin')
 
 def flash_all(messages, category='message'):
     if category == 'message':
@@ -499,7 +502,9 @@ def add_index():
         messages.append('New index "{0}" added to the database.'
                         .format(index.name))
         flash_all(messages)
-        return redirect(url_for('seeds.add_common_name', idx_id=index.id))
+        return redirect(
+            origin() or url_for('seeds.add_common_name', idx_id=index.id)
+        )
     crumbs = cblr.crumble_route_group('add_index', ADD_ROUTES)
     return render_template('seeds/add_index.html', crumbs=crumbs, form=form)
 
@@ -589,8 +594,10 @@ def add_common_name(idx_id=None):
         messages.append('New common name "{0}" added to the database.'
                         .format(cn.name))
         flash_all(messages)
-        return redirect(url_for('seeds.{0}'.format(form.next_page.data),
-                                cn_id=cn.id))
+        return redirect(
+            origin() or url_for('seeds.{0}'.format(form.next_page.data),
+                                cn_id=cn.id)
+        )
     crumbs = cblr.crumble_route_group('add_common_name', ADD_ROUTES)
     return render_template('seeds/add_common_name.html',
                            crumbs=crumbs,
@@ -642,7 +649,7 @@ def add_section(cn_id=None):
         messages.append('New section "{0}" added to the database.'
                         .format(section.fullname))
         flash_all(messages)
-        return redirect(url_for('seeds.add_cultivar', cn_id=cn.id))
+        return redirect(origin() or url_for('seeds.add_cultivar', cn_id=cn.id))
     crumbs = cblr.crumble_route_group('add_section', ADD_ROUTES)
     return render_template('seeds/add_section.html',
                            crumbs=crumbs,
@@ -766,7 +773,7 @@ def add_cultivar(cn_id=None):
         messages.append('New cultivar "{0}" added to the database.'
                         .format(cv.fullname))
         flash_all(messages)
-        return redirect(url_for('seeds.add_packet', cv_id=cv.id))
+        return redirect(origin() or url_for('seeds.add_packet', cv_id=cv.id))
     crumbs = cblr.crumble_route_group('add_cultivar', ADD_ROUTES)
     return render_template('seeds/add_cultivar.html',
                            crumbs=crumbs,
@@ -805,7 +812,7 @@ def add_packet(cv_id=None):
         if form.again.data:
             return redirect(url_for('seeds.add_packet', cv_id=cv_id))
         else:
-            return redirect(url_for('seeds.manage'))
+            return redirect(origin() or url_for('seeds.manage'))
     crumbs = cblr.crumble_route_group('add_packet', ADD_ROUTES)
     return render_template('seeds/add_packet.html',
                            crumbs=crumbs,
@@ -837,7 +844,7 @@ def add_redirect():
         rdf.save()
         flash('{0} added. It will take effect on next restart of Flask app.'
               .format(rd.message()))
-        return redirect(url_for('seeds.manage'))
+        return redirect(origin() or url_for('seeds.manage'))
     crumbs = (cblr.crumble('manage', 'Manage Seeds'),
               cblr.crumble('add_redirect'))
     return render_template('seeds/add_redirect.html', crumbs=crumbs, form=form)
@@ -898,7 +905,7 @@ def edit_index(idx_id=None):
                 if warnings:
                     flash_all(warnings, 'warning')
 
-            return redirect(url_for('seeds.manage'))
+            return redirect(origin() or index.url or url_for('seeds.manage'))
         else:
             messages.append('No changes to "{0}" were made.'
                             .format(index.name))
@@ -926,7 +933,7 @@ def edit_common_name(cn_id=None):
         return redirect(url_for('seeds.select_common_name',
                                 dest='seeds.edit_common_name'))
     form = EditCommonNameForm(obj=cn)
-    dest = url_for('seeds.manage')
+    dest = None
     if form.validate_on_submit():
         edited = False
         messages = []
@@ -1059,7 +1066,7 @@ def edit_common_name(cn_id=None):
                 if warnings:
                     flash_all(warnings, 'warning')
 
-            return redirect(dest)
+            return redirect(dest or origin() or url_for('seeds.manage'))
         else:
             messages.append('No changes to "{0}" were made.'.format(cn.name))
             flash_all(messages)

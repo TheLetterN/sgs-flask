@@ -34,10 +34,10 @@
           <legend>Common Name Information</legend>
           <ol>
             <li>
-              {{ form_field(form.index_id)|indent(14)|safe }}
+              {{ form_field(form.index_id)|safe }}
             </li>
             <li>
-              {{ form_field(form.name)|indent(14)|safe }}
+              {{ form_field(form.name)|safe }}
             </li>
             <li>
               {{ form_field(form.list_as)|safe }}
@@ -52,13 +52,13 @@
               {{ form_field(form.sunlight)|safe }}
             </li>
             <li>
-              {{ form_field(form.description)|indent(14)|safe }}
+              {{ form_field(form.description)|safe }}
             </li>
             <li>
-              {{ form_field(form.instructions)|indent(14)|safe }}
+              {{ form_field(form.instructions)|safe }}
             </li>
             <li>
-              {{ form_field(form.pos)|indent(14)|safe }}
+              {{ form_field(form.pos, tooltip='Warning: This will only apply if Index remains unchanged.')|safe }}
             </li>
           </ol>
         </fieldset>
@@ -66,13 +66,13 @@
           <legend>Grows With</legend>
           <ol>
             <li>
-              {{ form_field(form.gw_common_names_ids)|indent(14)|safe }}
+              {{ form_field(form.gw_common_names_ids)|safe }}
             </li>
             <li>
-              {{ form_field(form.gw_sections_ids)|indent(14)|safe }}
+              {{ form_field(form.gw_sections_ids)|safe }}
             </li>
             <li>
-              {{ form_field(form.gw_cultivars_ids)|indent(14)|safe }}
+              {{ form_field(form.gw_cultivars_ids)|safe }}
             </li>
           </ol>
         </fieldset>
@@ -81,7 +81,7 @@
           <ol>
             <li>
               {{ form_field(form.thumbnail_id, show_label=False)|safe }}
-              <div><img src="{{ cn.thumbnail.url }}" id="selected-thumbnail"></div>
+              <div><img src="{{ cn.thumbnail.url }}" alt="" id="selected-thumbnail"></div>
             </li>
           </ol>
         </fieldset>
@@ -108,6 +108,12 @@
   var image_urls = {{ form.image_urls|tojson }};
   $('#thumbnail_id').on('change', function () {
     $('#selected-thumbnail').attr('src', image_urls[$(this).val()]);
+  });
+  $('#thumbnail').on('input', function () {
+    var $fn = $('#thumbnail_filename');
+    if (!$fn.val()) {
+      $fn.val('images-assets/' + this.value);
+    }
   });
 </script>
 {% endblock %}

@@ -193,13 +193,16 @@ class AddWithThumbnailForm(Form):
     )
     thumbnail_filename = SecureFilenameField(
         'Thumbnail Filename',
-        tooltip=(
-            'Files will be saved in app/static, and filenames may include '
-            'subdirectories (e.g. images/flowers/hibiscus.jpg) which will be '
-            'created if needed.'
-        ),
         validators=[Length(max=254)]
     )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.thumbnail_filename.tooltip=(
+            'Files will be saved in app/static, and filenames may include '
+            'subdirectories (e.g. images/flowers/hibiscus.jpg) which will be '
+            'created as needed.'
+        )
 
     def validate_thumbnail_filename(self, field):
         """Raise error if a file with the same (full) name already exists."""
@@ -714,6 +717,7 @@ class AddRedirectForm(Form):
 # Edit Forms
 class EditWithThumbnailForm(Form):
     """Base form for editing objects that have thumbnails."""
+    thumbnail_id = SelectField('Choose a Thumbnail', coerce=int)
     thumbnail = SecureFileField(
         'New Thumbnail',
         validators=[FileAllowed(IMAGE_EXTENSIONS, 'Images only!')]
@@ -722,7 +726,6 @@ class EditWithThumbnailForm(Form):
         'Thumbnail Filename',
         validators=[Length(max=254)]
     )
-    thumbnail_id = SelectField('Choose a Thumbnail', coerce=int)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -745,6 +748,21 @@ class EditWithThumbnailForm(Form):
                 self.thumbnail_filename.data = obj.thumbnail.filename
             except AttributeError:
                 pass
+        self.thumbnail_id.tooltip = (
+            'Warning: Selecting anything other than the current '
+            'thumbnail will cause any other changes to thumbnail (such '
+            'as uploading a new file or changing Thumbnail Filename) to '
+            'be ignored.'
+        )
+        self.thumbnail.tooltip = (
+            'Warning: Uploading a new image without editing Thumbnail '
+            'Filename will replace the existing image file with the uploaded '
+            'image.'
+        )
+        self.thumbnail_filename.tooltip = (
+            'Editing this without uploading a new image file will rename/move '
+            'the existing thumbnail file.'
+        )
 
     def validate_thumbnail_filename(self, field):
         """Raise error if new thumbnail is uploaded w/o a filename."""

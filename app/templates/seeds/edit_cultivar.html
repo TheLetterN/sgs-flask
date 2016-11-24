@@ -34,30 +34,31 @@
           <legend>Cultivar Information</legend>
           <ol>
             <li>
-              {{ form_field(form.common_name_id)|indent(14)|safe }}
-            </li>
-              {{ form_field(form.name)|indent(14)|safe }}
+              {{ form_field(form.common_name_id)|safe }}
             </li>
             <li>
-              {{ form_field(form.subtitle)|indent(14)|safe }}
+              {{ form_field(form.name)|safe }}
             </li>
             <li>
-              {{ form_field(form.botanical_name)|indent(14)|safe }}
+              {{ form_field(form.subtitle)|safe }}
             </li>
             <li>
-              {{ form_field(form.section_id)|indent(14)|safe }}
+              {{ form_field(form.botanical_name)|safe }}
             </li>
             <li>
-              {{ form_field(form.organic)|indent(14)|safe }}
+              {{ form_field(form.section_id, tooltip='Warning: Changing Common Name will ignore Section selection. You will need to re-edit this cultivar if you wish to put it in a section belonging to the new common name.')|safe }}
             </li>
             <li>
-              {{ form_field(form.taxable)|indent(14)|safe }}
+              {{ form_field(form.organic)|safe }}
             </li>
             <li>
-              {{ form_field(form.description)|indent(14)|safe }}
+              {{ form_field(form.taxable)|safe }}
             </li>
             <li>
-              <span class="with-tooltip" data-tooltip="Warning: Position is relative to other cultivars in the lowest-level container this cultivar belongs to (common name is the highest container, followed by section/subsection this cultivar is in) so if common name or section are changed, this cultivar will be listed last in whatever its new parent container is, and will need to be edited again if it needs to be repositioned.">{{ form_field(form.pos)|indent(14)|safe }}</span>
+              {{ form_field(form.description)|safe }}
+            </li>
+            <li>
+              {{ form_field(form.pos, tooltip='Warning: Position is relative to other cultivars in the lowest-level container this cultivar belongs to (common name is the highest container, followed by section/subsection this cultivar is in) so if common name or section are changed, this cultivar will be listed last in whatever its new parent container is, and will need to be edited again if it needs to be repositioned.')|safe }}
             </li>
           </ol>
         </fieldset>
@@ -65,13 +66,13 @@
           <legend>Grows With</legend>
           <ol>
             <li>
-              {{ form_field(form.gw_common_names_ids)|indent(14)|safe }}
+              {{ form_field(form.gw_common_names_ids)|safe }}
             </li>
             <li>
-               {{ form_field(form.gw_sections_ids)| indent(14)|safe }} 
+               {{ form_field(form.gw_sections_ids)| safe }} 
             </li>
             <li>
-              {{ form_field(form.gw_cultivars_ids)|indent(14)|safe }}
+              {{ form_field(form.gw_cultivars_ids)|safe }}
             </li>
           </ol>
         </fieldset>
@@ -79,19 +80,19 @@
           <legend>Status:</legend>
           <ol>
             <li>
-              {{ form_field(form.new_for)|indent(14)|safe }}
+              {{ form_field(form.new_for)|safe }}
             </li>
             <li>
-              {{ form_field(form.featured)|indent(14)|safe }}
+              {{ form_field(form.featured)|safe }}
             </li>
             <li>
-              {{ form_field(form.in_stock)|indent(14)|safe }}
+              {{ form_field(form.in_stock)|safe }}
             </li>
             <li>
-              {{ form_field(form.active)|indent(14)|safe }}
+              {{ form_field(form.active)|safe }}
             </li>
             <li>
-              {{ form_field(form.visible)|indent(14)|safe }}
+              {{ form_field(form.visible)|safe }}
             </li>
           </ol>
         </fieldset>
@@ -100,12 +101,13 @@
           <ol>
             <li>
               {{ form_field(form.thumbnail_id, show_label=False)|safe }}
-              <div><img src="{{ cultivar.thumbnail.url }}" id="selected-thumbnail"></div>
+              <div><img src="{{ cultivar.thumbnail.url }}" alt=""  id="selected-thumbnail"></div>
             </li>
           </ol>
         </fieldset>
         <fieldset>
           <legend>Or Edit/Replace Thumbnail</legend>
+          <ol>
             <li>
               {{ form_field(form.thumbnail)|safe }}
             </li>
@@ -126,6 +128,12 @@
   var image_urls = {{ form.image_urls|tojson }};
   $('#thumbnail_id').on('change', function () {
     $('#selected-thumbnail').attr('src', image_urls[$(this).val()]);
+  });
+  $('#thumbnail').on('input', function () {
+    var $fn = $('#thumbnail_filename');
+    if (!$fn.val()) {
+      $fn.val('flowers/{{ cultivar.common_name.slug }}/' + this.value);
+    }
   });
 </script>
 {% endblock %}

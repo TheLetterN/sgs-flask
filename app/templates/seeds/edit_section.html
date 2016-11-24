@@ -34,22 +34,22 @@
           <legend>Section Info</legend>
           <ol>
             <li>
-              {{ form_field(form.common_name_id)|indent(14)|safe }}
+              {{ form_field(form.common_name_id)|safe }}
             </li>
             <li>
-              {{ form_field(form.parent_id, tooltip='Warning: Changing this will only work if common name remains the same, otherwise this section will be a top-level section in the new common name until edited.')|indent(14)|safe }}
+              {{ form_field(form.parent_id, tooltip='Warning: Changing this will only work if common name remains the same, otherwise this section will be a top-level section in the new common name until edited.')|safe }}
             </li>
             <li>
-              {{ form_field(form.name)|indent(14)|safe }}
+              {{ form_field(form.name)|safe }}
             </li>
             <li>
-              {{ form_field(form.subtitle)|indent(14)|safe }}
+              {{ form_field(form.subtitle)|safe }}
             </li>
             <li>
-              {{ form_field(form.description)|indent(14)|safe }}
+              {{ form_field(form.description)|safe }}
             </li>
             <li>
-              {{ form_field(form.pos, tooltip='Warning: Position is relative to other sections in the lowest-level container this section belongs to (common name is the highest level, followed by parent section) so if the parent container (parent section or common name) changes, these choices will be invalid. As such, this select will be ignored if common name or parent section are changed, and this section will be inserted last into the sections belonging to its new container.')|indent(14)|safe }}
+              {{ form_field(form.pos, tooltip='Warning: Position is relative to other sections in the lowest-level container this section belongs to (common name is the highest level, followed by parent section) so if the parent container (parent section or common name) changes, these choices will be invalid. As such, this select will be ignored if common name or parent section are changed, and this section will be inserted last into the sections belonging to its new container.')|safe }}
             </li>
           </ol>
         </fieldset>
@@ -58,12 +58,13 @@
           <ol>
             <li>
               {{ form_field(form.thumbnail_id, show_label=False)|safe }}
-              <div><img src="{{ section.thumbnail.url }}" id="selected-thumbnail"></div>
+              <div><img src="{{ section.thumbnail.url }}" alt="" id="selected-thumbnail"></div>
             </li>
           </ol>
         </fieldset>
         <fieldset>
           <legend>Or Edit/Replace Thumbnail</legend>
+          <ol>
             <li>
               {{ form_field(form.thumbnail)|safe }}
             </li>
@@ -84,6 +85,12 @@
   var image_urls = {{ form.image_urls|tojson }};
   $('#thumbnail_id').on('change', function () {
     $('#selected-thumbnail').attr('src', image_urls[$(this).val()]);
+  });
+  $('#thumbnail').on('input', function () {
+    var $fn = $('#thumbnail_filename');
+    if (!$fn.val()) {
+      $fn.val('flowers/{{ section.common_name.slug }}/' + this.value);
+    }
   });
 </script>
 {% endblock %}

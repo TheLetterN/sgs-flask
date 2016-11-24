@@ -32,16 +32,16 @@
         {{ form.hidden_tag() }}
         <ol>
           <li>
-            {{ form_field(form.cultivar_id)|indent(12)|safe }}
+            {{ form_field(form.cultivar_id)|safe }}
           </li>
           <li>
-            {{ form_field(form.sku)|indent(12)|safe }}
+            {{ form_field(form.sku)|safe }}
           </li>
           <li>
             {{ form_field(form.product_name)|safe }}
           </li>
           <li>
-            {{ form_field(form.price)|indent(12)|safe }}
+            {{ form_field(form.price)|safe }}
           </li>
           <li>
             {{ form_field(form.amount)|safe }}

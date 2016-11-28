@@ -47,7 +47,7 @@ a.move_button:hover{opacity:1;transition:.25s;}
 {% block main %}
 {% if current_user.can(Permission.MANAGE_SEEDS) %}
 <div class="admin">
-  <a href="{{ url_for('seeds.edit_index', idx_id=index.id, origin=request.path) }}">Edit {{ index.name }}</a> | <a href="{{ url_for('seeds.remove_index', idx_id=index.id) }}">Remove {{ index.name }}</a> | <a href="{{ url_for('seeds.add_common_name', idx_id=index.id, origin=request.path) }}">Add a Common Name to {{ index.name }}</a>
+  <a href="{{ url_for('seeds.edit_index', idx_id=index.id, origin=request.path) }}">Edit {{ index.name }}</a> | <a href="{{ url_for('seeds.remove_index', idx_id=index.id) }}">Remove {{ index.name }}</a> | <a href="{{ url_for('seeds.add_common_name', idx_id=index.id) }}">Add a Common Name to {{ index.name }}</a>
 </div>
 {% endif %}
 <h1 class="Index_pages-h1">{{ index.header }}</h1>

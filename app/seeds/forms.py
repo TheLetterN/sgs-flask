@@ -315,12 +315,6 @@ class AddCommonNameForm(AddWithThumbnailForm):
         render_kw={'size': 10},
         coerce=int
     )
-    next_page = RadioField(
-        'After submission, go to',
-        choices=[('add_section', 'Add Section (optional)'),
-                 ('add_cultivar', 'Add Cultivar')],
-        default='add_cultivar'
-    )
     submit = SubmitField('Save Common Name')
 
     def __init__(self, index, *args, **kwargs):
@@ -603,7 +597,6 @@ class AddPacketForm(FlaskForm):
         'Amount of Seeds',
         validators=[InputRequired(), Length(max=16)]
     )
-    again = BooleanField('Add another packet after this.')
     submit = SubmitField('Save Packet')
 
     def __init__(self, cultivar, *args, **kwargs):

@@ -118,6 +118,20 @@ def origin():
     """Get the 'origin' request arg if present."""
     return request.args.get('origin')
 
+def redirect_after_submit(*urls):
+    """Redirect to origin or first passed arg that exists."""
+    origin = request.args.get('origin')
+    if origin:
+        return redirect(origin)
+    try:
+        return redirect(next(u for u in urls if u))
+    except StopIteration:
+        flash(
+            'No valid URL was given to redirect to after submitting form.',
+            category='warning'
+        )
+        return redirect(request.path)
+
 def flash_all(messages, category='message'):
     if category == 'message':
         if len(messages) > 2:
@@ -502,8 +516,9 @@ def add_index():
         messages.append('New index "{0}" added to the database.'
                         .format(index.name))
         flash_all(messages)
-        return redirect(
-            origin() or url_for('seeds.add_common_name', idx_id=index.id)
+        return redirect_after_submit(
+            index.url,
+            url_for('seeds.add_common_name', idx_id=index.id)
         )
     crumbs = cblr.crumble_route_group('add_index', ADD_ROUTES)
     return render_template('seeds/add_index.html', crumbs=crumbs, form=form)
@@ -594,9 +609,9 @@ def add_common_name(idx_id=None):
         messages.append('New common name "{0}" added to the database.'
                         .format(cn.name))
         flash_all(messages)
-        return redirect(
-            origin() or url_for('seeds.{0}'.format(form.next_page.data),
-                                cn_id=cn.id)
+        return redirect_after_submit(
+            cn.url,
+            url_for('seeds.add_section', cn_id=cn.id)
         )
     crumbs = cblr.crumble_route_group('add_common_name', ADD_ROUTES)
     return render_template('seeds/add_common_name.html',
@@ -649,7 +664,10 @@ def add_section(cn_id=None):
         messages.append('New section "{0}" added to the database.'
                         .format(section.fullname))
         flash_all(messages)
-        return redirect(origin() or url_for('seeds.add_cultivar', cn_id=cn.id))
+        return redirect_after_submit(
+            section.url,
+            url_for('seeds.add_cultivar', cn_id=cn.id)
+        )
     crumbs = cblr.crumble_route_group('add_section', ADD_ROUTES)
     return render_template('seeds/add_section.html',
                            crumbs=crumbs,
@@ -773,7 +791,10 @@ def add_cultivar(cn_id=None):
         messages.append('New cultivar "{0}" added to the database.'
                         .format(cv.fullname))
         flash_all(messages)
-        return redirect(origin() or url_for('seeds.add_packet', cv_id=cv.id))
+        return redirect_after_submit(
+            cv.url,
+            url_for('seeds.add_packet', cv_id=cv.id)
+        )
     crumbs = cblr.crumble_route_group('add_cultivar', ADD_ROUTES)
     return render_template('seeds/add_cultivar.html',
                            crumbs=crumbs,
@@ -809,10 +830,7 @@ def add_packet(cv_id=None):
         messages.append('New packet with SKU #{0} added to the database.'
                         .format(packet.sku))
         flash_all(messages)
-        if form.again.data:
-            return redirect(url_for('seeds.add_packet', cv_id=cv_id))
-        else:
-            return redirect(origin() or url_for('seeds.manage'))
+        return redirect_after_submit(cv.url)
     crumbs = cblr.crumble_route_group('add_packet', ADD_ROUTES)
     return render_template('seeds/add_packet.html',
                            crumbs=crumbs,

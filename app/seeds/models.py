@@ -243,6 +243,30 @@ common_names_to_countries = db.Table(
 )
 
 
+class SlugMixin:
+    """A mixin for tables that should have a `slug` field for URL slugs.
+
+    Note: Please remember to add  events to `auto_set_slug` (defined later
+    in this module) for models using this mixin!
+
+    Attributes:
+        slug: A URL slug for the model instance.
+    """
+    slug = db.Column(db.UnicodeText)
+
+    def make_slug(self):
+        """Create a slug for object instance.
+
+        Note: This assumes the attribute to make the slug from is `name`. If
+        a different attribute is desired, override this method in the child
+        class.
+
+        Returns:
+            A slugified version of `name` if present, otherwise `None`.
+        """
+        return slugify(self.name) or None
+
+
 def dump_db_to_json(filename):
     """Save all data needed to copy the database into a JSON file."""
     d = dict()
@@ -317,19 +341,11 @@ def save_nav_data(json_file=None):
         ofile.write(json.dumps(idx_list, indent=4))
 
 
-@event.listens_for(SignallingSession, 'before_commit')
-def save_nav_data_before_commit(session):
-    """Save nav data if a commit would change a nav url."""
-    if (any(isinstance(obj, Index) for obj in db.session) or
-            any(isinstance(obj, CommonName) for obj in db.session)):
-        save_nav_data()
-
-
 # Models
 class IndexQuery(BaseQuery, SearchQueryMixin):
     pass
 
-class Index(db.Model, TimestampMixin):
+class Index(db.Model, SlugMixin, TimestampMixin):
     """Table for seed indexes.
 
     Indexes are the first/broadest divisions we use to sort seeds. The
@@ -354,7 +370,6 @@ class Index(db.Model, TimestampMixin):
 
     # Data Required
     name = db.Column(db.UnicodeText, unique=True)
-    slug = db.Column(db.UnicodeText, unique=True)
 
     # Data Optional
     thumbnail_id = db.Column(db.Integer, db.ForeignKey('images.id'))
@@ -492,10 +507,6 @@ class Index(db.Model, TimestampMixin):
     def plural(self):
         """str: plural form of `name`."""
         return pluralize(self.name) if self.name is not None else None
-
-    def make_slug(self):
-        """Make the string to use in URLs containing this `Index`."""
-        return slugify(self.plural) if self.name is not None else None
 
     # Positioning methods and properties.
     #
@@ -641,26 +652,11 @@ class Index(db.Model, TimestampMixin):
                    default=None)
 
 
-@event.listens_for(Index, 'before_insert')
-@event.listens_for(Index, 'before_update')
-def before_index_insert_or_update(mapper, connection, target):
-    """Run tasks best done before flushing an `Index` to the database."""
-    if not target.slug:
-        target.slug = target.make_slug()
-
-
-@event.listens_for(Index.thumbnail, 'set')
-def index_thumbnail_adds_to_images(target, value, oldvalue, initiator):
-    """Add thumbnail to Index.images when setting it."""
-    if value and value not in target.images:
-        target.images.append(value)
-
-
 class CommonNameQuery(BaseQuery, SearchQueryMixin):
     pass
 
 
-class CommonName(db.Model, TimestampMixin, OrderingListMixin):
+class CommonName(db.Model, OrderingListMixin, SlugMixin, TimestampMixin):
     """Table for common names.
 
     A `CommonName` is the next subdivision below `Index` in how we sort seeds.
@@ -675,7 +671,6 @@ class CommonName(db.Model, TimestampMixin, OrderingListMixin):
         index: The `Index` a `CommonName` instance belongs to.
         name: The common name of a seed. Examples: Coleus, Tomato,
             Lettuce, Zinnia.
-        slug: URL-friendly version `name`.
 
         thumbnail: An optional thumbnail `Image`.
         description: An optional HTML description.
@@ -707,7 +702,6 @@ class CommonName(db.Model, TimestampMixin, OrderingListMixin):
     index = db.relationship('Index', back_populates='common_names')
     name = db.Column(db.UnicodeText)
     list_as = db.Column(db.UnicodeText)
-    slug = db.Column(db.UnicodeText)
 
     # Data Optional
     subtitle = db.Column(db.UnicodeText)
@@ -1011,23 +1005,6 @@ class CommonName(db.Model, TimestampMixin, OrderingListMixin):
                                          index=d['Index'])
 
     @property
-    def arranged_name(self):
-        """str: `self.name` as-is or rearranged if a comma is in it.
-
-        Example:
-            Bean, Pole = Pole Bean
-        """
-        if self.name:
-            parts = self.name.split(', ')
-            if len(parts) == 2:
-                parts.append(parts.pop(0))
-                return ' '.join(parts)
-            else:
-                return self.name
-        else:
-            return None
-
-    @property
     def fullname(self):
         """str: The name of the `CommonName`.
 
@@ -1066,33 +1043,12 @@ class CommonName(db.Model, TimestampMixin, OrderingListMixin):
         """bool: Whether or not `CommonName` has any public cultivars."""
         return self.cultivars and any(cv.public for cv in self.cultivars)
 
-    def make_slug(self):
-        """Generate the string to use in URLs for this `CommonName`."""
-        return slugify(self.arranged_name) if self.name else None
-
-
-@event.listens_for(CommonName, 'before_insert')
-@event.listens_for(CommonName, 'before_update')
-def before_common_name_insert_or_update(mapper, connection, target):
-    """Run tasks best done before flushing a `CommonName` to the database."""
-    if not target.slug:
-        target.slug = target.make_slug()
-    if not target.list_as:
-        target.list_as = target.name
-
-
-@event.listens_for(CommonName.thumbnail, 'set')
-def common_name_thumbnail_adds_to_images(target, value, oldvalue, initiator):
-    """Add thumbnail to CommonName.images when setting it."""
-    if value and value not in target.images:
-        target.images.append(value)
-
 
 class SectionQuery(BaseQuery, SearchQueryMixin):
     pass
 
 
-class Section(db.Model, TimestampMixin, OrderingListMixin):
+class Section(db.Model, OrderingListMixin, SlugMixin, TimestampMixin):
     """Table for sections cultivars may fall under.
 
     Sections are subdivisions of a common name which contain cultivars, such
@@ -1257,10 +1213,6 @@ class Section(db.Model, TimestampMixin, OrderingListMixin):
         return sec
 
     @property
-    def slug(self):
-        return slugify(self.name)
-
-    @property
     def url(self):
         try:
             return url_for(
@@ -1352,59 +1304,11 @@ class Section(db.Model, TimestampMixin, OrderingListMixin):
             raise ValueError('Cannot set section as its own parent!')
 
 
-@event.listens_for(Section.parent, 'set')
-def section_parent_no_loop(target, value, oldvalue, initiator):
-    """Do not allow a parent-child loop to be created.
-
-    If a `Section` parent-child loop is created, it will cause endless loops
-    when iterating through parent-child relationships.
-    """
-    parents = [target]
-    p = value
-    while p is not None:
-        if value in parents:
-            raise RuntimeError(
-                'Setting {0} as parent to {1} would create a parent-child '
-                'loop!'.format(value, target)
-            )
-        else:
-            parents.append(p)
-            p = p.parent
-
-
-@event.listens_for(Section.thumbnail, 'set')
-def section_thumbnail_adds_to_images(target, value, oldvalue, initiator):
-    """Add thumbnail to Section.images when setting it."""
-    if value and value not in target.images:
-        target.images.append(value)
-
-
-@event.listens_for(CommonName.sections, 'append')
-def common_name_sections_appended(target, value, initiator):
-    if not value.parent:
-        value.parent_common_name = target
-
-
-@event.listens_for(CommonName.sections, 'remove')
-def common_name_sections_removed(target, value, initiator):
-    value.parent_common_name = None
-
-
-@event.listens_for(Section.children, 'append')
-def section_children_appended(target, value, intiator):
-    value.parent_common_name = None
-
-
-@event.listens_for(Section.children, 'remove')
-def section_children_removed(target, value, initiator):
-    value.parent_common_name = value.common_name
-
-
 class CultivarQuery(BaseQuery, SearchQueryMixin):
     pass
 
 
-class Cultivar(db.Model, TimestampMixin, OrderingListMixin):
+class Cultivar(db.Model, OrderingListMixin, SlugMixin, TimestampMixin):
     """Table for cultivar data.
 
     A cultivar is an individual variety of plant, and represents the most
@@ -1422,10 +1326,6 @@ class Cultivar(db.Model, TimestampMixin, OrderingListMixin):
 
         name: The name of the cultivar, without common name. e.g. 'Sparkler
             White' for Sparkler White Cleome.
-        slug: A URL-friendly version of `name`. The slug for a `Cultivar` is
-            not necessarily unique, as it is always used in conjunction with
-            a `CommonName` slug, so the unique constraint between `name` and
-            `common_name_id` prevents clashes.
         common_name: The `CommonName` a `Cultivar` belongs to.
 
         subtitle: An optional subtitle for cases in which the subtitle under
@@ -1468,7 +1368,6 @@ class Cultivar(db.Model, TimestampMixin, OrderingListMixin):
 
     # Data Required
     name = db.Column(db.UnicodeText)
-    slug = db.Column(db.UnicodeText)
     common_name_id = db.Column(db.Integer, db.ForeignKey('common_names.id'))
     common_name = db.relationship(
         'CommonName',
@@ -1799,74 +1698,6 @@ class Cultivar(db.Model, TimestampMixin, OrderingListMixin):
         else:
             return ''
 
-    def make_slug(self):
-        """Generate a string for use in URLs for pages that use `Cultivar`."""
-        return slugify(self.name) if self.name else None
-
-
-@event.listens_for(Cultivar, 'before_insert')
-@event.listens_for(Cultivar, 'before_update')
-def before_cultivar_insert_or_update(mapper, connection, target):
-    """Update a `Cultivar` before flushing changes to the database."""
-    if not target.slug:
-        target.slug = target.make_slug()
-
-
-@event.listens_for(Cultivar.thumbnail, 'set')
-def cultivar_thumbnail_adds_to_images(target, value, oldvalue, initiator):
-    """Add thumbnail to Cultivar.images when setting it."""
-    if value and value not in target.images:
-        target.images.append(value)
-
-
-@event.listens_for(CommonName.cultivars, 'append')
-def common_name_cultivars_appended(target, value, initiator):
-    if not value.parent_section:
-        target.child_cultivars.insert(len(target.child_cultivars), value)
-
-
-@event.listens_for(CommonName.cultivars, 'remove')
-def common_name_cultivars_removed(target, value, initiator):
-    value.parent_common_name = None
-
-
-@event.listens_for(Section.child_cultivars, 'append')
-def section_child_cultivars_appended(target, value, intiator):
-    value.parent_common_name = None
-
-
-@event.listens_for(Section.child_cultivars, 'remove')
-def section_child_cultivars_removed(target, value, initiator):
-    if not value.sections:
-        value.parent_common_name = value.common_name
-
-
-@event.listens_for(Section.cultivars, 'append')
-def section_cultivars_appended(target, value, initiator):
-    if target.parent and value not in target.parent.cultivars:
-        target.parent.cultivars.append(value)
-    if not target.children or set(target.children).isdisjoint(value.sections):
-        target.child_cultivars.insert(len(target.child_cultivars), value)
-
-
-@event.listens_for(Section.cultivars, 'remove')
-def section_cultivars_removed(target, value, initiator):
-    print('removing parent {0} from {1}'.format(value, target))
-    try:
-        for c in target.children:
-            try:
-                c.cultivars.remove(value)
-            except ValueError:
-                pass
-    except TypeError:
-        pass
-    if target.parent:
-        value.parent_section = target.parent
-        print(value.parent_section)
-    else:
-        value.parent_section = None
-        value.parent_common_name = value.common_name
-
 
 class Packet(db.Model, TimestampMixin):
     """Table for seed packet information.
@@ -1932,12 +1763,6 @@ class Packet(db.Model, TimestampMixin):
         if not pkt:
             pkt = cls(sku=sku)
         return pkt
-
-
-@event.listens_for(Packet.amount, 'set', retval=True)
-def htmlize_amount(target, value, oldvalue, initiatior):
-    """Convert fractions in amount to HTML."""
-    return html_fractions(value) if value else value
 
 
 class CustomPage(db.Model, TimestampMixin):
@@ -2115,6 +1940,15 @@ class Image(db.Model, TimestampMixin):
         return self.path.exists()
 
 
+# Event Listeners
+@event.listens_for(SignallingSession, 'before_commit')
+def save_nav_data_before_commit(session):
+    """Save nav data if a commit would change a nav url."""
+    if (any(isinstance(obj, Index) for obj in db.session) or
+            any(isinstance(obj, CommonName) for obj in db.session)):
+        save_nav_data()
+
+
 @event.listens_for(SignallingSession, 'before_attach')
 def auto_position_before_attach(session, instance):
     """Auto-generate positions for new instances of classes that have them."""
@@ -2122,6 +1956,143 @@ def auto_position_before_attach(session, instance):
         instance.auto_position()
 
 
+@event.listens_for(Index, 'before_insert')
+@event.listens_for(Index, 'before_update')
+@event.listens_for(CommonName, 'before_insert')
+@event.listens_for(CommonName, 'before_update')
+@event.listens_for(Section, 'before_insert')
+@event.listens_for(Section, 'before_update')
+@event.listens_for(Cultivar, 'before_insert')
+@event.listens_for(Cultivar, 'before_update')
+def auto_set_slug(mapper, connection, target):
+    """Automatically set `slug` if an instance without one is added/updated.
+    
+    To add a model to this event handler, simply add these decorators:
+
+        @event.listens_for(<model>, 'before_insert')
+        @event.listens_for(<model>, 'after_insert')
+    """
+    if not target.slug:
+        target.slug = target.make_slug()
+
+
+@event.listens_for(Index.thumbnail, 'set')
+@event.listens_for(CommonName.thumbnail, 'set')
+@event.listens_for(Section.thumbnail, 'set')
+@event.listens_for(Cultivar.thumbnail, 'set')
+def add_thumbnail_to_images(target, value, oldvalue, initiator):
+    """Add `thumbnail` to `images` when setting it."""
+    if value and value not in target.images:
+        target.images.append(value)
+
+
+# CommonName Event Listeners
+@event.listens_for(CommonName, 'before_insert')
+@event.listens_for(CommonName, 'before_update')
+def auto_set_list_as(mapper, connection, target):
+    """Set `list_as` if unset when adding/editing `CommonName`."""
+    if not target.list_as:
+        target.list_as = target.name
+
+
+@event.listens_for(CommonName.sections, 'append')
+def common_name_sections_appended(target, value, initiator):
+    if not value.parent:
+        value.parent_common_name = target
+
+
+@event.listens_for(CommonName.sections, 'remove')
+def common_name_sections_removed(target, value, initiator):
+    value.parent_common_name = None
+
+
+@event.listens_for(CommonName.cultivars, 'append')
+def common_name_cultivars_appended(target, value, initiator):
+    if not value.parent_section:
+        target.child_cultivars.insert(len(target.child_cultivars), value)
+
+
+@event.listens_for(CommonName.cultivars, 'remove')
+def common_name_cultivars_removed(target, value, initiator):
+    value.parent_common_name = None
+
+
+# Section Event Listeners
+@event.listens_for(Section.parent, 'set')
+def section_parent_no_loop(target, value, oldvalue, initiator):
+    """Do not allow a parent-child loop to be created.
+
+    If a `Section` parent-child loop is created, it will cause endless loops
+    when iterating through parent-child relationships.
+    """
+    parents = [target]
+    p = value
+    while p is not None:
+        if value in parents:
+            raise RuntimeError(
+                'Setting {0} as parent to {1} would create a parent-child '
+                'loop!'.format(value, target)
+            )
+        else:
+            parents.append(p)
+            p = p.parent
+
+
+@event.listens_for(Section.children, 'append')
+def section_children_appended(target, value, intiator):
+    value.parent_common_name = None
+
+
+@event.listens_for(Section.children, 'remove')
+def section_children_removed(target, value, initiator):
+    value.parent_common_name = value.common_name
+
+@event.listens_for(Section.child_cultivars, 'append')
+def section_child_cultivars_appended(target, value, intiator):
+    value.parent_common_name = None
+
+
+@event.listens_for(Section.child_cultivars, 'remove')
+def section_child_cultivars_removed(target, value, initiator):
+    if not value.sections:
+        value.parent_common_name = value.common_name
+
+
+@event.listens_for(Section.cultivars, 'append')
+def section_cultivars_appended(target, value, initiator):
+    if target.parent and value not in target.parent.cultivars:
+        target.parent.cultivars.append(value)
+    if not target.children or set(target.children).isdisjoint(value.sections):
+        target.child_cultivars.insert(len(target.child_cultivars), value)
+
+
+@event.listens_for(Section.cultivars, 'remove')
+def section_cultivars_removed(target, value, initiator):
+    print('removing parent {0} from {1}'.format(value, target))
+    try:
+        for c in target.children:
+            try:
+                c.cultivars.remove(value)
+            except ValueError:
+                pass
+    except TypeError:
+        pass
+    if target.parent:
+        value.parent_section = target.parent
+        print(value.parent_section)
+    else:
+        value.parent_section = None
+        value.parent_common_name = value.common_name
+
+
+# Packet Event Listeners
+@event.listens_for(Packet.amount, 'set', retval=True)
+def htmlize_amount(target, value, oldvalue, initiatior):
+    """Convert fractions in amount to HTML."""
+    return html_fractions(value) if value else value
+
+
+# Image Event Listeners
 @event.listens_for(Image, 'before_delete')
 def delete_image_file_before_delete(mapper, connection, target):
     """Delete image file of `Image` instance before the instance is deleted."""

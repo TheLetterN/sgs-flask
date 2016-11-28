@@ -130,7 +130,7 @@ def redirect_after_submit(*urls):
             'No valid URL was given to redirect to after submitting form.',
             category='warning'
         )
-        return redirect(request.path)
+        return redirect(request.full_path)
 
 def flash_all(messages, category='message'):
     if category == 'message':
@@ -922,13 +922,12 @@ def edit_index(idx_id=None):
                 )
                 if warnings:
                     flash_all(warnings, 'warning')
-
-            return redirect(origin() or index.url or url_for('seeds.manage'))
+            return redirect_after_submit(index.url)
         else:
             messages.append('No changes to "{0}" were made.'
                             .format(index.name))
             flash_all(messages)
-            return redirect(url_for('seeds.edit_index', idx_id=idx_id))
+            return redirect(request.full_path)
     crumbs = cblr.crumble_route_group('edit_index', EDIT_ROUTES)
     return render_template('seeds/edit_index.html',
                            crumbs=crumbs,

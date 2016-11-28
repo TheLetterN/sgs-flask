@@ -39,6 +39,7 @@ from app.form_helpers import (
     ReplaceMe,
     SecureFileField,
     SecureFilenameField,
+    SlugifiedStringField,
     StrippedStringField,
     StrippedTextAreaField
 )
@@ -232,6 +233,10 @@ class AddIndexForm(AddWithThumbnailForm):
         'Index Name',
         validators=[InputRequired(), Length(max=254)]
     )
+    slug = SlugifiedStringField(
+        'URL Slug',
+        validators=[InputRequired(), Length(max=254)]
+    )
     description = StrippedTextAreaField(
         'Description',
         validators=[Length(max=5120)]
@@ -276,6 +281,10 @@ class AddCommonNameForm(AddWithThumbnailForm):
     """
     name = StrippedStringField(
         'Common Name',
+        validators=[InputRequired(), Length(max=254)]
+    )
+    slug = SlugifiedStringField(
+        'URL Slug',
         validators=[InputRequired(), Length(max=254)]
     )
     list_as = StrippedStringField(
@@ -386,6 +395,10 @@ class AddSectionForm(AddWithThumbnailForm):
         'Section Name',
         validators=[InputRequired(), Length(max=254)]
     )
+    slug = SlugifiedStringField(
+        'URL Slug',
+        validators=[InputRequired(), Length(max=254)]
+    )
     subtitle = StrippedStringField(
         'Subtitle',
         validators=[Length(max=254)]
@@ -460,6 +473,10 @@ class AddCultivarForm(AddWithThumbnailForm):
     """
     name = StrippedStringField(
         'Cultivar Name',
+        validators=[InputRequired(), Length(max=254)]
+    )
+    slug = SlugifiedStringField(
+        'URL Slug',
         validators=[InputRequired(), Length(max=254)]
     )
     subtitle = StrippedStringField(

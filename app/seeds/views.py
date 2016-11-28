@@ -499,6 +499,8 @@ def add_index():
         messages.append('Creating new index "{0}":'
                         .format(index.name))
         add_thumbnail(form, index, messages)
+        index.slug = form.slug.data
+        messages.append('Slug set to "{}".'.format(index.slug))
         if form.description.data:
             index.description = form.description.data
             messages.append('Description set to: <p>{0}</p>'
@@ -542,6 +544,8 @@ def add_common_name(idx_id=None):
         db.session.add(cn)
         messages.append('Creating new common name "{0}" and adding it to '
                         'index "{1}":'.format(cn.name, idx.name))
+        cn.slug = form.slug.data
+        messages.append('Slug set to "{}".'.format(cn.slug))
         if form.subtitle.data:
             cn.subtitle = form.subtitle.data
             messages.append('Subtitle set to: <p>{}</p>'.format(cn.subtitle))
@@ -637,6 +641,8 @@ def add_section(cn_id=None):
         db.session.add(section)
         messages.append('Creating section "{0}" for common name "{1}":'
                         .format(section.name, cn.name))
+        section.slug = form.slug.data
+        messages.append('Slug set to "{}".'.format(section.slug))
         if form.parent.data:
             parent = next(s for s in cn.sections if s.id == form.parent.data)
             parent.children.insert(len(parent.children), section)
@@ -692,6 +698,8 @@ def add_cultivar(cn_id=None):
         db.session.add(cv)
         messages.append('Creating cultivar with short name "{0}" for common '
                         'name "{1}":'.format(cv.name, cn.name))
+        cv.slug = form.slug.data
+        messages.append('Slug set to "{}".'.format(cv.slug))
         if form.subtitle.data:
             cv.subtitle = form.subtitle.data
             messages.append('Subtitle set to: "{0}"'.format(cv.subtitle))

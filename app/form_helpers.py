@@ -19,6 +19,7 @@
 import os
 
 from flask_wtf.file import FileField
+from slugify import slugify
 from validate_email import validate_email
 from werkzeug import secure_filename
 from wtforms import StringField, TextAreaField, ValidationError
@@ -174,6 +175,19 @@ class StrippedStringField(StringField):
     def process_formdata(self, valuelist):
         super().process_formdata(valuelist)
         self.data = self.data.strip()
+
+
+class SlugifiedStringField(StringField):
+    """A `StringField` that is automatically slugified."""
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.tooltip = (
+            'Text in this field will be converted to valid slug format before '
+            'being submitted to the database.'
+        )
+    def process_formdata(self, valuelist):
+        super().process_formdata(valuelist)
+        self.data = slugify(self.data)
 
 
 class StrippedTextAreaField(TextAreaField):

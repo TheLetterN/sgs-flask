@@ -38,6 +38,9 @@
             {{ form_field(form.name, placeholder='e.g. Wizard Series')|safe }}
           </li>
           <li>
+            {{ form_field(form.slug, placeholder='e.g. wizard-series')|safe }}
+          </li>
+          <li>
             {{ form_field(form.subtitle)|safe }}
           </li>
           <li>
@@ -59,9 +62,11 @@
       </form>
 {% endblock %}
 {% block scripts %}
+    <script src="{{ url_for('static', filename='scripts/form-helpers.js') }}"></script>
     <script>
-        $('#thumbnail').on('input', function () {
-          $('#thumbnail_filename').val('flowers/{{ form.cn.slug }}/' + this.value);
-        });
+      populate_on_blur("{{ form.name.id }}", "{{ form.slug.id }}", slugify);
+      $('#thumbnail').on('input', function () {
+        $('#thumbnail_filename').val('flowers/{{ form.cn.slug }}/' + this.value);
+      });
     </script>
 {% endblock %}

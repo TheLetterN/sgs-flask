@@ -38,6 +38,9 @@
                 {{ form_field(form.name, placeholder='e.g. Heirloom Tomato')|safe }}
               </li>
               <li>
+                {{ form_field(form.slug, placeholder='e.g. heirloom-tomato')|safe }}
+              </li>
+              <li>
                 {{ form_field(form.list_as, placeholder='e.g. Tomato, Heirloom')|safe }}
               </li>
               <li>
@@ -93,9 +96,10 @@
 {% block scripts %}
     <script src="{{ url_for('static', filename='scripts/form-helpers.js') }}"></script>
     <script>
-        populate_on_blur("{{ form.name.id }}", "{{ form.list_as.id }}");
-        $('#thumbnail').on('input', function () {
-          $('#thumbnail_filename').val('image-assets/' + this.value);
-        });
+      populate_on_blur("{{ form.name.id }}", "{{ form.slug.id }}", slugify);
+      populate_on_blur("{{ form.name.id }}", "{{ form.list_as.id }}");
+      $('#thumbnail').on('input', function () {
+        $('#thumbnail_filename').val('image-assets/' + this.value);
+      });
     </script>
 {% endblock %}

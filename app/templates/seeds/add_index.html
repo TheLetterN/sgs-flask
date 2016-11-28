@@ -36,6 +36,9 @@
             {{ form_field(form.name, placeholder='e.g. Annual Flower')|safe }}
           </li>
           <li>
+            {{ form_field(form.slug, placeholder='e.g. annuals')|safe }}
+          </li>
+          <li>
             {{ form_field(form.thumbnail)|safe }}
           </li>
           <li>
@@ -54,9 +57,11 @@
       </form>
 {% endblock %}
 {% block scripts %}
-<script>
-  $('#thumbnail').on('input', function () {
-    $('#thumbnail_filename').val('images/index-image-links/' + this.value);
-  });
-</script>
+    <script src="{{ url_for('static', filename='scripts/form-helpers.js') }}"></script>
+    <script>
+      populate_on_blur("{{ form.name.id }}", "{{ form.slug.id }}", slugify);
+      $('#thumbnail').on('input', function () {
+        $('#thumbnail_filename').val('images/index-image-links/' + this.value);
+      });
+    </script>
 {% endblock %}

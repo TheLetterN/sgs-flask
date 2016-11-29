@@ -1,9 +1,11 @@
 import json
+import os
 from pathlib import Path
 
 from bs4 import BeautifulSoup, Comment
 from inflection import pluralize
 import requests
+from werkzeug import secure_filename
 
 from app import db
 from app.db_helpers import dbify
@@ -128,7 +130,7 @@ def load_index(slug, filename=None):
 
 def download_image(url):
     relname = Path(*url.replace('//', '').split('/')[1:])
-    fullname = Path(STATIC, relname)
+    fullname = Path(STATIC, relname.parent, secure_filename(relname.name))
     if fullname.exists():
         print('Image {} already exists, skipping download.'.format(fullname))
     else:

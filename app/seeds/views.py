@@ -798,6 +798,14 @@ def add_cultivar(cn_id=None):
             messages.append('"{0}" will not be visible in auto-generated '
                             'pages, but it can still be used in custom pages.'
                             .format(cv.fullname))
+        if form.open_pollinated.data:
+            cv.open_pollinated = True
+            messages.append('{} is open pollinated.'.format(cv.fullname))
+        if form.maturation.data:
+            cv.maturation = form.maturation.data
+            messages.append(
+                'Maturation time set to: "{}".'.format(cv.maturation)
+            )
         db.session.commit()
         messages.append('New cultivar "{0}" added to the database.'
                         .format(cv.fullname))
@@ -1416,6 +1424,20 @@ def edit_cultivar(cv_id=None):
             cv.visible = False
             messages.append('"{0}" will no longer be visible on '
                             'auto-generated pages.'.format(cv.fullname))
+        if form.open_pollinated.data and not cv.open_pollinated:
+            edited = True
+            cv.open_pollinated = True
+            messages.append('Set as open pollinated.')
+        elif not form.open_pollinated.data and cv.open_pollinated:
+            edited = True
+            cv.open_pollinated = False
+            messages.append('No longer set as open pollinated.')
+        edited = edit_optional_data(
+            form.maturation,
+            cv,
+            'maturation',
+            messages
+        ) or edited
         if edited:
             messages.append('Changes to "{0}" committed to the database.'
                             .format(cv.fullname))

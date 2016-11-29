@@ -100,6 +100,17 @@
           </ol>
         </fieldset>
         <fieldset>
+          <legend>Vegetable Info (Optional)</legend>
+          <ol>
+            <li>
+              {{ form_field(form.open_pollinated)|safe }}
+            </li>
+            <li>
+              {{ form_field(form.maturation, placeholder='e.g. 75-85 days')|safe }}
+            </li>
+          </ol>
+        </fieldset>
+        <fieldset>
           <legend>Select Thumbnail</legend>
           <ol>
             <li>

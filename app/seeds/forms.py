@@ -532,6 +532,11 @@ class AddCultivarForm(AddWithThumbnailForm):
     visible = BooleanField('Visible on auto-generated pages',
                            default='checked')
     taxable = BooleanField('Taxable in California', default='checked')
+    open_pollinated = BooleanField('Open Pollinated')
+    maturation = StrippedStringField(
+        'Maturation Time',
+        validators=[Length(max=254)]
+    )
     submit = SubmitField('Save Cultivar')
 
     def __init__(self, cn, *args, **kwargs):
@@ -1113,6 +1118,11 @@ class EditCultivarForm(EditWithThumbnailForm):
     active = BooleanField('Actively replenished')
     visible = BooleanField('Visible on auto-generated pages')
     in_stock = BooleanField('In Stock')
+    open_pollinated = BooleanField('Open Pollinated')
+    maturation = StrippedStringField(
+        'Maturation Time',
+        validators=[Length(max=254)]
+    )
     submit = SubmitField('Save Cultivar')
 
     def __init__(self, *args, **kwargs):

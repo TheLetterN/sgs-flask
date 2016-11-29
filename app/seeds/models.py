@@ -1023,7 +1023,7 @@ class CommonName(db.Model, OrderingListMixin, SlugMixin, TimestampMixin):
     def header(self):
         """str: `name` formatted for headers and titles."""
         if self.name:
-            return '{0} Seeds'.format(self.arranged_name)
+            return '{0} Seeds'.format(self.name.title())
         else:
             return ''
 

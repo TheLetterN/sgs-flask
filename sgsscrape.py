@@ -325,7 +325,11 @@ def generate_cultivars(cn, l):
         cv.subtitle = d['subtitle']
         cv.botanical_name = d['botanical_names']
         cv.description = d['description']
-        cv.vegetable_info = d['vegetable_info']
+        if d['veg_info']:
+            if d['veg_info']['open_pollinated']:
+                cv.open_pollinated = True
+            if d['veg_info']['maturation']:
+                cv.maturation = d['veg_info']['maturation']
         try:
             cv.new_for = int(d['new_for'])
         except ValueError:
@@ -421,7 +425,16 @@ class CultivarTag:
             i['src'].replace('\n', '') for i in self.images
         ]
         self._dbdict['packets'] = self.get_packet_dicts()
-        self._dbdict['vegetable_info'] = str_contents(self.veg_em)
+        self._dbdict['veg_info'] = {}
+        if self.veg_em:
+            abbrs = self.veg_em.find_all('abbr')
+            self._dbdict['veg_info']['open_pollinated'] = False
+            for abbr in abbrs:
+                abbr.extract()
+                if '(OP)' in abbr.text:
+                    self._dbdict['veg_info']['open_pollinated'] = True
+            self._dbdict['veg_info']['maturation'] = str_contents(self.veg_em)
+
 
 
 class SectionTag:

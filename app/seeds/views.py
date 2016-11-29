@@ -1591,30 +1591,25 @@ def remove_index(idx_id=None):
     if index is None:
         return redirect(url_for('seeds.select_index',
                                 dest='seeds.remove_index'))
-    if Index.query.count() == 1:
-        flash('Error: Cannot remove the index "{0}" without another index '
-              'existing to move its children to! Please add an index so you '
-              'can move {0}\'s children to it.'
-              .format(index.name), 'error')
-        return redirect(url_for('seeds.add_index'))
     form = RemoveIndexForm(index=index)
     if form.validate_on_submit():
         messages = []
         warnings = []
         if form.verify_removal.data:
             messages.append('Removing index "{0}":'.format(index.name))
-            new_index = Index.query.get(form.move_to.data)
-            warnings += redirect_index_warnings(index,
-                                                old_idx_slug=index.slug,
-                                                new_idx_slug=new_index.slug)
-            # This needs to come after redirect warnings because SQLAlchemy
-            # removes `CommonName` instances from the old `Index` when
-            # appending them to the new `Index`.
-            # TODO: See if there are any bugs in this due to things moving
-            # after redirect warnings are given.
-            warnings += migrate_common_names(index, new_index)
-            if index.thumbnail:
-                db.session.delete(index.thumbnail)
+            if form.move_to.data:
+                new_index = Index.query.get(form.move_to.data)
+                warnings += redirect_index_warnings(
+                    index,
+                    old_idx_slug=index.slug,
+                    new_idx_slug=new_index.slug
+                )
+                warnings += migrate_common_names(index, new_index)
+            else:
+                warnings.append(
+                    'Warning: CommonNames belonging to "{}" have been '
+                    'orphaned.'.format(index.name)
+                )
             index.clean_positions(remove_self=True)
             db.session.delete(index)
             db.session.commit()

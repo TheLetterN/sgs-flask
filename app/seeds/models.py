@@ -1359,8 +1359,6 @@ class Cultivar(db.Model, OrderingListMixin, SlugMixin, TimestampMixin):
         thumbnail: An optional thumbnail `Image` for a `Cultivar`.
         images: `Image` instances which are not thumbnails, but which are
             associated with a `Cultivar`.
-        vegetable_data: Optional additional information to be used if given
-            `Cultivar` is a "vegetable". (Really, food plant in general.)
         packets: The seed `Packet` instances belonging to given `Cultivar`.
         synonyms: Synonyms for a `Cultivar`.
         custom_pages: `CustomPage` instances that include given `Cultivar`.
@@ -1393,12 +1391,13 @@ class Cultivar(db.Model, OrderingListMixin, SlugMixin, TimestampMixin):
         back_populates='cultivars'
     )
     botanical_name = db.Column(db.UnicodeText)
-    vegetable_info = db.Column(db.UnicodeText)
-    organic = db.Column(db.Boolean, default=False)
+    organic = db.Column(db.Boolean)
+    open_pollinated = db.Column(db.Boolean)
+    maturation = db.Column(db.UnicodeText)
     description = db.Column(db.UnicodeText)
     new_for = db.Column(db.Integer)
-    featured = db.Column(db.Boolean, default=False)
-    favorite = db.Column(db.Boolean, default=False)
+    featured = db.Column(db.Boolean)
+    favorite = db.Column(db.Boolean)
     active = db.Column(db.Boolean)
     in_stock = db.Column(db.Boolean)
     visible = db.Column(db.Boolean)
@@ -1468,13 +1467,13 @@ class Cultivar(db.Model, OrderingListMixin, SlugMixin, TimestampMixin):
             'name',
             'subtitle',
             'botanical_name',
-            'vegetable_info',
+            'maturation',
             'description',
             weights={
                 'name': 'A',
                 'subtitle': 'B',
                 'botanical_name': 'B',
-                'vegetable_info': 'C',
+                'maturation': 'C',
                 'description': 'D'
             }
         )
@@ -1592,6 +1591,21 @@ class Cultivar(db.Model, OrderingListMixin, SlugMixin, TimestampMixin):
             return ' '.join(fn)
         else:
             return None
+
+    @property
+    def vegetable_info(self):
+        """vegetable info formatted for display, if present."""
+        if self.open_pollinated:
+            op = '<abbr title="Open Pollinated">(OP)</abbr>'
+            if self.maturation:
+                return '{} {}'.format(op, self.maturation)
+            else:
+                return op
+        elif self.maturation:
+            return self.maturation
+        else:
+            return ''
+
 
     @property
     def queryable_dict(self):

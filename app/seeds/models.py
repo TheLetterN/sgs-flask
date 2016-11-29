@@ -917,6 +917,11 @@ class CommonName(db.Model, OrderingListMixin, SlugMixin, TimestampMixin):
         return cn
 
     @classmethod
+    def get_orphans(cls):
+        """Get all`CommonName` instances which don't belong to an `Index`."""
+        return cls.query.filter(cls.index_id == None).all()
+
+    @classmethod
     def from_dict_(cls, dict_):
         """Create a new `CommonName` from a dict provided by dict_.
 
@@ -1172,46 +1177,6 @@ class Section(db.Model, OrderingListMixin, SlugMixin, TimestampMixin):
         """Return a string representing a `Section` instance."""
         return '<{0} "{1}">'.format(self.__class__.__name__, self.fullname)
 
-    @classmethod
-    def from_ids(cls, ids):
-        """Return a list of `Section` instances with `ids`.
-
-        Args:
-            ids: A collection of `Section.id` values to query for.
-
-        Returns:
-            list: A list of `Section` instances each with an id in `ids`.
-        """
-        return [cls.query.get(id) for id in ids]
-
-    @classmethod
-    def get_or_create(cls, name, common_name,  stream=sys.stdout):
-        """Load a `Section` from the db, or create it if it doesn't exist.
-
-        Args:
-            name: The name of the `Section`.
-            common_name: The `CommonName` it belongs to.
-            stream: Buffer to output messages to.
-
-        Returns:
-            Section: The loaded or created `Section`.
-        """
-        sec = cls.query.filter(
-            cls.common_name_id == common_name.id
-        ).filter(
-            cls.name == name
-        ).one_or_none()
-        if sec:
-            sec.created = False
-            print('The Section "{0}" has been loaded from the database.'
-                  .format(sec.fullname), file=stream)
-        else:
-            sec = Section(name=name, common_name=common_name)
-            sec.created = True
-            print('The Section "{0}" does not yet exist in the database, '
-                  'so it has been created'.format(sec.fullname), file=stream)
-        return sec
-
     @property
     def url(self):
         try:
@@ -1264,6 +1229,51 @@ class Section(db.Model, OrderingListMixin, SlugMixin, TimestampMixin):
             if any(child.has_public_cultivars for child in self.children):
                 rv = True
         return rv
+
+    @classmethod
+    def from_ids(cls, ids):
+        """Return a list of `Section` instances with `ids`.
+
+        Args:
+            ids: A collection of `Section.id` values to query for.
+
+        Returns:
+            list: A list of `Section` instances each with an id in `ids`.
+        """
+        return [cls.query.get(id) for id in ids]
+
+    @classmethod
+    def get_or_create(cls, name, common_name,  stream=sys.stdout):
+        """Load a `Section` from the db, or create it if it doesn't exist.
+
+        Args:
+            name: The name of the `Section`.
+            common_name: The `CommonName` it belongs to.
+            stream: Buffer to output messages to.
+
+        Returns:
+            Section: The loaded or created `Section`.
+        """
+        sec = cls.query.filter(
+            cls.common_name_id == common_name.id
+        ).filter(
+            cls.name == name
+        ).one_or_none()
+        if sec:
+            sec.created = False
+            print('The Section "{0}" has been loaded from the database.'
+                  .format(sec.fullname), file=stream)
+        else:
+            sec = Section(name=name, common_name=common_name)
+            sec.created = True
+            print('The Section "{0}" does not yet exist in the database, '
+                  'so it has been created'.format(sec.fullname), file=stream)
+        return sec
+
+    @classmethod
+    def get_orphans(cls):
+        """Get all `Section` instances with no `CommonName`."""
+        return cls.query.filter(cls.common_name_id == None).all()
 
     def set_common_name(self, cn, insert_at=None):
         """Set common_name and deal with positioning.
@@ -1572,6 +1582,56 @@ class Cultivar(db.Model, OrderingListMixin, SlugMixin, TimestampMixin):
         """Return a default product name for given `Cultivar`."""
         return '{}, {}'.format(self.common_name.name, self.name).upper()
 
+    @property
+    def fullname(self):
+        """str: Full name of cultivar including common name."""
+        fn = [self.name]
+        if self.common_name and self.common_name.name != self.name:
+            fn.append(self.common_name.name)
+        if fn:
+            return ' '.join(fn)
+        else:
+            return None
+
+    @property
+    def queryable_dict(self):
+        """dict: A dict with name, common_name, and index of `self`.
+
+        Note:
+            Any or all values can be `None`, as passing <obj.attribute> == None
+            to db.Model.query.filter() will return `None` if no objects in the
+            database have the attribute in question set to `None`. A `dict`
+            with all values set to `None` won't raise an exception when used
+            for a query, it will just yield no results.
+        """
+        name = self.name
+        common_name = self.common_name.name if self.common_name else None
+        index = (self.common_name.index.name if self.common_name
+                 and self.common_name.index else None)
+        return {
+            'Cultivar Name': name,
+            'Common Name': common_name,
+            'Index': index
+        }
+
+    @property
+    def public(self):
+        """bool: Whether or not `Cultivar` is visible to non-admin users."""
+        return self.active and self.visible
+
+    @property
+    def noship_states_html(self):
+        """str: A list of states a `Cultivar` can't be shipped to."""
+        if self.noship_states:
+            return 'Cannot ship to {}.'.format(
+                list_to_english(
+                    [s.html for s in self.noship_states],
+                    ', or '
+                )
+            )
+        else:
+            return ''
+
     @classmethod
     def from_ids(cls, ids):
         """Get `Cultivar` instances corresponding to `ids`.
@@ -1648,55 +1708,10 @@ class Cultivar(db.Model, OrderingListMixin, SlugMixin, TimestampMixin):
                   'so it has been created.'.format(cv.fullname), file=stream)
         return cv
 
-    @property
-    def fullname(self):
-        """str: Full name of cultivar including common name."""
-        fn = [self.name]
-        if self.common_name and self.common_name.name != self.name:
-            fn.append(self.common_name.name)
-        if fn:
-            return ' '.join(fn)
-        else:
-            return None
-
-    @property
-    def queryable_dict(self):
-        """dict: A dict with name, common_name, and index of `self`.
-
-        Note:
-            Any or all values can be `None`, as passing <obj.attribute> == None
-            to db.Model.query.filter() will return `None` if no objects in the
-            database have the attribute in question set to `None`. A `dict`
-            with all values set to `None` won't raise an exception when used
-            for a query, it will just yield no results.
-        """
-        name = self.name
-        common_name = self.common_name.name if self.common_name else None
-        index = (self.common_name.index.name if self.common_name
-                 and self.common_name.index else None)
-        return {
-            'Cultivar Name': name,
-            'Common Name': common_name,
-            'Index': index
-        }
-
-    @property
-    def public(self):
-        """bool: Whether or not `Cultivar` is visible to non-admin users."""
-        return self.active and self.visible
-
-    @property
-    def noship_states_html(self):
-        """str: A list of states a `Cultivar` can't be shipped to."""
-        if self.noship_states:
-            return 'Cannot ship to {}.'.format(
-                list_to_english(
-                    [s.html for s in self.noship_states],
-                    ', or '
-                )
-            )
-        else:
-            return ''
+    @classmethod
+    def get_orphans(cls):
+        """Get all `Cultivar` instances with no `CommonName`."""
+        return cls.query.filter(cls.common_name_id == None).all()
 
 
 class Packet(db.Model, TimestampMixin):
@@ -1763,6 +1778,11 @@ class Packet(db.Model, TimestampMixin):
         if not pkt:
             pkt = cls(sku=sku)
         return pkt
+
+    @classmethod
+    def get_orphans(cls):
+        """Get all `Packet` instances with no `Cultivar`."""
+        return cls.query.filter(cls.cultivar_id == None).all()
 
 
 class CustomPage(db.Model, TimestampMixin):

@@ -795,6 +795,10 @@ class EditIndexForm(EditWithThumbnailForm):
         'Index',
         validators=[InputRequired(), Length(max=254)]
     )
+    slug = SlugifiedStringField(
+        'URL Slug',
+        validators=[InputRequired(), Length(max=254)]
+    )
     description = StrippedTextAreaField(
         'Description',
         validators=[Length(max=5120)]
@@ -844,6 +848,10 @@ class EditCommonNameForm(EditWithThumbnailForm):
                            validators=[InputRequired()])
     name = StrippedStringField(
         'Common Name',
+        validators=[InputRequired(), Length(max=254)]
+    )
+    slug = SlugifiedStringField(
+        'URL Slug',
         validators=[InputRequired(), Length(max=254)]
     )
     list_as = StrippedStringField(
@@ -967,6 +975,10 @@ class EditSectionForm(EditWithThumbnailForm):
         'Section Name',
         validators=[InputRequired(), Length(max=254)]
     )
+    slug = SlugifiedStringField(
+        'URL Slug',
+        validators=[InputRequired(), Length(max=254)]
+    )
     subtitle = StrippedStringField(
         'Subtitle',
         validators=[Length(max=254)]
@@ -1057,6 +1069,10 @@ class EditCultivarForm(EditWithThumbnailForm):
     taxable = BooleanField('Taxable in California')
     name = StrippedStringField(
         'Cultivar Name',
+        validators=[InputRequired(), Length(max=254)]
+    )
+    slug = SlugifiedStringField(
+        'URL Slug',
         validators=[InputRequired(), Length(max=254)]
     )
     subtitle = StrippedStringField(

@@ -122,7 +122,10 @@ def redirect_after_submit(*urls):
     """Redirect to origin or first passed arg that exists."""
     origin = request.args.get('origin')
     if origin:
-        return redirect(origin)
+        with current_app.test_client() as tc:
+            # Only redirect to origin if the page exists.
+            if tc.get(origin).status_code // 100 != 4:
+                return redirect(origin)
     try:
         return redirect(next(u for u in urls if u))
     except StopIteration:
@@ -896,6 +899,10 @@ def edit_index(idx_id=None):
             edited = True
             index.name = form.name.data
             messages.append('Name changed to: "{0}".'.format(index.name))
+        if form.slug.data != index.slug:
+            edited = True
+            index.slug = form.slug.data
+            messages.append('Slug changed to "{}".'.format(index.slug))
         edited = edit_thumbnail(form, index, messages) or edited
         edited = edit_optional_data(
             form.description,
@@ -979,6 +986,10 @@ def edit_common_name(cn_id=None):
             edited = True
             cn.name = form.name.data
             messages.append('Name changed to: "{0}".'.format(cn.name))
+        if form.slug.data != cn.slug:
+            edited = True
+            cn.slug = form.slug.data
+            messages.append('Slug changed to "{}".'.format(cn.slug))
         if form.list_as.data != cn.list_as:
             edited = True
             cn.list_as = form.list_as.data
@@ -1091,11 +1102,11 @@ def edit_common_name(cn_id=None):
                 if warnings:
                     flash_all(warnings, 'warning')
 
-            return redirect(dest or origin() or url_for('seeds.manage'))
+            return redirect_after_submit(cn.url)
         else:
             messages.append('No changes to "{0}" were made.'.format(cn.name))
             flash_all(messages)
-            return redirect(url_for('seeds.edit_common_name', cn_id=cn.id))
+            return redirect(request.full_path)
     crumbs = cblr.crumble_route_group('edit_common_name', EDIT_ROUTES)
     return render_template('seeds/edit_common_name.html',
                            crumbs=crumbs,
@@ -1148,6 +1159,10 @@ def edit_section(section_id=None):
             edited = True
             section.name = form.name.data
             messages.append('Name changed to: "{0}"'.format(section.name))
+        if form.slug.data != section.slug:
+            edited = True
+            section.slug = form.slug.data
+            messages.append('Slug changed to "{}".'.format(section.slug))
         edited = edit_optional_data(
             form.subtitle,
             section,
@@ -1207,13 +1222,12 @@ def edit_section(section_id=None):
                 except NotEnabledError:
                     pass
 
-            return redirect(url_for('seeds.manage'))
+            return redirect_after_submit(section.url)
         else:
             messages.append('No changes to "{0}" were made.'
                             .format(section.name))
             flash_all(messages)
-            return redirect(url_for('seeds.edit_section',
-                                    section_id=section_id))
+            return redirect(request.full_path)
     crumbs = cblr.crumble_route_group('edit_section', EDIT_ROUTES)
     return render_template('seeds/edit_section.html',
                            crumbs=crumbs,
@@ -1251,6 +1265,10 @@ def edit_cultivar(cv_id=None):
             cv.name = form.name.data
             messages.append('(Short) Name changed to: "{0}".'
                             .format(cv.name))
+        if form.slug.data != cv.slug:
+            edited = True
+            cv.slug = form.slug.data
+            messages.append('Slug changed to "{}".'.format(cv.slug))
         old_parent_sec = cv.parent_section
         edited = edit_optional_data(
             form.subtitle,
@@ -1420,12 +1438,12 @@ def edit_cultivar(cv_id=None):
                     pass
             if warnings:
                 flash_all(warnings)
-            return redirect(url_for('seeds.manage'))
+            return redirect_after_submit(cv.url)
         else:
             messages.append('No changes to "{0}" were made'
                             .format(cv.fullname))
             flash_all(messages)
-            return redirect(url_for('seeds.edit_cultivar', cv_id=cv_id))
+            return redirect(request.full_path)
     crumbs = cblr.crumble_route_group('edit_cultivar', EDIT_ROUTES)
     return render_template('seeds/edit_cultivar.html',
                            crumbs=crumbs,

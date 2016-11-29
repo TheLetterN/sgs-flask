@@ -57,7 +57,7 @@ Copyright Swallowtail Garden Seeds, Inc
   {# Cultivar admin below #}
   {% if current_user.can(Permission.MANAGE_SEEDS) %}
   {% macro flipper(attr) %}
-  {{ cultivar.fullname }} is <em class="status-{% if cultivar[attr] %}true{% else %}false{% endif %}">{% if not cultivar[attr] %}not {% endif %}{{ attr }}</em><a class="toggle-{% if cultivar[attr] %}false{% else %}true{% endif %}" href="{{ url_for('seeds.flip_cultivar_bool', cv_id=cultivar.id, attr=attr, origin=request.path + '#' + cultivar.slug) }}">Set as {% if cultivar[attr] %}not {% endif %}{{ attr }}</a>
+  {{ cultivar.fullname }} is <em class="status-{% if cultivar[attr] %}true{% else %}false{% endif %}">{% if not cultivar[attr] %}not {% endif %}{{ attr }}</em><a class="toggle-{% if cultivar[attr] %}false{% else %}true{% endif %}" href="{{ url_for('seeds.flip_cultivar_bool', cv_id=cultivar.id, attr=attr, origin=cultivar.url) }}">Set as {% if cultivar[attr] %}not {% endif %}{{ attr }}</a>
   {% endmacro %}
   <div class="cultivar-admin">
     <h3>ADMIN - Options for {{ cultivar.fullname }}:</h3>
@@ -81,7 +81,7 @@ Copyright Swallowtail Garden Seeds, Inc
         {{ flipper('taxable') }}
       </li>
     </ul>
-    <a title="move up/backward" href="{{ url_for('seeds.move_cultivar', cv_id=cultivar.id, delta=-1, origin=request.path + '#{}'.format(cultivar.slug)) }}">&#9650;</a> | <a href="{{ url_for('seeds.edit_cultivar', cv_id=cultivar.id) }}">Edit {{ cultivar.fullname }}</a> | <a href="{{ url_for('seeds.remove_cultivar', cv_id=cultivar.id) }}">Remove {{ cultivar.fullname }}</a> | <a title="move down/forward" href="{{ url_for('seeds.move_cultivar', cv_id=cultivar.id, delta=1, origin=request.path + '#{}'.format(cultivar.slug)) }}">&#9660;</a>
+    <a title="move up/backward" href="{{ url_for('seeds.move_cultivar', cv_id=cultivar.id, delta=-1, origin=cultivar.url) }}">&#9650;</a> | <a href="{{ url_for('seeds.edit_cultivar', cv_id=cultivar.id, origin=cultivar.url) }}">Edit {{ cultivar.fullname }}</a> | <a href="{{ url_for('seeds.remove_cultivar', cv_id=cultivar.id) }}">Remove {{ cultivar.fullname }}</a> | <a title="move down/forward" href="{{ url_for('seeds.move_cultivar', cv_id=cultivar.id, delta=1, origin=cultivar.url) }}">&#9660;</a>
     <div class="packet-admin">
       <h4>Packets for {{ cultivar.fullname }}:</h4>
       {% if cultivar.packets %}

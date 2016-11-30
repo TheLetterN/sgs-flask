@@ -5,11 +5,15 @@ from pathlib import Path
 from bs4 import BeautifulSoup, Comment
 from inflection import pluralize
 import requests
+from slugify import slugify
 from werkzeug import secure_filename
 
 from app import db
 from app.db_helpers import dbify
 from app.seeds.models import (
+    BulkCategory,
+    BulkItem,
+    BulkSeries,
     CommonName,
     Cultivar,
     Image,
@@ -224,10 +228,12 @@ def save_herbs(herb=None, filename=None):
 def load_herbs(filename=None):
     return load_index('herbs', filename=filename)
 
+
 def scrape_bulk():
     b = BulkScraper()
     b.create_dblist()
     return b
+
 
 def save_bulk(bulk=None, filename=None):
     print('Saving bulk...')
@@ -241,6 +247,13 @@ def save_bulk(bulk=None, filename=None):
     print('Bulk saved to: {}'.format(p))
 
 
+def load_bulk(filename=None):
+    if not filename:
+        filename = '/tmp/bulk.json'
+    p = Path(filename)
+    with p.open('r', encoding='utf-8') as ifile:
+        return json.loads(ifile.read())
+
 
 def save_all():
     save_annuals()
@@ -248,9 +261,15 @@ def save_all():
     save_vines()
     save_vegetables()
     save_herbs()
+    save_bulk()
 
 
 def load_all():
+    """Load all indexes from json files.
+
+    Note: bulk is excluded because it operates differently, so should be
+    handled on its own.
+    """
     return (
         load_annuals(),
         load_perennials(),
@@ -298,7 +317,47 @@ def add_index_to_database(d):
     idx.common_names.reorder()
     db.session.commit()
     print('Finished adding {} to the database.'.format(d['name']))
-    
+
+
+def add_bulk_to_database(l):
+    for d in l:
+        print('Adding bulk category "{}" to database...'.format(d['header']))
+        cat = BulkCategory.get_or_create(d['slug'])
+        db.session.add(cat)
+        cat.name = d['header']  # Deal with it.
+        cat.list_as = d['list_as']
+        cat.series = list(generate_bulk_series(cat, d['sections']))
+        cat.items = list(generate_bulk_items(cat, d['items']))
+        db.session.flush()
+        cat.series.reorder()
+        cat.items.reorder()
+        db.session.commit()
+        print('Finished adding "{}" to database.'.format(cat.name))
+
+
+def generate_bulk_series(cat, l):
+    for d in l:
+        ser = BulkSeries.get_or_create(cat, d['slug'])
+        db.session.add(ser)
+        ser.name = d['name']
+        ser.subtitle = d['subtitle']
+        ser.items = list(generate_bulk_items(ser, d['items']))
+        db.session.flush()
+        ser.items.reorder()
+        yield ser
+
+
+def generate_bulk_items(parent, l, series=None):
+    for d in l:
+        item = BulkItem.get_or_create(parent, d['slug'])
+        db.session.add(item)
+        item.name = d['name']
+        item.product_name = d['product_name']
+        item.sku = d['sku']
+        item.price = d['price']
+        item.taxable = d['taxable']
+        yield item
+
 
 def generate_common_names(idx, l):
     for d in l:
@@ -669,24 +728,30 @@ class BulkPage:
         def item_from_row(row):
             button = row.find('button')
             taxable = False if 'f' in button['data-item-taxable'] else True
+            name = ' '.join(row.find('td').text.strip().split())
+
             return {
-                'name': row.find('td').text.strip(),
+                'name': name,
+                'slug': slugify(name),
                 'sku': button['data-item-id'],
                 'product_name': button['data-item-name'],
                 'price': button['data-item-price'],
                 'taxable': taxable
             }
         def dict_from_section(sec):
+            name = ' '.join(first_text(sec['div'].find('h2')).split())
             return {
-                'name': first_text(sec['div'].find('h2')),
+                'name': name,
+                'slug': slugify(name),
                 'subtitle': sec['div'].find('em').text.strip(),
                 'items': [item_from_row(r) for r in sec['rows']]
             }
-        header = self.h1.text.strip()
+        header = ' '.join(self.h1.text.strip().split())
         print('Creating dbdict for {}...'.format(header))
         self._dbdict = {
             'list_as': self.list_as,
             'header': header,
+            'slug': self.url.split('/')[-1].replace('.html', ''),
             'sections': [dict_from_section(s) for s in self.sections],
             'items': [item_from_row(r) for r in self.rows]
         }

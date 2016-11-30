@@ -35,7 +35,13 @@ from app import create_app, db, mail, Permission
 from app.auth.models import User
 from app.seeds.excel import SeedsWorkbook
 from app.seeds.models import Cultivar
-from sgsscrape import add_index_to_database, load_all, save_all
+from sgsscrape import (
+    add_bulk_to_database,
+    add_index_to_database,
+    load_all,
+    load_bulk,
+    save_all
+)
 
 app = create_app(os.getenv('SGS_MODE') or 'default')
 manager = Manager(app)
@@ -56,6 +62,7 @@ def populate():
     try:
         for i in load_all():
             add_index_to_database(i)
+        add_bulk_to_database(load_bulk())
     except FileNotFoundError:
         print('No scraped data found! Please run "manage.py scrape" to scrape '
               'the website, then try again.')

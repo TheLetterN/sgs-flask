@@ -369,7 +369,10 @@ class Index(db.Model, SlugMixin, TimestampMixin):
     position = db.Column(db.Integer)
 
     # Data Required
-    name = db.Column(db.UnicodeText, unique=True)
+    name = db.Column(db.UnicodeText)
+
+    # Override slug to add unique constraint
+    slug = db.Column(db.UnicodeText, unique=True)
 
     # Data Optional
     thumbnail_id = db.Column(db.Integer, db.ForeignKey('images.id'))
@@ -1972,6 +1975,123 @@ class Image(db.Model, TimestampMixin):
     def exists(self):
         """Check whether or not file associated with this Image exists."""
         return self.path.exists()
+
+
+class BulkCategory(db.Model, SlugMixin, TimestampMixin):
+    """Table for bulk categories/sections."""
+    __tablename__ = 'bulk_categories'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.UnicodeText)
+    # Override slug to add unique constraint
+    slug = db.Column(db.UnicodeText, unique=True)
+    list_as = db.Column(db.UnicodeText)
+    
+    series = db.relationship(
+        'BulkSeries',
+        order_by='BulkSeries.cat_pos',
+        collection_class=ordering_list('cat_pos', count_from=1),
+        back_populates='category'
+    )
+    items = db.relationship(
+        'BulkItem',
+        order_by='BulkItem.cat_pos',
+        collection_class=ordering_list('cat_pos', count_from=1),
+        back_populates='category'
+    )
+
+    def __repr__(self):
+        return '<BulkCategory "{}">'.format(self.name)
+
+    @classmethod
+    def get_or_create(cls, slug):
+        """Get `BulkCategory` with given slug, otherwise create it."""
+        bc = cls.query.filter(cls.slug == slug).one_or_none()
+        if not bc:
+            bc = cls(slug=slug)
+            bc.created = True
+        else:
+            bc.created = False
+        return bc
+
+
+class BulkSeries(db.Model, OrderingListMixin, SlugMixin, TimestampMixin):
+    """Table for series within bulk categories/sections."""
+    __tablename__ = 'bulk_series'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.UnicodeText)
+    subtitle = db.Column(db.UnicodeText)
+
+    cat_pos = db.Column(db.Integer)
+
+    category_id = db.Column(db.Integer, db.ForeignKey('bulk_categories.id'))
+    category = db.relationship('BulkCategory', back_populates='series')
+    items = db.relationship(
+        'BulkItem',
+        order_by='BulkItem.ser_pos',
+        collection_class=ordering_list('ser_pos', count_from=1),
+        back_populates='series'
+    )
+
+    def __repr__(self):
+        return '<BulkSeries "{}">'.format(self.name)
+
+    @classmethod
+    def get_or_create(cls, cat, slug):
+        """Get `BulkSeries` with given category and slug.
+
+        Args:
+            cat: The `BulkCategory` the `BulkSeries` belongs/should belong to.
+            slug: The slug of the `BulkSeries` to get or create.
+        """
+        ser = next((s for s in cat.series if s.slug == slug), None)
+        if not ser:
+            ser = cls(category=cat, slug=slug)
+            ser.created = True
+        else:
+            ser.created = False
+        return ser
+
+
+class BulkItem(db.Model, OrderingListMixin, SlugMixin, TimestampMixin):
+    """Table for individual bulk items."""
+    __tablename__ = 'bulk_items'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.UnicodeText)
+    product_name = db.Column(db.UnicodeText)
+    sku = db.Column(db.UnicodeText)
+    price = db.Column(USDollar)
+    taxable = db.Column(db.Boolean)
+
+    cat_pos = db.Column(db.Integer)
+    ser_pos = db.Column(db.Integer)
+
+    category_id = db.Column(db.Integer, db.ForeignKey('bulk_categories.id'))
+    category = db.relationship('BulkCategory', back_populates='items')
+    series_id = db.Column(db.Integer, db.ForeignKey('bulk_series.id'))
+    series = db.relationship('BulkSeries', back_populates='items')
+
+    def __repr__(self):
+        return '<BulkItem "{}">'.format(self.name)
+    
+    @classmethod
+    def get_or_create(cls, parent, slug):
+        """Get `BulkItem` with given category and slug.
+
+        Args:
+            parent: The `BulkCategory` or `BulkSeries` the `BulkItem` 
+                belongs/should belong to.
+            slug: The slug of the `BulkItem` to get or create.
+        """
+        item = next((i for i in parent.items if i.slug == slug), None)
+        if not item:
+            if isinstance(parent, BulkCategory):
+                item = cls(category=parent, slug=slug)
+            else:
+                item = cls(series=parent, slug=slug)
+            item.created = True
+        else:
+            item.created = False
+        return item
 
 
 # Event Listeners

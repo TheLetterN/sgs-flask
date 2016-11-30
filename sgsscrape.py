@@ -224,6 +224,23 @@ def save_herbs(herb=None, filename=None):
 def load_herbs(filename=None):
     return load_index('herbs', filename=filename)
 
+def scrape_bulk():
+    b = BulkScraper()
+    b.create_dblist()
+    return b
+
+def save_bulk(bulk=None, filename=None):
+    print('Saving bulk...')
+    if not bulk:
+        bulk = scrape_bulk()
+    if not filename:
+        filename = '/tmp/bulk.json'
+    p = Path(filename)
+    with p.open('w', encoding='utf-8') as ofile:
+        ofile.write(json.dumps(bulk.dblist, indent=4))
+    print('Bulk saved to: {}'.format(p))
+
+
 
 def save_all():
     save_annuals()
@@ -587,6 +604,94 @@ class IndexScraper:
         ]
 
 
+class BulkScraper:
+    """A scraper for the bulk section."""
+    def __init__(self):
+        self.url = 'https://www.swallowtailgardenseeds.com/bulk/'
+        self.thumbnail = (
+            'https://www.swallowtailgardenseeds.com/images/index-image-links/'
+            'bulk-catalog3.jpg'
+        )
+        r = requests.get(self.url)
+        r.encoding = 'utf-8'
+        self.soup = BeautifulSoup(r.text, 'html5lib')
+        self.ul = self.soup.find('ul', class_='bulk-index')
+        self.links = self.ul.find_all('a')
+        self._dblist = []
+
+    @property
+    def dblist(self):
+        if not self._dblist:
+            self.create_dblist()
+        return self._dblist
+
+    def create_dblist(self):
+        print('Creating Bulk dblist...')
+        self._dblist = [BulkPage(l).dbdict for l in self.links]
+
+
+class BulkPage:
+    """A scraped page in the bulk section."""
+    def __init__(self, link):
+        self.url = link['href']
+        self.list_as = link.text
+        r = requests.get(self.url)
+        r.encoding = 'utf-8'
+        self.soup = BeautifulSoup(r.text, 'html5lib')
+        self.h1 = self.soup.find('h1')
+        self.section_divs = self.soup.find_all('div', class_='Series')
+        self.sections = [
+            {
+                'div': d,
+                'table': d.find_next('table'),
+                'rows': d.find_next('table').find_all('tr')
+            } for d in self.section_divs
+        ]
+        self.tables = [
+            t for t in self.soup.find_all(
+                'table', class_='bulk-items'
+            ) if t not in (
+                s['table'] for s in self.sections
+            )
+        ]
+        self.rows = []
+        for t in self.tables:
+            self.rows += t.find_all('tr')
+        self._dbdict = dict()
+
+    @property
+    def dbdict(self):
+        if not self._dbdict:
+            self.create_dbdict()
+        return self._dbdict
+
+    def create_dbdict(self):
+        def item_from_row(row):
+            button = row.find('button')
+            taxable = False if 'f' in button['data-item-taxable'] else True
+            return {
+                'name': row.find('td').text.strip(),
+                'sku': button['data-item-id'],
+                'product_name': button['data-item-name'],
+                'price': button['data-item-price'],
+                'taxable': taxable
+            }
+        def dict_from_section(sec):
+            return {
+                'name': first_text(sec['div'].find('h2')),
+                'subtitle': sec['div'].find('em').text.strip(),
+                'items': [item_from_row(r) for r in sec['rows']]
+            }
+        header = self.h1.text.strip()
+        print('Creating dbdict for {}...'.format(header))
+        self._dbdict = {
+            'list_as': self.list_as,
+            'header': header,
+            'sections': [dict_from_section(s) for s in self.sections],
+            'items': [item_from_row(r) for r in self.rows]
+        }
+
+
 class CNScraper:
     """A scraper for a given common name page."""
     def __init__(self, url, thumbnail=None):
@@ -696,3 +801,4 @@ class CNScraper:
             for sec in section.subsections:
                 cultivars += sec.cultivars
         return cultivars
+

@@ -84,5 +84,21 @@ Copyright Swallowtail Garden Seeds, Inc
         {{ item_row(item) }}
        {% endfor %} 
       </table>
+      {% if ser.items_after %}
+      <hr>
+      <table class="bulk-items">
+        {% for item in ser.items_after %}
+        {{ item_row(item) }}
+        {% endfor %}
+      </table>
+      <hr>
+      {% endif %}
 {% endfor %}
+{% if not category.series %}
+      <table class="bulk-items">
+        {% for item in category.items %}
+        {{ item_row(item) }}
+        {% endfor %}
+      </table>
+{% endif %}
 {% endblock %}

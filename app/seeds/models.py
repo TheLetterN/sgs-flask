@@ -2048,6 +2048,18 @@ class BulkSeries(db.Model, OrderingListMixin, SlugMixin, TimestampMixin):
     def __repr__(self):
         return '<BulkSeries "{}">'.format(self.name)
 
+    @property
+    def items_after(self):
+        """list: Items not in a series that come after this series."""
+        serieses = self.category.series  # A perfectly cromulent word!
+        try:
+            n = serieses[serieses.index(self) + 1]
+            return [
+                i for i in self.category.items if self.name < i.name < n.name
+            ]
+        except IndexError:
+            return []
+
     @classmethod
     def get_or_create(cls, cat, slug):
         """Get `BulkSeries` with given category and slug.

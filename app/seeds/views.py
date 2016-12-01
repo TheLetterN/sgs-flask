@@ -38,13 +38,14 @@ from app.redirects import Redirect, RedirectsFile
 from . import seeds
 from ..lastcommit import LastCommit
 from app.db_helpers import dbify
-from .models import (
-    Section,
+from app.seeds.models import (
+    BulkCategory,
     CommonName,
     Cultivar,
     Image,
     Index,
     Packet,
+    Section,
     USDollar
 )
 from app.seeds.forms import (
@@ -487,6 +488,39 @@ def static_html(page):
         return render_template('static/' + page + '.html', page=page)
     except TemplateNotFound:
         abort(404)
+
+
+@seeds.route('/bulk')
+def bulk():
+    categories = BulkCategory.query.all()
+    crumbs = (
+        cblr.crumble('home', 'Home'),
+        cblr.crumble('bulk', 'Bulk Seeds')
+    )
+    return render_template(
+        'seeds/bulk.html',
+        categories=categories,
+        crumbs=crumbs
+    )
+
+
+@seeds.route('/bulk/<slug>.html')
+def bulk_category(slug):
+    category = BulkCategory.query.filter(
+        BulkCategory.slug == slug
+    ).one_or_none()
+    if not category:
+        abort(404)
+    crumbs = (
+        cblr.crumble('home', 'Home'),
+        cblr.crumble('bulk', 'Bulk Seeds'),
+        cblr.crumble('bulk_category', category.name.title(), slug=slug)
+    )
+    return render_template(
+        'seeds/bulk_category.html',
+        crumbs=crumbs,
+        category=category
+    )
 
 
 @seeds.route('/add_index', methods=['GET', 'POST'])

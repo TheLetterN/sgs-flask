@@ -1,0 +1,50 @@
+{# This file is part of SGS-Flask.
+SGS-Flask is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+SGS-Flask is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see
+<http://www.gnu.org/licenses/>.
+Copyright Swallowtail Garden Seeds, Inc
+#}
+{% extends "includes/base.html" %}
+{# Indent block head content 4 spaces, and block main content 6 spaces. #}
+{% block head %}
+<title>Bulk Seeds | Swallowtail Garden Seeds</title>
+<link rel="canonical" href="{{ url_for('seeds.bulk', _external=True) }}">
+<style>
+  @media all and (min-width:20em){
+  #main .bulk-index{margin-top:1.5em;padding-left:1.5em;list-style:none;text-transform:lowercase;text-align:left}
+  #main .bulk-index li{display:inline-block;width:9.25em;height:auto;padding:.5em .75em .5em 0;vertical-align:top}
+  #main li.bulk-index-li-letters{margin-top:1.5em;display:block;width:3em;height:3em}
+  #main .bulk-index-h3-letters{font-size:2em;margin:0}
+  }
+  @media all and (min-width:48em){
+  #main .bulk-index{padding-left:0}
+  }
+</style> 
+{% endblock %}
+{% block main %}
+      <h1>Bulk Flower Seeds</h1>
+        <p>Bulk items are special orders and are estimated to ship within 3 weeks from the order date. These wholesale packets can be purchased in combination with our regular retail packets. The retail portion of your order will ship immediately. Because these seeds are ordered just for you, bulk seed returns (in original condition) are subject to a 20% restocking fee. The quality of the seed is high, the prices competitive, and if you are able to plan ahead, you are sure to find some extraordinary values.
+        </p>
+      <ul class="bulk-index">
+      {% set first_letter=None %}
+      {% for cat in categories %}
+        {% if cat.slug[0] != first_letter %}
+          {% set first_letter = cat.slug[0] %}
+        <li class="bulk-index-li-letters">
+          <h3 class="bulk-index-h3-letters">{{ first_letter|upper }}</h3>
+        </li>
+        {% endif %}
+        <li>
+          <a rel="nofollow" href="{{ cat.url }}">{{ cat.list_as }}</a>
+        </li>
+      {% endfor %}
+      </ul>
+{% endblock %}

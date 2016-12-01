@@ -34,6 +34,7 @@ Copyright Swallowtail Garden Seeds, Inc
 {% for idx in nav_data %}
 #Home_{{ idx['id'] }}-seeds-image{background:url({{ idx['Thumbnail'] }});background-size:101%}
 {% endfor %}
+#Home_bulk-seed-sales-image{background:url({{ url_for('static', filename='images/index-image-links/bulk-catalog3.jpg', _external=True) }});background-size:101%}
 }
 @media all and (min-width:48em){
 .Home_header{text-align:left}
@@ -63,5 +64,9 @@ Copyright Swallowtail Garden Seeds, Inc
     <a class="Home_link-box-link" title="{{ idx['Header'] }}" href="{{ url_for('seeds.index', idx_slug=idx['Slug']) }}"></a>
   </div>
   {% endfor %}
+  <div class="Home_link-box" id="Home_bulk-seed-sales-image">
+    <h2 class="Home_link-box-caption">Bulk Seed Sales</h2>
+    <a class="Home_link-box-link" href="{{ url_for('seeds.bulk') }}" title="Bulk Flower Seeds"></a>
+  </div>
 </div>
 {% endblock %}

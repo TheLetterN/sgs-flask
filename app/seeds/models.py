@@ -2002,6 +2002,19 @@ class BulkCategory(db.Model, SlugMixin, TimestampMixin):
     def __repr__(self):
         return '<BulkCategory "{}">'.format(self.name)
 
+    @property
+    def url(self):
+        return url_for('seeds.bulk_category', slug=self.slug, _external=True)
+
+    @property
+    def title(self):
+        name = self.name.title()
+        if 'Bulk' not in name:
+            name = 'Bulk ' + name
+        if 'Seeds' not in name:
+            name = name + ' Seeds'
+        return name
+
     @classmethod
     def get_or_create(cls, slug):
         """Get `BulkCategory` with given slug, otherwise create it."""

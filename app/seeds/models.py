@@ -147,6 +147,20 @@ cultivars_to_images = db.Table(
 )
 
 
+bulk_series_to_images = db.Table(
+    'bulk_series_to_images',
+    db.Column('bulk_series_id', db.Integer, db.ForeignKey('bulk_series.id')),
+    db.Column('images_id', db.Integer, db.ForeignKey('images.id'))
+)
+
+
+bulk_items_to_images = db.Table(
+    'bulk_items_to_images',
+    db.Column('bulk_item_id', db.Integer, db.ForeignKey('bulk_items.id')),
+    db.Column('images_id', db.Integer, db.ForeignKey('images.id'))
+)
+
+
 cultivars_to_custom_pages = db.Table(
     'cultivars_to_custom_pages',
     db.Model.metadata,
@@ -1890,6 +1904,24 @@ class Image(db.Model, TimestampMixin):
         secondary=cultivars_to_images,
         back_populates='images'
     )
+    bulk_series_with_thumb = db.relationship(
+        'BulkSeries',
+        back_populates='thumbnail'
+    )
+    bulk_series = db.relationship(
+        'BulkSeries',
+        secondary=bulk_series_to_images,
+        back_populates='images'
+    )
+    bulk_items_with_thumb = db.relationship(
+        'BulkItem',
+        back_populates='thumbnail'
+    )
+    bulk_items = db.relationship(
+        'BulkItem',
+        secondary=bulk_items_to_images,
+        back_populates='images'
+    )
     # Search
     search_vector = db.Column(TSVectorType('filename'))
 
@@ -2044,6 +2076,16 @@ class BulkSeries(db.Model, OrderingListMixin, SlugMixin, TimestampMixin):
         collection_class=ordering_list('ser_pos', count_from=1),
         back_populates='series'
     )
+    thumbnail_id = db.Column(db.Integer, db.ForeignKey('images.id'))
+    thumbnail = db.relationship(
+        'Image',
+        back_populates='bulk_series_with_thumb'
+    )
+    images = db.relationship(
+        'Image',
+        secondary=bulk_series_to_images,
+        back_populates='bulk_series'
+    )
 
     def __repr__(self):
         return '<BulkSeries "{}">'.format(self.name)
@@ -2094,6 +2136,16 @@ class BulkItem(db.Model, OrderingListMixin, SlugMixin, TimestampMixin):
     category = db.relationship('BulkCategory', back_populates='items')
     series_id = db.Column(db.Integer, db.ForeignKey('bulk_series.id'))
     series = db.relationship('BulkSeries', back_populates='items')
+    thumbnail_id = db.Column(db.Integer, db.ForeignKey('images.id'))
+    thumbnail = db.relationship(
+        'Image',
+        back_populates='bulk_items_with_thumb'
+    )
+    images = db.relationship(
+        'Image',
+        secondary=bulk_items_to_images,
+        back_populates='bulk_items'
+    )
 
     def __repr__(self):
         return '<BulkItem "{}">'.format(self.name)

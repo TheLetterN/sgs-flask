@@ -334,11 +334,12 @@ def add_bulk_to_database(l):
         db.session.commit()
         # We need to ensure the bulk thumbnail file exists, but since there
         # is no associated table, there is no need to add it to the db.
-        db.session.expunge(download_image(
-            'https://www.swallowtailgardenseeds.com/images/index-image-links/'
-            'bulk-catalog3.jpg'
-        ))
         print('Finished adding "{}" to database.'.format(cat.name))
+    db.session.expunge(download_image(
+        'https://www.swallowtailgardenseeds.com/images/index-image-links/'
+        'bulk-catalog3.jpg'
+    ))
+    print('Finished adding bulk to database.')
 
 
 def generate_bulk_series(cat, l):
@@ -347,6 +348,8 @@ def generate_bulk_series(cat, l):
         db.session.add(ser)
         ser.name = d['name']
         ser.subtitle = d['subtitle']
+        if d['thumbnail']:
+            ser.thumbnail = download_image(d['thumbnail'])
         ser.items = list(generate_bulk_items(ser, d['items']))
         db.session.flush()
         ser.items.reorder()
@@ -701,9 +704,20 @@ class BulkPage:
         self.soup = BeautifulSoup(r.text, 'html5lib')
         self.h1 = self.soup.find('h1')
         self.section_divs = self.soup.find_all('div', class_='Series')
+        try:
+            self.section_links = self.soup.find(
+                'div',
+                class_='RelatedLinks'
+            ).find_all('a')
+        except AttributeError:
+            self.section_links = []
+        self.section_thumbs = {
+            a['href'][1:] : a.find('img')['src'] for a in self.section_links
+        }
         self.sections = [
             {
                 'div': d,
+                'thumbnail': self.get_section_thumb(d['id']),
                 'table': d.find_next('table'),
                 'rows': d.find_next('table').find_all('tr')
             } for d in self.section_divs
@@ -726,6 +740,12 @@ class BulkPage:
             self.create_dbdict()
         return self._dbdict
 
+    def get_section_thumb(self, section_id):
+        try:
+            return self.section_thumbs[section_id]
+        except KeyError:
+            return None
+
     def create_dbdict(self):
         def item_from_row(row):
             button = row.find('button')
@@ -741,11 +761,11 @@ class BulkPage:
                 'taxable': taxable
             }
         def dict_from_section(sec):
-            name = ' '.join(first_text(sec['div'].find('h2')).split())
             return {
-                'name': name,
-                'slug': slugify(name),
+                'name': ' '.join(first_text(sec['div'].find('h2')).split()),
+                'slug': sec['div']['id'],
                 'subtitle': sec['div'].find('em').text.strip(),
+                'thumbnail': sec['thumbnail'],
                 'items': [item_from_row(r) for r in sec['rows']]
             }
         header = ' '.join(self.h1.text.strip().split())

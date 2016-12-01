@@ -332,6 +332,12 @@ def add_bulk_to_database(l):
         cat.series.reorder()
         cat.items.reorder()
         db.session.commit()
+        # We need to ensure the bulk thumbnail file exists, but since there
+        # is no associated table, there is no need to add it to the db.
+        db.session.expunge(download_image(
+            'https://www.swallowtailgardenseeds.com/images/index-image-links/'
+            'bulk-catalog3.jpg'
+        ))
         print('Finished adding "{}" to database.'.format(cat.name))
 
 
@@ -667,10 +673,6 @@ class BulkScraper:
     """A scraper for the bulk section."""
     def __init__(self):
         self.url = 'https://www.swallowtailgardenseeds.com/bulk/'
-        self.thumbnail = (
-            'https://www.swallowtailgardenseeds.com/images/index-image-links/'
-            'bulk-catalog3.jpg'
-        )
         r = requests.get(self.url)
         r.encoding = 'utf-8'
         self.soup = BeautifulSoup(r.text, 'html5lib')

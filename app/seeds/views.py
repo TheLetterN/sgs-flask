@@ -495,7 +495,7 @@ def bulk():
     categories = BulkCategory.query.all()
     crumbs = (
         cblr.crumble('home', 'Home'),
-        cblr.crumble('bulk', 'Bulk Seeds')
+        cblr.crumble('bulk', 'Bulk')
     )
     return render_template(
         'seeds/bulk.html',
@@ -513,7 +513,7 @@ def bulk_category(slug):
         abort(404)
     crumbs = (
         cblr.crumble('home', 'Home'),
-        cblr.crumble('bulk', 'Bulk Seeds'),
+        cblr.crumble('bulk', 'Bulk'),
         cblr.crumble('bulk_category', category.name.title(), slug=slug)
     )
     return render_template(

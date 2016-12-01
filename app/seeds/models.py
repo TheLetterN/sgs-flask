@@ -86,6 +86,7 @@ import datetime
 import json
 import os
 import random
+import re
 import shutil
 import sys
 from decimal import Decimal
@@ -2089,6 +2090,11 @@ class BulkSeries(db.Model, OrderingListMixin, SlugMixin, TimestampMixin):
 
     def __repr__(self):
         return '<BulkSeries "{}">'.format(self.name)
+
+    @property
+    def short_name(self):
+        """str: Name with 'series' removed."""
+        return re.sub('(?i)series', '', self.name).strip()
 
     @property
     def items_after(self):

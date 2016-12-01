@@ -2143,6 +2143,12 @@ def auto_position_before_attach(session, instance):
 @event.listens_for(Section, 'before_update')
 @event.listens_for(Cultivar, 'before_insert')
 @event.listens_for(Cultivar, 'before_update')
+@event.listens_for(BulkCategory, 'before_insert')
+@event.listens_for(BulkCategory, 'before_update')
+@event.listens_for(BulkSeries, 'before_insert')
+@event.listens_for(BulkSeries, 'before_update')
+@event.listens_for(BulkItem, 'before_insert')
+@event.listens_for(BulkItem, 'before_update')
 def auto_set_slug(mapper, connection, target):
     """Automatically set `slug` if an instance without one is added/updated.
     

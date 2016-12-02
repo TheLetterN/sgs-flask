@@ -148,6 +148,14 @@ cultivars_to_images = db.Table(
 )
 
 
+bulk_categories_to_images = db.Table(
+    'bulk_categories_to_images',
+    db.Model.metadata,
+    db.Column('bulk_cat_id', db.Integer, db.ForeignKey('bulk_categories.id')),
+    db.Column('images_id', db.Integer, db.ForeignKey('images.id'))
+)
+
+
 bulk_series_to_images = db.Table(
     'bulk_series_to_images',
     db.Column('bulk_series_id', db.Integer, db.ForeignKey('bulk_series.id')),
@@ -1928,6 +1936,15 @@ class Image(db.Model, TimestampMixin):
         secondary=cultivars_to_images,
         back_populates='images'
     )
+    bulk_categories_with_thumb = db.relationship(
+        'BulkCategory',
+        back_populates='thumbnail'
+    )
+    bulk_categories = db.relationship(
+        'BulkCategory',
+        secondary=bulk_categories_to_images,
+        back_populates='images'
+    )
     bulk_series_with_thumb = db.relationship(
         'BulkSeries',
         back_populates='thumbnail'
@@ -2053,6 +2070,16 @@ class BulkCategory(db.Model, SlugMixin, TimestampMixin):
         order_by='BulkItem.cat_pos',
         collection_class=ordering_list('cat_pos', count_from=1),
         back_populates='category'
+    )
+    thumbnail_id = db.Column(db.Integer, db.ForeignKey('images.id'))
+    thumbnail = db.relationship(
+        'Image',
+        back_populates='bulk_categories_with_thumb'
+    )
+    images = db.relationship(
+        'Image',
+        secondary=bulk_categories_to_images,
+        back_populates='bulk_categories'
     )
 
     def __repr__(self):

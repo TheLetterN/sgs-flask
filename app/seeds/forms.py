@@ -645,6 +645,28 @@ class AddPacketForm(FlaskForm):
             )
 
 
+class AddBulkCategory(AddWithThumbnailForm):
+    """Form for adding a `BulkCategory` to db.
+
+    Attributes:
+        name: Name of the bulk category.
+        slug: URL slug for bulk category.
+        list_as: What to list the bulk category as in links.
+    """
+    name = StrippedStringField(
+        'Name',
+        validators=[InputRequired(), Length(max=254)]
+    )
+    slug = StrippedStringField(
+        'URL Slug',
+        validators=[InputRequired(), Length(max=254)]
+    )
+    list_as = StrippedStringField(
+        'List As',
+        validators=[InputRequired(), Length(max=254)]
+    )
+
+
 class AddRedirectForm(FlaskForm):
     """Form for adding a redirect to the application.
 

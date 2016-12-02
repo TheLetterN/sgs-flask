@@ -100,7 +100,7 @@ Copyright Swallowtail Garden Seeds, Inc
 {% endif %}
 {% endblock %}
 {% block detailed_nav %}
-{{ make_detailed_nav(nav_data, cn.index.slug, cn.url) }}
+{{ make_detailed_nav(nav_data, cn.index.slug) }}
 {% endblock %}
 {% block scripts %}
 <script src="{{ url_for('static', filename='scripts/input-number-fix.js') }}"></script>

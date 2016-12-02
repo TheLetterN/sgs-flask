@@ -352,6 +352,28 @@ def save_nav_data(json_file=None):
                 cnd['Thumbnail'] = None
             d['Common Names'].append(cnd)
         idx_list.append(d)
+    bulk_cats = BulkCategory.query.order_by('list_as').all()
+    bulk = dict()
+    bulk['Name'] = 'Bulk'
+    bulk['Position'] = 1383
+    bulk['Header'] = 'Bulk'
+    bulk['id'] = 'bulk'
+    bulk['Slug'] = 'bulk'
+    bulk['URL'] = url_for('seeds.bulk', _external=True)
+    bulk['Thumbnail'] = (
+        'https://www.swallowtailgardenseeds.com/images/'
+        'index-image-links/bulk-catalog3.jpg'
+    )
+    bulk['Common Names'] = list()
+    for  cat in bulk_cats:
+        catd = dict()
+        catd['Poisition'] = bulk_cats.index(cat)
+        catd['Name'] = cat.name
+        catd['List As'] = cat.list_as
+        catd['URL'] = cat.url
+        catd['Thumbnail'] = None
+        bulk['Common Names'].append(catd)
+    idx_list.append(bulk)
     with json_file.open('w', encoding='utf-8') as ofile:
         ofile.write(json.dumps(idx_list, indent=4))
 
@@ -359,6 +381,7 @@ def save_nav_data(json_file=None):
 # Models
 class IndexQuery(BaseQuery, SearchQueryMixin):
     pass
+
 
 class Index(db.Model, SlugMixin, TimestampMixin):
     """Table for seed indexes.
@@ -2182,7 +2205,8 @@ class BulkItem(db.Model, OrderingListMixin, SlugMixin, TimestampMixin):
 def save_nav_data_before_commit(session):
     """Save nav data if a commit would change a nav url."""
     if (any(isinstance(obj, Index) for obj in db.session) or
-            any(isinstance(obj, CommonName) for obj in db.session)):
+            any(isinstance(obj, CommonName) for obj in db.session) or
+            any(isinstance(obj, BulkCategory) for obj in db.session)):
         save_nav_data()
 
 

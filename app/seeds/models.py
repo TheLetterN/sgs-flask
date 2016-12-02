@@ -2247,6 +2247,8 @@ def auto_set_slug(mapper, connection, target):
 @event.listens_for(CommonName.thumbnail, 'set')
 @event.listens_for(Section.thumbnail, 'set')
 @event.listens_for(Cultivar.thumbnail, 'set')
+@event.listens_for(BulkSeries.thumbnail, 'set')
+@event.listens_for(BulkItem.thumbnail, 'set')
 def add_thumbnail_to_images(target, value, oldvalue, initiator):
     """Add `thumbnail` to `images` when setting it."""
     if value and value not in target.images:

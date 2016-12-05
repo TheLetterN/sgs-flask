@@ -16,7 +16,7 @@
 # Copyright Swallowtail Garden Seeds, Inc
 
 
-from flask import url_for
+from flask import request, url_for
 from titlecase import titlecase
 
 
@@ -28,7 +28,10 @@ class Crumbler(object):
         if not title:
             title = titlecase(route.replace('_', ' '))
         url = url_for('.'.join([self.blueprint, route]), **kwargs)
-        return '<a href="{0}">{1}</a>'.format(url, title)
+        if url == request.path:
+            return title
+        else:
+            return '<a href="{0}">{1}</a>'.format(url, title)
 
     def crumble_routes(self, routes, **kwargs):
         for route in routes:

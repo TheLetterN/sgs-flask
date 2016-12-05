@@ -2058,6 +2058,7 @@ class BulkCategory(db.Model, SlugMixin, TimestampMixin):
     # Override slug to add unique constraint
     slug = db.Column(db.UnicodeText, unique=True)
     list_as = db.Column(db.UnicodeText)
+    subtitle = db.Column(db.UnicodeText)
     
     series = db.relationship(
         'BulkSeries',

@@ -46,12 +46,13 @@ from app.form_helpers import (
 from app import estimate_ship_date
 from app.redirects import RedirectsFile
 from .models import (
-    Section,
+    BulkCategory,
     CommonName,
+    Cultivar,
     Image,
     Index,
     Packet,
-    Cultivar
+    Section
 )
 from app.seeds.models import USDollar as USDollar_
 
@@ -250,21 +251,15 @@ class AddIndexForm(AddWithThumbnailForm):
         if not self.pos.data:
             self.pos.data = self.pos.choices[-1][0]
 
-    def validate_name(self, field):
-        """Raise a ValidationError if an `Index` exists with given name.
-
-        Raises:
-            ValidationError: If submitted `Index` already exists in the
-                database.
-        """
-        idx = Index.query.filter(Index.name == field.data).one_or_none()
+    def validate_slug(self, field):
+        idx = Index.query.filter(Index.slug == field.data).one_or_none()
         if idx:
-            idx_url = url_for('seeds.edit_index', idx_id=idx.id)
-            raise ValidationError(
-                Markup('\'{0}\' already exists in the database. <a '
-                       'href="{1}">Click here</a> to edit it.'
-                       .format(idx.name, idx_url))
-            )
+            raise ValidationError(Markup(
+                'An index with the slug "{}" already exists! <a href="{}">'
+                'Click here</a> if you wish to edit it.'
+                .format(field.data, url_for('seeds.edit_index', idx_id=idx.id))
+            ))
+
 
 
 class AddCommonNameForm(AddWithThumbnailForm):
@@ -356,7 +351,7 @@ class AddCommonNameForm(AddWithThumbnailForm):
             title_attribute='fullname'
         )
 
-    def validate_name(self, field):
+    def validate_slug(self, field):
         """Raise `ValidationError` if `CommonName` instance already exists.
 
         A new `CommonName` must be a unique combination of `CommonName.name`
@@ -367,14 +362,14 @@ class AddCommonNameForm(AddWithThumbnailForm):
                 already exists.
         """
         cn = CommonName.query.filter(
-            CommonName.name == field.data,
+            CommonName.slug == field.data,
             CommonName.index_id == self.index.id
         ).one_or_none()
         if cn:
             raise ValidationError(Markup(
-                'The common name \'{0}\' already exists under the index '
-                '\'{1}\'. <a href="{2}">Click here</a> if you wish to edit it.'
-                .format(cn.name,
+                'A common name with the slug "{0}" and index "{1}". already '
+                'exists. <a href="{2}">Click here</a> if you wish to edit it.'
+                .format(cn.slug,
                         cn.index.name,
                         url_for('seeds.edit_common_name', cn_id=cn.id))
                 ))
@@ -645,7 +640,7 @@ class AddPacketForm(FlaskForm):
             )
 
 
-class AddBulkCategory(AddWithThumbnailForm):
+class AddBulkCategoryForm(AddWithThumbnailForm):
     """Form for adding a `BulkCategory` to db.
 
     Attributes:
@@ -661,10 +656,22 @@ class AddBulkCategory(AddWithThumbnailForm):
         'URL Slug',
         validators=[InputRequired(), Length(max=254)]
     )
-    list_as = StrippedStringField(
-        'List As',
-        validators=[InputRequired(), Length(max=254)]
-    )
+    list_as = StrippedStringField('List As', validators=[Length(max=254)])
+    subtitle = StrippedStringField('Subtitle', validators=[Length(max=254)])
+    submit = SubmitField('submit')
+
+    def validate_slug(self, field):
+        """Raise an error if a `BulkCategory` with the same slug exists."""
+        bc = BulkCategory.query.filter(
+            BulkCategory.slug == field.data
+        ).one_or_none()
+        if bc:
+            raise ValidationError(Markup(
+                'A bulk category with the slug "{}" already exists. <a href='
+                '"{}">Click here</a> if you wish to edit it.'
+                .format(field.data,
+                        url_for('seeds.edit_bulk_category', cat_id=bc.id))
+            ))
 
 
 class AddRedirectForm(FlaskForm):

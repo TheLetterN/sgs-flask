@@ -49,8 +49,9 @@ from app.seeds.models import (
     USDollar
 )
 from app.seeds.forms import (
-    AddIndexForm,
+    AddBulkCategoryForm,
     AddCommonNameForm,
+    AddIndexForm,
     AddPacketForm,
     AddRedirectForm,
     AddCultivarForm,
@@ -122,19 +123,13 @@ def origin():
 def redirect_after_submit(*urls):
     """Redirect to origin or first passed arg that exists."""
     origin = request.args.get('origin')
-    if origin:
-        with current_app.test_client() as tc:
-            # Only redirect to origin if the page exists.
-            if tc.get(origin).status_code // 100 != 4:
-                return redirect(origin)
     try:
         return redirect(next(u for u in urls if u))
     except StopIteration:
-        flash(
-            'No valid URL was given to redirect to after submitting form.',
-            category='warning'
-        )
-        return redirect(request.full_path)
+        if request.referrer:
+            return redirect(request.referrer)
+        else:
+            return redirect(request.full_path)
 
 def flash_all(messages, category='message'):
     if category == 'message':
@@ -921,6 +916,31 @@ def add_redirect():
     return render_template('seeds/add_redirect.html', crumbs=crumbs, form=form)
 
 
+@seeds.route('/add_bulk_category', methods=['GET', 'POST'])
+@permission_required(Permission.MANAGE_SEEDS)
+def add_bulk_category():
+    form = AddBulkCategoryForm()
+    if form.validate_on_submit():
+        messages = []
+        bc = BulkCategory(name=form.name.data)
+        db.session.add(bc)
+        messages.append('Creating new bulk category "{0}":'
+                        .format(bc.name))
+        bc.slug = form.slug.data
+        messages.append('Slug set to "{}".'.format(bc.slug))
+        if form.list_as.data:
+            bc.list_as = form.list_as.data
+            messages.append('Will be listed as "{}".'.format(bc.list_as))
+        if form.subtitle.data:
+            bc.subtitle = form.subtitle.data
+            messages.append('Subtitle set to "{}".'.format(bc.subtitle))
+        add_thumbnail(form, bc, messages)
+        db.session.commit()
+        flash_all(messages)
+        return redirect_after_submit(bc.url)
+    return render_template('seeds/add_bulk_category.html', form=form)
+
+
 @seeds.route('/edit_index', methods=['GET', 'POST'])
 @seeds.route('/edit_index/<int:idx_id>', methods=['GET', 'POST'])
 @login_required
@@ -1554,6 +1574,13 @@ def edit_packet(pkt_id=None):
     return render_template('seeds/edit_packet.html',
                            crumbs=crumbs,
                            form=form)
+
+
+@seeds.route('/edit_bulk_category', methods=['GET', 'POST'])
+@seeds.route('/edit_bulk_category/<int:cat_id>', methods=['GET', 'POST'])
+@permission_required(Permission.MANAGE_SEEDS)
+def edit_bulk_category(cat_id=None):
+    return 'TODO'
 
 
 def migrate_cultivars(cn, other):

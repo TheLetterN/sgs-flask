@@ -31,7 +31,7 @@ from pathlib import Path
 
 
 import stripe
-from flask import Flask, current_app, render_template, session
+from flask import Flask, current_app, render_template, request, session
 from flask_login import AnonymousUserMixin, current_user, LoginManager
 from flask_mail import Mail
 from flask_sqlalchemy import SQLAlchemy
@@ -259,6 +259,8 @@ def create_app(config_name):
     # Error pages
     @app.errorhandler(404)
     def page_not_found(e):
+        # TODO: Change this to use a logger.
+        print('404 not found: {}'.format(request.url))
         return render_template('errors/404.html'), 404
 
     return app

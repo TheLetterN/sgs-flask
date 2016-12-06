@@ -19,50 +19,73 @@
 {% from "includes/form_field.html" import form_field %}
 {# Indent block head content 4 spaces, and block main content 6 spaces. #}
 {% block head %}
-    <title>Add Bulk Category</title>
+    <title>Edit Bulk Category</title>
     {% if ALLOW_CRAWLING %}
     {# If ALLOW_CRAWLING is False, this tag is already generated. #}
     {# If ALLOW_CRAWLING is True, we still don't want admin pages like this crawled. #}
     <meta name="robots" content="noindex, nofollow">
     {% endif %}
-    <link rel="canonical" href="{{ url_for('seeds.add_bulk_category', _external=True) }}">
+    <link rel="canonical" href="{{ url_for('seeds.edit_bulk_category', _external=True) }}">
 {% endblock %}
 {% block main %}
-      <h1>Add Bulk Category:</h1>
-        <form class="admin" method="POST" enctype="multipart/form-data">
-          {{ form.hidden_tag() }}
+      <h1>Edit Bulk Category</h1>
+      <form class="admin" method="POST" enctype="multipart/form-data">
+        {{ form.hidden_tag() }}
+        <fieldset>
+          <legend>Category Information</legend>
           <ol>
             <li>
-              {{ form_field(form.name, placeholder='e.g. achillea')|safe }}
+              {{ form_field(form.name)|safe }}
             </li>
             <li>
-              {{ form_field(form.slug, placeholder='e.g. achillea')|safe }}
+              {{ form_field(form.slug)|safe }}
             </li>
             <li>
-              {{ form_field(form.list_as, placeholder='e.g. achillea - yarrow')|safe }}
+              {{ form_field(form.list_as)|safe }}
             </li>
             <li>
-              {{ form_field(form.subtitle, placeholder='e.g. Yarrow Seeds in Bulk Packets')|safe }}
+              {{ form_field(form.subtitle)|safe }}
             </li>
+          </ol>
+        </fieldset>
+        <fieldset>
+          <legend>Select Thumbnail</legend>
+          <ol>
+            <li>
+              {{ form_field(form.thumbnail_id, show_label=False)|safe }}
+              <div><img src="{{ category.thumbnail.url }}" alt="" id="selected-thumbnail"></div>
+            </li>
+          </ol>
+        </fieldset>
+        <fieldset>
+          <legend>Or Edit/Replace Thumbnail</legend>
+          <ol>
             <li>
               {{ form_field(form.thumbnail)|safe }}
             </li>
             <li>
               {{ form_field(form.thumbnail_filename)|safe }}
             </li>
+          </ol>
+        </fieldset>
+        <ol>
           <li>
             {{ form.submit }}
           </li>
         </ol>
-        </form>
+      </form>
 {% endblock %}
 {% block scripts %}
-    <script src="{{ url_for('static', filename='scripts/form-helpers.js') }}"></script>
-    <script>
-      populate_on_blur("{{ form.name.id }}", "{{ form.slug.id }}", slugify);
-      populate_on_blur("{{ form.name.id }}", "{{ form.list_as.id }}");
-      $('#thumbnail').on('input', function () {
-        $('#thumbnail_filename').val('wholesale/' + this.value);
-      });
-    </script>
+<script>
+  var image_urls = {{ form.image_urls|tojson }};
+  $('#thumbnail_id').on('change', function () {
+    $('#selected-thumbnail').attr('src', image_urls[$(this).val()]);
+  });
+  $('#thumbnail').on('input', function () {
+    var $fn = $('#thumbnail_filename');
+    if (!$fn.val()) {
+      $fn.val('wholesale/' + this.value);
+    }
+  });
+</script>
 {% endblock %}

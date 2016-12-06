@@ -647,12 +647,13 @@ class AddBulkCategoryForm(AddWithThumbnailForm):
         name: Name of the bulk category.
         slug: URL slug for bulk category.
         list_as: What to list the bulk category as in links.
+        subtitle: Optional subtitle for bulk category.
     """
     name = StrippedStringField(
         'Name',
         validators=[InputRequired(), Length(max=254)]
     )
-    slug = StrippedStringField(
+    slug = SlugifiedStringField(
         'URL Slug',
         validators=[InputRequired(), Length(max=254)]
     )
@@ -1298,6 +1299,43 @@ class EditPacketForm(FlaskForm):
             ))
 
 
+class EditBulkCategoryForm(EditWithThumbnailForm):
+    """Form for editing a `BulkCategory`.
+
+    Attributes:
+        name: Name of the bulk category.
+        slug: URL slug for bulk category.
+        list_as: What to list the bulk category as in links.
+        subtitle: Optional subtitle for bulk category.
+    """
+    id = HiddenField()
+    name = StrippedStringField(
+        'Name',
+        validators=[InputRequired(), Length(max=254)]
+    )
+    slug = SlugifiedStringField(
+        'URL Slug',
+        validators=[InputRequired(), Length(max=254)]
+    )
+    list_as = StrippedStringField('List As', validators=[Length(max=254)])
+    subtitle = StrippedStringField('Subtitle', validators=[Length(max=254)])
+    submit = SubmitField('submit')
+
+    def validate_slug(self, field):
+        """Raise an error if a `BulkCategory` with the same slug exists."""
+        bc = BulkCategory.query.filter(
+            BulkCategory.slug == field.data,
+            BulkCategory.id != self.id.data
+        ).one_or_none()
+        if bc:
+            raise ValidationError(Markup(
+                'A bulk category with the slug "{}" already exists. <a href='
+                '"{}">Click here</a> if you wish to edit it.'
+                .format(field.data,
+                        url_for('seeds.edit_bulk_category', cat_id=bc.id))
+            ))
+
+
 class RemoveIndexForm(FlaskForm):
     """Form for removing an `Index` from the database.
 
@@ -1389,6 +1427,15 @@ class RemovePacketForm(FlaskForm):
     """
     verify_removal = BooleanField('Yes')
     submit = SubmitField('Remove Packet')
+
+
+class SelectObjectForm(FlaskForm):
+    """Form for selecting an object from the database."""
+    id = SelectField('Select Object', coerce=int)
+    submit = SubmitField('Submit')
+    def __init__(self, model, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.id.choices = select_field_choices(model=model)
 
 
 class SelectIndexForm(FlaskForm):
@@ -1490,6 +1537,17 @@ class SelectPacketForm(FlaskForm):
         self.packet.choices = select_field_choices(model=Packet,
                                                    order_by='sku',
                                                    title_attribute='info')
+
+
+class SelectBulkCategoryForm(FlaskForm):
+    """Form for selecting a `BulkCategory`."""
+    category = SelectField('Select Bulk Category', coerce=int)
+    submit = SubmitField('Submit')
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.category.choices = select_field_choices(model=BulkCategory,
+                                                     order_by='name',
+                                                     title_attribute='name')
 
 
 class EditShipDateForm(FlaskForm):

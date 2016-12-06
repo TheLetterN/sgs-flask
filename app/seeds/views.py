@@ -56,10 +56,11 @@ from app.seeds.forms import (
     AddRedirectForm,
     AddCultivarForm,
     AddSectionForm,
-    EditIndexForm,
+    EditBulkCategoryForm,
     EditCommonNameForm,
-    EditPacketForm,
     EditCultivarForm,
+    EditIndexForm,
+    EditPacketForm,
     EditSectionForm,
     EditShipDateForm,
     RemoveIndexForm,
@@ -67,12 +68,15 @@ from app.seeds.forms import (
     RemovePacketForm,
     RemoveSectionForm,
     RemoveCultivarForm,
-    SelectIndexForm,
+    SelectBulkCategoryForm,
     SelectCommonNameForm,
-    SelectPacketForm,
     SelectCultivarForm,
+    SelectIndexForm,
+    SelectObjectForm,
+    SelectPacketForm,
     SelectSectionForm
 )
+
 
 cblr = Crumbler('seeds')
 
@@ -1580,7 +1584,57 @@ def edit_packet(pkt_id=None):
 @seeds.route('/edit_bulk_category/<int:cat_id>', methods=['GET', 'POST'])
 @permission_required(Permission.MANAGE_SEEDS)
 def edit_bulk_category(cat_id=None):
-    return 'TODO'
+    bc = BulkCategory.query.get(cat_id) if cat_id else None
+    if not bc:
+        return redirect(url_for(
+            'seeds.select_object',
+            dest='seeds.edit_bulk_category',
+            id_attr='cat_id',
+            model='Bulk Category'
+        ))
+
+    form = EditBulkCategoryForm(obj=bc)
+    if form.validate_on_submit():
+        edited = False
+        messages = []
+        messages.append('Editing bulk category "{}".'.format(bc.name))
+        if form.name.data != bc.name:
+            edited = True
+            bc.name = form.name.data
+            messages.append('Name changed to "{}".'.format(bc.name))
+        if form.slug.data != bc.slug:
+            edited = True
+            bc.slug = form.slug.data
+            messages.append('Slug changed to "{}".'.format(bc.slug))
+        edited = edit_optional_data(
+            form.list_as,
+            bc,
+            'list_as',
+            messages
+        ) or edited
+        edited = edit_optional_data(
+            form.subtitle,
+            bc,
+            'subtitle',
+            messages
+        ) or edited
+        edited = edit_thumbnail(form, bc, messages) or edited
+        if edited:
+            db.session.commit()
+            messages.append(
+                'Changes to "{}" commited to database.'.format(bc.name)
+            )
+            return redirect_after_submit(bc.url)
+        else:
+            messages.append('No changes were made.')
+            flash_all(messages)
+            return redirect(request.path)
+
+    return render_template(
+        'seeds/edit_bulk_category.html',
+        category=bc, 
+        form=form
+    )
 
 
 def migrate_cultivars(cn, other):
@@ -1905,6 +1959,31 @@ def remove_packet(pkt_id=None):
                            packet=packet)
 
 
+@seeds.route('/select_object', methods=['GET', 'POST'])
+@permission_required(Permission.MANAGE_SEEDS)
+def select_object():
+    MODELS = {
+     'Bulk Category': BulkCategory
+    }
+    dest = request.args.get('dest')
+    id_attr = request.args.get('id_attr')
+    model = request.args.get('model')
+    if dest is None:
+        flash('Error: No destination specified.', category='error')
+        return redirect(url_for('seeds.manage'))
+    form = SelectObjectForm(model=MODELS[model])
+    if form.validate_on_submit():
+        return redirect(url_for(dest, **{id_attr: form.id.data}))
+    crumbs = (
+        cblr.crumble('manage', 'Manage Seeds'),
+        cblr.crumble('select_object', dest=dest, id_attr=id_attr)
+    )
+    return render_template('seeds/select_object.html',
+                           crumbs=crumbs,
+                           form=form,
+                           model=model)
+
+
 @seeds.route('/select_index', methods=['GET', 'POST'])
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
@@ -2026,6 +2105,25 @@ def select_packet():
         cblr.crumble('select_packet', dest=dest)
     )
     return render_template('seeds/select_packet.html',
+                           crumbs=crumbs,
+                           form=form)
+
+
+@seeds.route('/select_bulk_category')
+def select_bulk_category():
+    """Select a `BulkCategory` for use on another page."""
+    dest = request.args.get('dest')
+    if dest is None:
+        flash('No destination page was specified!')
+        return redirect(url_for('seeds.manage'))
+    form = SelectBulkCategoryForm()
+    if form.validate_on_submit():
+        return redirect(url_for(dest, cat_id=form.category.data))
+    crumbs = (
+        cblr.crumble('manage', 'Manage Seeds'),
+        cblr.crumble('select_bulk_category', dest=dest)
+    )
+    return render_template('seeds/select_bulk_category.html',
                            crumbs=crumbs,
                            form=form)
 

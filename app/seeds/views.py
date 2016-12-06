@@ -40,6 +40,7 @@ from ..lastcommit import LastCommit
 from app.db_helpers import dbify
 from app.seeds.models import (
     BulkCategory,
+    BulkSeries,
     CommonName,
     Cultivar,
     Image,
@@ -50,6 +51,7 @@ from app.seeds.models import (
 )
 from app.seeds.forms import (
     AddBulkCategoryForm,
+    AddBulkSeriesForm,
     AddCommonNameForm,
     AddIndexForm,
     AddPacketForm,
@@ -938,7 +940,7 @@ def add_bulk_category():
         messages = []
         bc = BulkCategory(name=form.name.data)
         db.session.add(bc)
-        messages.append('Creating new bulk category "{0}":'
+        messages.append('Creating new bulk category "{}":'
                         .format(bc.name))
         bc.slug = form.slug.data
         messages.append('Slug set to "{}".'.format(bc.slug))
@@ -952,7 +954,49 @@ def add_bulk_category():
         db.session.commit()
         flash_all(messages)
         return redirect_after_submit(bc.url)
-    return render_template('seeds/add_bulk_category.html', form=form)
+    crumbs = (
+        cblr.crumble('manage', 'Manage Seeds'),
+        cblr.crumble('add_bulk_category')
+    )
+    return render_template(
+        'seeds/add_bulk_category.html',
+        crumbs=crumbs,
+        form=form
+    )
+
+
+@seeds.route('/add_bulk_series', methods=['GET', 'POST'])
+@seeds.route('/add_bulk_series/<int:cat_id>', methods=['GET', 'POST'])
+@permission_required(Permission.MANAGE_SEEDS)
+def add_bulk_series(cat_id=None):
+    cat = BulkCategory.query.get(cat_id) if cat_id else None
+    if not cat:
+        return redirect(url_for(
+            'seeds.select_object',
+            dest='seeds.add_bulk_series',
+            id_arg='cat_id',
+            model='Bulk Category'
+        ))
+    form = AddBulkSeriesForm(category=cat)
+    if form.validate_on_submit():
+        messages = []
+        bs = BulkSeries(name=form.name.data, category=cat)
+        db.session.add(bs)
+        messages.append('Creating new bulk series "{}":'.format(bs.name))
+        bs.slug = form.slug.data
+        messages.append('Slug set to "{}".'.format(bs.slug))
+        if form.subtitle.data:
+            bs.subtitle = form.subtitle.data
+            messages.append('Subtitle set to "{}".'.format(bs.subtitle))
+        add_thumbnail(form, bs, messages)
+        db.session.commit()
+        flash_all(messages)
+        return redirect_after_submit(bs.url)
+    crumbs = (
+        cblr.crumble('manage', 'Manage Seeds'),
+        cblr.crumble('add_bulk_series')
+    )
+    return render_template('seeds/add_bulk_series.html', form=form)
 
 
 @seeds.route('/edit_index', methods=['GET', 'POST'])
@@ -2025,6 +2069,7 @@ def select_object():
     """
     MODELS = {
      'Bulk Category': BulkCategory,
+     'Bulk Series': BulkSeries,
      'Common Name': CommonName,
      'Cultivar': Cultivar,
      'Packet': Packet,

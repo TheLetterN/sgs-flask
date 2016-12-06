@@ -2143,6 +2143,16 @@ class BulkSeries(db.Model, OrderingListMixin, SlugMixin, TimestampMixin):
         return '<BulkSeries "{}">'.format(self.name)
 
     @property
+    def url(self):
+        """str: A URL for the page this series is on."""
+        return url_for(
+            'seeds.bulk_category',
+            slug=self.category.slug,
+            _anchor=self.slug,
+            _external=True
+        )
+
+    @property
     def short_name(self):
         """str: Name with 'series' removed."""
         return re.sub('(?i)series', '', self.name).strip()

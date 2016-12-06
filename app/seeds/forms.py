@@ -47,6 +47,7 @@ from app import estimate_ship_date
 from app.redirects import RedirectsFile
 from .models import (
     BulkCategory,
+    BulkSeries,
     CommonName,
     Cultivar,
     Image,
@@ -672,6 +673,38 @@ class AddBulkCategoryForm(AddWithThumbnailForm):
                 '"{}">Click here</a> if you wish to edit it.'
                 .format(field.data,
                         url_for('seeds.edit_bulk_category', cat_id=bc.id))
+            ))
+
+
+class AddBulkSeriesForm(AddWithThumbnailForm):
+    """Form for adding a `BulkSeries` to db."""
+    name = StrippedStringField(
+        'Name',
+        validators=[InputRequired(), Length(max=254)]
+    )
+    slug = SlugifiedStringField(
+        'URL Slug',
+        validators=[InputRequired(), Length(max=254)]
+    )
+    subtitle = StrippedStringField('Subtitle', validators=[Length(max=254)])
+    submit = SubmitField('submit')
+
+    def __init__(self, category, *args, **kwargs):
+        self.category = category
+        super().__init__(*args, **kwargs)
+
+    def validate_slug(self, field):
+        """Raise error if a `BulkSeries` exists with same category & slug."""
+        bs = BulkSeries.query.filter(
+            BulkSeries.category_id == self.category.id,
+            BulkSeries.slug == field.data
+        ).one_or_none()
+        if bs:
+            raise ValidationError(Markup(
+                'A bulk series with the slug "{}" already belongs to the '
+                'category "{}"/ <a href="{}">Click here</a> if you wish to '
+                'edit it.'
+                .format(field.data, self.category.name, bs.url)
             ))
 
 

@@ -29,24 +29,36 @@
 {% block main %}
       <h1>Manage Seeds</h1>
       <h2>Add:</h2>
-      <a href="{{ url_for('seeds.add_index') }}">Index</a>
-      <a href="{{ url_for('seeds.add_common_name') }}">Common Name</a>
-      <a href="{{ url_for('seeds.add_section') }}">Section</a>
-      <a href="{{ url_for('seeds.add_cultivar') }}">Cultivar</a>
-      <a href="{{ url_for('seeds.add_packet') }}">Packet</a>
-      <a href="{{ url_for('seeds.add_redirect') }}">Redirect</a>
+      <div>
+        <a href="{{ url_for('seeds.add_index') }}">Index</a>
+        <a href="{{ url_for('seeds.add_common_name') }}">Common Name</a>
+        <a href="{{ url_for('seeds.add_section') }}">Section</a>
+        <a href="{{ url_for('seeds.add_cultivar') }}">Cultivar</a>
+        <a href="{{ url_for('seeds.add_packet') }}">Packet</a>
+        <a href="{{ url_for('seeds.add_redirect') }}">Redirect</a>
+      </div>
+      <div>
+        <a href="{{ url_for('seeds.add_bulk_category') }}">Bulk Category</a>
+      </div>
       <h2>Edit:</h2>
-      <a href="{{ url_for('seeds.edit_index') }}">Index</a>
-      <a href="{{ url_for('seeds.edit_common_name') }}">Common Name</a>
-      <a href="{{ url_for('seeds.edit_section') }}">Section</a>
-      <a href="{{ url_for('seeds.edit_cultivar') }}">Cultivar</a>
-      <a href="{{ url_for('seeds.edit_packet') }}">Packet</a>
+      <div>
+        <a href="{{ url_for('seeds.edit_index') }}">Index</a>
+        <a href="{{ url_for('seeds.edit_common_name') }}">Common Name</a>
+        <a href="{{ url_for('seeds.edit_section') }}">Section</a>
+        <a href="{{ url_for('seeds.edit_cultivar') }}">Cultivar</a>
+        <a href="{{ url_for('seeds.edit_packet') }}">Packet</a>
+      </div>
+      <div>
+        <a href="{{ url_for('seeds.edit_bulk_category') }}">Bulk Category</a>
+      </div>
       <h2>Remove:</h2>
-      <a href="{{ url_for('seeds.remove_index') }}">Index</a>
-      <a href="{{ url_for('seeds.remove_common_name') }}">Common Name</a>
-      <a href="{{ url_for('seeds.remove_section') }}">Section</a>
-      <a href="{{ url_for('seeds.remove_cultivar') }}">Cultivar</a>
-      <a href="{{ url_for('seeds.remove_packet') }}">Packet</a>
+      <div>
+        <a href="{{ url_for('seeds.remove_index') }}">Index</a>
+        <a href="{{ url_for('seeds.remove_common_name') }}">Common Name</a>
+        <a href="{{ url_for('seeds.remove_section') }}">Section</a>
+        <a href="{{ url_for('seeds.remove_cultivar') }}">Cultivar</a>
+        <a href="{{ url_for('seeds.remove_packet') }}">Packet</a>
+      </div>
       {% if pending.changes %}
       <h2>Changes Pending Restart of Application:</h2>
       <div class="pending_changes">{{ pending.changes|safe }}</div>

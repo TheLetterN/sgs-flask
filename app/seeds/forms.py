@@ -1369,6 +1369,47 @@ class EditBulkCategoryForm(EditWithThumbnailForm):
             ))
 
 
+class EditBulkSeriesForm(EditWithThumbnailForm):
+    """Form for editing a `BulkSeries`.
+
+    Attributes:
+        name: Name of the bulk category.
+        slug: URL slug for bulk category.
+        subtitle: Optional subtitle for bulk category.
+    """
+    category_id = SelectField('Category', coerce=int)
+    name = StrippedStringField(
+        'Name',
+        validators=[InputRequired(), Length(max=254)]
+    )
+    slug = SlugifiedStringField(
+        'URL Slug',
+        validators=[InputRequired(), Length(max=254)]
+    )
+    subtitle = StrippedStringField('Subtitle', validators=[Length(max=254)])
+    submit = SubmitField('submit')
+
+    def __init__(self, *args, **kwargs):
+        self.series = kwargs['obj']
+        super().__init__(*args, **kwargs)
+        self.category_id.choices = select_field_choices(model=BulkCategory)
+
+    def validate_slug(self, field):
+        """Raise error if a series exists with same category and slug."""
+        bs = BulkSeries.query.filter(
+            BulkSeries.slug == field.data,
+            BulkSeries.category_id == self.category_id.data,
+            BulkSeries.id != self.series.id,
+        ).one_or_none()
+        if bs:
+            raise ValidationError(Markup(
+                'A Bulk Series with the category "{}" and the slug "{}" '
+                'already exists! <a href="{}">Click here</a> if you wish to '
+                'edit it.'
+                .format(bs.category.name, bs.slug, bs.url)
+            ))
+
+
 class RemoveIndexForm(FlaskForm):
     """Form for removing an `Index` from the database.
 

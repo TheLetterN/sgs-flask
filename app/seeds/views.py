@@ -59,6 +59,7 @@ from app.seeds.forms import (
     AddCultivarForm,
     AddSectionForm,
     EditBulkCategoryForm,
+    EditBulkSeriesForm,
     EditCommonNameForm,
     EditCultivarForm,
     EditIndexForm,
@@ -1710,6 +1711,67 @@ def edit_bulk_category(cat_id=None):
         category=bc, 
         form=form
     )
+
+
+@seeds.route('/edit_bulk_series', methods=['GET', 'POST'])
+@seeds.route('/edit_bulk_series/<int:ser_id>', methods=['GET', 'POST'])
+def edit_bulk_series(ser_id=None):
+    """Edit a `BulkSeries`."""
+    bs = BulkSeries.query.get(ser_id) if ser_id else None
+    if not bs:
+        return redirect(url_for(
+            'seeds.select_object',
+            dest='seeds.edit_bulk_series',
+            id_arg='ser_id',
+            model='Bulk Series'
+        ))
+    form = EditBulkSeriesForm(obj=bs)
+    if form.validate_on_submit():
+        edited = False
+        messages = []
+        messages.append('Editing bulk series "{}"...'.format(bs.name))
+        if form.category_id.data != bs.category_id:
+            edited = True
+            bs.category = BulkCategory.query.get(form.category_id.data)
+            messages.append(
+                'Category changed to "{}".'.format(bs.category.name)
+            )
+        if form.name.data != bs.name:
+            edited = True
+            bs.name = form.name.data
+            messages.append('Name changed to "{}".'.format(bs.name))
+        if form.slug.data != bs.slug:
+            edited = True
+            bs.slug = form.slug.data
+            messages.append('Slug changed to "{}".'.format(bs.slug))
+        edited = edit_optional_data(
+            field=form.subtitle,
+            obj=bs,
+            attr='subtitle',
+            messages=messages
+        ) or edited
+        edited = edit_thumbnail(form, bs, messages) or edited
+        if edited:
+            db.session.commit()
+            messages.append(
+                'Changes to "{}" committed to the database.'.format(bs.name)
+            )
+            flash_all(messages)
+            return redirect_after_submit(bs.url)
+        else:
+            messages.append('No changes to "{}" were made.'.format(bs.name))
+            flash_all(messages)
+            return redirect(request.full_path)
+    crumbs = (
+        cblr.crumble('manage', 'Manage Seeds'),
+        cblr.crumble('edit_bulk_series')
+    )
+    return render_template(
+        'seeds/edit_bulk_series.html',
+        crumbs=crumbs,
+        form=form
+    )
+
 
 
 def migrate_cultivars(cn, other):

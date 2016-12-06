@@ -94,6 +94,11 @@ Copyright Swallowtail Garden Seeds, Inc
 {% for ser in category.series %}
       <div id="{{ ser.slug }}" class="Series">
         <h2 class="Series_h2">{{ ser.name }}{% if ser.subtitle %}<em class="Series_em">{{ ser.subtitle }}</em>{% endif %}</h2>
+        {% if current_user.can(Permission.MANAGE_SEEDS) %}
+        <div class="admin-links">
+          <a href="{{ url_for('seeds.edit_bulk_series', ser_id=ser.id) }}">Edit {{ ser.name }}</a>
+        </div>
+        {% endif %}
         <p class="Series_p"> </p>  {# This is probably here for a reason. #}
       </div>
       <table class="bulk-items">

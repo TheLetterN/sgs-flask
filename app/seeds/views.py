@@ -570,8 +570,12 @@ def add_common_name(idx_id=None):
     """Handle web interface for adding CommonName objects to the database."""
     idx = Index.query.get(idx_id) if idx_id else None
     if not idx:
-        return redirect(url_for('seeds.select_index',
-                                dest='seeds.add_common_name'))
+        return redirect(url_for(
+            'seeds.select_object',
+            dest='seeds.add_common_name',
+            id_arg='idx_id',
+            model='Index'
+        ))
 
     form = AddCommonNameForm(index=idx)
     if form.validate_on_submit():
@@ -952,8 +956,12 @@ def add_bulk_category():
 def edit_index(idx_id=None):
     index = Index.query.get(idx_id) if idx_id else None
     if index is None:
-        return redirect(url_for('seeds.select_index',
-                        dest='seeds.edit_index'))
+        return redirect(url_for(
+            'seeds.select_object',
+            dest='seeds.edit_index',
+            id_arg='idx_id',
+            model='Index'
+        ))
 
     form = EditIndexForm(obj=index)
     if form.validate_on_submit():
@@ -1589,7 +1597,7 @@ def edit_bulk_category(cat_id=None):
         return redirect(url_for(
             'seeds.select_object',
             dest='seeds.edit_bulk_category',
-            id_attr='cat_id',
+            id_arg='cat_id',
             model='Bulk Category'
         ))
 
@@ -1726,8 +1734,12 @@ def remove_index(idx_id=None):
     """Remove an index from the database."""
     index = Index.query.get(idx_id) if idx_id else None
     if index is None:
-        return redirect(url_for('seeds.select_index',
-                                dest='seeds.remove_index'))
+        return redirect(url_for(
+            'seeds.select_object',
+            dest='seeds.remove_index',
+            id_arg='idx_id',
+            model='Index'
+        ))
     form = RemoveIndexForm(index=index)
     if form.validate_on_submit():
         messages = []
@@ -1962,51 +1974,41 @@ def remove_packet(pkt_id=None):
 @seeds.route('/select_object', methods=['GET', 'POST'])
 @permission_required(Permission.MANAGE_SEEDS)
 def select_object():
+    """View for selecting an object to work with.
+
+    Request Args:
+        dest: The destination route.
+        id_arg: The name of the argument the id of the object will be passed
+            as.
+        model: The name of the model to load instances of, with spaces between
+            words so that it can be shown on the page without having to find a
+            way to add spaces between camelcase words.
+    """
     MODELS = {
-     'Bulk Category': BulkCategory
+     'Bulk Category': BulkCategory,
+     'Common Name': CommonName,
+     'Cultivar': Cultivar,
+     'Packet': Packet,
+     'Section': Section,
+     'Index': Index
     }
     dest = request.args.get('dest')
-    id_attr = request.args.get('id_attr')
+    id_arg = request.args.get('id_arg')
     model = request.args.get('model')
     if dest is None:
         flash('Error: No destination specified.', category='error')
         return redirect(url_for('seeds.manage'))
     form = SelectObjectForm(model=MODELS[model])
     if form.validate_on_submit():
-        return redirect(url_for(dest, **{id_attr: form.id.data}))
+        return redirect(url_for(dest, **{id_arg: form.id.data}))
     crumbs = (
         cblr.crumble('manage', 'Manage Seeds'),
-        cblr.crumble('select_object', dest=dest, id_attr=id_attr)
+        cblr.crumble('select_object', dest=dest, id_arg=id_arg)
     )
     return render_template('seeds/select_object.html',
                            crumbs=crumbs,
                            form=form,
                            model=model)
-
-
-@seeds.route('/select_index', methods=['GET', 'POST'])
-@login_required
-@permission_required(Permission.MANAGE_SEEDS)
-def select_index():
-    """Select an index to load on another page.
-
-    Request Args:
-        dest: The route to redirect to after `Index` is selected.
-    """
-    dest = request.args.get('dest')
-    if dest is None:
-        flash('Error: No destination page was specified!', 'error')
-        return redirect(url_for('seeds.manage'))
-    form = SelectIndexForm()
-    if form.validate_on_submit():
-        return redirect(url_for(dest, idx_id=form.index.data))
-    crumbs = (
-        cblr.crumble('manage', 'Manage Seeds'),
-        cblr.crumble('select_index', dest=dest)
-    )
-    return render_template('seeds/select_index.html',
-                           crumbs=crumbs,
-                           form=form)
 
 
 @seeds.route('/select_common_name', methods=['GET', 'POST'])

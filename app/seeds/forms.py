@@ -1435,119 +1435,17 @@ class SelectObjectForm(FlaskForm):
     submit = SubmitField('Submit')
     def __init__(self, model, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.id.choices = select_field_choices(model=model)
-
-
-class SelectIndexForm(FlaskForm):
-    """Form for selecting an index.
-
-    Attributes:
-        index: Select field for `Index`.
-    """
-    index = SelectField('Select Index', coerce=int)
-    submit = SubmitField('Submit')
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.set_select()
-
-    def set_select(self):
-        """Populate index with Indexes from the database."""
-        self.index.choices = select_field_choices(model=Index)
-
-
-class SelectCommonNameForm(FlaskForm):
-    """Form for selecting a common name.
-
-    Attributes:
-        common_name: Select field for `CommonName`.
-    """
-    common_name = SelectField('Select Common Name', coerce=int)
-    submit = SubmitField('Submit')
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.set_select()
-
-    def set_select(self):
-        """Populate `common_name`."""
-        self.common_name.choices = select_field_choices(
-            model=CommonName,
-            title_attribute='select_field_title',
-            order_by='name'
+        if model == Packet:
+            ta = 'info'
+            ob = 'sku'
+        else:
+            ta = 'name'
+            ob = 'name'
+        self.id.choices = select_field_choices(
+            model=model,
+            title_attribute=ta,
+            order_by=ob
         )
-
-
-class SelectSectionForm(FlaskForm):
-    """Form for selecting a section.
-
-    Attributes:
-        section: Select field for `Section`.
-    """
-    section = SelectField('Select Section', coerce=int)
-    submit = SubmitField('Submit')
-
-    def __init__(self, *args, **kwargs):  # pragma: no cover
-        super().__init__(*args, **kwargs)
-        self.set_select()
-
-    def set_select(self):
-        """Populate `section`."""
-        self.section.choices = select_field_choices(model=Section,
-                                                    order_by='name')
-
-
-class SelectCultivarForm(FlaskForm):
-    """Form for selecting a cultivar.
-
-    Attributes:
-        cultivar: Select field for `Cultivar`.
-    """
-    cultivar = SelectField('Select Cultivar', coerce=int)
-    submit = SubmitField('Submit')
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.set_select()
-
-    def set_select(self):
-        """Populate `cultivar`."""
-        self.cultivar.choices = select_field_choices(
-            model=Cultivar,
-            order_by='slug',
-            title_attribute='fullname'
-        )
-
-
-class SelectPacketForm(FlaskForm):
-    """Form for selecting a packet.
-
-    Attributes:
-        packet: Select field for `Packet`.
-    """
-    packet = SelectField('Select Packet', coerce=int)
-    submit = SubmitField('Submit')
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.set_select()
-
-    def set_select(self):
-        """Populate packet with Packets from database."""
-        self.packet.choices = select_field_choices(model=Packet,
-                                                   order_by='sku',
-                                                   title_attribute='info')
-
-
-class SelectBulkCategoryForm(FlaskForm):
-    """Form for selecting a `BulkCategory`."""
-    category = SelectField('Select Bulk Category', coerce=int)
-    submit = SubmitField('Submit')
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.category.choices = select_field_choices(model=BulkCategory,
-                                                     order_by='name',
-                                                     title_attribute='name')
 
 
 class EditShipDateForm(FlaskForm):

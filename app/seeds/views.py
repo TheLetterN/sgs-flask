@@ -68,13 +68,7 @@ from app.seeds.forms import (
     RemovePacketForm,
     RemoveSectionForm,
     RemoveCultivarForm,
-    SelectBulkCategoryForm,
-    SelectCommonNameForm,
-    SelectCultivarForm,
-    SelectIndexForm,
-    SelectObjectForm,
-    SelectPacketForm,
-    SelectSectionForm
+    SelectObjectForm
 )
 
 
@@ -671,8 +665,12 @@ def add_section(cn_id=None):
     """Add a section to the database."""
     cn = CommonName.query.get(cn_id) if cn_id else None
     if not cn:
-        return redirect(url_for('seeds.select_common_name',
-                                dest='seeds.add_section'))
+        return redirect(url_for(
+            'seeds.select_object',
+            dest='seeds.add_section',
+            id_arg='cn_id',
+            model='Common Name'
+        ))
 
     form = AddSectionForm(cn=cn)
     if form.validate_on_submit():
@@ -728,8 +726,12 @@ def add_cultivar(cn_id=None):
     """Add a cultivar to the database."""
     cn = CommonName.query.get(cn_id) if cn_id else None
     if not cn:
-        return redirect(url_for('seeds.select_common_name',
-                                dest='seeds.add_cultivar'))
+        return redirect(url_for(
+            'seeds.select_object',
+            dest='seeds.add_cultivar',
+            id_arg='cn_id',
+            model='Common Name'
+        ))
 
     form = AddCultivarForm(cn=cn)
     if form.validate_on_submit():
@@ -865,8 +867,12 @@ def add_packet(cv_id=None):
     """Add a packet to the database."""
     cv = Cultivar.query.get(cv_id) if cv_id else None
     if not cv:
-        return redirect(url_for('seeds.select_cultivar',
-                                dest='seeds.add_packet'))
+        return redirect(url_for(
+            'seeds.select_object',
+            dest='seeds.add_packet',
+            id_arg='cv_id',
+            model='Cultivar'
+        ))
     form = AddPacketForm(cultivar=cv)
     if form.validate_on_submit():
         messages = []
@@ -1036,8 +1042,12 @@ def edit_common_name(cn_id=None):
     """
     cn = CommonName.query.get(cn_id) if cn_id else None
     if not cn:
-        return redirect(url_for('seeds.select_common_name',
-                                dest='seeds.edit_common_name'))
+        return redirect(url_for(
+            'seeds.select_object',
+            dest='seeds.edit_common_name',
+            id_arg='cn_id',
+            model='Common Name'
+        ))
     form = EditCommonNameForm(obj=cn)
     dest = None
     if form.validate_on_submit():
@@ -1196,8 +1206,12 @@ def edit_section(section_id=None):
     """Display page for editing a Section from the database."""
     section = Section.query.get(section_id) if section_id else None
     if section is None:
-        return redirect(url_for('seeds.select_section',
-                                dest='seeds.edit_section'))
+        return redirect(url_for(
+            'seeds.select_object',
+            dest='seeds.edit_section',
+            id_arg='section_id',
+            model='Section'
+        ))
     form = EditSectionForm(obj=section)
     if form.validate_on_submit():
         edited = False
@@ -1317,8 +1331,12 @@ def edit_cultivar(cv_id=None):
     """Edit a cultivar stored in the database."""
     cv = Cultivar.query.get(cv_id) if cv_id else None
     if cv is None:
-        return redirect(url_for('seeds.select_cultivar',
-                                dest='seeds.edit_cultivar'))
+        return redirect(url_for(
+            'seeds.select_object',
+            dest='seeds.edit_cultivar',
+            id_arg='cv_id',
+            model='Cultivar'
+        ))
     form = EditCultivarForm(obj=cv)
     if form.validate_on_submit():
         edited = False
@@ -1546,8 +1564,13 @@ def edit_cultivar(cv_id=None):
 def edit_packet(pkt_id=None):
     packet = Packet.query.get(pkt_id) if pkt_id else None
     if packet is None:
-        return redirect(url_for('seeds.select_packet',
-                                dest='seeds.edit_packet'))
+        return redirect(url_for(
+            'seeds.select_object',
+            dest='seeds.edit_packet',
+            id_arg='pkt_id',
+            model='Packet'
+        ))
+
     form = EditPacketForm(obj=packet)
     if form.validate_on_submit():
         edited = False
@@ -1788,8 +1811,12 @@ def remove_common_name(cn_id=None):
     """Remove a common name from the database."""
     cn = CommonName.query.get(cn_id) if cn_id else None
     if cn is None:
-        return redirect(url_for('seeds.select_common_name',
-                                dest='seeds.remove_common_name'))
+        return redirect(url_for(
+            'seeds.select_object',
+            dest='seeds.remove_common_name',
+            id_arg='cn_id',
+            model='Common Name'
+        ))
     form = RemoveCommonNameForm(cn=cn)
     if form.validate_on_submit():
         messages = []
@@ -1840,8 +1867,12 @@ def remove_section(section_id=None):
     """Display page for removing section from database."""
     section = Section.query.get(section_id) if section_id else None
     if section is None:
-        return redirect(url_for('seeds.select_section',
-                                dest='seeds.remove_section'))
+        return redirect(url_for(
+            'seeds.select_object',
+            dest='seeds.remove_section',
+            id_arg='section_id',
+            model='Section'
+        ))
     form = RemoveSectionForm()
     if form.validate_on_submit():
         messages = []
@@ -1876,8 +1907,12 @@ def remove_section(section_id=None):
 def remove_cultivar(cv_id=None):
     cv = Cultivar.query.get(cv_id) if cv_id else None
     if cv is None:
-        return redirect(url_for('seeds.select_cultivar',
-                                dest='seeds.remove_cultivar'))
+        return redirect(url_for(
+            'seeds.select_object',
+            dest='seeds.remove_cultivar',
+            id_arg='cv_id',
+            model='Cultivar'
+        ))
     form = RemoveCultivarForm()
     if form.validate_on_submit():
         messages = []
@@ -1947,8 +1982,12 @@ def remove_packet(pkt_id=None):
     """Remove a packet from the database."""
     packet = Packet.query.get(pkt_id) if pkt_id else None
     if packet is None:
-        return redirect(url_for('seeds.select_packet',
-                                dest='seeds.remove_packet'))
+        return redirect(url_for(
+            'seeds.select_object',
+            dest='seeds.remove_packet',
+            id_arg='pkt_id',
+            model='Packet'
+        ))
     form = RemovePacketForm()
     if form.validate_on_submit():
         messages = []
@@ -2009,125 +2048,6 @@ def select_object():
                            crumbs=crumbs,
                            form=form,
                            model=model)
-
-
-@seeds.route('/select_common_name', methods=['GET', 'POST'])
-@login_required
-@permission_required(Permission.MANAGE_SEEDS)
-def select_common_name():
-    """Select a common name to load on another page.
-
-    Request Args:
-        dest: The route to redirect to after `Index` is selected.
-    """
-    dest = request.args.get('dest')
-    if dest is None:
-        flash('Error: No destination page was specified!')
-        return redirect(url_for('seeds.manage'))
-    form = SelectCommonNameForm()
-    if form.validate_on_submit():
-        return redirect(url_for(dest, cn_id=form.common_name.data))
-    crumbs = (
-        cblr.crumble('manage', 'Manage Seeds'),
-        cblr.crumble('select_common_name', dest=dest)
-    )
-    return render_template('seeds/select_common_name.html',
-                           crumbs=crumbs,
-                           form=form)
-
-
-@seeds.route('/select_section', methods=['GET', 'POST'])
-@login_required
-@permission_required(Permission.MANAGE_SEEDS)
-def select_section():
-    """Select a section to load on another page.
-
-    Request Args:
-        dest: The route to redirect to after `Section` is selected.
-    """
-    dest = request.args.get('dest')
-    if dest is None:
-        flash('Error: No destination page was specified!')
-        return redirect(url_for('seeds.manage'))
-    form = SelectSectionForm()
-    if form.validate_on_submit():
-        return redirect(url_for(dest, section_id=form.section.data))
-    crumbs = (
-        cblr.crumble('manage', 'Manage Seeds'),
-        cblr.crumble('select_section', dest=dest)
-    )
-    return render_template('seeds/select_section.html',
-                           crumbs=crumbs,
-                           form=form)
-
-
-@seeds.route('/select_cultivar', methods=['GET', 'POST'])
-@login_required
-@permission_required(Permission.MANAGE_SEEDS)
-def select_cultivar():
-    """Select a cultivar to load on another page.
-
-    Request Args:
-        dest: The route to redirect after `Cultivar` is selected.
-    """
-    dest = request.args.get('dest')
-    if dest is None:
-        flash('Error: No destination page was specified!')
-        return redirect(url_for('seeds.manage'))
-    form = SelectCultivarForm()
-    if form.validate_on_submit():
-        return redirect(url_for(dest, cv_id=form.cultivar.data))
-    crumbs = (
-        cblr.crumble('manage', 'Manage Seeds'),
-        cblr.crumble('select_cultivar', dest=dest)
-    )
-    return render_template('seeds/select_cultivar.html',
-                           crumbs=crumbs,
-                           form=form)
-
-
-@seeds.route('/select_packet', methods=['GET', 'POST'])
-@login_required
-@permission_required(Permission.MANAGE_SEEDS)
-def select_packet():
-    """Select a packet to load on another page.
-
-    Request Args:
-        dest: The route to redirect to after `Packet` is selected.
-    """
-    dest = request.args.get('dest')
-    if dest is None:
-        flash('Error: No destination page was specified!')
-        return redirect(url_for('seeds.manage'))
-    form = SelectPacketForm()
-    if form.validate_on_submit():
-        return redirect(url_for(dest, pkt_id=form.packet.data))
-    crumbs = (
-        cblr.crumble('manage', 'Manage Seeds'),
-        cblr.crumble('select_packet', dest=dest)
-    )
-    return render_template('seeds/select_packet.html',
-                           crumbs=crumbs,
-                           form=form)
-
-
-@seeds.route('/select_bulk_category')
-def select_bulk_category():
-    """Select a `BulkCategory` for use on another page."""
-    dest = request.args.get('dest')
-    if dest is None:
-        flash('No destination page was specified!')
-        return redirect(url_for('seeds.manage'))
-    form = SelectBulkCategoryForm()
-    if form.validate_on_submit():
-        return redirect(url_for(dest, cat_id=form.category.data))
-    crumbs = (
-        cblr.crumble('manage', 'Manage Seeds'),
-        cblr.crumble('select_bulk_category', dest=dest)
-    )
-    return render_template('seeds/select_bulk_category.html',
-                           crumbs=crumbs,
-                           form=form)
 
 
 @seeds.route('/manage')

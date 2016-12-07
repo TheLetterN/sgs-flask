@@ -740,8 +740,10 @@ class AddBulkItemForm(AddWithThumbnailForm):
     def __init__(self, category, *args, **kwargs):
         self.category = category
         super().__init__(*args, **kwargs)
-        self.series.choices = select_field_choices(items=self.category.series)
-        self.series.choices.insert(0, (0, 'None'))
+        self.series_id.choices = select_field_choices(
+            items=self.category.series
+        )
+        self.series_id.choices.insert(0, (0, 'None'))
 
 
 class AddRedirectForm(FlaskForm):

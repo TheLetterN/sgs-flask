@@ -73,7 +73,7 @@ Copyright Swallowtail Garden Seeds, Inc
 {% block main %}
 {% if current_user.can(Permission.MANAGE_SEEDS) %}
 <div class="admin-links">
-  <a href="{{ url_for('seeds.edit_bulk_category', cat_id=category.id) }}">Edit {{ category.name }}</a>
+  <a href="{{ url_for('seeds.edit_bulk_category', cat_id=category.id) }}">Edit {{ category.name|title }}</a> | <a href="{{ url_for('seeds.add_bulk_series', cat_id=category.id) }}">Add a Series to {{ category.name|title }}</a> | <a href="{{ url_for('seeds.add_bulk_item', cat_id=category.id) }}">Add an Item to {{ category.name|title }}</a>
 </div>
 {% endif %}
       <h1 class="Header_h1">{{ category.title }}</h1>
@@ -90,39 +90,46 @@ Copyright Swallowtail Garden Seeds, Inc
         </a>
         {% endfor %}  
       </div> 
-{% endif %}
-{% for ser in category.series %}
-      <div id="{{ ser.slug }}" class="Series">
-        <h2 class="Series_h2">{{ ser.name }}{% if ser.subtitle %}<em class="Series_em">{{ ser.subtitle }}</em>{% endif %}</h2>
+      {% endif %}
+      {% for group in category.item_groups %}
+      {% if group['series'] %}
+      <div id="{{ group['series'].slug }}" class="Series">
+        <h2 class="Series_h2">{{ group['series'].name }}{% if group['series'].subtitle %} <em class="Series_em">{{ group['series'].subtitle }}</em>{% endif %}</h2>
         {% if current_user.can(Permission.MANAGE_SEEDS) %}
         <div class="admin-links">
-          <a href="{{ url_for('seeds.edit_bulk_series', ser_id=ser.id) }}">Edit {{ ser.name }}</a>
+          <a href="{{ url_for('seeds.edit_bulk_series', ser_id=group['series'].id) }}">Edit {{ group['series'].name }}</a>
         </div>
         {% endif %}
         <p class="Series_p"> </p>  {# This is probably here for a reason. #}
       </div>
-      <table class="bulk-items">
-       {% for item in ser.items %}
-        {{ item_row(item) }}
-       {% endfor %} 
-      </table>
-      {% if ser.items_after %}
-      <hr>
-      <table class="bulk-items">
-        {% for item in ser.items_after %}
-        {{ item_row(item) }}
-        {% endfor %}
-      </table>
+      {% elif not loop.first %}
       <hr>
       {% endif %}
-{% endfor %}
-{% if not category.series %}
       <table class="bulk-items">
-        {% for item in category.items %}
-        {{ item_row(item) }}
+        {% for item in group['items'] %}
+        <tr>
+          <td>
+            {{ item.name }}
+          </td>
+          <td>
+            {{ item.sku }}
+          </td>
+          <td>
+            ${{ item.price }}
+          </td>
+          <td>
+            <input id="quantity-{{ item.sku }}" min=1 type="number" value="1">
+          </td>
+          <td>
+            <button class="snipcart-add-item" data-item-description="Bulk Seeds" data-item-id="{{ item.sku }}" data-item-name="{{ item.product_name }}" data-item-price="{{ item.price }}" data-item-taxable="{% if item.taxable %}true{% else %}false{% endif %}" data-item-url="{{ request.url }}" id="button-{{ item.sku }}" type="button">Add to Cart</button>
+          </td>
+        </tr>
         {% endfor %}
       </table>
-{% endif %}
+      {% if not group['series'] and not loop.last and not loop.first %}
+      <hr>
+      {% endif %}
+      {% endfor %}
 {% endblock %}
 {% block detailed_nav %}
 {{ make_detailed_nav(nav_data, 'bulk') }}

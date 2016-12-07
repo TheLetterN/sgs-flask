@@ -2099,6 +2099,23 @@ class BulkCategory(db.Model, SlugMixin, TimestampMixin):
             name = name + ' Seeds'
         return name
 
+    @property
+    def item_groups(self):
+        items = sorted(self.items, key = lambda x: x.name)
+        current_series = items[0].series
+        groups = []
+        current_group = {'series': current_series, 'items': []}
+        for item in items:
+            if item.series is current_series:
+                current_group['items'].append(item)
+            else:
+                groups.append(current_group)
+                current_series = item.series
+                current_group = {'series': current_series, 'items': [item]}
+        if current_group not in groups:
+            groups.append(current_group)
+        return groups
+
     @classmethod
     def get_or_create(cls, slug):
         """Get `BulkCategory` with given slug, otherwise create it."""

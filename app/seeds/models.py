@@ -2246,20 +2246,16 @@ class BulkItem(db.Model, OrderingListMixin, SlugMixin, TimestampMixin):
             return ''
     
     @classmethod
-    def get_or_create(cls, parent, slug):
+    def get_or_create(cls, category, slug):
         """Get `BulkItem` with given category and slug.
 
         Args:
-            parent: The `BulkCategory` or `BulkSeries` the `BulkItem` 
-                belongs/should belong to.
+            category: The `BulkCategory` the item belongs to.
             slug: The slug of the `BulkItem` to get or create.
         """
-        item = next((i for i in parent.items if i.slug == slug), None)
+        item = next((i for i in category.items if i.slug == slug), None)
         if not item:
-            if isinstance(parent, BulkCategory):
-                item = cls(category=parent, slug=slug)
-            else:
-                item = cls(series=parent, slug=slug)
+            item = cls(category=category, slug=slug)
             item.created = True
         else:
             item.created = False

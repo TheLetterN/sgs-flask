@@ -326,8 +326,9 @@ def add_bulk_to_database(l):
         db.session.add(cat)
         cat.name = d['header']  # Deal with it.
         cat.list_as = d['list_as']
-        cat.series = list(generate_bulk_series(cat, d['sections']))
         cat.items = list(generate_bulk_items(cat, d['items']))
+        # series after items so items in series end up in items.
+        cat.series = list(generate_bulk_series(cat, d['sections']))
         db.session.flush()
         cat.series.reorder()
         cat.items.reorder()
@@ -350,15 +351,15 @@ def generate_bulk_series(cat, l):
         ser.subtitle = d['subtitle']
         if d['thumbnail']:
             ser.thumbnail = download_image(d['thumbnail'])
-        ser.items = list(generate_bulk_items(ser, d['items']))
+        ser.items = list(generate_bulk_items(cat, d['items']))
         db.session.flush()
         ser.items.reorder()
         yield ser
 
 
-def generate_bulk_items(parent, l, series=None):
+def generate_bulk_items(cat, l):
     for d in l:
-        item = BulkItem.get_or_create(parent, d['slug'])
+        item = BulkItem.get_or_create(cat, d['slug'])
         db.session.add(item)
         item.name = d['name']
         item.product_name = d['product_name']

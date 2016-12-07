@@ -2216,6 +2216,17 @@ class BulkItem(db.Model, OrderingListMixin, SlugMixin, TimestampMixin):
 
     def __repr__(self):
         return '<BulkItem "{}">'.format(self.name)
+
+    @property
+    def url(self):
+        try:
+            return url_for(
+                'seeds.bulk_category',
+                slug=self.category.slug,
+                _anchor=self.sku
+            )
+        except AttributeError:
+            return ''
     
     @classmethod
     def get_or_create(cls, parent, slug):

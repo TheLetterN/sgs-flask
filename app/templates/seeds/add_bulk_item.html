@@ -1,0 +1,80 @@
+{# This file is part of SGS-Flask.
+
+   SGS-Flask is free software: you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
+ 
+   SGS-Flask is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+ 
+   You should have received a copy of the GNU General Public License
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ 
+   Copyright Swallowtail Garden Seeds, Inc 
+#}
+{% extends "includes/base.html" %}
+{% from "includes/form_field.html" import form_field %}
+{# Indent block head content 4 spaces, and block main content 6 spaces. #}
+{% block head %}
+    <title>Add Bulk Item</title>
+    {% if ALLOW_CRAWLING %}
+    {# If ALLOW_CRAWLING is False, this tag is already generated. #}
+    {# If ALLOW_CRAWLING is True, we still don't want admin pages like this crawled. #}
+    <meta name="robots" content="noindex, nofollow">
+    {% endif %}
+    <link rel="canonical" href="{{ url_for('seeds.add_bulk_series', _external=True) }}">
+{% endblock %}
+{% block main %}
+      <h1>Add Item to Bulk Category "{{ form.category.name }}":</h1>
+        <form class="admin" method="POST" enctype="multipart/form-data">
+          {{ form.hidden_tag() }}
+          <ol>
+            <li>
+              {{ form_field(form.series_id)|safe }}
+            </li>
+            <li>
+              {{ form_field(form.name, placeholder='e.g. MILADY LILAC (10,000 SEEDS)')|safe }}
+            </li>
+            <li>
+              {{ form_field(form.slug, placeholder='e.g. milady-lilac')|safe }}
+            </li>
+            <li>
+              {{ form_field(form.product_name, placeholder='e.g. ASTER, MILADY LILAC (10,000 SEEDS)')|safe }}
+            </li>
+            <li>
+              {{ form_field(form.sku, placeholder='e.g. BBA130145')|safe }}
+            </li>
+            <li>
+              {{ form_field(form.price, placeholder='e.g. 3.50')|safe }}
+            </li>
+            <li>
+              {{ form_field(form.taxable)|safe }}
+            </li>
+            <li>
+              {{ form_field(form.thumbnail)|safe }}
+            </li>
+            <li>
+              {{ form_field(form.thumbnail_filename)|safe }}
+            </li>
+          <li>
+            {{ form.submit }}
+          </li>
+        </ol>
+        </form>
+{% endblock %}
+{% block scripts %}
+    <script src="{{ url_for('static', filename='scripts/form-helpers.js') }}"></script>
+    <script>
+      populate_on_blur("{{ form.name.id }}", "{{ form.slug.id }}", slugify);
+      $('#thumbnail').on('input', function () {
+        $('#thumbnail_filename').val('wholesale/' + this.value);
+      });
+      $('#{{ form.name.id }}').on('blur', function () {
+        $('#{{ form.product_name.id }}').val('{{ form.category.name|upper }}, ' + this.value.toUpperCase());
+      });
+    </script>
+{% endblock %}
+

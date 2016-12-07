@@ -43,10 +43,11 @@ from app.form_helpers import (
     StrippedStringField,
     StrippedTextAreaField
 )
-from app import estimate_ship_date
+from app import db, estimate_ship_date
 from app.redirects import RedirectsFile
 from .models import (
     BulkCategory,
+    BulkItem,
     BulkSeries,
     CommonName,
     Cultivar,
@@ -167,7 +168,7 @@ def image_path(filename):
         return None
 
 
-class USDollar(object):
+class USDollar:
     """Validator to ensure data in fields for USD amounts is parseable."""
     def __init__(self, message=None):
         if not message:
@@ -180,6 +181,25 @@ class USDollar(object):
                 USDollar_.usd_to_decimal(field.data)
             except:
                 raise ValidationError(self.message)
+
+
+class UnusedSKU:
+    """Validator to ensure a SKU isn't already in use."""
+    def __init__(self, message=None):
+        self.message = message
+
+    def __call__(self, form, field):
+        exists =  db.session.query(
+            db.exists().where(Packet.sku == field.data)
+        ).scalar() or db.session.query(
+            db.exists().where(BulkItem.sku == field.data)
+        ).scalar()
+        if exists:
+            raise ValidationError(
+                self.message or
+                'The SKU "{}" is already in use. Please choose another.'
+                .format(field.data)
+            )
 
 
 # Add Forms
@@ -601,7 +621,7 @@ class AddPacketForm(FlaskForm):
     """
     sku = StrippedStringField(
         'SKU',
-        validators=[InputRequired(), Length(max=32)]
+        validators=[InputRequired(), Length(max=254), UnusedSKU()]
     )
     product_name = StrippedStringField(
         'Product Name',
@@ -613,7 +633,7 @@ class AddPacketForm(FlaskForm):
     )
     amount = StrippedStringField(
         'Amount of Seeds',
-        validators=[InputRequired(), Length(max=16)]
+        validators=[InputRequired(), Length(max=254)]
     )
     submit = SubmitField('Save Packet')
 
@@ -622,23 +642,6 @@ class AddPacketForm(FlaskForm):
         self.cultivar = cultivar
         if not self.submit.data:
             self.product_name.data = self.cultivar.product_name
-
-    def validate_sku(self, field):
-        """Raise ValidationError if sku already exists in database.
-
-        Raises:
-            ValidationError: If value of sku is already used by another packet.
-        """
-        packet = Packet.query\
-            .filter(Packet.sku == field.data.strip())\
-            .one_or_none()
-        if packet:
-            pkt_url = url_for('seeds.edit_packet', pkt_id=packet.id)
-            raise ValidationError(
-                Markup('The SKU \'{0}\' is already in use by \'{1}\'. <a '
-                       'href="{2}">Click here</a> if you wish to edit it.'
-                       .format(packet.sku, packet.cultivar.fullname, pkt_url))
-            )
 
 
 class AddBulkCategoryForm(AddWithThumbnailForm):
@@ -706,6 +709,39 @@ class AddBulkSeriesForm(AddWithThumbnailForm):
                 'edit it.'
                 .format(field.data, self.category.name, bs.url)
             ))
+
+
+class AddBulkItemForm(AddWithThumbnailForm):
+    """Form for adding a `BulkItem` to db."""
+    series_id = SelectField('Series', coerce=int)
+    name = StrippedStringField(
+        'Name',
+        validators=[InputRequired(), Length(max=254)]
+    )
+    slug = SlugifiedStringField(
+        'URL Slug',
+        validators=[InputRequired(), Length(max=254)]
+    )
+    product_name = StrippedStringField(
+        'Product Name',
+        validators=[InputRequired(), Length(max=254)]
+    )
+    sku = StrippedStringField(
+        'Product SKU',
+        validators=[InputRequired(), Length(max=254), UnusedSKU()]
+    )
+    price = StrippedStringField(
+        'Price',
+        validators=[InputRequired(), Length(max=254), USDollar()]
+    )
+    taxable = BooleanField('Taxable', default=True)
+    submit = SubmitField('Submit')
+
+    def __init__(self, category, *args, **kwargs):
+        self.category = category
+        super().__init__(*args, **kwargs)
+        self.series.choices = select_field_choices(items=self.category.series)
+        self.series.choices.insert(0, (0, 'None'))
 
 
 class AddRedirectForm(FlaskForm):

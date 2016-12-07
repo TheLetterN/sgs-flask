@@ -40,6 +40,7 @@ from ..lastcommit import LastCommit
 from app.db_helpers import dbify
 from app.seeds.models import (
     BulkCategory,
+    BulkItem,
     BulkSeries,
     CommonName,
     Cultivar,
@@ -51,6 +52,7 @@ from app.seeds.models import (
 )
 from app.seeds.forms import (
     AddBulkCategoryForm,
+    AddBulkItemForm,
     AddBulkSeriesForm,
     AddCommonNameForm,
     AddIndexForm,
@@ -998,6 +1000,55 @@ def add_bulk_series(cat_id=None):
         cblr.crumble('add_bulk_series')
     )
     return render_template('seeds/add_bulk_series.html', form=form)
+
+
+@seeds.route('/add_bulk_item', methods=['GET', 'POST'])
+@seeds.route('/add_bulk_item/<int:cat_id>', methods=['GET', 'POST'])
+@permission_required(Permission.MANAGE_SEEDS)
+def add_bulk_item(cat_id=None):
+    cat = BulkCategory.query.get(cat_id) if cat_id else None
+    if not cat:
+        return redirect(url_for(
+            'seeds.select_object',
+            dest='seeds.add_bulk_item',
+            id_arg='cat_id',
+            model='Bulk Category'
+        ))
+    form = AddBulkItemForm(category=cat)
+    if form.validate_on_submit():
+        messages = []
+        bi = BulkItem(name=form.name.data, category=cat)
+        db.session.add(bi)
+        messages.append('Creating new bulk item "{}":'.format(bi.name))
+        if form.series_id.data:
+            bi.series = BulkSeries.query.get(form.series_id.data)
+            messages.append('Series set to "{}".'.format(bi.series.name))
+        bi.slug = form.slug.data
+        messages.append('Slug set to "{}".'.format(bi.slug))
+        bi.product_name = form.product_name.data
+        messages.append('Product name set to "{}".'.format(bi.product_name))
+        bi.sku = form.sku.data
+        messages.append('SKU set to "{}".'.format(bi.sku))
+        bi.price = form.price.data
+        messages.append('Price set to ${}.'.format(bi.price))
+        bi.taxable = True if form.taxable.data else False
+        if bi.taxable:
+            messages.append('Set as taxable.')
+        else:
+            messages.append('Set as not taxable.')
+        add_thumbnail(form, bi, messages)
+        db.session.commit()
+        flash_all(messages)
+        return redirect_after_submit(bi.url)
+    crumbs = (
+        cblr.crumble('manage', 'Manage Seeds'),
+        cblr.crumble('add_bulk_item')
+    )
+    return render_template(
+        'seeds/add_bulk_item.html',
+        crumbs=crumbs,
+        form=form
+    )
 
 
 @seeds.route('/edit_index', methods=['GET', 'POST'])
@@ -2131,6 +2182,7 @@ def select_object():
     """
     MODELS = {
      'Bulk Category': BulkCategory,
+     'Bulk Item': BulkItem,
      'Bulk Series': BulkSeries,
      'Common Name': CommonName,
      'Cultivar': Cultivar,

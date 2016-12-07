@@ -325,6 +325,7 @@ def add_bulk_to_database(l):
         cat = BulkCategory.get_or_create(d['slug'])
         db.session.add(cat)
         cat.name = d['header']  # Deal with it.
+        cat.subtitle = d['subtitle']
         cat.list_as = d['list_as']
         cat.items = list(generate_bulk_items(cat, d['items']))
         # series after items so items in series end up in items.
@@ -704,6 +705,7 @@ class BulkPage:
         r.encoding = 'utf-8'
         self.soup = BeautifulSoup(r.text, 'html5lib')
         self.h1 = self.soup.find('h1')
+        self.h2 = self.soup.find('h2', class_='Header_h2')
         self.section_divs = self.soup.find_all('div', class_='Series')
         try:
             self.section_links = self.soup.find(
@@ -770,10 +772,12 @@ class BulkPage:
                 'items': [item_from_row(r) for r in sec['rows']]
             }
         header = ' '.join(self.h1.text.strip().split())
+        subtitle = ' '.join(self.h2.text.strip().split()) if self.h2 else None
         print('Creating dbdict for {}...'.format(header))
         self._dbdict = {
             'list_as': self.list_as,
             'header': header,
+            'subtitle': subtitle,
             'slug': self.url.split('/')[-1].replace('.html', ''),
             'sections': [dict_from_section(s) for s in self.sections],
             'items': [item_from_row(r) for r in self.rows]

@@ -63,6 +63,9 @@
         <a href="{{ url_for('seeds.remove_cultivar') }}">Cultivar</a>
         <a href="{{ url_for('seeds.remove_packet') }}">Packet</a>
       </div>
+      <div>
+        <a href="{{ url_for('seeds.remove_object', model='Bulk Category') }}">Bulk Category</a> | <a href="{{ url_for('seeds.remove_object', model='Bulk Series') }}">Bulk Series</a> | <a href="{{ url_for('seeds.remove_object', model='Bulk Item') }}">Bulk Item</a>
+      </div>
       {% if pending.changes %}
       <h2>Changes Pending Restart of Application:</h2>
       <div class="pending_changes">{{ pending.changes|safe }}</div>

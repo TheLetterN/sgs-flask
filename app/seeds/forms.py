@@ -1524,6 +1524,15 @@ class EditBulkItemForm(EditWithThumbnailForm):
                 )
 
 
+class RemoveObjectForm(FlaskForm):
+    """Form for removing an object from the database."""
+    verify_removal = BooleanField(
+        'Yes',
+        validators=[InputRequired('Cannot remove item without confirmation.')]
+    )
+    submit = SubmitField('Remove')
+
+
 class RemoveIndexForm(FlaskForm):
     """Form for removing an `Index` from the database.
 

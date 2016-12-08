@@ -1812,6 +1812,15 @@ class Packet(db.Model, TimestampMixin):
         self.cultivar = cultivar
 
     @property
+    def name(self):
+        """str: `product_name`.
+
+        This is a convenience so that generic functions that expect a `name`
+        attribute can work with `Packet`.
+        """
+        return self.product_name
+
+    @property
     def taxable(self):
         try:
             return self.cultivar.taxable

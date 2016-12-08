@@ -71,6 +71,7 @@ from app.seeds.forms import (
     EditShipDateForm,
     RemoveIndexForm,
     RemoveCommonNameForm,
+    RemoveObjectForm,
     RemovePacketForm,
     RemoveSectionForm,
     RemoveCultivarForm,
@@ -79,6 +80,18 @@ from app.seeds.forms import (
 
 
 cblr = Crumbler('seeds')
+
+
+MODELS = {
+ 'Bulk Category': BulkCategory,
+ 'Bulk Item': BulkItem,
+ 'Bulk Series': BulkSeries,
+ 'Common Name': CommonName,
+ 'Cultivar': Cultivar,
+ 'Packet': Packet,
+ 'Section': Section,
+ 'Index': Index
+}
 
 
 ADD_ROUTES = (
@@ -120,13 +133,19 @@ class NotEnabledError(RuntimeError):
     def __init__(self, message):
         self.message = message
 
+
+def request_kwargs():
+    """Return a normal `dict` of request.args."""
+    return {k: request.args.get(k) for k in request.args}
+
+
 def origin():
     """Get the 'origin' request arg if present."""
     return request.args.get('origin')
 
+
 def redirect_after_submit(*urls):
     """Redirect to origin or first passed arg that exists."""
-    origin = request.args.get('origin')
     try:
         return redirect(next(u for u in urls if u))
     except StopIteration:
@@ -134,6 +153,7 @@ def redirect_after_submit(*urls):
             return redirect(request.referrer)
         else:
             return redirect(request.full_path)
+
 
 def flash_all(messages, category='message'):
     if category == 'message':
@@ -1995,6 +2015,46 @@ def migrate_sections(cn, other):
     return warnings
 
 
+@seeds.route('/remove_object', methods=['GET', 'POST'])
+@permission_required(Permission.MANAGE_SEEDS)
+def remove_object():
+    model = request.args.get('model')
+    if not model:
+        flash(
+            'Error: No model was specified to remove an item from!',
+            category='error'
+        )
+        return redirect(request.referrer or url_for('seeds.manage'))
+    select_url = url_for(
+        'seeds.select_object',
+        dest='seeds.remove_object',
+        id_arg='obj_id',
+        model=model
+        )
+    try:
+        obj_id = int(request.args.get('obj_id'))
+    except TypeError:
+        return redirect(select_url)
+    obj = MODELS[model].query.get(obj_id)
+    if not obj:
+        flash('No {} could be found with the id: {}'.format(model, obj_id))
+        return redirect(select_url)
+    name = obj.name
+    form = RemoveObjectForm()
+    if form.validate_on_submit():
+        if form.verify_removal:
+            db.session.delete(obj)
+            db.session.commit()
+            flash('{} removed from database.'.format(name))
+            return redirect(url_for('seeds.manage'))
+    return render_template(
+        'seeds/remove_object.html',
+        form=form,
+        model=model,
+        name=name
+    )
+
+
 @seeds.route('/remove_index', methods=['GET', 'POST'])
 @seeds.route('/remove_index/<int:idx_id>', methods=['GET', 'POST'])
 @login_required
@@ -2256,10 +2316,27 @@ def remove_packet(pkt_id=None):
                            packet=packet)
 
 
+@seeds.route('/kwargs_test')
+def kwargs_test():
+    def foo(**kwargs):
+        print('kwargs:')
+        for k in kwargs:
+            print('{}: {}'.format(k, kwargs[k]))
+    kwargs = {k: request.args.get(k) for k in request.args}
+    defined_arg = kwargs.pop('defined')
+    print('Defined arg: {}'.format(defined_arg))
+    foo(**kwargs)
+    return('done')
+
+
 @seeds.route('/select_object', methods=['GET', 'POST'])
 @permission_required(Permission.MANAGE_SEEDS)
 def select_object():
     """View for selecting an object to work with.
+
+    Note:
+        Any unspecified request args passed will be passed along to the
+        destination route as kwargs.
 
     Request Args:
         dest: The destination route.
@@ -2269,25 +2346,19 @@ def select_object():
             words so that it can be shown on the page without having to find a
             way to add spaces between camelcase words.
     """
-    MODELS = {
-     'Bulk Category': BulkCategory,
-     'Bulk Item': BulkItem,
-     'Bulk Series': BulkSeries,
-     'Common Name': CommonName,
-     'Cultivar': Cultivar,
-     'Packet': Packet,
-     'Section': Section,
-     'Index': Index
-    }
-    dest = request.args.get('dest')
-    id_arg = request.args.get('id_arg')
-    model = request.args.get('model')
-    if dest is None:
+    kwargs = request_kwargs()
+    dest = kwargs.pop('dest')
+    id_arg = kwargs.pop('id_arg')
+    model = kwargs['model']
+    if dest != 'seeds.remove_object':
+        kwargs.pop('model')
+    if not dest:
         flash('Error: No destination specified.', category='error')
         return redirect(url_for('seeds.manage'))
     form = SelectObjectForm(model=MODELS[model])
     if form.validate_on_submit():
-        return redirect(url_for(dest, **{id_arg: form.id.data}))
+        kwargs[id_arg] = form.id.data
+        return redirect(url_for(dest, **kwargs))
     crumbs = (
         cblr.crumble('manage', 'Manage Seeds'),
         cblr.crumble('select_object', dest=dest, id_arg=id_arg)

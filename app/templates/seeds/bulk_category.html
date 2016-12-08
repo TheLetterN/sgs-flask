@@ -82,12 +82,14 @@ Copyright Swallowtail Garden Seeds, Inc
 {% if category.series %}
       <div class="RelatedLinks">
         {% for ser in category.series %}
+        {% if ser.thumbnail %}
         <a href="#{{ ser.slug }}">
           <figure class="RelatedLinks_figure">
             <img class="Cultivar_img" src="{{ ser.thumbnail.url }}">
             <figcaption class="Related_links_figcaption">{{ ser.short_name|title }}</figcaption>
           </figure>
         </a>
+        {% endif %}
         {% endfor %}  
       </div> 
       {% endif %}
@@ -109,7 +111,7 @@ Copyright Swallowtail Garden Seeds, Inc
         {% for item in group['items'] %}
         <tr>
           <td>
-            {{ item.name }}
+            {{ item.name }}{% if current_user.can(Permission.MANAGE_SEEDS) %} [<a href="{{ url_for('seeds.edit_bulk_item', item_id=item.id) }}">Edit</a>]{% endif %}
           </td>
           <td>
             {{ item.sku }}

@@ -2240,7 +2240,7 @@ class BulkItem(db.Model, OrderingListMixin, SlugMixin, TimestampMixin):
             return url_for(
                 'seeds.bulk_category',
                 slug=self.category.slug,
-                _anchor=self.sku
+                _anchor=self.slug
             )
         except AttributeError:
             return ''

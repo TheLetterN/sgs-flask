@@ -61,6 +61,7 @@ from app.seeds.forms import (
     AddCultivarForm,
     AddSectionForm,
     EditBulkCategoryForm,
+    EditBulkItemForm,
     EditBulkSeriesForm,
     EditCommonNameForm,
     EditCultivarForm,
@@ -1823,6 +1824,94 @@ def edit_bulk_series(ser_id=None):
         form=form
     )
 
+
+@seeds.route('/edit_bulk_item', methods=['GET', 'POST'])
+@seeds.route('/edit_bulk_item/<int:item_id>', methods=['GET', 'POST'])
+@permission_required(Permission.MANAGE_SEEDS)
+def edit_bulk_item(item_id=None):
+    item = BulkItem.query.get(item_id) if item_id else None
+    if not item:
+        return redirect(url_for(
+            'seeds.select_object',
+            dest='seeds.edit_bulk_item',
+            id_arg='item_id',
+            model='Bulk Item'
+        ))
+    form = EditBulkItemForm(obj=item)
+    if form.validate_on_submit():
+        edited = False
+        messages = []
+        messages.append('Editing bulk item "{}"...'.format(item.name))
+        if form.category_id.data != item.category_id:
+            edited = True
+            item.category = BulkCategory.query.get(form.category_id.data)
+            messages.append(
+                'Category changed to "{}".'.format(item.category.name)
+            )
+        if not form.series_id.data:
+            form.series_id.data = None
+        if form.series_id.data != item.series_id:
+            edited = True
+            if form.series_id.data:
+                item.series = BulkSeries.query.get(form.series_id.data)
+                messages.append(
+                    'Series changed to "{}".'.format(item.series.name)
+                )
+            else:
+                item.series = None
+                messages.append('Series cleared.')
+        if form.name.data != item.name:
+            edited = True
+            item.name = form.name.data
+            messages.append('Name changed to "{}".'.format(item.name))
+        if form.slug.data != item.slug:
+            edited = True
+            item.slug = form.slug.data
+            messages.append('Slug changed to "{}".'.format(item.slug))
+        if form.product_name.data != item.product_name:
+            edited = True
+            item.product_name = form.product_name.data
+            messages.append(
+                'Product name changed to "{}".'.format(item.product_name)
+            )
+        if form.sku.data != item.sku:
+            edited = True
+            item.sku = form.sku.data
+            messages.append('SKU changed to "{}".'.format(item.sku))
+        dec_p = USDollar.usd_to_decimal(form.price.data)
+        if dec_p != item.price:
+            edited = True
+            item.price = dec_p
+            messages.append('Price changed to ${}.'.format(item.price))
+        if form.taxable.data and not item.taxable:
+            edited = True
+            item.taxable = True
+            messages.append('Set as taxable.')
+        elif not form.taxable.data and item.taxable:
+            edited = True
+            item.taxable = False
+            messages.append('No longer set as taxable.')
+        edited = edit_thumbnail(form, item, messages) or edited
+        if edited:
+            db.session.commit()
+            messages.append(
+                'Changes to "{}" committed to database.'.format(item.name)
+            )
+            flash_all(messages)
+            return redirect_after_submit(item.url)
+        else:
+            messages.append('No changes were made.')
+            flash_all(messages)
+            return redirect(request.full_path)
+    crumbs = (
+        cblr.crumble('manage', 'Manage Seeds'),
+        cblr.crumble('edit_bulk_item')
+    )
+    return render_template(
+        'seeds/edit_bulk_item.html',
+        crumbs=crumbs,
+        form=form
+    )
 
 
 def migrate_cultivars(cn, other):

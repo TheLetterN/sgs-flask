@@ -1,0 +1,105 @@
+{# This file is part of SGS-Flask.
+
+   SGS-Flask is free software: you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
+ 
+   SGS-Flask is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+ 
+   You should have received a copy of the GNU General Public License
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ 
+   Copyright Swallowtail Garden Seeds, Inc 
+#}
+{% extends "includes/base.html" %}
+{% from "includes/form_field.html" import form_field %}
+{# Indent block head content 4 spaces, and block main content 6 spaces. #}
+{% block head %}
+    <title>Edit Bulk Item</title>
+    {% if ALLOW_CRAWLING %}
+    {# If ALLOW_CRAWLING is False, this tag is already generated. #}
+    {# If ALLOW_CRAWLING is True, we still don't want admin pages like this crawled. #}
+    <meta name="robots" content="noindex, nofollow">
+    {% endif %}
+    <link rel="canonical" href="{{ url_for('seeds.edit_bulk_item', item_id=form.item.id,  _external=True) }}">
+{% endblock %}
+{% block main %}
+      <h1>Edit Bulk Item</h1>
+      <form class="admin" method="POST" enctype="multipart/form-data">
+        {{ form.hidden_tag() }}
+        <fieldset>
+          <legend>Item Information</legend>
+          <ol>
+            <li>
+              {{ form_field(form.category_id)|safe }}
+            </li>
+            <li>
+              {{ form_field(form.series_id)|safe }}
+            </li>
+            <li>
+              {{ form_field(form.name)|safe }}
+            </li>
+            <li>
+              {{ form_field(form.slug)|safe }}
+            </li>
+            <li>
+              {{ form_field(form.product_name)|safe }}
+            </li>
+            <li>
+              {{ form_field(form.sku)|safe }}
+            </li>
+            <li>
+              {{ form_field(form.price)|safe }}
+            </li>
+            <li>
+              {{ form_field(form.taxable)|safe }}
+            </li>
+          </ol>
+        </fieldset>
+        <fieldset>
+          <legend>Select Thumbnail</legend>
+          <ol>
+            <li>
+              {{ form_field(form.thumbnail_id, show_label=False)|safe }}
+              <div><img src="{{ form.item.thumbnail.url }}" alt="" id="selected-thumbnail"></div>
+            </li>
+          </ol>
+        </fieldset>
+        <fieldset>
+          <legend>Or Edit/Replace Thumbnail</legend>
+          <ol>
+            <li>
+              {{ form_field(form.thumbnail)|safe }}
+            </li>
+            <li>
+              {{ form_field(form.thumbnail_filename)|safe }}
+            </li>
+          </ol>
+        </fieldset>
+        <ol>
+          <li>
+            {{ form.submit }}
+          </li>
+        </ol>
+      </form>
+{% endblock %}
+{% block scripts %}
+<script>
+  var image_urls = {{ form.image_urls|tojson }};
+  $('#thumbnail_id').on('change', function () {
+    $('#selected-thumbnail').attr('src', image_urls[$(this).val()]);
+  });
+  $('#thumbnail').on('input', function () {
+    var $fn = $('#thumbnail_filename');
+    if (!$fn.val()) {
+      $fn.val('wholesale/' + this.value);
+    }
+  });
+</script>
+{% endblock %}
+
+

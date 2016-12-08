@@ -1448,6 +1448,82 @@ class EditBulkSeriesForm(EditWithThumbnailForm):
             ))
 
 
+class EditBulkItemForm(EditWithThumbnailForm):
+    """Form for editing a `BulkItem`."""
+    category_id = SelectField('Category', coerce=int)
+    series_id = SelectField('Series', coerce=int)
+    name = StrippedStringField(
+        'Name',
+        validators=[InputRequired(), Length(max=254)]
+    )
+    slug = SlugifiedStringField(
+        'URL Slug',
+        validators=[InputRequired(), Length(max=254)]
+    )
+    product_name = StrippedStringField(
+        'Product Name',
+        validators=[InputRequired(), Length(max=254)]
+    )
+    sku = StrippedStringField(
+        'Product SKU',
+        validators=[InputRequired(), Length(max=254)]
+    )
+    price = StrippedStringField(
+        'Price',
+        validators=[InputRequired(), Length(max=254), USDollar()]
+    )
+    taxable = BooleanField('Taxable')
+    submit = SubmitField('Submit')
+
+    def __init__(self, *args, **kwargs):
+        self.item = kwargs['obj']
+        super().__init__(*args, **kwargs)
+        self.category_id.choices = select_field_choices(model=BulkCategory)
+        self.series_id.choices = select_field_choices(model=BulkSeries)
+        self.series_id.choices.insert(0, (0, 'None'))
+
+    def validate_sku(self, field):
+        """Raise error if new sku already in use."""
+        if field.data != self.item.sku:
+            exists =  db.session.query(
+                db.exists().where(Packet.sku == field.data)
+            ).scalar() or db.session.query(
+                db.exists().where(BulkItem.sku == field.data)
+            ).scalar()
+            if exists:
+                raise ValidationError(
+                    'The sku "{}" is already in use, please choose another.'
+                    .format(field.data)
+                )
+
+    def validate_slug(self, field):
+        """Raise error if slug in use by item in selected category."""
+        item = BulkItem.query.filter(
+            BulkItem.category_id == self.category_id.data,
+            BulkItem.slug == field.data
+        ).one_or_none()
+        if item and item is not self.item:
+            raise ValidationError(
+                'A bulk item in the category "{}" already exists with the '
+                'slug "{}". <a href="{}">Click here</a> if you wish to edit '
+                'it.'
+                .format(item.category.name,
+                        field.data,
+                        url_for('seeds.edit_bulk_item', item_id=item.id))
+            )
+
+    def validate_series_id(self, field):
+        """Raise error if selected series is not in selected category."""
+        if field.data:
+            ser = BulkSeries.query.get(field.data)
+            cat = BulkCategory.query.get(self.category_id.data)
+            if ser.category is not cat:
+                raise ValidationError(
+                    'The series "{}" does not belong to the category "{}".'
+                    .format(ser.name, cat.name)
+                )
+
+
 class RemoveIndexForm(FlaskForm):
     """Form for removing an `Index` from the database.
 

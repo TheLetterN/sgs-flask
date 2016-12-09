@@ -73,7 +73,7 @@ Copyright Swallowtail Garden Seeds, Inc
 {% block main %}
 {% if current_user.can(Permission.MANAGE_SEEDS) %}
 <div class="admin-links">
-  <a href="{{ url_for('seeds.edit_bulk_category', cat_id=category.id) }}">Edit {{ category.name|title }}</a> | <a href="{{ url_for('seeds.add_bulk_series', cat_id=category.id) }}">Add a Series to {{ category.name|title }}</a> | <a href="{{ url_for('seeds.add_bulk_item', cat_id=category.id) }}">Add an Item to {{ category.name|title }}</a>
+  <a href="{{ url_for('seeds.edit_bulk_category', cat_id=category.id) }}">Edit {{ category.name|title }}</a> | <a href="{{ url_for('seeds.remove_object', obj_id=category.id, model='Bulk Category') }}">Remove {{ category.name|title }}</a> | <a href="{{ url_for('seeds.add_bulk_series', cat_id=category.id) }}">Add a Series to {{ category.name|title }}</a> | <a href="{{ url_for('seeds.add_bulk_item', cat_id=category.id) }}">Add an Item to {{ category.name|title }}</a>
 </div>
 {% endif %}
       <h1 class="Header_h1">{{ category.title }}</h1>
@@ -99,7 +99,7 @@ Copyright Swallowtail Garden Seeds, Inc
         <h2 class="Series_h2">{{ group['series'].name }}{% if group['series'].subtitle %} <em class="Series_em">{{ group['series'].subtitle }}</em>{% endif %}</h2>
         {% if current_user.can(Permission.MANAGE_SEEDS) %}
         <div class="admin-links">
-          <a href="{{ url_for('seeds.edit_bulk_series', ser_id=group['series'].id) }}">Edit {{ group['series'].name }}</a>
+          <a href="{{ url_for('seeds.edit_bulk_series', ser_id=group['series'].id) }}">Edit {{ group['series'].name }}</a> | <a href="{{ url_for('seeds.remove_object', obj_id=group['series'].id, model='Bulk Series') }}">Remove {{ group['series'].name }}</a>
         </div>
         {% endif %}
         <p class="Series_p"> </p>  {# This is probably here for a reason. #}
@@ -111,7 +111,7 @@ Copyright Swallowtail Garden Seeds, Inc
         {% for item in group['items'] %}
         <tr>
           <td>
-            {{ item.name }}{% if current_user.can(Permission.MANAGE_SEEDS) %} [<a href="{{ url_for('seeds.edit_bulk_item', item_id=item.id) }}">Edit</a>]{% endif %}
+            {{ item.name }}{% if current_user.can(Permission.MANAGE_SEEDS) %} [<a href="{{ url_for('seeds.edit_bulk_item', item_id=item.id) }}">Edit</a>] [<a href="{{ url_for('seeds.remove_object', obj_id=item.id, model='Bulk Item') }}">Remove</a>]{% endif %}
           </td>
           <td>
             {{ item.sku }}

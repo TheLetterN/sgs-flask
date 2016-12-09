@@ -468,6 +468,11 @@ class Index(db.Model, SlugMixin, TimestampMixin):
         return hash(self.id)
 
     @property
+    def select_label(self):
+        """str: label to use in select field options."""
+        return self.name
+
+    @property
     def url(self):
         """Return the URL for the main page for a given `Index`."""
         try:
@@ -871,6 +876,14 @@ class CommonName(db.Model, OrderingListMixin, SlugMixin, TimestampMixin):
         return hash(self.id)
 
     @property
+    def select_label(self):
+        """str: label to use in select field options."""
+        try:
+            return '{} ({})'.format(self.name, self.index.name)
+        except AttributeError:
+            return self.name
+
+    @property
     def parent_collection(self):
         """Return the collection `CommonName` instances are ordered in."""
         if self.index:
@@ -1227,6 +1240,14 @@ class Section(db.Model, OrderingListMixin, SlugMixin, TimestampMixin):
         return '<{0} "{1}">'.format(self.__class__.__name__, self.fullname)
 
     @property
+    def select_label(self):
+        """str: label to use in select field options."""
+        try:
+            return '{} {}'.format(self.name, self.common_name.select_label)
+        except AttributeError:
+            return self.name
+
+    @property
     def url(self):
         try:
             return url_for(
@@ -1575,6 +1596,14 @@ class Cultivar(db.Model, OrderingListMixin, SlugMixin, TimestampMixin):
             raise KeyError(key)
 
     @property
+    def select_label(self):
+        """str: label to use in select field options."""
+        try:
+            return '{} {}'.format(self.name, self.common_name.select_label)
+        except AttributeError:
+            return self.name
+
+    @property
     def url(self):
         # TODO: Integrate option for if cultivar pages are active.
         try:
@@ -1812,6 +1841,11 @@ class Packet(db.Model, TimestampMixin):
         self.cultivar = cultivar
 
     @property
+    def select_label(self):
+        """str: label to use in select field options."""
+        return '{}: {}'.format(self.sku, self.product_name)
+
+    @property
     def name(self):
         """str: `product_name`.
 
@@ -1984,6 +2018,11 @@ class Image(db.Model, TimestampMixin):
                                               self.filename)
 
     @property
+    def select_label(self):
+        """str: label to use in select field options."""
+        return self.filename
+
+    @property
     def url(self):
         try:
             return url_for('static', filename=self.filename, _external=True)
@@ -2096,6 +2135,11 @@ class BulkCategory(db.Model, SlugMixin, TimestampMixin):
         return '<BulkCategory "{}">'.format(self.name)
 
     @property
+    def select_label(self):
+        """str: label to use in select field options."""
+        return self.name
+
+    @property
     def url(self):
         return url_for('seeds.bulk_category', slug=self.slug, _external=True)
 
@@ -2169,6 +2213,14 @@ class BulkSeries(db.Model, OrderingListMixin, SlugMixin, TimestampMixin):
         return '<BulkSeries "{}">'.format(self.name)
 
     @property
+    def select_label(self):
+        """str: label to use in select field options."""
+        try:
+            return '{} {}'.format(self.name, self.category.name)
+        except AttributeError:
+            return self.name
+
+    @property
     def url(self):
         """str: A URL for the page this series is on."""
         return url_for(
@@ -2182,18 +2234,6 @@ class BulkSeries(db.Model, OrderingListMixin, SlugMixin, TimestampMixin):
     def short_name(self):
         """str: Name with 'series' removed."""
         return re.sub('(?i)series', '', self.name).strip()
-
-    @property
-    def items_after(self):
-        """list: Items not in a series that come after this series."""
-        serieses = self.category.series  # A perfectly cromulent word!
-        try:
-            n = serieses[serieses.index(self) + 1]
-            return [
-                i for i in self.category.items if self.name < i.name < n.name
-            ]
-        except IndexError:
-            return []
 
     @classmethod
     def get_or_create(cls, cat, slug):
@@ -2242,6 +2282,14 @@ class BulkItem(db.Model, OrderingListMixin, SlugMixin, TimestampMixin):
 
     def __repr__(self):
         return '<BulkItem "{}">'.format(self.name)
+
+    @property
+    def select_label(self):
+        """str: label to use in select field options."""
+        try:
+            return '{} {}'.format(self.name, self.category.name)
+        except AttributeError:
+            return self.name
 
     @property
     def url(self):

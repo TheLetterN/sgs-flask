@@ -88,7 +88,7 @@ SUNLIGHT_CHOICES = [
 # Module functions
 def select_field_choices(model=None,
                          items=None,
-                         title_attribute='name',
+                         title_attribute=None,
                          order_by=None):
     """Create a list of select field choices from a model or list of items.
 
@@ -113,15 +113,13 @@ def select_field_choices(model=None,
             from the attribute specified by `title_attribute`. If model is not
             set and items is falsey, return an empty list.
     """
-    if not items:
-        if not order_by:
-            order_by = 'position' if hasattr(model, 'position') else 'id'
-        if model:
-            items = model.query.order_by(order_by).all()
-        else:
-            return []
-    elif order_by:  # Use default order of items if order_by not specified.
-        items = sorted(items, key=lambda x: getattr(x, order_by))
+    if not title_attribute:
+        title_attribute = 'select_label'
+    if not order_by:
+        order_by = 'select_label'
+    if model and not items:
+        items = model.query.all()
+    items = sorted(items, key=lambda x: getattr(x, order_by))
     return [(item.id, getattr(item, title_attribute)) for item in items]
 
 
@@ -1632,17 +1630,7 @@ class SelectObjectForm(FlaskForm):
     submit = SubmitField('Submit')
     def __init__(self, model, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if model == Packet:
-            ta = 'info'
-            ob = 'sku'
-        else:
-            ta = 'name'
-            ob = 'name'
-        self.id.choices = select_field_choices(
-            model=model,
-            title_attribute=ta,
-            order_by=ob
-        )
+        self.id.choices = select_field_choices(model=model)
 
 
 class EditShipDateForm(FlaskForm):

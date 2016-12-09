@@ -34,6 +34,8 @@ def str_contents(tag):
 
 
 def first_text(tag):
+    if isinstance(tag, str):
+        return tag
     try:
         return next(
             (c for c in tag.contents if isinstance(c, str) and
@@ -382,8 +384,16 @@ def generate_common_names(idx, l):
         cn.botanical_names = d['botanical_names']
         cn.description = d['description']
         cn.instructions = d['instructions']
-        cn.cultivars = list(generate_cultivars(cn, d['cultivars']))
-        cn.sections = list(generate_sections(cn, d['sections']))
+        if not cn.cultivars:
+            cn.cultivars = []
+        for cv in generate_cultivars(cn, d['cultivars']):
+            if cv not in cn.cultivars:
+                cn.cultivars.append(cv)
+        if not cn.sections:
+            cn.sections = []
+        for s in generate_sections(cn, d['sections']):
+            if s not in cn.sections:
+                cn.sections.append(s)
         db.session.flush()
         cn.child_sections.reorder()
         cn.child_cultivars.reorder()

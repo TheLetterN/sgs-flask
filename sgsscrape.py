@@ -565,7 +565,8 @@ class SectionTag:
                 self.botanical_names = None
             self.intro = self.header.find_all('p') if self.header else ''
         else:
-            self.header_h2 = str(self.tag['class'])
+            c = self.tag['class'][0].replace('-', ' ').replace('seeds', '')
+            self.header_h2 = c.title().strip()
             self.botanical_names = ''
             self.intro = ''
             self.subtitle = ''

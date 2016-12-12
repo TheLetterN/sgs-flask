@@ -533,7 +533,16 @@ class CultivarTag:
                 if '(OP)' in abbr.text:
                     self._dbdict['veg_info']['open_pollinated'] = True
             self._dbdict['veg_info']['maturation'] = str_contents(self.veg_em)
-
+        try:
+            self._dbdict['slug'] = self.tag['id'].lower()
+        except KeyError:
+            try:
+                self._dbdict['slug'] = self.h3['id'].lower()
+            except KeyError:
+                try:
+                    self._dbdict['slug'] = self.tag.img['id'].lower()
+                except KeyError:
+                    self._dbdict['slug'] = None
 
 
 class SectionTag:
@@ -564,12 +573,26 @@ class SectionTag:
                 self.subtitle = None
                 self.botanical_names = None
             self.intro = self.header.find_all('p') if self.header else ''
+            related = self.tag.find_previous_sibling(
+                'div',
+                class_='RelatedLinks'
+            )
+            try:
+                a = related.find(
+                    'a',
+                    href=lambda x: self.header['id'].lower() in x.lower()
+                )
+                self.thumbnail = a.find('img')
+            except (AttributeError, KeyError):
+                self.thumbnail = None
+
         else:
             c = self.tag['class'][0].replace('-', ' ').replace('seeds', '')
             self.header_h2 = c.title().strip()
             self.botanical_names = ''
             self.intro = ''
             self.subtitle = ''
+            self.thumbnail = None
             
         self.cultivars = get_cultivars(tag)
         self.comments = extract_comments(tag)
@@ -610,6 +633,14 @@ class SectionTag:
         self._dbdict['description'] = tags_to_str(self.intro)
         self._dbdict['subsections'] = [s.dbdict for s in self.subsections]
         self._dbdict['cultivars'] = [c.dbdict for c in self.cultivars]
+        try:
+            self._dbdict['slug'] = self.header['id'].lower()
+        except (AttributeError, KeyError, TypeError):
+            self._dbdict['slug'] = None
+        try:
+            self._dbdict['thumbnail'] = self.thumbnail['src']
+        except (TypeError, KeyError):
+            self._dbdict['thumbnail'] = None
 
 
 class IndexScraper:
@@ -683,6 +714,133 @@ class IndexScraper:
         self._dbdict['common_names'] = [
             c.dbdict for c in self.common_names
         ]
+
+
+class CNScraper:
+    """A scraper for a given common name page."""
+    def __init__(self, url, thumbnail=None):
+        self.url = url
+        self.thumbnail = thumbnail
+        r = requests.get(url)
+        r.encoding = 'utf-8'
+        self.soup = BeautifulSoup(r.text, 'html5lib')
+        self.main = self.soup.find('div', id='main')
+        if not self.main:
+            raise RuntimeError('No main div on CN page: {}'.format(url))
+        self.sections = get_subsections(self.main)
+        self.cultivars = get_cultivars(self.main)
+        self.header = self.main.find('div', class_='Header')
+        self.header_h1 = self.header.find('h1')
+        self.header_h2 = self.header.find('h2')
+        self.header_h3 = self.header.find('h3')
+        self.sun = self.header.find(
+            'p',
+            class_=lambda x: x and 'sun' in x or 'shade' in x
+        )
+        self.intro = self.main.find('div', class_='Introduction')
+        self.comments = extract_comments(self.main)
+        self.growing_divs = self.main.find_all('div', class_='Growing')
+        self.growing = self.growing_divs[-1] if self.growing_divs else None
+        self.sidenav = self.soup.find('div', class_='Sidebar')
+        self.sn_link = self.sidenav.find_all('a', href=self.url)[-1]
+        try:
+            self.growing.h2.extract()
+        except AttributeError:
+            pass
+        self.onpage_nav = None
+        self.related_links = None
+        self.parse_related_and_nav()
+        self.consolidate_cultivars()
+        self._dbdict = dict()
+
+    def __repr__(self):
+        return '<CNScraper url="{}">'.format(self.url)
+
+    @property
+    def dbdict(self):
+        if not self._dbdict:
+            self.create_dbdict()
+        return self._dbdict
+
+    def create_dbdict(self):
+        print('Creating dbdict for "{}"...'.format(self.url))
+        self._dbdict['name'] = clean_title(first_text(self.header_h1))
+        self._dbdict['list_as'] = self.sn_link.text.strip()
+        try:
+            self._dbdict['description'] = tags_to_str(self.intro.contents)
+        except AttributeError:
+            self._dbdict['description'] = ''
+        heirloom = self.main.find('div', id='heirloom-tomato-intro')
+        if heirloom:
+            self._dbdict['description'] = str(heirloom)
+        self._dbdict['subtitle'] = str_contents(self.header_h2)
+        self._dbdict['botanical_names'] = str_contents(self.header_h3)
+        self._dbdict['slug'] = self.url.split('/')[-1].replace('.html', '')
+        try:
+            self._dbdict['sunlight'] = next(
+                c for c in self.sun['class'] if 'sun' in c or 'shade' in c
+            )
+        except TypeError:
+            self._dbdict['sunlight'] = ''
+        self._dbdict['thumb_url'] = self.thumbnail
+        try:
+            self._dbdict['instructions'] = tags_to_str(
+                self.growing.contents
+            )
+        except AttributeError:
+            self._dbdict['instructions'] = ''
+        self._dbdict['sections'] = [s.dbdict for s in self.sections]
+        self._dbdict['cultivars'] = [c.dbdict for c in self.cultivars]
+        self._dbdict['related_links'] = list(
+            generate_related_links_dicts(self.related_links)
+        )
+
+    def parse_related_and_nav(self):
+        rls = self.main.find_all('div', class_='RelatedLinks')
+        if len(rls) > 2:
+            raise ValueError(
+                'Found more than two RelatedLinks divs on {}!'.format(self.url)
+            )
+        for rl in rls:
+            if 'navigation' in rl['class']:
+                self.onpage_nav = rl
+            else:
+                self.related_links = rl
+
+    def consolidate_cultivars(self):
+        for s in self.sections:
+            c = ' '.join(s.class_).lower()
+            if 'individual' in c and 'variet' in c:
+                self.cultivars += s.cultivars
+                self.sections.remove(s)
+
+    @property
+    def all_cultivars(self):
+        cultivars = list(self.cultivars)
+        for section in self.sections:
+            cultivars += section.cultivars
+            for sec in section.subsections:
+                cultivars += sec.cultivars
+        return cultivars
+
+
+def get_links(tag, *args, **kwargs):
+    try:
+        return [a['href'] for a in tag.find_all('a', *args, **kwargs)]
+    except AttributeError:
+        return []
+
+
+def generate_related_links_dicts(tag):
+    links = get_links(tag)
+    for link in links:
+        parts = link.split('/')[-2:]
+        more_parts = parts[1].split('#')
+        yield {
+            'idx_slug': parts[0],
+            'cn_slug': more_parts[0].replace('.html', ''),
+            'anchor': more_parts[1].lower() if len(more_parts) == 2 else None
+        }
 
 
 class BulkScraper:
@@ -793,115 +951,3 @@ class BulkPage:
             'sections': [dict_from_section(s) for s in self.sections],
             'items': [item_from_row(r) for r in self.rows]
         }
-
-
-class CNScraper:
-    """A scraper for a given common name page."""
-    def __init__(self, url, thumbnail=None):
-        self.url = url
-        self.thumbnail = thumbnail
-        r = requests.get(url)
-        r.encoding = 'utf-8'
-        self.soup = BeautifulSoup(r.text, 'html5lib')
-        self.main = self.soup.find('div', id='main')
-        if not self.main:
-            raise RuntimeError('No main div on CN page: {}'.format(url))
-        self.sections = get_subsections(self.main)
-        self.cultivars = get_cultivars(self.main)
-        self.header = self.main.find('div', class_='Header')
-        self.header_h1 = self.header.find('h1')
-        self.header_h2 = self.header.find('h2')
-        self.header_h3 = self.header.find('h3')
-        self.sun = self.header.find(
-            'p',
-            class_=lambda x: x and 'sun' in x or 'shade' in x
-        )
-        self.intro = self.main.find('div', class_='Introduction')
-        self.comments = extract_comments(self.main)
-        self.growing_divs = self.main.find_all('div', class_='Growing')
-        self.growing = self.growing_divs[-1] if self.growing_divs else None
-        self.sidenav = self.soup.find('div', class_='Sidebar')
-        self.sn_link = self.sidenav.find_all('a', href=self.url)[-1]
-        try:
-            self.growing.h2.extract()
-        except AttributeError:
-            pass
-        self.onpage_nav = None
-        self.related_links = None
-        self.parse_related_and_nav()
-        self.consolidate_cultivars()
-        self._dbdict = dict()
-
-    def __repr__(self):
-        return '<CNScraper url="{}">'.format(self.url)
-
-    @property
-    def dbdict(self):
-        if not self._dbdict:
-            self.create_dbdict()
-        return self._dbdict
-
-    def create_dbdict(self):
-        print('Creating dbdict for "{}"...'.format(self.url))
-        self._dbdict['name'] = clean_title(first_text(self.header_h1))
-        self._dbdict['list_as'] = self.sn_link.text.strip()
-        try:
-            self._dbdict['description'] = tags_to_str(self.intro.contents)
-        except AttributeError:
-            self._dbdict['description'] = ''
-        heirloom = self.main.find('div', id='heirloom-tomato-intro')
-        if heirloom:
-            self._dbdict['description'] = str(heirloom)
-        self._dbdict['subtitle'] = str_contents(self.header_h2)
-        self._dbdict['botanical_names'] = str_contents(self.header_h3)
-        self._dbdict['slug'] = self.url.split('/')[-1].replace('.html', '')
-        try:
-            self._dbdict['sunlight'] = next(
-                c for c in self.sun['class'] if 'sun' in c or 'shade' in c
-            )
-        except TypeError:
-            self._dbdict['sunlight'] = ''
-        self._dbdict['thumb_url'] = self.thumbnail
-        try:
-            self._dbdict['instructions'] = tags_to_str(
-                self.growing.contents
-            )
-        except AttributeError:
-            self._dbdict['instructions'] = ''
-        try:
-            self._dbdict['related_links'] = [
-                a['href'] for a in self.related_links
-            ]
-        except TypeError:
-            self._dbdict['related_links'] = []
-        self._dbdict['sections'] = [s.dbdict for s in self.sections]
-        self._dbdict['cultivars'] = [c.dbdict for c in self.cultivars]
-
-    def parse_related_and_nav(self):
-        rls = self.main.find_all('div', class_='RelatedLinks')
-        if len(rls) > 2:
-            raise ValueError(
-                'Found more than two RelatedLinks divs on {}!'.format(self.url)
-            )
-        for rl in rls:
-            if rl.find('a', href=lambda x: x[0] == '#'):
-                self.onpage_nav = rl
-            else:
-                self.related_links = rl
-
-    def consolidate_cultivars(self):
-        for s in self.sections:
-            c = ' '.join(s.class_).lower()
-            if 'individual' in c and 'variet' in c:
-                self.cultivars += s.cultivars
-                self.sections.remove(s)
-
-    @property
-    def all_cultivars(self):
-        cultivars = list(self.cultivars)
-        for section in self.sections:
-            cultivars += section.cultivars
-            for sec in section.subsections:
-                cultivars += sec.cultivars
-        return cultivars
-

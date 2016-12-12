@@ -48,6 +48,15 @@ Copyright Swallowtail Garden Seeds, Inc
     {% endif %} 
 </div>
 {# END common name page header #}
+{# BEGIN section nav #}
+{% if cn.has_navigable_sections %}
+<div class="RelatedLinks navigation">
+{% for s in cn.sections %}
+<a href="{{ s.url }}"><figure class="RelatedLinks_figure"><img class="Cultivar_img" src="{{ s.thumbnail.url }}"><figcaption class="RelatedLinks_figcaption navigation-caption">{{ s.name|title }}</figcaption></figure></a>
+{% endfor %}
+</div>
+{% endif %}
+{# END section nav #}
 {% if featured %}
 <div class="featured">
   {% for cv in featured %}

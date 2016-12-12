@@ -956,6 +956,14 @@ class CommonName(db.Model, OrderingListMixin, SlugMixin, TimestampMixin):
         else:
             return ''
 
+    @property
+    def has_navigable_sections(self):
+        """bool: True if at least one section with a thumbnail is present."""
+        if self.sections:
+            return any(s.thumbnail for s in self.sections)
+        else:
+            return False
+
     @classmethod
     def get_or_create(cls, name, index, stream=sys.stdout):
         """Load a `CommonName` if it exists, create it if not.

@@ -407,6 +407,8 @@ def generate_sections(cn, l):
         sec.botanical_names = d['botanical_names']
         sec.subtitle = d['subtitle']
         sec.description = d['description']
+        if d['thumbnail']:
+            sec.thumbnail = download_image(d['thumbnail'])
         sec.cultivars = list(generate_cultivars(cn, d['cultivars']))
         sec.children = list(generate_sections(cn, d['subsections']))
         db.session.flush()

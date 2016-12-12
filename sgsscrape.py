@@ -575,7 +575,7 @@ class SectionTag:
                 self.subtitle = None
                 self.botanical_names = None
             self.intro = self.header.find_all('p') if self.header else ''
-            related = self.tag.find_previous_sibling(
+            related = self.tag.find_previous(
                 'div',
                 class_='RelatedLinks'
             )

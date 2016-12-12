@@ -27,7 +27,7 @@ Copyright Swallowtail Garden Seeds, Inc
     </h2>
   {% if current_user.can(Permission.MANAGE_SEEDS) %}
   <div class="admin">
-    <a title="move up/backward" href="{{ url_for('seeds.move_section', section_id=sec.id, delta=-1, next=request.path + '#main') }}">&#9650;</a> | <a href="{{ url_for('seeds.edit_section', section_id=sec.id, origin=request.path) }}">Edit {{ sec.name }}</a> | <a href="{{ url_for('seeds.remove_section', section_id=sec.id) }}">Remove {{ sec.name }}</a> | <a title="move down/forward" href="{{ url_for('seeds.move_section', section_id=sec.id, delta=1, next=request.path + '#main') }}">&#9660;</a>
+    <a title="move up/backward" href="{{ url_for('seeds.move_section', section_id=sec.id, delta=-1, next=request.path + '#main') }}">&#9650;</a> | <a href="{{ url_for('seeds.edit_section', section_id=sec.id, origin=request.path) }}">Edit {{ sec.name }}</a> | <a href="{{ url_for('seeds.remove_object', model='Section', obj_id=sec.id) }}">Remove {{ sec.name }}</a> | <a title="move down/forward" href="{{ url_for('seeds.move_section', section_id=sec.id, delta=1, next=request.path + '#main') }}">&#9660;</a>
   </div>
   {% endif %}
     {% if sec.description %}

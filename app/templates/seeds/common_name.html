@@ -25,7 +25,7 @@ Copyright Swallowtail Garden Seeds, Inc
 {% block main %}
 {% if current_user.can(Permission.MANAGE_SEEDS) %}
 <div class="admin-links">
-  <a href="{{ url_for('seeds.edit_common_name', cn_id=cn.id, origin=request.path) }}">Edit {{ cn.name }}</a> | <a href="{{ url_for('seeds.add_section', cn_id=cn.id) }}">Add a Section to {{ cn.name }}</a> | <a href="{{ url_for('seeds.remove_common_name', cn_id=cn.id) }}">Remove {{ cn.name }}</a> | <a href="{{ url_for('seeds.add_cultivar', cn_id=cn.id) }}">Add a Cultivar to {{ cn.name }}</a>
+  <a href="{{ url_for('seeds.edit_common_name', cn_id=cn.id, origin=request.path) }}">Edit {{ cn.name }}</a> | <a href="{{ url_for('seeds.add_section', cn_id=cn.id) }}">Add a Section to {{ cn.name }}</a> | <a href="{{ url_for('seeds.remove_object', model='Common Name', obj_id=cn.id) }}">Remove {{ cn.name }}</a> | <a href="{{ url_for('seeds.add_cultivar', cn_id=cn.id) }}">Add a Cultivar to {{ cn.name }}</a>
 </div>
 {% endif %}
 {# BEGIN common name page header #}

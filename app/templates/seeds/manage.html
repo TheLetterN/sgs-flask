@@ -57,11 +57,11 @@
       </div>
       <h2>Remove:</h2>
       <div>
-        <a href="{{ url_for('seeds.remove_index') }}">Index</a>
-        <a href="{{ url_for('seeds.remove_common_name') }}">Common Name</a>
-        <a href="{{ url_for('seeds.remove_section') }}">Section</a>
-        <a href="{{ url_for('seeds.remove_cultivar') }}">Cultivar</a>
-        <a href="{{ url_for('seeds.remove_packet') }}">Packet</a>
+        <a href="{{ url_for('seeds.remove_object', model='Index') }}">Index</a>
+        <a href="{{ url_for('seeds.remove_object', model='Common Name') }}">Common Name</a>
+        <a href="{{ url_for('seeds.remove_object', model='Section') }}">Section</a>
+        <a href="{{ url_for('seeds.remove_object', model='Cultivar') }}">Cultivar</a>
+        <a href="{{ url_for('seeds.remove_object', model='Packet') }}">Packet</a>
       </div>
       <div>
         <a href="{{ url_for('seeds.remove_object', model='Bulk Category') }}">Bulk Category</a> | <a href="{{ url_for('seeds.remove_object', model='Bulk Series') }}">Bulk Series</a> | <a href="{{ url_for('seeds.remove_object', model='Bulk Item') }}">Bulk Item</a>

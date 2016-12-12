@@ -81,14 +81,14 @@ Copyright Swallowtail Garden Seeds, Inc
         {{ flipper('taxable') }}
       </li>
     </ul>
-    <a title="move up/backward" href="{{ url_for('seeds.move_cultivar', cv_id=cultivar.id, delta=-1, origin=cultivar.url) }}">&#9650;</a> | <a href="{{ url_for('seeds.edit_cultivar', cv_id=cultivar.id, origin=cultivar.url) }}">Edit {{ cultivar.fullname }}</a> | <a href="{{ url_for('seeds.remove_cultivar', cv_id=cultivar.id) }}">Remove {{ cultivar.fullname }}</a> | <a title="move down/forward" href="{{ url_for('seeds.move_cultivar', cv_id=cultivar.id, delta=1, origin=cultivar.url) }}">&#9660;</a>
+    <a title="move up/backward" href="{{ url_for('seeds.move_cultivar', cv_id=cultivar.id, delta=-1, origin=cultivar.url) }}">&#9650;</a> | <a href="{{ url_for('seeds.edit_cultivar', cv_id=cultivar.id, origin=cultivar.url) }}">Edit {{ cultivar.fullname }}</a> | <a href="{{ url_for('seeds.remove_object', model='Cultivar', obj_id=cultivar.id) }}">Remove {{ cultivar.fullname }}</a> | <a title="move down/forward" href="{{ url_for('seeds.move_cultivar', cv_id=cultivar.id, delta=1, origin=cultivar.url) }}">&#9660;</a>
     <div class="packet-admin">
       <h4>Packets for {{ cultivar.fullname }}:</h4>
       {% if cultivar.packets %}
       <ul class="packet-options">
         {% for packet in cultivar.packets %}
         <li>
-          {{ packet.info }}: <a href="{{ url_for('seeds.edit_packet', pkt_id=packet.id) }}">Edit</a> | <a href="{{ url_for('seeds.remove_packet', pkt_id=packet.id) }}">Remove</a>
+          {{ packet.info }}: <a href="{{ url_for('seeds.edit_packet', pkt_id=packet.id) }}">Edit</a> | <a href="{{ url_for('seeds.remove_object', model='Packet', obj_id=packet.id) }}">Remove</a>
         </li>
         {% endfor %}
       </ul>

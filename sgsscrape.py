@@ -26,6 +26,9 @@ from app.seeds.models import (
 STATIC = Path(Path.cwd(), 'app', 'static')
 
 
+related_links = []
+
+
 def str_contents(tag):
     try:
         return ' '.join(''.join(str(c) for c in tag.contents).split())
@@ -122,6 +125,15 @@ def save_index(idx, filename=None):
         p = Path(filename)
     with p.open('w', encoding='utf-8') as ofile:
         ofile.write(idx.json)
+    for cn in idx.dbdict['common_names']:
+        for rl in cn['related_links']:
+            related_links.append({
+                'source': {
+                    'idx_slug': idx.dbdict['slug'],
+                    'cn_slug': cn['slug']
+                },
+                'target': rl
+            })
     print('Saved {} to: {}'.format(idx.dbdict['slug'], p))
 
 
@@ -264,6 +276,8 @@ def save_all():
     save_vegetables()
     save_herbs()
     save_bulk()
+    with open('/tmp/related_links.json', 'w', encoding='utf-8') as ofile:
+        ofile.write(json.dumps(related_links, indent=4))
 
 
 def load_all():

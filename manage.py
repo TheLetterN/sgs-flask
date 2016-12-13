@@ -40,7 +40,8 @@ from sgsscrape import (
     add_index_to_database,
     load_all,
     load_bulk,
-    save_all
+    save_all,
+    set_related_links
 )
 
 app = create_app(os.getenv('SGS_MODE') or 'default')
@@ -63,6 +64,7 @@ def populate():
         for i in load_all():
             add_index_to_database(i)
         add_bulk_to_database(load_bulk())
+        set_related_links()
     except FileNotFoundError:
         print('No scraped data found! Please run "manage.py scrape" to scrape '
               'the website, then try again.')

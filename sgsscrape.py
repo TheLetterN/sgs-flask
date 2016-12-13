@@ -472,6 +472,58 @@ def generate_packets(l):
         yield pkt
 
 
+def set_related_links():
+    with open('/tmp/related_links.json', 'r', encoding='utf-8') as ifile:
+        dicts = json.loads(ifile.read())
+        print('Setting related links/grows with...')
+        for d in dicts:
+            cn = CommonName.from_slugs(
+                d['source']['idx_slug'],
+                d['source']['cn_slug']
+            )
+            if d['target']['anchor']:
+                t = Cultivar.from_slugs(
+                    d['target']['idx_slug'],
+                    d['target']['cn_slug'],
+                    d['target']['anchor']
+                )
+                if t:
+                    cn.gw_cultivars.append(t)
+                else:
+                    t = Section.from_slugs(
+                        d['target']['idx_slug'],
+                        d['target']['cn_slug'],
+                        d['target']['anchor']
+                    )
+                    if t:
+                        cn.gw_sections.append(t)
+                    else:
+                        print(
+                            'Could not find a Section or Cultivar with the '
+                            'slug: "{}"'.format(d['target']['anchor'])
+                        )
+                        t = CommonName.from_slugs(
+                            d['target']['idx_slug'],
+                            d['target']['cn_slug']
+                        )
+                        cn.gw_common_names.append(t)
+            else:
+                t = CommonName.from_slugs(
+                    d['target']['idx_slug'],
+                    d['target']['cn_slug']
+                )
+                if t:
+                    cn.gw_common_names.append(t)
+                else:
+                    print('Could not find gw for {}'.format(d))
+            if t:
+                print(
+                    '"{}" grows with the {} "{}"'
+                    .format(cn.name, t.__class__.__name__, t.name)
+                )
+        db.session.commit()
+
+
 class CultivarTag:
     def __init__(self, tag):
         self.tag = tag
@@ -551,13 +603,13 @@ class CultivarTag:
                     self._dbdict['veg_info']['open_pollinated'] = True
             self._dbdict['veg_info']['maturation'] = str_contents(self.veg_em)
         try:
-            self._dbdict['slug'] = self.tag['id'].lower()
+            self._dbdict['slug'] = slugify(self.tag['id'])
         except KeyError:
             try:
-                self._dbdict['slug'] = self.h3['id'].lower()
+                self._dbdict['slug'] = slugify(self.h3['id'])
             except KeyError:
                 try:
-                    self._dbdict['slug'] = self.tag.img['id'].lower()
+                    self._dbdict['slug'] = slugify(self.tag.img['id'])
                 except KeyError:
                     self._dbdict['slug'] = None
 
@@ -651,7 +703,7 @@ class SectionTag:
         self._dbdict['subsections'] = [s.dbdict for s in self.subsections]
         self._dbdict['cultivars'] = [c.dbdict for c in self.cultivars]
         try:
-            self._dbdict['slug'] = self.header['id'].lower()
+            self._dbdict['slug'] = slugify(self.header['id'])
         except (AttributeError, KeyError, TypeError):
             self._dbdict['slug'] = None
         try:
@@ -856,7 +908,7 @@ def generate_related_links_dicts(tag):
         yield {
             'idx_slug': parts[0],
             'cn_slug': more_parts[0].replace('.html', ''),
-            'anchor': more_parts[1].lower() if len(more_parts) == 2 else None
+            'anchor': slugify(more_parts[1]) if len(more_parts) == 2 else None
         }
 
 

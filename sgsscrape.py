@@ -276,6 +276,7 @@ def save_all():
     save_vegetables()
     save_herbs()
     save_bulk()
+    print('Saving related links...')
     with open('/tmp/related_links.json', 'w', encoding='utf-8') as ofile:
         ofile.write(json.dumps(related_links, indent=4))
 

@@ -551,6 +551,11 @@ class Index(db.Model, SlugMixin, TimestampMixin):
             idx.created = True
         return idx
 
+    @classmethod
+    def from_slug(cls, slug):
+        """Get an `Index` with the given slug."""
+        return cls.query.filter(cls.slug == slug).one_or_none()
+
     @property
     def header(self):
         """str: contents of `name` in a str for headers, titles, etc."""
@@ -987,6 +992,16 @@ class CommonName(db.Model, OrderingListMixin, SlugMixin, TimestampMixin):
         return cn
 
     @classmethod
+    def from_slugs(cls, idx_slug, cn_slug):
+        """Get a `CommonName` with the given slugs."""
+        return cls.query.join(
+            Index, Index.id == cls.index_id
+        ).filter(
+            Index.slug == idx_slug,
+            cls.slug == cn_slug
+        ).one_or_none()
+
+    @classmethod
     def get_orphans(cls):
         """Get all`CommonName` instances which don't belong to an `Index`."""
         return cls.query.filter(cls.index_id == None).all()
@@ -1347,6 +1362,19 @@ class Section(db.Model, OrderingListMixin, SlugMixin, TimestampMixin):
             print('The Section "{0}" does not yet exist in the database, '
                   'so it has been created'.format(sec.fullname), file=stream)
         return sec
+
+    @classmethod
+    def from_slugs(cls, idx_slug, cn_slug, sec_slug):
+        """Get a `Section` with the given slugs."""
+        return cls.query.join(
+            CommonName, CommonName.id == cls.common_name_id
+        ).join(
+            Index, Index.id == CommonName.index_id
+        ).filter(
+            Index.slug == idx_slug,
+            CommonName.slug == cn_slug,
+            Section.slug == sec_slug
+        ).one_or_none()
 
     @classmethod
     def get_orphans(cls):
@@ -1807,6 +1835,19 @@ class Cultivar(db.Model, OrderingListMixin, SlugMixin, TimestampMixin):
             print('The Cultivar "{0}" does not yet exist in the database, '
                   'so it has been created.'.format(cv.fullname), file=stream)
         return cv
+
+    @classmethod
+    def from_slugs(cls, idx_slug, cn_slug, cv_slug):
+        """Get a `Cultivar` with given slugs."""
+        return cls.query.join(
+            CommonName, CommonName.id == cls.common_name_id
+        ).join(
+            Index, Index.id == CommonName.index_id
+        ).filter(
+            Index.slug == idx_slug,
+            CommonName.slug == cn_slug,
+            cls.slug == cv_slug
+        ).one_or_none()
 
     @classmethod
     def get_orphans(cls):

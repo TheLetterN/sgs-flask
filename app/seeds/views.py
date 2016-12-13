@@ -481,30 +481,13 @@ def edit_thumbnail(form, obj, messages):
     return edited
 
 
-# Routes
-@seeds.route('/_dbify')
-def _dbify():
-    text = request.args.get('text', '', type=str)
-    print(text)
-    return jsonify(result=dbify(text))
-
-
 @seeds.route('/')
 def home():
     """Home page."""
     return render_template('seeds/home.html')
 
 
-@seeds.route('/<page>.html')
-def static_html(page):
-    """Display a page generated from html files in app/static/html"""
-    try:
-        return render_template('static/' + page + '.html', page=page)
-    except TemplateNotFound:
-        abort(404)
-
-
-@seeds.route('/bulk')
+@seeds.route('/bulk/')
 def bulk():
     categories = BulkCategory.query.all()
     crumbs = (
@@ -537,7 +520,7 @@ def bulk_category(slug):
     )
 
 
-@seeds.route('/add_index', methods=['GET', 'POST'])
+@seeds.route('/add_index/', methods=['GET', 'POST'])
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
 def add_index():
@@ -577,7 +560,7 @@ def add_index():
     return render_template('seeds/add_index.html', crumbs=crumbs, form=form)
 
 
-@seeds.route('/add_common_name', methods=['GET', 'POST'])
+@seeds.route('/add_common_name/', methods=['GET', 'POST'])
 @seeds.route('/add_common_name/<int:idx_id>', methods=['GET', 'POST'])
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
@@ -678,7 +661,7 @@ def add_common_name(idx_id=None):
                            form=form)
 
 
-@seeds.route('/add_section', methods=['GET', 'POST'])
+@seeds.route('/add_section/', methods=['GET', 'POST'])
 @seeds.route('/add_section/<int:cn_id>', methods=['GET', 'POST'])
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
@@ -739,7 +722,7 @@ def add_section(cn_id=None):
                            form=form)
 
 
-@seeds.route('/add_cultivar', methods=['GET', 'POST'])
+@seeds.route('/add_cultivar/', methods=['GET', 'POST'])
 @seeds.route('/add_cultivar/<int:cn_id>', methods=['GET', 'POST'])
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
@@ -880,7 +863,7 @@ def add_cultivar(cn_id=None):
                            form=form)
 
 
-@seeds.route('/add_packet', methods=['GET', 'POST'])
+@seeds.route('/add_packet/', methods=['GET', 'POST'])
 @seeds.route('/add_packet/<int:cv_id>', methods=['GET', 'POST'])
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
@@ -920,7 +903,7 @@ def add_packet(cv_id=None):
                            form=form)
 
 
-@seeds.route('/add_redirect', methods=['GET', 'POST'])
+@seeds.route('/add_redirect/', methods=['GET', 'POST'])
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
 def add_redirect():
@@ -951,7 +934,7 @@ def add_redirect():
     return render_template('seeds/add_redirect.html', crumbs=crumbs, form=form)
 
 
-@seeds.route('/add_bulk_category', methods=['GET', 'POST'])
+@seeds.route('/add_bulk_category/', methods=['GET', 'POST'])
 @permission_required(Permission.MANAGE_SEEDS)
 def add_bulk_category():
     form = AddBulkCategoryForm()
@@ -984,7 +967,7 @@ def add_bulk_category():
     )
 
 
-@seeds.route('/add_bulk_series', methods=['GET', 'POST'])
+@seeds.route('/add_bulk_series/', methods=['GET', 'POST'])
 @seeds.route('/add_bulk_series/<int:cat_id>', methods=['GET', 'POST'])
 @permission_required(Permission.MANAGE_SEEDS)
 def add_bulk_series(cat_id=None):
@@ -1018,7 +1001,7 @@ def add_bulk_series(cat_id=None):
     return render_template('seeds/add_bulk_series.html', form=form)
 
 
-@seeds.route('/add_bulk_item', methods=['GET', 'POST'])
+@seeds.route('/add_bulk_item/', methods=['GET', 'POST'])
 @seeds.route('/add_bulk_item/<int:cat_id>', methods=['GET', 'POST'])
 @permission_required(Permission.MANAGE_SEEDS)
 def add_bulk_item(cat_id=None):
@@ -1067,7 +1050,7 @@ def add_bulk_item(cat_id=None):
     )
 
 
-@seeds.route('/edit_index', methods=['GET', 'POST'])
+@seeds.route('/edit_index/', methods=['GET', 'POST'])
 @seeds.route('/edit_index/<int:idx_id>', methods=['GET', 'POST'])
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
@@ -1142,7 +1125,7 @@ def edit_index(idx_id=None):
                            index=index)
 
 
-@seeds.route('/edit_common_name', methods=['GET', 'POST'])
+@seeds.route('/edit_common_name/', methods=['GET', 'POST'])
 @seeds.route('/edit_common_name/<int:cn_id>', methods=['GET', 'POST'])
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
@@ -1310,7 +1293,7 @@ def edit_common_name(cn_id=None):
                            cn=cn)
 
 
-@seeds.route('/edit_section', methods=['GET', 'POST'])
+@seeds.route('/edit_section/', methods=['GET', 'POST'])
 @seeds.route('/edit_section/<int:section_id>', methods=['GET', 'POST'])
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
@@ -1435,7 +1418,7 @@ def edit_section(section_id=None):
                            section=section)
 
 
-@seeds.route('/edit_cultivar', methods=['GET', 'POST'])
+@seeds.route('/edit_cultivar/', methods=['GET', 'POST'])
 @seeds.route('/edit_cultivar/<int:cv_id>', methods=['GET', 'POST'])
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
@@ -1669,7 +1652,7 @@ def edit_cultivar(cv_id=None):
                            cultivar=cv)
 
 
-@seeds.route('/edit_packet', methods=['GET', 'POST'])
+@seeds.route('/edit_packet/', methods=['GET', 'POST'])
 @seeds.route('/edit_packet/<int:pkt_id>', methods=['GET', 'POST'])
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
@@ -1723,7 +1706,7 @@ def edit_packet(pkt_id=None):
                            form=form)
 
 
-@seeds.route('/edit_bulk_category', methods=['GET', 'POST'])
+@seeds.route('/edit_bulk_category/', methods=['GET', 'POST'])
 @seeds.route('/edit_bulk_category/<int:cat_id>', methods=['GET', 'POST'])
 @permission_required(Permission.MANAGE_SEEDS)
 def edit_bulk_category(cat_id=None):
@@ -1780,7 +1763,7 @@ def edit_bulk_category(cat_id=None):
     )
 
 
-@seeds.route('/edit_bulk_series', methods=['GET', 'POST'])
+@seeds.route('/edit_bulk_series/', methods=['GET', 'POST'])
 @seeds.route('/edit_bulk_series/<int:ser_id>', methods=['GET', 'POST'])
 def edit_bulk_series(ser_id=None):
     """Edit a `BulkSeries`."""
@@ -1840,7 +1823,7 @@ def edit_bulk_series(ser_id=None):
     )
 
 
-@seeds.route('/edit_bulk_item', methods=['GET', 'POST'])
+@seeds.route('/edit_bulk_item/', methods=['GET', 'POST'])
 @seeds.route('/edit_bulk_item/<int:item_id>', methods=['GET', 'POST'])
 @permission_required(Permission.MANAGE_SEEDS)
 def edit_bulk_item(item_id=None):
@@ -1929,7 +1912,7 @@ def edit_bulk_item(item_id=None):
     )
 
 
-@seeds.route('/remove_object', methods=['GET', 'POST'])
+@seeds.route('/remove_object/', methods=['GET', 'POST'])
 @permission_required(Permission.MANAGE_SEEDS)
 def remove_object():
     model = request.args.get('model')
@@ -1969,7 +1952,7 @@ def remove_object():
     )
 
 
-@seeds.route('/select_object', methods=['GET', 'POST'])
+@seeds.route('/select_object/', methods=['GET', 'POST'])
 @permission_required(Permission.MANAGE_SEEDS)
 def select_object():
     """View for selecting an object to work with.
@@ -2009,7 +1992,7 @@ def select_object():
                            model=model)
 
 
-@seeds.route('/manage')
+@seeds.route('/manage/')
 @login_required
 @permission_required(Permission.MANAGE_SEEDS)
 def manage():
@@ -2020,7 +2003,7 @@ def manage():
     return render_template('seeds/manage.html', pending=pending, lc=lc)
 
 
-@seeds.route('/<idx_slug>')
+@seeds.route('/<idx_slug>/')
 def index(idx_slug=None):
     """Display an `Index`."""
     index = Index.query.filter_by(slug=idx_slug).one_or_none()
@@ -2106,7 +2089,7 @@ def flip_cultivar_bool(cv_id, attr):
     return redirect(request.args.get('origin') or url_for('seeds.manage'))
 
 
-@seeds.route('/edit_ship_date', methods=['GET', 'POST'])
+@seeds.route('/edit_ship_date/', methods=['GET', 'POST'])
 @permission_required(Permission.MANAGE_SEEDS)
 def edit_ship_date():
     """Edit the expected date of shipment for orders."""

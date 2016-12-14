@@ -13,36 +13,32 @@ along with this program.  If not, see
 Copyright Swallowtail Garden Seeds, Inc
 #}
 {% extends "includes/base.html" %}
-{# Indent block head content 4 spaces, and block main content 6 spaces. #}
-{% block head %}
-<title>Swallowtail Garden Seeds - {{ index.header }}</title>
-<link rel="canonical" href="{{ url_for('seeds.index', idx_slug=index.slug, _external=True) }}">
-<style>
-#main{font-family:"Droid sans","Lucida Sans Unicode",Helvetica,Arial,sans-serif;}
-#main a{border-bottom:none}
-#main .Index_pages-h1,.Index_pages-intro{text-align:center;}
-#main .Index_pages-intro{padding:0 1.2em;font-size:1.1em;}
-#main .Index_pages-image-links-wrapper{margin:1em auto;text-align:left;}
-#main a.Index_pages-image-thumbs{display:inline-block;vertical-align:top;;width:7.4em;margin:1em 0 1em 1.6em;}
-#main a.Index_pages-image-thumbs:link,#main a.Index_pages-image-thumbs:visited{background-color:#f0f1F9;color:#141414;}
-#main a.Index_pages-image-thumbs:hover{transition:.25s;background-color:#cbd6c1;}
-#main .Index_pages-image-links-wrapper img{width:7.4em;height:7.4em;}
-#main .Index_pages-image-links-wrapper a:hover img{border:.08em solid #c14424;}
-#main .Index_pages-image-links-wrapper figcaption{font-size:.85em;padding-bottom:.3em;text-align:center;}
-#main .Index_pages-image-links-wrapper .fig-caption-seeds-block{display:block;}
-
-.move_button_wrapper{display:inline-block;margin-left:1.6em;}
-.move_button{position:relative;display:inline-block;z-index:22;width:1.5em;margin-top:3.7em;padding:.5em .25em;background:white;}
-.backward{margin-right:-3.1em;}
-.forward{margin-left:-1.5em;}
-a.move_button:link,a.move_button:visited{opacity:.8;background-color:#f7f7f7;}
-a.move_button:hover{opacity:1;transition:.25s;}
-
-@media all and (min-width:48em){
-#main .Index_pages-h1,#main .Index_pages-intro{text-align:left;}
-#main .Index_pages-intro{text-indent:2.5em;padding:0;}
-}
-</style>
+{% block title %}{{ index.header }} | Swallowtail Garden Seeds{% endblock %}
+{% block style %}
+      #main{font-family:"Droid sans","Lucida Sans Unicode",Helvetica,Arial,sans-serif;}
+      #main a{border-bottom:none}
+      #main .Index_pages-h1,.Index_pages-intro{text-align:center;}
+      #main .Index_pages-intro{padding:0 1.2em;font-size:1.1em;}
+      #main .Index_pages-image-links-wrapper{margin:1em auto;text-align:left;}
+      #main a.Index_pages-image-thumbs{display:inline-block;vertical-align:top;;width:7.4em;margin:1em 0 1em 1.6em;}
+      #main a.Index_pages-image-thumbs:link,#main a.Index_pages-image-thumbs:visited{background-color:#f0f1F9;color:#141414;}
+      #main a.Index_pages-image-thumbs:hover{transition:.25s;background-color:#cbd6c1;}
+      #main .Index_pages-image-links-wrapper img{width:7.4em;height:7.4em;}
+      #main .Index_pages-image-links-wrapper a:hover img{border:.08em solid #c14424;}
+      #main .Index_pages-image-links-wrapper figcaption{font-size:.85em;padding-bottom:.3em;text-align:center;}
+      #main .Index_pages-image-links-wrapper .fig-caption-seeds-block{display:block;}
+      
+      .move_button_wrapper{display:inline-block;margin-left:1.6em;}
+      .move_button{position:relative;display:inline-block;z-index:22;width:1.5em;margin-top:3.7em;padding:.5em .25em;background:white;}
+      .backward{margin-right:-3.1em;}
+      .forward{margin-left:-1.5em;}
+      a.move_button:link,a.move_button:visited{opacity:.8;background-color:#f7f7f7;}
+      a.move_button:hover{opacity:1;transition:.25s;}
+      
+      @media all and (min-width:48em){
+      #main .Index_pages-h1,#main .Index_pages-intro{text-align:left;}
+      #main .Index_pages-intro{text-indent:2.5em;padding:0;}
+      }
 {% endblock %}
 {% block main %}
 {% if current_user.can(Permission.MANAGE_SEEDS) %}

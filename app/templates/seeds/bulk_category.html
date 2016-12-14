@@ -13,7 +13,7 @@ along with this program.  If not, see
 Copyright Swallowtail Garden Seeds, Inc
 #}
 {% extends "includes/base.html" %}
-{# Indent block head content 4 spaces, and block main content 6 spaces. #}
+
 {% macro item_row(item) %}
 <tr>
   <td>
@@ -33,42 +33,40 @@ Copyright Swallowtail Garden Seeds, Inc
   </td>
 </tr>
 {% endmacro %}
-{% block head %}
-<title>{{ category.title }} | Swallowtail Garden Seeds</title>
-<link rel="canonical" href="{{ url_for('seeds.bulk', _external=True) }}">
-<style>
-  .bulk-items td:nth-child(1){width:40%;}
-  .bulk-items td:nth-child(2){display:none}
-  .bulk-items td:nth-child(3){width:15%;}
-  .bulk-items td:nth-child(4){width:15%;}
-  .bulk-items td:nth-child(5){width:26%;}
-  .RelatedLinks {margin-bottom:0}
-    .bulk-items td:nth-child(1){width:40%;}
-  .bulk-items td:nth-child(2){display:none}
-  .bulk-items td:nth-child(3){width:15%;}
-  .bulk-items td:nth-child(4){width:13%;}
-  .bulk-items td:nth-child(5){width:26%;}
-  .RelatedLinks {margin-bottom:-2em;margin-top:0}
-  .RelatedLinks_figcaption{margin-left:.22em;}
-  hr.style-hr {
-      height: 30px;
-      border-style: solid;
-      border-color: #141823;
-      border-width: 1px 0 0 0;
-      border-radius: 20px;
-  }
-  hr.style-hr:before {
-      display: block;
-      content: "";
-      height: 30px;
-      margin-top: -31px;
-      border-style: solid;
-      border-color: #141823;
-      border-width: 0 0 1px 0;
-      border-radius: 20px;
-  }
-  div.Series {border:none;margin-bottom:-3em;}
-</style> 
+
+{% block title %}{{ category.title }} | Swallowtail Garden Seeds{% endblock %}
+{% block style %}
+      .bulk-items td:nth-child(1){width:40%;}
+      .bulk-items td:nth-child(2){display:none}
+      .bulk-items td:nth-child(3){width:15%;}
+      .bulk-items td:nth-child(4){width:15%;}
+      .bulk-items td:nth-child(5){width:26%;}
+      .RelatedLinks {margin-bottom:0}
+        .bulk-items td:nth-child(1){width:40%;}
+      .bulk-items td:nth-child(2){display:none}
+      .bulk-items td:nth-child(3){width:15%;}
+      .bulk-items td:nth-child(4){width:13%;}
+      .bulk-items td:nth-child(5){width:26%;}
+      .RelatedLinks {margin-bottom:-2em;margin-top:0}
+      .RelatedLinks_figcaption{margin-left:.22em;}
+      hr.style-hr {
+          height: 30px;
+          border-style: solid;
+          border-color: #141823;
+          border-width: 1px 0 0 0;
+          border-radius: 20px;
+      }
+      hr.style-hr:before {
+          display: block;
+          content: "";
+          height: 30px;
+          margin-top: -31px;
+          border-style: solid;
+          border-color: #141823;
+          border-width: 0 0 1px 0;
+          border-radius: 20px;
+      }
+      div.Series {border:none;margin-bottom:-3em;}
 {% endblock %}
 {% block main %}
 {% if current_user.can(Permission.MANAGE_SEEDS) %}

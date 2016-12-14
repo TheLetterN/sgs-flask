@@ -13,21 +13,17 @@ along with this program.  If not, see
 Copyright Swallowtail Garden Seeds, Inc
 #}
 {% extends "includes/base.html" %}
-{# Indent block head content 4 spaces, and block main content 6 spaces. #}
-{% block head %}
-<title>Bulk Seeds | Swallowtail Garden Seeds</title>
-<link rel="canonical" href="{{ url_for('seeds.bulk', _external=True) }}">
-<style>
-  @media all and (min-width:20em){
-  #main .bulk-index{margin-top:1.5em;padding-left:1.5em;list-style:none;text-transform:lowercase;text-align:left}
-  #main .bulk-index li{display:inline-block;width:9.25em;height:auto;padding:.5em .75em .5em 0;vertical-align:top}
-  #main li.bulk-index-li-letters{margin-top:1.5em;display:block;width:3em;height:3em}
-  #main .bulk-index-h3-letters{font-size:2em;margin:0}
-  }
-  @media all and (min-width:48em){
-  #main .bulk-index{padding-left:0}
-  }
-</style> 
+{% block title %}Bulk Seeds | Swallowtail Garden Seeds{% endblock %}
+{% block style %}
+      @media all and (min-width:20em){
+      #main .bulk-index{margin-top:1.5em;padding-left:1.5em;list-style:none;text-transform:lowercase;text-align:left}
+      #main .bulk-index li{display:inline-block;width:9.25em;height:auto;padding:.5em .75em .5em 0;vertical-align:top}
+      #main li.bulk-index-li-letters{margin-top:1.5em;display:block;width:3em;height:3em}
+      #main .bulk-index-h3-letters{font-size:2em;margin:0}
+      }
+      @media all and (min-width:48em){
+      #main .bulk-index{padding-left:0}
+      }
 {% endblock %}
 {% block main %}
 {% if current_user.can(Permission.MANAGE_SEEDS) %}

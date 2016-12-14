@@ -16,35 +16,32 @@ Copyright Swallowtail Garden Seeds, Inc
 {# HTML within blocks should be indented as follows for consistency: #}
 {# block head: 2 indentations of 4 spaces each. (8 spaces total.) #}
 {# block main: 3 indentations of 4 spaces each. (12 spaces total.) #}
-{% block head %}
-<title>Swallowtail Garden Seeds</title>
-<link rel="canonical" href="{{ url_for('seeds.home', _external=True) }}">
-<style>
-@media all and (min-width:20em){
-.group a{border-bottom:none}
-.Home_header{text-align:center;margin:2.75em 1.2em 2.1em 1.2em}
-.Home_header-h1{margin-top:-.4em}
-.Home_header-h2{font-size:1.35em;margin-top:-.25em}
-.Home_header-h3{font-size:1em;margin-top:-.25em}
-.Home_header-span{color:#873557}
-.Home_link-boxes{text-align:center;max-width:47em}
-.Home_link-box{display:inline-block;position:relative;vertical-align:top;margin:0 1.2em 2.25em 1.2em;width:195px;height:260px;border:1px solid #873557}
-.Home_link-box-caption{font-family:"Droid sans","Lucida Sans Unicode",Helvetica,Arial,sans-serif;display:block;color:#242424;background:#fff;padding:.3em 0;margin:0;text-align:center;border-bottom:1px solid #873557;font-size:1em}
-.Home_link-box-link{position:absolute;top:0px;left:0px;width:100%;height:100%}
-{% for idx in nav_data %}
-#Home_{{ idx['id'] }}-seeds-image{background:url({{ idx['Thumbnail'] }});background-size:101%}
-{% endfor %}
-#Home_bulk-seed-sales-image{background:url({{ url_for('static', filename='images/index-image-links/bulk-catalog3.jpg', _external=True) }});background-size:101%}
-}
-@media all and (min-width:48em){
-.Home_header{text-align:left}
-.Home_header-h3{margin-top:-.85em}
-}
-@media all and (min-width:68em){
-.Home_header{margin-left:7%}
-.Home_link-boxes{margin-left:7%}
-}
-</style>
+{% block title %}Flower Seeds - Annual & Perennial Flowers - Vegetable Seeds -  Herb & Bulk Seeds{% endblock %}
+{% block style %}
+      @media all and (min-width:20em){
+      .group a{border-bottom:none}
+      .Home_header{text-align:center;margin:2.75em 1.2em 2.1em 1.2em}
+      .Home_header-h1{margin-top:-.4em}
+      .Home_header-h2{font-size:1.35em;margin-top:-.25em}
+      .Home_header-h3{font-size:1em;margin-top:-.25em}
+      .Home_header-span{color:#873557}
+      .Home_link-boxes{text-align:center;max-width:47em}
+      .Home_link-box{display:inline-block;position:relative;vertical-align:top;margin:0 1.2em 2.25em 1.2em;width:195px;height:260px;border:1px solid #873557}
+      .Home_link-box-caption{font-family:"Droid sans","Lucida Sans Unicode",Helvetica,Arial,sans-serif;display:block;color:#242424;background:#fff;padding:.3em 0;margin:0;text-align:center;border-bottom:1px solid #873557;font-size:1em}
+      .Home_link-box-link{position:absolute;top:0px;left:0px;width:100%;height:100%}
+      {% for idx in nav_data %}
+      #Home_{{ idx['id'] }}-seeds-image{background:url({{ idx['Thumbnail'] }});background-size:101%}
+      {% endfor %}
+      #Home_bulk-seed-sales-image{background:url({{ url_for('static', filename='images/index-image-links/bulk-catalog3.jpg', _external=True) }});background-size:101%}
+      }
+      @media all and (min-width:48em){
+      .Home_header{text-align:left}
+      .Home_header-h3{margin-top:-.85em}
+      }
+      @media all and (min-width:68em){
+      .Home_header{margin-left:7%}
+      .Home_link-boxes{margin-left:7%}
+      }
 {% endblock %}
 {% block main %}
 {% if current_user.can(Permission.MANAGE_SEEDS) %}

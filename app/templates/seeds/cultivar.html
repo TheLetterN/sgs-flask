@@ -17,11 +17,7 @@
 #}
 {% extends "includes/base.html" %}
 {% from 'includes/cultivar_box.html' import cultivar_box with context %}
-{# Indent block head content 4 spaces, and block main content 6 spaces. #}
-{% block head %}
-    <title>Swallowtail Garden Seeds - {{ cultivar.fullname }}</title>
-    <link rel="canonical" href="{{ url_for('seeds.cultivar', idx_slug=idx_slug, cn_slug=cn_slug, cv_slug=cultivar.slug, _external=True) }}">
-{% endblock %}
+{% block title %}Swallowtail Garden Seeds - {{ cultivar.fullname }}{% endblock %}
 {% block main %}
       <h1>{{ cultivar.fullname }}</h1>
       {{ cultivar_box(cultivar)|indent(6)|safe }}

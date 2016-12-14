@@ -16,16 +16,8 @@
    Copyright Swallowtail Garden Seeds, Inc 
 #}
 {% extends "includes/base.html" %}
-{# Indent block head content 4 spaces, and block main content 6 spaces. #}
-{% block head %}
-    <title>Manage Seeds</title>
-    {% if ALLOW_CRAWLING %}
-    {# If ALLOW_CRAWLING is False, this tag is already generated. #}
-    {# If ALLOW_CRAWLING is True, we still don't want admin pages like this crawled. #}
-    <meta name="robots" content="noindex, nofollow">
-    {% endif %}
-    <link rel="canonical" href="{{ url_for('seeds.manage', _external=True) }}">
-{% endblock %}
+{% block title %}Manage Seeds{% endblock %}
+{% block meta_robots %}noindex, nofollow{% endblock %}
 {% block main %}
       <h1>Manage Seeds</h1>
       <h2>Add:</h2>

@@ -13,15 +13,9 @@ along with this program.  If not, see
 Copyright Swallowtail Garden Seeds, Inc
 #}
 {% extends "includes/base.html" %}
-{# HTML within blocks should be indented as follows for consistency: #}
-{# block head: 2 indentations of 2 spaces each. (4 spaces total.) #}
-{# block main: 3 indentations of 2 spaces each. (6 spaces total.) #}
 {% from 'includes/cultivar_box.html' import cultivar_box with context %}
 {% from 'includes/section.html' import section with context %}
-{% block head %}
-<title>{{ cn.header }} | {{ count }} varieties</title>
-<link rel="canonical" href="{{ url_for('seeds.common_name', idx_slug=cn.index.slug, cn_slug=cn.slug, _external=True) }}">
-{% endblock %}
+{% block title %}{{ cn.header }}{% if count > 1 %} | {{ count }} varieties{% endif %}{% endblock %}
 {% block main %}
 {% if current_user.can(Permission.MANAGE_SEEDS) %}
 <div class="admin-links">

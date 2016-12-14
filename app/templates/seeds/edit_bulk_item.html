@@ -18,15 +18,8 @@
 {% extends "includes/base.html" %}
 {% from "includes/form_field.html" import form_field %}
 {# Indent block head content 4 spaces, and block main content 6 spaces. #}
-{% block head %}
-    <title>Edit Bulk Item</title>
-    {% if ALLOW_CRAWLING %}
-    {# If ALLOW_CRAWLING is False, this tag is already generated. #}
-    {# If ALLOW_CRAWLING is True, we still don't want admin pages like this crawled. #}
-    <meta name="robots" content="noindex, nofollow">
-    {% endif %}
-    <link rel="canonical" href="{{ url_for('seeds.edit_bulk_item', item_id=form.item.id,  _external=True) }}">
-{% endblock %}
+{% block title %}Edit Bulk Item{% endblock %}
+{% block meta_robots %}noindex, nofollow{% endblock %}
 {% block main %}
       <h1>Edit Bulk Item</h1>
       <form class="admin" method="POST" enctype="multipart/form-data">

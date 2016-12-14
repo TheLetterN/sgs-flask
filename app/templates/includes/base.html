@@ -38,8 +38,10 @@ Copyright Swallowtail Garden Seeds, Inc
 
     <meta name="robots" content="{% block meta_robots %}{% if not config['ALLOW_CRAWLING']%}noindex, nofollow{%endif %}{% endblock %}">
     {% endif %}
+    {% if self.canonical() | trim %}
 
     <link rel ="canonical" href="{% block canonical %}{{ request.base_url }}{% endblock %}">
+    {% endif %}
     <link rel="shortcut icon" href="{{ url_for('static', filename='images/assets/favicon.ico') }}">
 
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700,400italic,700italic%7cDroid+Sans:400,700">

@@ -18,11 +18,8 @@
 {% extends "includes/base.html" %}
 {% from "includes/form_field.html" import form_field %}
 {# Indent block head content 4 spaces, and block main content 6 spaces. #}
-{% block head %}
-    <title>Log In</title>
-    <meta name="robots" content="noindex, nofollow">
-    <link rel="canonical" href="{{ url_for('auth.login', _external=True) }}">
-{% endblock %}
+{% block title %}Log In{% endblock %}
+{% block meta_robots %}noindex, nofollow{% endblock %}
 {% block main %}
       <h1>Log In</h1>
       <form method="POST">

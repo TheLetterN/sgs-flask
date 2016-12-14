@@ -12,6 +12,7 @@ along with this program.  If not, see
 <http://www.gnu.org/licenses/>.
 Copyright Swallowtail Garden Seeds, Inc
 #}
+{# END macros #}
 {# This is our main skeleton template, from which other pages inherit. #}
 {# It should only contain elements we want on all pages. #}
 {# The head block should be indented 4 spaces in derived pages. #}
@@ -22,29 +23,54 @@ Copyright Swallowtail Garden Seeds, Inc
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <link rel='stylesheet' href='https://fonts.googleapis.com/css?family=Droid+Serif:400,700,400italic,700italic%7cDroid+Sans:400,700'>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>{% block title %}Swallowtail Garden Seeds{% endblock %}</title>
+
+    {% if self.meta_description() | trim %}
+    <meta name="description" content="{% block meta_description %}{% endblock %}">
+    {% endif %}
+    {% if self.meta_keywords() | trim %}
+    <meta name="keywords" content="{% block meta_keywords %}{% endblock %}">
+    {% endif %}
+    <meta name="author" content="{% block meta_author %}Swallowtail Garden Seeds, Inc.{% endblock %}">
+    {% if self.meta_robots() | trim %}
+
+    <meta name="robots" content="{% block meta_robots %}{% if not config['ALLOW_CRAWLING']%}noindex, nofollow{%endif %}{% endblock %}">
+    {% endif %}
+
+    <link rel ="canonical" href="{% block canonical %}{{ request.base_url }}{% endblock %}">
     <link rel="shortcut icon" href="{{ url_for('static', filename='images/assets/favicon.ico') }}">
-    {% if not config['ALLOW_CRAWLING'] %}
-    <!-- ALLOW_CRAWLING is set to False. Please set it to True if you want pages to be crawled by robots! -->
-    <meta name="robots" content="noindex, nofollow">
-    {% endif %}
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.2/jquery.min.js"></script>
-    {% if config['USE_SNIPCART'] %}
-    <script data-api-key="{{ config['SNIPCART_KEY'] }}" data-cart-custom1-name="Shipping Comments" data-cart-custom1-type="textarea" id="snipcart" src="https://cdn.snipcart.com/scripts/2.0/snipcart.js"></script>
-    <link href="https://cdn.snipcart.com/themes/2.0/base/snipcart.min.css" rel="stylesheet" type="text/css"/>
-    {% if config['NOTY_INSTALLED'] %}
-    <script src="{{ url_for('static', filename='scripts/noty/packaged/jquery.noty.packaged.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='scripts/noty/themes/sgs.js') }}"></script>
-    {% endif %}
-    <script src="{{ url_for('static', filename='scripts/snipscripts.js') }}"></script>
-    <script>
-      setupSnip();
-    </script>
-    {% endif %}
-    {% block head %}{% endblock %}
+
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700,400italic,700italic%7cDroid+Sans:400,700">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/present.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/database.css') }}">
+{% if config['USE_SNIPCART'] %}
+    <link rel="stylesheet" href="https://cdn.snipcart.com/themes/2.0/base/snipcart.min.css">
+{% endif %}
+{% if self.style() | trim %}
+
+    <style>
+      {% block style %}{% endblock %}
+    </style>
+
+{% endif %}
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.2/jquery.min.js"></script>
+{% if config['USE_SNIPCART'] %}
+    <script src="https://cdn.snipcart.com/scripts/2.0/snipcart.js" data-api-key="{{ config['SNIPCART_KEY'] }}" data-cart-custom1-name="Shipping Comments" data-cart-custom1-type="textarea" id="snipcart"></script>
+    <script src="{{ url_for('static', filename='scripts/snipscripts.js') }}"></script>
+{% endif %}
+{% if config['NOTY_INSTALLED'] %}
+    <script src="{{ url_for('static', filename='scripts/noty/packaged/jquery.noty.packaged.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='scripts/noty/themes/sgs.js') }}"></script>
+{% endif %}
+    <script>
+{% if config['USE_SNIPCART'] %}
+      setupSnip();
+{% endif %}
+      {% block head_javascript %}{% endblock %}
+    </script>
+    {% block head %}{% endblock %}
   </head>
   <body class="twoColFixLtHdr">
     <div id="container">
@@ -98,8 +124,11 @@ Copyright Swallowtail Garden Seeds, Inc
         <a href="https://www.instagram.com/swallowtailgardenseeds/" target="_blank">
           <img class="Sidebar_social_image" src="{{ url_for('static', filename='images/assets/social/instagram.jpg') }}" alt="Follow us on Instagram."></a>
       </div>
-      {% from 'includes/make_detailed_nav.html' import make_detailed_nav %}
-      {% block detailed_nav %}{{ make_detailed_nav(nav_data) }}{% endblock %}
+      <ul class="Sidebar_nav">
+        {% from 'includes/make_detailed_nav.html' import make_detailed_nav %}
+        {% block detailed_nav %}{{ make_detailed_nav(nav_data) }}{% endblock %}
+        <li><a href="{{ url_for('seeds.about', _external=True) }}" title="About Us">About Us</a></li>
+      </ul>
     </div>
     <div class="Footer">
       {# TODO: Replace Site Map link with correct one.

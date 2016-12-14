@@ -2153,3 +2153,16 @@ def move_section(section_id, delta):
 def move_cultivar(cv_id, delta):
     """Move a cultivar <delta> positions in its parent container."""
     return move_object(Cultivar, cv_id, delta)
+
+
+# STATIC PAGES
+
+# These routes define "static" pages that don't need their data in the db.
+
+@seeds.route('/about-us/')
+@seeds.route('/about-us/<employee>.html')
+def about(employee=None):
+    if employee:
+        return render_template('static/about-us/{}.html'.format(employee))
+    else:
+        return render_template('static/about-us/index.html')

@@ -1,0 +1,31 @@
+{# This file is part of SGS-Flask.
+SGS-Flask is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+SGS-Flask is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see
+<http://www.gnu.org/licenses/>.
+Copyright Swallowtail Garden Seeds, Inc
+#}
+{% extends "includes/base.html" %}
+
+{% block title %}Swallowtail Garden Seeds - Meet Levon{% endblock %}
+{% block style %}
+      .Cultivar_h3{margin-top:0em}
+{% endblock %}
+{% block main %}
+				<div class="Cultivar">
+          <img alt="Levon and job title" class="Cultivar_img" src="{{ url_for('static', filename='images/levon-about-us-tree.png') }}">
+					<h3 class="Cultivar_h3">
+						Levon
+					</h3>
+					<p class="Cultivar_p">
+						Gardening runs thick in my family, but my knowledge starts with how to water already established plants and ends with keeping an area weed free. Where I can't help on the phone, I'm able to make it so orders go out on-time and that the availability of our products is accurate. When I started working here 4 years ago I had no knowledge on starting seeds (thought you just threw them in the ground with water). Now I have a great respect for everything that goes into starting a seed and the people who do it. It brings me great joy knowing that each order I pack up and bring to the post office will bring happiness and enjoyment to peoples gardens. While my interests have shifted away from the gardens I grew up with to cars and video games, I do hope to one day be able to have a garden that I start from seed.
+					</p>
+				</div>
+{% endblock %}

@@ -1,0 +1,34 @@
+{# This file is part of SGS-Flask.
+SGS-Flask is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+SGS-Flask is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see
+<http://www.gnu.org/licenses/>.
+Copyright Swallowtail Garden Seeds, Inc
+#}
+{% extends "includes/base.html" %}
+
+{% block title %}Swallowtail Garden Seeds - Meet Emily{% endblock %}
+{% block style %}
+      .Cultivar_h3{margin-top:0em}
+{% endblock %}
+{% block main %}
+				<div class="Cultivar">
+          <img alt="Emily" class="Cultivar_img" src="{{ url_for('static', filename='images/emily-about-us.jpg') }}">
+					<h3 class="Cultivar_h3">
+						Emily
+					</h3>
+					<p class="Cultivar_p">
+						A Sonoma County native, I grew up in the country surrounded by forests and fields, with parents who were avid gardeners and lovers of wildlife of all types. As a child, I helped in the garden, enjoyed hikes to spot wildflowers (lupines have always been particular favorites), and learned to cook and process our homegrown fruit, vegetables, and herbs. As an adult, I’ve parlayed my knowledge of plants and flowers into an independent floral design business designing flowers for weddings (Green Snapdragon Floral Design) and have found myself fascinated with plants and flowers from a variety of perspectives. I still love spotting and photographing wildflowers on hikes in the hills and on the coast, and I’m happy to bring my knowledge and curiosity about cut flowers and plants to our customers on social media and on the main site.
+					</p>
+					<p class="Cultivar_p">
+						When not working (or designing flowers for a wedding), I enjoy being involved in local theater (usually in a behind-the-scenes role such as stage management), traveling and having adventures with my husband, running outdoors, and playing tabletop board games with friends.
+					</p>
+				</div>
+{% endblock %}

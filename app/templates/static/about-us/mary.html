@@ -1,0 +1,38 @@
+{# This file is part of SGS-Flask.
+SGS-Flask is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+SGS-Flask is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see
+<http://www.gnu.org/licenses/>.
+Copyright Swallowtail Garden Seeds, Inc
+#}
+{% extends "includes/base.html" %}
+
+{% block title %}Swallowtail Garden Seeds - Meet Mary{% endblock %}
+{% block style %}
+      .Cultivar_h3{margin-top:0em}
+{% endblock %}
+{% block main %}
+				<div class="Cultivar">
+          <img alt="Mary and job title" class="Cultivar_img" src="{{ url_for('static', filename='images/mary-about-us-morning-glory.jpg') }}">
+					<h3 class="Cultivar_h3">
+						Mary
+					</h3>
+					<p class="Cultivar_p">
+						My fascination with plants began as early as I can remember, stemming from my two grandmothers: one a botanist who focused her studies on California wildflowers, and the other a lifelong vegetable gardener in the challenging New England climate. My parents nurtured my botanical interests by planting huge vegetable gardens and always encouraging my curiosity.
+					</p>
+					<p class="Cultivar_p">
+						My husband and I share a 1/4 acre back yard where we grow way too many veggies every year (mostly tomatoes, cucumbers, and spicy peppers). We’ve tucked fruit trees in here and there, and flowers definitely have their place (all over the place); salvia, sunflowers, cosmos,zinnias, dahlias, and many fairly rambunctious hardy annuals (some of my absolute favorites: borage, nasturtiums, and love-in-the mist).
+					</p>
+					<p class="Cultivar_p">
+						Besides digging in the dirt, I also love
+						cooking (especially Mexican food), reading (mostly novels and mysteries, but I have been known to spend an hour in the dictionary), canning (especially salsa),the wild northern California coast, cats, and traveling to new and familiar places. Fun fact about me: I have an identical twin sister who is also a plant nerd.
+					</p>
+				</div>
+{% endblock %}

@@ -1,0 +1,35 @@
+{# This file is part of SGS-Flask.
+SGS-Flask is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+SGS-Flask is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see
+<http://www.gnu.org/licenses/>.
+Copyright Swallowtail Garden Seeds, Inc
+#}
+{% extends "includes/base.html" %}
+
+{% block title %}Swallowtail Garden Seeds - Meet Levon{% endblock %}
+{% block style %}
+      .Cultivar_h3{margin-top:0em}
+      .Cultivar_img{max-width:450px}
+{% endblock %}
+{% block main %}
+				<div class="Cultivar">
+          <img alt="Nicholas and job title" class="Cultivar_img tall-adjustment" src="{{ url_for('static', filename='images/nicholas-about-us-tree.png') }}">
+					<h3 class="Cultivar_h3">
+						Nicholas
+					</h3>
+					<p class="Cultivar_p">
+						While a Computer Wrangler—a perfectly cromulent job title—by trade, Nicholas has also been fond of gardening and agriculture throughout his life. He was a member of the Future Farmers of America in high school, in which he and his classmates built and maintained several water culture hydroponic tanks. He’s especially fond of natural agricultural systems. Did you know that rice farmers in Bali keep flocks of ducks which they herd into and out of rice paddies to eat bugs and algae, and fertilize the rice? No need for pesticides or artificial fertilizers!
+					</p>
+					<p class="Cultivar_p">
+						He’s also fond of beneficial critters, especially bees, arachnids, and butterflies! He wishes more people would grow flowers that benefit the bees and butterflies, and that people were kinder to spiders; after all, they eat the bugs that would otherwise be eating plants.
+					</p>
+				</div>
+{% endblock %}

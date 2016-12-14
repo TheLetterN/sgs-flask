@@ -165,7 +165,6 @@ def download_image(url):
                 with open('/tmp/404.log', 'a', encoding='utf-8') as ofile:
                     ofile.write('{}\n'.format(e))
     img = Image.get_or_create(filename=str(relname))
-    db.session.add(img)
     return img
 
 
@@ -351,13 +350,11 @@ def add_bulk_to_database(l):
         cat.series.reorder()
         cat.items.reorder()
         db.session.commit()
-        # We need to ensure the bulk thumbnail file exists, but since there
-        # is no associated table, there is no need to add it to the db.
         print('Finished adding "{}" to database.'.format(cat.name))
-    db.session.expunge(download_image(
+    download_image(
         'https://www.swallowtailgardenseeds.com/images/index-image-links/'
         'bulk-catalog3.jpg'
-    ))
+    )
     print('Finished adding bulk to database.')
 
 
@@ -522,6 +519,34 @@ def set_related_links():
                     .format(cn.name, t.__class__.__name__, t.name)
                 )
         db.session.commit()
+
+
+def download_misc_images():
+    """Download any images that are needed but not used in the db."""
+    images = [
+        'https://www.swallowtailgardenseeds.com/images/'
+        'ben-about-us-thumbnail.jpg',
+        'https://www.swallowtailgardenseeds.com/images/'
+        'emily-about-us-thumbnail.jpg',
+        'https://www.swallowtailgardenseeds.com/images/'
+        'levon-about-us-tree-thumbnail.png',
+        'https://www.swallowtailgardenseeds.com/images/'
+        'levon-about-us-tree-thumbnail.png',
+        'https://www.swallowtailgardenseeds.com/images/'
+        'mary-about-us-thumbnail.jpg',
+        'https://www.swallowtailgardenseeds.com/images/'
+        'nicholas-about-us-tree-thumbnail.png',
+        'https://www.swallowtailgardenseeds.com/images/ben-about-us.jpg',
+        'https://www.swallowtailgardenseeds.com/images/emily-about-us.jpg',
+        'https://www.swallowtailgardenseeds.com/images/'
+        'levon-about-us-tree.png',
+        'https://www.swallowtailgardenseeds.com/images/'
+        'mary-about-us-morning-glory.jpg',
+        'https://www.swallowtailgardenseeds.com/images/'
+        'nicholas-about-us-tree.png'
+    ]
+    for image in images:
+        download_image(image)
 
 
 class CultivarTag:

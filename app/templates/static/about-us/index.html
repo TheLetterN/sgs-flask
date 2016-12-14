@@ -1,0 +1,71 @@
+{# This file is part of SGS-Flask.
+SGS-Flask is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+SGS-Flask is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see
+<http://www.gnu.org/licenses/>.
+Copyright Swallowtail Garden Seeds, Inc
+#}
+{% extends "includes/base.html" %}
+
+{% block title %}Swallowtail Garden Seeds - About{% endblock %}
+{% block meta_robots %}noindex, follow{% endblock %}
+{% block style %}
+      #main p{margin-bottom:1em;}
+      p span{color:#ffffff;}
+{% endblock %}
+
+{% block main %}
+				<div class="breadcrumbs">
+					<ol class="breadcrumb">
+						<li>
+              <a href="{{ url_for('seeds.home', _external=True) }}">
+								Home
+							</a>
+						</li>
+						<li class="active">
+							About us
+						</li>
+					</ol>
+				</div>
+				<h1>
+					About Swallowtail Garden Seeds
+				</h1>
+				<p>
+					Whether you are growing a feast for the table or a feast for the eyes, we at Swallowtail Garden Seeds share your passion for the unique joys of gardening. Because we are eager for all of your plantings to be a stunning success, we select only premium quality seeds for our valued customers. We offer very generous packets... no peering down into the corner of a tiny envelope asking, "where are the seeds, exactly?". Sowing generously ensures a rich harvest.
+				</p>
+				<p>
+					Over the years, our caring customer support has earned a name for us in the gardening world. We respond to all concerns and questions promptly. And, if for any reason, you are unhappy with your purchase of Swallowtail Garden Seeds, we will refund or exchange your order hassle-free. Our good name depends upon	your satisfaction and we want to surpass your expectations for quality seeds and quality service.
+				</p>
+				<p>
+					We thank you for growing with us.
+				</p>
+				<div class="RelatedLinks navigation">	<h2 class="RelatedLinks_h2">
+     Meet our team A-Z.
+     </h2>
+
+     <a href="{{ url_for('seeds.about', employee='ben') }}">
+  <figure class="RelatedLinks_figure"><img alt="Ben" class="Cultivar_img" src="{{ url_for('static', filename='images/ben-about-us-thumbnail.jpg') }}">
+							<figcaption class="RelatedLinks_figcaption navigation-caption">Ben</figcaption>
+						</figure></a>
+
+            <a href="{{ url_for('seeds.about', employee='emily') }}">
+            <figure class="RelatedLinks_figure"><img alt="Emily" class="Cultivar_img" src="{{ url_for('static', filename='images/emily-about-us-thumbnail.jpg') }}">
+							<figcaption class="RelatedLinks_figcaption navigation-caption">Emily</figcaption>
+						</figure></a>
+            <a href="{{ url_for('seeds.about', employee='levon') }}">
+            <figure class="RelatedLinks_figure"><img alt="Levon" class="Cultivar_img" src="{{ url_for('static', filename='images/levon-about-us-tree-thumbnail.png') }}">							<figcaption class="RelatedLinks_figcaption navigation-caption">Levon</figcaption>
+						</figure></a>
+            <a href="{{ url_for('seeds.about', employee='mary') }}">
+          <figure class="RelatedLinks_figure"><img alt="Mary" class="Cultivar_img" src="{{ url_for('static', filename='images/mary-about-us-thumbnail.jpg') }}">
+							<figcaption class="RelatedLinks_figcaption navigation-caption">Mary</figcaption>
+						</figure></a>
+            <a href="{{ url_for('seeds.about', employee='nicholas') }}"><figure class="RelatedLinks_figure"><img alt="Nicholas" class="Cultivar_img" src="{{ url_for('static', filename='images/nicholas-about-us-tree-thumbnail.png') }}"><figcaption class="RelatedLinks_figcaption navigation-caption">Nicholas</figcaption></figure></a>
+									</div>
+{% endblock %}

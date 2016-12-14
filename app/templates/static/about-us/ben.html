@@ -1,0 +1,38 @@
+{# This file is part of SGS-Flask.
+SGS-Flask is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+SGS-Flask is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see
+<http://www.gnu.org/licenses/>.
+Copyright Swallowtail Garden Seeds, Inc
+#}
+{% extends "includes/base.html" %}
+
+{% block title %}Swallowtail Garden Seeds - Meet Ben{% endblock %}
+{% block style %}
+      .Cultivar_h3{margin-top:0em}
+      .Cultivar_p{margin-bottom:1.75em}
+{% endblock %}
+{% block main %}
+				<div class="Cultivar">
+          <img alt="Ben" class="Cultivar_img" src="{{ url_for('static', filename='images/ben-about-us.jpg') }}">
+					<h3 class="Cultivar_h3">
+						Ben
+					</h3>
+					<p class="Cultivar_p">
+						My interest in gardening began in my early childhood when I lived on a small farm in Oregon. After moving to the suburbs during my early elementary years, I began gardening in my own small space that grew in size year after year. At that time, most of my plants were things I got from dividing mature plants in other areas of the garden and from digging up interesting plants that grew in the wild spaces nearby. My first job as a teenager was at a retail garden center and nursery and my first job after moving to California was on an organic vegetable and fruit farm in Sonoma County. For the last 6 years, seeds have played a central role in my work and in my garden.
+					</p>
+					<p class="Cultivar_p">
+						When I’m not working directly with seeds, I'm usually communicating with customers, writing code for our website, out taking photos of flowers or sharing my passion and photos on our social media pages. Outside of work, I enjoy gardening, hiking, and camping.
+					</p>
+					<p class="Cultivar_p">
+						It’s hard to say any one type or variety of plant is my favorite. I really like Scarlet Runner Beans, a widely varied mix of sunflowers, unique cosmos, gigantic morning glory vines, scabiosa zinnias and volunteer plants of all types. Loose-leaf lettuce, arugula and kale are pretty good too!
+					</p>
+				</div>
+{% endblock %}

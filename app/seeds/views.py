@@ -2162,7 +2162,17 @@ def move_cultivar(cv_id, delta):
 @seeds.route('/about-us/')
 @seeds.route('/about-us/<employee>.html')
 def about(employee=None):
+    crumbs = [
+        cblr.crumble('home', 'Home'),
+        cblr.crumble('about', 'About Us')
+    ]
     if employee:
-        return render_template('static/about-us/{}.html'.format(employee))
+        crumbs.append(
+            cblr.crumble('about', employee.title(), employee=employee)
+        )
+        return render_template(
+            'static/about-us/{}.html'.format(employee),
+            crumbs=crumbs
+        )
     else:
-        return render_template('static/about-us/index.html')
+        return render_template('static/about-us/index.html', crumbs=crumbs)

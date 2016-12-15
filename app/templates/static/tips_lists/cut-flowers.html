@@ -1,0 +1,589 @@
+{# This file is part of SGS-Flask.
+SGS-Flask is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+SGS-Flask is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see
+<http://www.gnu.org/licenses/>.
+Copyright Swallowtail Garden Seeds, Inc
+#}
+{% extends "includes/base.html" %}
+{% block title %}Flowers for the Cutting Garden{% endblock %}
+{% block meta_description %}Ideas for creating garden-fresh bouquets in multiple styles.{% endblock %}
+{% block meta_keywords %}cutting garden, cut flowers, bouquet, flowers, floral, tips, lists, swallowtail garden seeds{% endblock %}
+{% block style %}
+      @media all and (min-width:20em){
+      .Sidebar_nav a.tips-stand-out:link{color:#000}
+      p{margin-bottom:.75em}
+      h2{margin-top:2.5em;margin-bottom:.5em}
+      h3{margin-top:.5em;margin-bottom:.25em}
+      .cut-flower-type-intro-p{margin-bottom:-1em}
+      .cut-flowers-image{max-width:250px;height:auto;margin-top:2.5em}
+      .cut-flowers-link{display:inline-block;margin-bottom:1em}
+      .cut-flowers-link-multiple{display:inline-block;margin:0 1em .5em 0}
+      .cut-flowers-list-intro-p{margin-top:2em;margin-bottom:1.25em;font-weight:700;font-size:1.2em}
+      .image-thumb{max-width:150px;height:auto;}
+      .group ul{list-style-type:none}
+      .group ul li{display:inline-block;margin:.15em}
+      figcaption{font-size:.85em;text-align:center}
+      .group a:hover{border-bottom:1px solid #fcfcfc}
+      }
+      @media all and (min-width:48em){
+      h3{margin-top:2em}
+      .cut-flowers-image{float:left;margin-right:1.1em}
+      .clear{clear:both;}
+      .cut-flowers-link{margin-bottom:2.5em}
+      }
+      @media all and (min-width:55em){
+      .cut-flowers-image{max-width:275px;}
+      }
+{% endblock %}
+{% block main %}
+				<h1>Flowers for the Cutting Garden</h1>
+				<p>Looking to grow your own cutting garden? Whether you’re a professional floral designer looking to add some unique options to special bridal bouquets or a home gardener who loves to bring a garden-fresh bouquet in to grace your kitchen table, growing flowers for cutting is a true joy. Swallowtail Garden Seeds carries a wide variety of seeds that will produce excellent cut flowers, and here are some ideas to get your creative juices flowing.
+				</p>
+				<p>Many gardeners plan their gardens for color and visual interest, but what about design style? Here is a selection of plants that provide fantastic cut flowers in four different aesthetics: a wildflower look, a traditional floral design look, a fresh-from-the-garden look, and an unusual look.
+				</p>
+				<h2 id="wildflower-look">Wildflower Look</h2>
+				<p class="cut-flower-type-intro-p">This is a currently a very popular design style for weddings. Many couples have gone away from traditional wedding flowers such as roses or lilies and are asking for a wild, unstructured aesthetic for the floral art created for their weddings. If you’re also a fan of the natural and unstructured, you know that many true wildflowers don’t make good cut flowers, as they have not been bred for cutting or vase tolerance. If you’re looking for a wildflower cutting garden, here are some flower types to plant to add to that wild, natural feel indoors and out.
+				</p>
+				<br class="clear">
+				<img class="cut-flowers-image" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/cosmos-bouquet.jpeg" alt="Cosmos cut flower seeds.">
+				<h3>Cosmos</h3>
+				<p>Cosmos are a longtime favorite of home gardeners, and many cosmos require low effort for high reward. Cosmos can be tall or short, bloom through a long season, and range in color from white to cream to bright yellows and oranges, and in pinks and purples to a deep wine color. A traditional cosmos has a very simple bloom with a cheery yellow center, but there are many varieties that have a more unusual look – picotee edges or striping, ruffled doubled petals. All are beautiful, and add something a little on the wild side to your garden or arrangement.
+				</p>
+				<a class="cut-flowers-link" href="https://www.swallowtailgardenseeds.com/annuals/cosmos.html">View more Cosmos</a>
+				<br class="clear">
+				<img class="cut-flowers-image" alt="laceflower cut flower seeds filler" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/laceflower-bouquet.jpg">
+				<h3>Laceflower</h3>
+				<p>Beautiful, ethereal, and light-as-a-feather, laceflower is the non-invasive and hardier-when-cut iteration of Queen Anne’s Lace. Valued for both its feather-light white spray of tiny blooms and its lacy, fernlike foliage, laceflower brings that wild, gathered-from-the-meadows feel to a garden bed or a cut arrangement. Laceflower is tall, easy to grow, and attracts beneficial insects to your garden. It works very well in fresh-cut or dried arrangements.
+				</p>
+				<a class="cut-flowers-link" href="https://www.swallowtailgardenseeds.com/annuals/laceflower.html">View more Laceflower</a><br class="clear">
+				<img class="cut-flowers-image" alt="love-in-a-mist cut flower seeds." src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/love-in-a-mist-bouquet.jpg">
+				<h3>Love-in-a-mist</h3>
+				<p>Love-in-a-mist, also known as nigella, grows in shades of white to burgundy, pink, purple, true aqua blue, and dark violet blue. It features light, feathery foliage and blooms beautifully, followed by an unusually-shaped pod streaked in green and dark maroon that adds visual interest to cut or dried arrangements. Love-in-a-mist is hardy, prefers cooler weather, and blooms quickly once established. It is also a deer-resistant plant.
+				</p>
+				<a class="cut-flowers-link" href="https://www.swallowtailgardenseeds.com/annuals/loveinamist.html">View more Love-in-a-mist</a><br class="clear">
+				<img class="cut-flowers-image" alt="veronica cut flower seeds." src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/veronica-bouquet.jpg">
+				<h3>Veronica</h3>
+				<p>A showy flower with spikes in shades of white, rose pink, or purple, veronica is an excellent perennial for your wildflower cutting garden. Cut veronica is long-lasting, and many varieties will bloom multiple times in a year if blooms are cut. Each bloom is 1-3 inches in height atop a stem anywhere from 12-30 inches, depending on variety, and adds dimensionality and movement to a cut arrangement. Veronica is both deer- and rabbit-resistant, and attracts bees, butterflies, and hummingbirds.
+				</p>
+				<a class="cut-flowers-link" href="https://www.swallowtailgardenseeds.com/perennials/veronica.html">View more Veronica</a><br class="clear">
+				<img class="cut-flowers-image" alt="yarrow cut flower seeds filler." src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/yarrow-bouquet.jpg">
+				<h3>Yarrow</h3>
+				<p>Yarrow has been used for a variety of purposes around the world and for much of human history for medicinal and agricultural purposes. Yarrow produces flat bunches of tiny flowers in shades of white and cream, bright yellow, and pinks, peaches and oranges to deep reds and purples. Yarrow can grow in coastal climates, salty soils, and tolerates both heat and drought. Attractive to butterflies and beneficial insects, yarrow is also resistant to deer and rabbits. Flowers grow on long stalks and blend beautifully into cut fresh or dried arrangements.
+				</p>
+				<a class="cut-flowers-link" href="https://www.swallowtailgardenseeds.com/perennials/yarrow.html">View more Yarrow</a><br class="clear">
+				<p class="cut-flowers-list-intro-p">Additional flower varieties that fall under a wildflower design aesthetic:
+				</p>
+				<ul>
+					<li><a href="https://www.swallowtailgardenseeds.com/annuals/ageratum.html">
+							<figure>
+								<img class="image-thumb" alt="Ageratum cut flower seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/ageratum.jpg">
+								<figcaption>
+									Ageratum
+								</figcaption>
+							</figure>
+						</a>
+					</li>
+					<li>	<a href="https://www.swallowtailgardenseeds.com/annuals/bachelor_button.html">
+							<figure>
+								<img class="image-thumb" alt="Bachelor's Button cut flower seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/bachelors-button.jpg">
+								<figcaption>
+									Bachelor's Button
+								</figcaption>
+							</figure>
+						</a>
+					</li>
+					<li><a href="https://www.swallowtailgardenseeds.com/annuals/butterfly_weed_annual.html">
+							<figure>
+								<img class="image-thumb" alt="Butterfly Weed cut flower seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/butterfly-weed.jpg">
+								<figcaption>
+									Butterfly Weed
+								</figcaption>
+							</figure>
+						</a>
+					</li>
+					<li><a href="https://www.swallowtailgardenseeds.com/annuals/calendulaann.html">
+							<figure>
+								<img class="image-thumb" alt="Calendula cut flower seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/calendula.jpg">
+								<figcaption>
+									Calendula
+								</figcaption>
+							</figure>
+						</a>
+					</li>
+					<li><a href="https://www.swallowtailgardenseeds.com/perennials/lupine.html">
+							<figure>
+								<img class="image-thumb" alt="Lupine cut flower seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/lupine.jpg">
+								<figcaption>
+									Lupine
+								</figcaption>
+							</figure>
+						</a>
+					</li>
+					<li><a href="https://www.swallowtailgardenseeds.com/annuals/strawflower.html">
+							<figure>
+								<img class="image-thumb" alt="Strawflower cut flower seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/strawflower.jpg">
+								<figcaption>
+									Strawflower
+								</figcaption>
+							</figure>
+						</a>
+					</li>
+					<li><a href="https://www.swallowtailgardenseeds.com/annuals/xeranthemum.html">
+							<figure>
+								<img class="image-thumb" alt="Xeranthemum cut flower seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/xeranthemum.jpg">
+								<figcaption>
+									Xeranthemum
+								</figcaption>
+							</figure>
+						</a>
+					</li>
+					<li><a href="https://www.swallowtailgardenseeds.com/perennials/astilbe.html">
+							<figure>
+								<img class="image-thumb" alt="Astilbe cut flower seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/astilbe.jpg">
+								<figcaption>
+									Astilbe
+								</figcaption>
+							</figure>
+						</a>
+					</li>
+					<li><a href="https://www.swallowtailgardenseeds.com/perennials/geum-seeds.html">
+							<figure>
+								<img class="image-thumb" alt="red Geum cut flower seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/geum.jpg">
+								<figcaption>
+									Geum
+								</figcaption>
+							</figure>
+						</a>
+					</li>
+					<li><a href="https://www.swallowtailgardenseeds.com/perennials/lavender.html">
+							<figure>
+								<img class="image-thumb" alt="Lavender cut flower seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/lavender.jpg">
+								<figcaption>
+									Lavender
+								</figcaption>
+							</figure>
+						</a>
+					</li>
+					<li><a href="https://www.swallowtailgardenseeds.com/perennials/sea_holly.html">
+							<figure>
+								<img class="image-thumb" alt="Sea Holly cut flower seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/sea-holly.jpg">
+								<figcaption>
+									Sea Holly
+								</figcaption>
+							</figure>
+						</a>
+					</li>
+					<li><a href="https://www.swallowtailgardenseeds.com/perennials/stokesia.html">
+							<figure>
+								<img class="image-thumb" alt="Stokesia cut flower seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/stokesia.jpg">
+								<figcaption>
+									Stokesia
+								</figcaption>
+							</figure>
+						</a>
+					</li>
+					<li><a href="https://www.swallowtailgardenseeds.com/annuals/ptilotus.html">
+							<figure>
+								<img class="image-thumb" alt="Ptilotus cut flower seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/ptilotus.jpg">
+								<figcaption>
+									Ptilotus
+								</figcaption>
+							</figure>
+						</a>
+					</li>
+					<li><a href="https://www.swallowtailgardenseeds.com/perennials/goldenrod.html">
+							<figure>
+								<img class="image-thumb" alt="Goldenrod cut flower seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/goldenrod.jpg">
+								<figcaption>
+									Goldenrod
+								</figcaption>
+							</figure>
+						</a>
+					</li>
+					<li><a href="https://www.swallowtailgardenseeds.com/perennials/echinacea.html">
+							<figure>
+								<img class="image-thumb" alt="Echinacea cut flower seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/echinacea.jpg">
+								<figcaption>
+									Echinacea
+								</figcaption>
+							</figure>
+						</a>
+					</li>
+					<li><a href="https://www.swallowtailgardenseeds.com/perennials/jupiters_beard.html">
+							<figure>
+								<img class="image-thumb" alt="Jupiter's Beard cut flower seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/jupiters-beard.jpg">
+								<figcaption>
+									Jupiter's Beard
+								</figcaption>
+							</figure>
+						</a>
+					</li>
+				</ul>
+				<h2 id="traditional-floral-look">Traditional Floral Look</h2>
+				<p class="cut-flower-type-intro-p">If, on the other hand, you love the look of a well-structured bloom or traditional design, you can still add some interest and unusual color or texture to your grocery store bouquet. These varieties are tried and true cut flowers, delighting generations of gardeners and couples alike. Why not try some traditional cut flowers with a bit of a homegrown twist?
+				</p>
+				<br class="clear">
+				<img class="cut-flowers-image" alt="carnation cut flower seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/dianthus-bouquet.jpg">
+				<h3>Dianthus</h3>
+				<p>Flowers in the dianthus family are also known as pinks, sweet William, and carnations. Dianthus in general make excellent cut flowers, and many carnation varieties have a beautiful spicy fragrance in addition to an extraordinarily long vase life. Dianthus are in large part easy to grow, and come in a very wide variety of colors and textures. Add some garden-grown dianthus to your table décor, make yourself a boutonniere, or add some old-fashioned fragrance to your scent-free grocery store mix.
+				</p>
+				<a class="cut-flowers-link" href=" https://www.swallowtailgardenseeds.com/perennials/dianthus.html">View more Dianthus</a><br class="clear">
+				<img class="cut-flowers-image" alt="lisianthus cut flower seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/lisianthus.jpg">
+				<h3>Lisianthus</h3>
+				<p>Graceful and elegant, lisianthus resembles a softer version of a rose. Also known as eustoma, lisianthus grow natively in warm areas of the Americas. They come in all shades of white, pink, purple, and even peach and butter yellow. The echo blue variety has greenish white buds that slowly turn to deep royal purple. Lisianthus make excellent cut flowers and can last for up to two weeks in a vase if cared for properly. In traditional Victorian floriography, lisianthus means “appreciation.” Try growing lisianthus in your cutting garden next season!
+				</p>
+				<a class="cut-flowers-link" href="https://www.swallowtailgardenseeds.com/annuals/lisianthus.html">View more Lisianthus</a><br class="clear">
+				<img class="cut-flowers-image" alt="peony poppy cut flower seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/poppy-bouquet.jpg">
+				<h3>Poppy</h3>
+				<p>Poppies are some of the garden’s most spectacular show-offs, and luckily many varieties of poppy work just as well cut as on the plant. Poppies can vary from simple to complex, come in sizes from smallish to huge, and can resemble peonies or carnations. The pods of many poppies are also excellent additions to cut arrangements. Depending on the variety, poppies have dark or yellow centers and can come in colors ranging in the white/cream/peach/yellow/orange and the pink/red/dark purple families. Consider planting poppies to add show-stopping color, size, and texture to your garden and your table.
+				</p><a class="cut-flowers-link-multiple" href="https://www.swallowtailgardenseeds.com/annuals/poppy_breadseed.html">View&nbsp;more&nbsp;Breadseed&nbsp;Poppy</a> <a class="cut-flowers-link-multiple" href="https://www.swallowtailgardenseeds.com/annuals/flanders-poppy.html">View&nbsp;more&nbsp;Flanders&nbsp;Poppy</a> <a class="cut-flowers-link-multiple" href="https://www.swallowtailgardenseeds.com/annuals/poppy_peony.html">View&nbsp;more&nbsp;Peony&nbsp;Poppy</a> <a style="margin-right:1em" class="cut-flowers-link" href="https://www.swallowtailgardenseeds.com/annuals/poppy_shirley.html">View&nbsp;more&nbsp;Shirley&nbsp;Poppy</a><br class="clear">
+				<img class="cut-flowers-image" alt="stock cut flower seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/stock-bouquet.jpg">
+				<h3>Stock</h3>
+				<p>Underappreciated and lovely, stock’s unattractive name belies a beautiful line flower with an amazingly spicy fragrance. Stock, known as gillyflower in the UK, makes an excellent fragrant addition to a cut arrangement and comes in shades of white, cream, apricot, pink, magenta, and purple. Stock grows best in cooler climates, attracts butterflies and bees, and is deer resistant.
+				</p>
+				<a class="cut-flowers-link" href="https://www.swallowtailgardenseeds.com/annuals/stock.html">View more Stock</a><br class="clear">
+				<img class="cut-flowers-image" alt="Sunflower cut Flower Seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/sunflower-bouquet.jpg">
+				<h3>Sunflower</h3>
+				<p>Sunflowers have long been grown for their seeds (consumption of seeds and oil made from seeds), but many sunflowers are showy and beautiful flowers that are excellent in a cut arrangement. Sunflowers come in dwarf (short) and tall (up to 16 feet tall in giant varieties) and range in color for both the center and petals: yellows, oranges, reds, rusts, and even deep crimson brown. Some sunflowers are bicolored; others have unusually-textured petals or centers. Smaller blooms are excellent for mixed arrangement, and monobotanical arrangements can also be stunning. Sunflowers need full sun to thrive.
+				</p>
+				<a class="cut-flowers-link" href="https://www.swallowtailgardenseeds.com/annuals/sunflowers.html">View more Sunflower</a><br class="clear">
+				<img class="cut-flowers-image" alt="Zinnia cut flower seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/zinnia-bouquet.jpeg">
+				<h3>Zinnia</h3>
+				<p>Zinnias come in many shapes, sizes, and colors, and the flowers can vary wildly from small and simple to huge and complex. Some zinnias resemble dahlias or scabiosa, while others rival sunflowers for height and size. Zinnias can be white, cream, yellow, orange, red, pink, purple, multicolored, variegated, or even bright lime green! They are easy to grow, do fine in heat and drought, and are resistant to deer. Most zinnias bloom continuously over a long summer and fall growing season, and mix well with other traditional flowers in a homegrown arrangement.
+				</p>
+				<a class="cut-flowers-link" href="https://www.swallowtailgardenseeds.com/annuals/zinnias.html">View more Zinnia</a><br class="clear">
+				<p class="cut-flowers-list-intro-p">Additional varieties that fall within a traditional design aesthetic:
+				</p>
+				<ul>
+					<li><a href="https://www.swallowtailgardenseeds.com/perennials/aster.html">
+							<figure>
+								<img class="image-thumb" alt="Aster cut flower seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/aster.jpg">
+								<figcaption>
+									Perennial Aster
+								</figcaption>
+							</figure>
+						</a>
+					</li>
+					<li><a href="https://www.swallowtailgardenseeds.com/annuals/bellsofireland.html">
+							<figure>
+								<img class="image-thumb" alt="Bells of Ireland cut flower seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/bells-of-ireland.jpg">
+								<figcaption>
+									Bells of Ireland
+								</figcaption>
+							</figure>
+						</a>
+					</li>
+					<li><a href="https://www.swallowtailgardenseeds.com/annuals/cape_daisy.html">
+							<figure>
+								<img class="image-thumb" alt="Cape Daisy cut flower seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/cape-daisy.jpg">
+								<figcaption>
+									Cape Daisy
+								</figcaption>
+							</figure>
+						</a>
+					</li>
+					<li><a href="https://www.swallowtailgardenseeds.com/annuals/dahlia.html">
+							<figure>
+								<img class="image-thumb" alt="Dahlia cut flower seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/dahlia.jpg">
+								<figcaption>
+									Dahlia
+								</figcaption>
+							</figure>
+						</a>
+					</li>
+					<li><a href="https://www.swallowtailgardenseeds.com/perennials/shasta_daisy.html">
+							<figure>
+								<img class="image-thumb" alt="Shasta Daisy cut flower seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/shasta-daisy.jpg">
+								<figcaption>
+									Shasta Daisy
+								</figcaption>
+							</figure>
+						</a>
+					</li>
+					<li><a href="https://www.swallowtailgardenseeds.com/annuals/snapdragon.html">
+							<figure>
+								<img class="image-thumb" alt="Snapdragon cut flower seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/snapdragon.jpg">
+								<figcaption>
+									Snapdragon
+								</figcaption>
+							</figure>
+						</a>
+					</li>
+					<li><a href="https://www.swallowtailgardenseeds.com/perennials/alstroemeria.html">
+							<figure>
+								<img class="image-thumb" alt="Alstroemeria cut flower seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/alstroemeria.jpg">
+								<figcaption>
+									Alstroemeria
+								</figcaption>
+							</figure>
+						</a>
+					</li>
+					<li><a href="https://www.swallowtailgardenseeds.com/annuals/chrysanthemum.html">
+							<figure>
+								<img class="image-thumb" alt="Chrysanthemum cut flower seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/chrysanthemum.jpg">
+								<figcaption class="nopadlr">
+									Chrysanthemum
+								</figcaption>
+							</figure>
+						</a>
+					</li>
+					<li><a href="https://www.swallowtailgardenseeds.com/perennials/campanula.html">
+							<figure>
+								<img class="image-thumb" alt="Campanula cut flower seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/campanula.jpg">
+								<figcaption>
+									Campanula
+								</figcaption>
+							</figure>
+						</a>
+					</li>
+					<li><a href="https://www.swallowtailgardenseeds.com/annuals/rudbeckia.html">
+							<figure>
+								<img class="image-thumb" alt="Rudbeckia cut flower seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/rudbeckia.jpg">
+								<figcaption>
+									Rudbeckia
+								</figcaption>
+							</figure>
+						</a>
+					</li>
+					<li><a href="https://www.swallowtailgardenseeds.com/perennials/limonium.html">
+							<figure>
+								<img class="image-thumb" alt="Limonium cut flower seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/limonium.jpg">
+								<figcaption>
+									Limonium
+								</figcaption>
+							</figure>
+						</a>
+					</li>
+					<li><a href="https://www.swallowtailgardenseeds.com/annuals/babys_breathann.html">
+							<figure>
+								<img class="image-thumb" alt="Baby's Breath cut flower seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/babys-breath.jpg">
+								<figcaption>
+									Baby's Breath
+								</figcaption>
+							</figure>
+						</a>
+					</li>
+				</ul>
+				<h2 id="garden-look">Garden Look</h2>
+				<p class="cut-flower-type-intro-p">The Victorians had interesting ideas about a lot of things, but their garden aesthetic is still popular for a very good reason. A garden-style floral aesthetic is also very popular in wedding floral design. These are flowers that bring to mind a dowager countess competing in a country horticultural contest, or a Colonial estate garden. Here are some garden-style blooms for the Downton Abbey or Hamilton fan.
+				</p>
+				<br class="clear">
+				<img class="cut-flowers-image" alt="pink anemone cut flower seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/anemone-bouquet.jpg" title="Anemone hupehensis 'Pink Saucer' plants bloom from mid summer and into the fall.">
+				<h3>Anemone</h3>
+				<p>Ethereal and captivating, the anemone, a perennial, makes a beautiful addition to a garden-style arrangement or a Victorian-styled garden bed. Also known as windflower, anemones come in lovely shades of white and pink, and have lasting vase life. The plants are deer- and rabbit-resistant and easy to grow, spreading via stolons underground. Anemones prefer light shade in most climates but can tolerate full sun in milder climates, and grows well in coastal landscapes.
+				</p>
+				<a class="cut-flowers-link" href="https://www.swallowtailgardenseeds.com/perennials/anemone.html">View more Anemone</a><br class="clear">
+				<img class="cut-flowers-image" alt="Delphinium cut flower perennial seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/delphinium-bouquet.jpg">
+				<h3>Delphinium</h3>
+				<p>The ultimate flower for a cottage garden look, delphinium grows in both dwarf and tall varieties, producing long stems of beautiful blooms in shades of white to pink to purple and a wide variety of blues. Delphiniums can handle full sun to part shade and prefer moist soil. They are the perfect line flower for a garden arrangement and make for a striking addition to a cottage or country-style garden.
+				</p>
+				<a class="cut-flowers-link" href="https://www.swallowtailgardenseeds.com/perennials/delphinium.html">View more Delphinium</a><br class="clear">
+				<img class="cut-flowers-image" alt="Scabiosa Perennial cut Flower Seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/scabiosa-bouquet.jpg" title="Scabiosa House's Hybrids - Perennial Flower Seeds">
+				<h3>Scabiosa</h3>
+				<p>The scabiosa, or pincushion flower, brings a delicate yet showy face flower to your cottage garden. Flowers have long vase life and range from white to pink to a light blue-violet. Scabiosas are perennials and once they’ve bloomed, the pods left have an interesting texture and color that provides a pop of rustic neutral green-brown to set off brighter or white blossoms in a garden-style arrangement or bouquet. Scabiosas are easy to grown and attract bees and butterflies.
+				</p>
+				<a class="cut-flowers-link" href="https://www.swallowtailgardenseeds.com/perennials/perennial_scabiosa.html">View more Scabiosa</a><br class="clear">
+				<img class="cut-flowers-image" alt="sweet pea cut flower seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/sweet-pea-bouquet.jpg">
+				<h3>Sweet Peas</h3>
+				<p>Sweet peas are a classic Victorian garden flower, a flowering vine that climbs fences, trellises, or arbors and spills over shrubs. Sweet peas have enchanting scents, come in a wide variety of colors including white, cream, pink, salmon, orange, purples, reds, bicolored, and even blues, and make a beautiful, wild-yet-traditional addition to a garden bouquet or arrangement. Sweet peas, while delicate, are long-lasting when cut and an excellent way to bring that heady fragrance into your home.
+				</p>
+				<a class="cut-flowers-link" href="https://www.swallowtailgardenseeds.com/vines/sweet_pea_vines.html">View more Sweet Peas</a><br class="clear">
+				<img class="cut-flowers-image" alt="sidalcea cut flower seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/sidalcea-bouquet.jpg" title="Rosanna Sidalcea plants covered in flower spikes.">
+				<h3>Sidalcea</h3>
+				<p>Sidalceas are a perennial mallow that produces saucer-shaped flowers (with the look of a hollyhock) on long stems. A line flower similar in feel to a larkspur or a delphinium, the sidalcea is a true perennial that thrives in full sun to part shade. Sidalcea flowers attract hummingbirds and butterflies, and make for an excellent addition to cut arrangements. Blooms are in the pinks/purples/rose red shades.
+				</p>
+				<a class="cut-flowers-link" href="https://www.swallowtailgardenseeds.com/perennials/sidalcea.html">View more Sidalcea</a><br class="clear">
+				<p class="cut-flowers-list-intro-p">Additional varieties that fall within a garden-style aesthetic:
+				</p>
+				<ul>
+					<li><a href="https://www.swallowtailgardenseeds.com/annuals/amaranthus.html">
+							<figure>
+								<img class="image-thumb" alt="Amaranthus cut flower seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/amaranthus.jpg">
+								<figcaption>
+									Amaranthus
+								</figcaption>
+							</figure>
+						</a>
+					</li>
+					<li><a href="https://www.swallowtailgardenseeds.com/annuals/larkspur.html">
+							<figure>
+								<img class="image-thumb" alt="Larkspur cut flower seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/larkspur.jpg">
+								<figcaption>
+									Larkspur
+								</figcaption>
+							</figure>
+						</a>
+					</li>
+					<li><a href="https://www.swallowtailgardenseeds.com/perennials/butterflybush.html">
+							<figure>
+								<img class="image-thumb" alt="Butterfly Bush cut flower seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/butterfly-bush.jpg">
+								<figcaption>
+									Butterfly Bush
+								</figcaption>
+							</figure>
+						</a>
+					</li>
+					<li><a href="https://www.swallowtailgardenseeds.com/perennials/gaillardia.html">
+							<figure>
+								<img class="image-thumb" alt="Gaillardia cut flower seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/gaillardia.jpg">
+								<figcaption>
+									Gaillardia
+								</figcaption>
+							</figure>
+						</a>
+					</li>
+					<li><a href="https://www.swallowtailgardenseeds.com/perennials/sedum.html">
+							<figure>
+								<img class="image-thumb" alt="Sedum cut flower seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/sedum.jpg">
+								<figcaption>
+									Sedum
+								</figcaption>
+							</figure>
+						</a>
+					</li>
+					<li><a href="https://www.swallowtailgardenseeds.com/annuals/dustymiller.html">
+							<figure>
+								<img class="image-thumb" alt="Dusty Miller cut flower seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/dusty-miller.jpg">
+								<figcaption>
+									Dusty Miller
+								</figcaption>
+							</figure>
+						</a>
+					</li>
+					<li><a href="https://www.swallowtailgardenseeds.com/perennials/agastache.html">
+							<figure>
+								<img class="image-thumb" alt="Agastache cut flower seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/agastache.jpg">
+								<figcaption>
+									Agastache
+								</figcaption>
+							</figure>
+						</a>
+					</li>
+					<li><a href="https://www.swallowtailgardenseeds.com/annuals/angelonia.html">
+							<figure>
+								<img class="image-thumb" alt="Angelonia cut flower seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/angelonia.jpg">
+								<figcaption>
+									Angelonia
+								</figcaption>
+							</figure>
+						</a>
+					</li>
+					<li><a href="https://www.swallowtailgardenseeds.com/perennials/armeria.html">
+							<figure>
+								<img class="image-thumb" alt="Armeria cut flower seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/armeria.jpg">
+								<figcaption>
+									Armeria
+								</figcaption>
+							</figure>
+						</a>
+					</li>
+					<li><a href="https://www.swallowtailgardenseeds.com/perennials/columbine.html">
+							<figure>
+								<img class="image-thumb" alt="Columbine cut flower seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/columbine.jpg">
+								<figcaption>
+									Columbine
+								</figcaption>
+							</figure>
+						</a>
+					</li>
+					<li><a href="https://www.swallowtailgardenseeds.com/perennials/gayfeather.html">
+							<figure>
+								<img class="image-thumb" alt="Gayfeather cut flower seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/gayfeather.jpg">
+								<figcaption>
+									Gayfeather
+								</figcaption>
+							</figure>
+						</a>
+					</li>
+					<li><a href="https://www.swallowtailgardenseeds.com/perennials/joe_pye_weed.html">
+							<figure>
+								<img class="image-thumb" alt="Joe-Pye Weed cut flower seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/joe-pye-weed.jpg">
+								<figcaption>
+									Joe-pye Weed
+								</figcaption>
+							</figure>
+						</a>
+					</li>
+					<li><a href="https://www.swallowtailgardenseeds.com/perennials/blackberry_lily.html">
+							<figure>
+								<img class="image-thumb" alt="Blackberry Lily cut flower seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/blackberry-lily.jpg">
+								<figcaption>
+									Blackberry Lily
+								</figcaption>
+							</figure>
+						</a>
+					</li>
+					<li><a href="https://www.swallowtailgardenseeds.com/vines/passion_vine.html">
+							<figure>
+								<img class="image-thumb" alt="Passion Vine cut flower seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/passion-vine.jpg">
+								<figcaption>
+									Passion Vine
+								</figcaption>
+							</figure>
+						</a>
+					</li>
+				</ul>
+				<h2 id="unusual-look">Unusual Look</h2>
+				<p class="cut-flower-type-intro-p">Some cut flowers deserve to stand apart from the rest, with their unusual sizes, colors, shapes, or textures. Here are a few plants whose flowers make for an eye-popping unusual addition to your dining room table.
+				</p>
+				<img class="cut-flowers-image" alt="Red Hot Poker plant flowers cut flower seeds." src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/red-hot-poker-bouquet.jpg">
+				<h3>Red Hot Poker</h3>
+				<p>The red hot poker, also known as the torch lily, blooms in strikingly bright shades of green, yellow, orange, and red. They are attractive to hummingbirds and grow well alongside daylilies. Red hot poker plants are perennials and will bloom the first year if started early. The plants tolerate heat well, prefers drained soils to wet over winter. Red Hot Poker varieties all make excellent cut flowers, and will provide some striking color and style accents to your more humble or commonplace arrangements.
+				</p>
+				<a class="cut-flowers-link" href="https://www.swallowtailgardenseeds.com/perennials/red_hot_poker.html">View more Red Hot Poker</a><br class="clear">
+				<img class="cut-flowers-image" alt="Armenian Basket Flower cut flower seeds." src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/armenian-basket-flower-bouquet.jpg">
+				<h3>Armenian Basket Flower</h3>
+				<p>Rising on 3-4 foot stalks and tolerant of heat, drought, and able to grow in even salty coastal soils, the Armenian basket flower is a true stunner – growing 3-4 feet tall and producing brown buds that open to 4 inch bright yellow thistle-like flowers in midsummer. Attractive to butterflies and repellant to rabbits and deer, the Armenian basket flower is a true perennial, living up to 15 years with minimal care. Flowers last when cut and work well in both fresh and dried arrangements.
+				</p>
+				<a class="cut-flowers-link" href="https://www.swallowtailgardenseeds.com/perennials/armenian_basket.html">View more Armenian Basket Flower</a><br class="clear">
+				<img class="cut-flowers-image" alt="Money Plant Perennial cut Flower Seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/money-plant-bouquet.jpg" title="Silver dollar-like seed pods of Money plant.">
+				<h3>Money Plant</h3>
+				<p>Beautiful both in its flower and pod form, the money plant has heart-shaped leaves and fragrant purple or white flowers in the spring. Cut flowers when blooming to bring in splashy color and fragrance, or wait until the flowers have formed ripened seed pods that release their outer covers to reveal translucent, silver dollar-like circles. These work well in dried arrangements. Money plant can thrive from full sun to part shade and prefers moist soil. The flowers are attractive to bees and butterflies, and the plants are deer- and rabbit-resistant.
+				</p>
+				<a class="cut-flowers-link" href="https://www.swallowtailgardenseeds.com/perennials/money_plant.html">View more Money Plant</a><br class="clear">
+				<img class="cut-flowers-image" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/bee-balm-bouquet.jpg" alt="Bee balm perennial cut flower seeds.">
+				<h3>Bee Balm</h3>
+				<p>Bee balm, a member of the mint family, has long been used by Native Americans for its medicinal properties, and is attractive to butterflies, hummingbirds, and bees. An unusual flower both in shape and texture, bee balm grows 2- 3 feet tall and comes in reds, rose pink, salmon, scarlet, and crimson. Bergamo bee balm in particular is a workhouse flower, blooming in as few as 10 weeks and well into fall if watered regularly. The leaves of Bergamo bee balm are citrus-scented, and all bee balms make excellent cut flowers for both beauty and fragrance.
+				</p>
+				<a class="cut-flowers-link" href="https://www.swallowtailgardenseeds.com/perennials/beebalmper.html">View more Bee Balm</a><br class="clear">
+				<img class="cut-flowers-image" alt="Mignonette - garden seeds cut flower seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/mignonette-bouquet.jpeg">
+				<h3>Mignonette</h3>
+				<p>Tiny, creamy white flowers on long, 2-3 feet tall spikes produce spicy-sweet fragrance that lasts even when cut or dried, the mignonette is an excellent choice for an unusual bloom to add to a more traditional arrangement. Mignonette prefers cool weather and moist, rich soil. Mignonette can be grown in 6-inch pots or in annual beds, in full sun to part shade.
+				</p>
+				<a class="cut-flowers-link" href="https://www.swallowtailgardenseeds.com/annuals/mignonette.html">View more Mignonette</a><br class="clear">
+				<p class="cut-flowers-list-intro-p">Additional unusual flower options to consider:
+				</p>
+				<ul>
+					<li><a href="https://www.swallowtailgardenseeds.com/herbs/garlicchives.html">
+							<figure>
+								<img class="image-thumb" alt="Garlic Chives cut flower seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/garlic-chives.jpg">
+								<figcaption>
+									Garlic chives
+								</figcaption>
+							</figure>
+						</a>
+					</li>
+					<li><a href="https://www.swallowtailgardenseeds.com/perennials/coral_bells.html">
+							<figure>
+								<img class="image-thumb" alt="Coral Bells cut flower seeds" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/coral-bells.jpg">
+								<figcaption>
+									Coral Bells
+								</figcaption>
+							</figure>
+						</a>
+					</li>
+				</ul>
+				<span id="back-top"><a href="#top"><span></span>Back to Top</a></span>
+				<address>Written by <a href="https://www.swallowtailgardenseeds.com/about-us/emily.html">Emily Tryer</a>.</address>
+{% endblock %}
+{% block scripts %}
+<script src="https://www.swallowtailgardenseeds.com/scripts/other-scripts.js"></script>
+{% endblock %}

@@ -129,6 +129,7 @@ Copyright Swallowtail Garden Seeds, Inc
       <ul class="Sidebar_nav">
         {% from 'includes/make_detailed_nav.html' import make_detailed_nav %}
         {% block detailed_nav %}{{ make_detailed_nav(nav_data) }}{% endblock %}
+        <li><a href="{{ url_for('seeds.tips_lists', _external=True) }}">Gardening Tips</a></li>
         <li><a href="{{ url_for('seeds.about', _external=True) }}" title="About Us">About Us</a></li>
       </ul>
     </div>

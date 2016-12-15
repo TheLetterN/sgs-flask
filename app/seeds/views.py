@@ -2176,3 +2176,61 @@ def about(employee=None):
         )
     else:
         return render_template('static/about-us/index.html', crumbs=crumbs)
+
+
+@seeds.route('/tips_lists/')
+@seeds.route('/tips_lists/<page>.html')
+def tips_lists(page=None):
+    crumbs = [
+        cblr.crumble('home', 'Home'),
+        cblr.crumble('tips_lists', 'Gardening Tips and Lists')
+    ]
+    if page:
+        if page == 'cut-flowers':
+            crumbs.append(cblr.crumble(
+                'tips_lists',
+                'Flowers for the Cutting Garden',
+                page=page
+            ))
+        elif page == 'drought-tolerant-plants':
+            crumbs.append(cblr.crumble(
+                'tips_lists',
+                'Drought Tolerant Plants',
+                page=page
+            ))
+        elif page == 'chitting-your-seeds':
+            crumbs.append(cblr.crumble(
+                'tips_lists',
+                'Chitting Seeds',
+                page=page
+            ))
+        elif page == 'perennials_first_year_flowers':
+            crumbs.append(cblr.crumble(
+                'tips_lists',
+                'First-year Flowering Perennials From Seed',
+                page=page
+            ))
+        elif page == 'startingyourseeds':
+            crumbs.append(cblr.crumble(
+                'tips_lists',
+                'Starting Your Seeds',
+                page=page
+            ))
+        elif page == 'deer_resistant_list':
+            crumbs.append(cblr.crumble(
+                'tips_lists',
+                'Deer Resistant Plants',
+                page=page
+            ))
+        elif page == 'floral-fun':
+            crumbs.append(cblr.crumble(
+                'tips_lists',
+                'Floral Fun',
+                page=page
+            ))
+        return render_template(
+            'static/tips_lists/{}.html'.format(page),
+            crumbs=crumbs
+        )
+    else:
+        return render_template('static/tips_lists/index.html', crumbs=crumbs)

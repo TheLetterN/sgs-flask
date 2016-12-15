@@ -1,0 +1,91 @@
+{# This file is part of SGS-Flask.
+SGS-Flask is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+SGS-Flask is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see
+<http://www.gnu.org/licenses/>.
+Copyright Swallowtail Garden Seeds, Inc
+#}
+{% extends "includes/base.html" %}
+{% block title %}Swallowtail Garden Seeds - Gardening Tips and Plant Lists{% endblock %}
+{% block meta_description %}Swallowtail Garden Seeds - Gardening Tips and Plant Lists{% endblock %}
+{% block style %}
+      #main p{margin-bottom:1em}
+      #main a{border:none}
+      figure{display:inline-block;margin:1em}
+      figcaption{text-align:center}
+{% endblock %}
+{% block main %}
+				<h1>
+					Gardening Tips and Lists
+				</h1>
+				<p>
+					Are you wanting more information about gardening from seed? Has the perfect plant for that trouble spot in your garden been eluding you? Here you will find tips on how to germinate seeds, plant lists to help find the right flowers for your next gardening project, and a glimpse of our lighthearted side. This is a work in progress, so keep checking back for more.
+				</p>
+				<figure>
+          <a href="{{ url_for('seeds.tips_lists', page='cut-flowers') }}" title="Ideas for creating garden-fresh bouquets in multiple styles.">
+						<img alt="double flowered cosmos" height="200" src="https://www.swallowtailgardenseeds.com/gardens/cut-flowers/cosmos-bouquet.jpeg" width="200">
+						<figcaption>
+							Cutting Garden Flowers
+						</figcaption>
+					</a>
+				</figure>
+				<figure>
+          <a href="{{ url_for('seeds.tips_lists', page='drought-tolerant-plants') }}" title="A list of plants that can tolerate a bit of a drought.">
+						<img alt="vibrant pink ice plant" height="200" src="https://www.swallowtailgardenseeds.com/assets/table-mountain-hardy-ice-plant.jpg" width="200">
+						<figcaption>
+							Drought Tolerant Plants
+						</figcaption>
+					</a>
+				</figure>
+				<figure>
+          <a href="{{ url_for('seeds.tips_lists', page='chitting-your-seeds') }}">
+						<img alt="sweet pea seed starting to sprout" height="200" src="https://www.swallowtailgardenseeds.com/assets/sweet-pea-seed.jpg" width="200">
+						<figcaption>
+							Chitting Your Seeds
+						</figcaption>
+					</a>
+				</figure>
+				<figure>
+          <a href="{{ url_for('seeds.tips_lists', page='perennials_first_year_flowers') }}" title="Perennials that flower the first year from seed">
+						<img alt="Yellow and red bicolor gailarida" height="200" src="https://www.swallowtailgardenseeds.com/assets/mesa-bright-bicolor-gaillardia.jpg" width="200">
+						<figcaption>
+							Perennials, First Year Bloom
+						</figcaption>
+					</a>
+				</figure>
+				<figure>
+          <a href="{{ url_for('seeds.tips_lists', page='startingyourseeds') }}" title="A guide to starting your new seeds.">
+						<img alt="Close up on hollyhock seeds" height="200" src="https://www.swallowtailgardenseeds.com/assets/alcea-rosea-seeds.jpg" width="200">
+						<figcaption>
+							Starting Your Seeds
+						</figcaption>
+					</a>
+				</figure>
+				<figure>
+          <a href="{{ url_for('seeds.tips_lists', page='deer_resistant_list') }}" title="An illustrated list of plants that are deer resistant">
+						<img alt="Blue Globe Thistle blossoms" height="200" src="https://www.swallowtailgardenseeds.com/assets/globe-thistle-blue-flowers.jpg" width="200">
+						<figcaption>
+							Deer Resistant Plants
+						</figcaption>
+					</a>
+				</figure>
+				<figure>
+          <a href="{{ url_for('seeds.tips_lists', page='floral-fun') }}">
+						<img alt="Chef prepares vegetables for their last meal." height="200" src="https://www.swallowtailgardenseeds.com/assets/floral-fun-humor.jpg" width="200">
+						<figcaption>
+							Floral Fun
+						</figcaption>
+					</a>
+				</figure>
+			</div>
+{% endblock %}
+{% block scripts %}
+<script src="https://www.swallowtailgardenseeds.com/scripts/other-scripts.js"></script>
+{% endblock %}

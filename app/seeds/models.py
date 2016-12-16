@@ -2202,6 +2202,11 @@ class BulkCategory(db.Model, SlugMixin, TimestampMixin):
         return name
 
     @property
+    def header(self):
+        n = self.name.lower().replace('bulk', '').replace('seeds', '').split()
+        return ' '.join(n).title() + ' Seeds'
+
+    @property
     def item_groups(self):
         items = sorted(self.items, key = lambda x: x.name)
         current_series = items[0].series

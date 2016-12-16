@@ -2155,6 +2155,30 @@ def move_cultivar(cv_id, delta):
     return move_object(Cultivar, cv_id, delta)
 
 
+@seeds.route('/seeds-new.html')
+def new_seeds():
+    return 'Nothing here yet!'
+
+
+@seeds.route('/site-map.html')
+def site_map():
+    new_for_year = 2017  # TODO
+    indexes = Index.query.all()
+    bulk = BulkCategory.query.all()
+    crumbs = (
+        cblr.crumble('home', 'Home'),
+        cblr.crumble('site_map', 'Site Map')
+    )
+    return render_template(
+        'static/site-map.html',
+        bulk=bulk,
+        crumbs=crumbs,
+        indexes=indexes,
+        new_for_year=new_for_year
+    )
+
+
+
 # STATIC PAGES
 
 # These routes define "static" pages that don't need their data in the db.
@@ -2234,3 +2258,56 @@ def tips_lists(page=None):
         )
     else:
         return render_template('static/tips_lists/index.html', crumbs=crumbs)
+
+
+@seeds.route('/contact.html')
+def contact():
+    crumbs = (
+        cblr.crumble('home', 'Home'),
+        cblr.crumble('contact', 'Contact')
+    )
+    return render_template('static/contact.html', crumbs=crumbs)
+
+@seeds.route('/howtoorder.html')
+def how_to_order():
+    crumbs = (
+        cblr.crumble('home', 'Home'),
+        cblr.crumble('how_to_order', 'How to Order')
+    )
+    return render_template('static/howtoorder.html', crumbs=crumbs)
+
+@seeds.route('/form.html')
+def printable_order_form():
+    return render_template('static/form.html')
+
+@seeds.route('/gift-certificates.html')
+def gift_certificates():
+    crumbs = (
+        cblr.crumble('home', 'Home'),
+        cblr.crumble('gift_certificates', 'Gift Certificates')
+    )
+    return render_template('static/gift-certificates.html', crumbs=crumbs)
+
+@seeds.route('/privacy_policy.html')
+def privacy_policy():
+    crumbs = (
+        cblr.crumble('home', 'Home'),
+        cblr.crumble('privacy_policy', 'Privacy Policy')
+    )
+    return render_template('static/privacy_policy.html', crumbs=crumbs)
+
+@seeds.route('/international-shipping.html')
+def international_shipping():
+    crumbs = (
+        cblr.crumble('home', 'Home'),
+        cblr.crumble('international_shipping', 'International Shipping')
+    )
+    return render_template('static/international-shipping.html', crumbs=crumbs)
+
+@seeds.route('/zonemap.html')
+def zone_map():
+    crumbs = (
+        cblr.crumble('home', 'Home'),
+        cblr.crumble('zone_map', 'Zone Map')
+    )
+    return render_template('static/zonemap.html', crumbs=crumbs)

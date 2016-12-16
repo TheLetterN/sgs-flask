@@ -1,0 +1,370 @@
+{# This file is part of SGS-Flask.
+SGS-Flask is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+SGS-Flask is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see
+<http://www.gnu.org/licenses/>.
+Copyright Swallowtail Garden Seeds, Inc
+#}
+{% extends "includes/base.html" %}
+{% block title %}Swallowtail Garden Seeds - Zone Map{% endblock %}
+{% block style %}
+      #main p{margin-bottom:1em;}
+      #main table {
+      	float:left;
+      	width: 90%;
+      	font-family: Verdana, Arial, Helvetica, sans-serif;
+      	font-size:12px;
+      	margin-left:1em;
+      	border: 1px solid black;
+      }
+      #main table tr th {
+      	color:#800000;
+      	text-align:center;
+      	border: 1px solid black;
+      }
+      #main table tr td {
+      	color:#004000;
+      	text-align:center;
+      	padding:.2em .2em;
+      	border: 1px solid black;
+      }
+      #main table tr td.bold {
+      	font-weight:bold;
+      	text-align:center;
+      }
+      #main table tr td.left {
+      	text-align:left;
+      }
+      #main img {
+      	margin-top:1em;
+      	margin-bottom:1em;
+      	width:85%;
+      	max-width:550px;
+      	height:auto;
+      }
+{% endblock %}
+{% block main %}
+				<h1>
+					USDA Hardiness Zones
+				</h1>
+				<p>
+					<a href="http://planthardiness.ars.usda.gov/phzmweb/interactivemap.aspx" rel="nofollow" target="_blank">
+						Click here
+					</a>
+					to see the zone for your area.
+				</p>
+        <img alt="Zone Map - USDA Hardiness Zones" src="{{ url_for('static', filename='images/zonemap.jpg') }}">
+				<br/>
+				<table border="2">
+					<tbody>
+						<tr>
+							<th>
+								Zone
+							</th>
+							<th>
+								Fahrenheit
+							</th>
+							<th>
+								Celsius
+							</th>
+							<th>
+								Example Cities
+							</th>
+						</tr>
+						<tr>
+							<td class="bold" style="background-color:#FA965A;">
+								1
+							</td>
+							<td>
+								Below -50 F
+							</td>
+							<td>
+								Below -45.6 C
+							</td>
+							<td class="left">
+								Fairbanks, Alaska; Resolute, Northwest Territories (Canada)
+							</td>
+						</tr>
+						<tr>
+							<td class="bold" style="background-color:#8CA0D2;">
+								2a
+							</td>
+							<td>
+								-50 to -45 F
+							</td>
+							<td>
+								-42.8 to -45.5 C
+							</td>
+							<td class="left">
+								Prudhoe Bay, Alaska; Flin Flon, Manitoba (Canada)
+							</td>
+						</tr>
+						<tr>
+							<td class="bold" style="background-color:#4678C8;">
+								2b
+							</td>
+							<td>
+								-45 to -40 F
+							</td>
+							<td>
+								-40.0 to -42.7 C
+							</td>
+							<td class="left">
+								Unalakleet, Alaska; Pinecreek, Minnesota
+							</td>
+						</tr>
+						<tr>
+							<td class="bold" style="background-color:#F5962D;">
+								3a
+							</td>
+							<td>
+								-40 to -35 F
+							</td>
+							<td>
+								-37.3 to -39.9 C
+							</td>
+							<td class="left">
+								International Falls, Minnesota; St. Michael, Alaska
+							</td>
+						</tr>
+						<tr>
+							<td class="bold" style="background-color:#E65A0A;">
+								3b
+							</td>
+							<td>
+								-35 to -30 F
+							</td>
+							<td>
+								-34.5 to -37.2 C
+							</td>
+							<td class="left">
+								Tomahawk, Wisconsin; Sidney, Montana
+							</td>
+						</tr>
+						<tr>
+							<td class="bold" style="background-color:#A09BC3;">
+								4a
+							</td>
+							<td>
+								-30 to -25 F
+							</td>
+							<td>
+								-31.7 to -34.4 C
+							</td>
+							<td class="left">
+								Minneapolis/St.Paul, Minnesota; Lewistown, Montana
+							</td>
+						</tr>
+						<tr>
+							<td class="bold" style="background-color:#505596;">
+								4b
+							</td>
+							<td>
+								-25 to -20 F
+							</td>
+							<td>
+								-28.9 to -31.6 C
+							</td>
+							<td class="left">
+								Northwood, Iowa; Nebraska
+							</td>
+						</tr>
+						<tr>
+							<td class="bold" style="background-color:#B9C8A0;">
+								5a
+							</td>
+							<td>
+								-20 to -15 F
+							</td>
+							<td>
+								-26.2 to -28.8 C
+							</td>
+							<td class="left">
+								Des Moines, Iowa; Illinois
+							</td>
+						</tr>
+						<tr>
+							<td class="bold" style="background-color:#55781E;">
+								5b
+							</td>
+							<td>
+								-15 to -10 F
+							</td>
+							<td>
+								-23.4 to -26.1 C
+							</td>
+							<td class="left">
+								Columbia, Missouri; Mansfield, Pennsylvania
+							</td>
+						</tr>
+						<tr>
+							<td class="bold" style="background-color:#FADC78;">
+								6a
+							</td>
+							<td>
+								-10 to -5 F
+							</td>
+							<td>
+								-20.6 to -23.3 C
+							</td>
+							<td class="left">
+								St. Louis, Missouri; Lebanon, Pennsylvania
+							</td>
+						</tr>
+						<tr>
+							<td class="bold" style="background-color:#F5D21E;">
+								6b
+							</td>
+							<td>
+								-5 to 0 F
+							</td>
+							<td>
+								-17.8 to -20.5 C
+							</td>
+							<td class="left">
+								McMinnville, Tennessee; Branson, Missouri
+							</td>
+						</tr>
+						<tr>
+							<td class="bold" style="background-color:#FAAAA0;">
+								7a
+							</td>
+							<td>
+								0 to 5 F
+							</td>
+							<td>
+								-15.0 to -17.7 C
+							</td>
+							<td class="left">
+								Oklahoma City, Oklahoma; South Boston, Virginia
+							</td>
+						</tr>
+						<tr>
+							<td class="bold" style="background-color:#F06E5A;">
+								7b
+							</td>
+							<td>
+								5 to 10 F
+							</td>
+							<td>
+								-12.3 to -14.9 C
+							</td>
+							<td class="left">
+								Little Rock, Arkansas; Griffin, Georgia
+							</td>
+						</tr>
+						<tr>
+							<td class="bold" style="background-color:#B49646;">
+								8a
+							</td>
+							<td>
+								10 to 15 F
+							</td>
+							<td>
+								-9.5 to -12.2 C
+							</td>
+							<td class="left">
+								Tifton, Georgia; Dallas, Texas
+							</td>
+						</tr>
+						<tr>
+							<td class="bold" style="background-color:#8C6419;">
+								8b
+							</td>
+							<td>
+								15 to 20 F
+							</td>
+							<td>
+								-6.7 to -9.4 C
+							</td>
+							<td class="left">
+								Austin, Texas; Gainesville, Florida
+							</td>
+						</tr>
+						<tr>
+							<td class="bold" style="background-color:#E6AF7D;">
+								9a
+							</td>
+							<td>
+								20 to 25 F
+							</td>
+							<td>
+								-3.9 to -6.6 C
+							</td>
+							<td class="left">
+								Houston, Texas; St. Augustine, Florida
+							</td>
+						</tr>
+						<tr>
+							<td class="bold" style="background-color:#DC9650;">
+								9b
+							</td>
+							<td>
+								25 to 30 F
+							</td>
+							<td>
+								-1.2 to -3.8 C
+							</td>
+							<td class="left">
+								Brownsville, Texas; Fort Pierce, Florida
+							</td>
+						</tr>
+						<tr>
+							<td class="bold" style="background-color:#E1B4A5;">
+								10a
+							</td>
+							<td>
+								30 to 35 F
+							</td>
+							<td>
+								1.6 to -1.1 C
+							</td>
+							<td class="left">
+								Naples, Florida; Victorville, California
+							</td>
+						</tr>
+						<tr>
+							<td class="bold" style="background-color:#DC8C64;">
+								10b
+							</td>
+							<td>
+								35 to 40 F
+							</td>
+							<td>
+								4.4 to 1.7 C
+							</td>
+							<td class="left">
+								Miami, Florida; Coral Gables, Florida
+							</td>
+						</tr>
+						<tr>
+							<td class="bold" style="background-color:#E15000;">
+								11
+							</td>
+							<td>
+								above 40 F
+							</td>
+							<td>
+								above 4.5 C
+							</td>
+							<td class="left">
+								Honolulu, Hawaii; Mazatlan, Mexico
+							</td>
+						</tr>
+					</tbody>
+				</table>
+ <!--temp fix for margin left issue on pages without multi-line <p>s-->
+				<div>
+					&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+				</div>
+{% endblock %}
+{% block scripts %}
+ <script src="https://www.swallowtailgardenseeds.com/scripts/other-scripts.js"></script>
+ {% endblock %}

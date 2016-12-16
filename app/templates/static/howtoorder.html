@@ -13,15 +13,91 @@ along with this program.  If not, see
 Copyright Swallowtail Garden Seeds, Inc
 #}
 {% extends "includes/base.html" %}
-{# This is an example of how to add a 'static' HTML page. #}
-{# Put head data in block head, and main content in block main. #}
-{# Any templates in this folder will be rendered when accessed from root. #}
-{# i.e. localhost:5000/example.html in testing/dev mode renders this template. #}
-{% block head %}
-<title>Test Page Please Ignore</title>
-<link rel="canonical" href="{{ url_for('seeds.static_html', page=page,  _external=True) }}">
-{% endblock %}
+{% block title %}Swallowtail Garden Seeds - How to Order{% endblock %}
+{% block meta_description %}Offers untreated heirloom and modern vegetable, flower and herb seeds.{% endblock %}
 {% block main %}
-<h1>Test Page Please Ignore</h1>
-<iframe width="640" height="360" src="https://www.youtube.com/embed/FMNJuSl91qY" frameborder="0" allowfullscreen></iframe>
+				<h1>
+					How to Order
+				</h1>
+				<h2>
+					Online Orders (Secure Shopping Cart):
+				</h2>
+				<p>
+					For your convenience, each section of our online catalog; Annuals, Perennials, Flowering Vines, Vegetables, and Herbs operates on our completely Secure Shopping Cart. To purchase an item, just click on the "ADD TO CART" button next to the item you wish to purchase. To view items in your cart or check out, click on the shopping cart icon in the upper right corner of every page. After completing the ordering process, you will receive a confirmation email which will include your order information and order number.
+				</p>
+				<h2>
+					Fax Orders:
+				</h2>
+				<p>
+					Toll Free 1-855-726-7333 or 1-707-538-3584
+					<br>
+					We welcome fax orders, 24 hours a day, 7 days a week. You can find the link to the
+          <a href="{{ url_for('seeds.printable_order_form') }}">
+						Print Order Form
+					</a>
+					in the lower left corner of any page of our online catalog.
+				</p>
+				<h2>
+					Order by Mail:
+				</h2>
+				<p>
+					S.G.S.
+					<br>
+					122 Calistoga Road, #178
+					<br>
+					Santa Rosa, CA 95409
+					<br>
+					To order by mail, print out the
+					<a href="{{ url_for('seeds.printable_order_form') }}">
+						Print Order Form
+					</a>
+					, fill it out completely, and mail it to us.
+				</p>
+				<h2>
+					Phone Orders and Questions:
+				</h2>
+				<p>
+					Toll Free 1-877-489-7333 or 1-707-538-3585
+					<br>
+					Our staff assisted hours are Monday through Friday, 9 AM to 5 PM (Pacific Standard Time).
+				</p>
+				<h2>
+					Payment:
+				</h2>
+				<p>
+					We accept Visa, MasterCard and Discover for online orders with our Secure Shopping Cart. For mail orders, we also accept personal checks and money orders.
+				</p>
+				<h2>
+					Shipping:
+				</h2>
+				<p>
+					Standard shipping to the U.S. is $4.95.
+					<br>
+					Priority shipping to the U.S. is $9.95.
+					<br>
+					<br>
+					U.S. orders over $40.00 receive free shipping.
+					<br>
+					U.S. orders over $100.00 receive free Priority shipping.
+					<br>
+					<br>
+					International Shipping is $6.95.
+					<br>
+					<br>
+					All packages are shipped by the United States Postal Service.
+				</p>
+				<h2>
+					Email Questions and Comments:
+				</h2>
+				<p>
+					<a href="mailto:info@swallowtailgardenseeds.com">
+						info@swallowtailgardenseeds.com
+					</a>
+					<br>
+					<br>
+					Email questions and comments are always welcome. We respond to most emails within 1 business day. Emails sent over the weekend are typically answered by the end of the next business day.
+				</p>
 {% endblock %}
+{% block scripts %}
+ <script src="https://www.swallowtailgardenseeds.com/scripts/other-scripts.js"></script>
+ {% endblock %}

@@ -13,15 +13,48 @@ along with this program.  If not, see
 Copyright Swallowtail Garden Seeds, Inc
 #}
 {% extends "includes/base.html" %}
-{# This is an example of how to add a 'static' HTML page. #}
-{# Put head data in block head, and main content in block main. #}
-{# Any templates in this folder will be rendered when accessed from root. #}
-{# i.e. localhost:5000/example.html in testing/dev mode renders this template. #}
-{% block head %}
-<title>Test Page Please Ignore</title>
-<link rel="canonical" href="{{ url_for('seeds.static_html', page=page,  _external=True) }}">
-{% endblock %}
+{% block title %}Swallowtail Garden Seeds - Contact{% endblock %}
+{% block meta_robots %}noindex, follow{% endblock %}
 {% block main %}
-<h1>Test Page Please Ignore</h1>
-<iframe width="640" height="360" src="https://www.youtube.com/embed/FMNJuSl91qY" frameborder="0" allowfullscreen></iframe>
+				<h1>
+					Contact Swallowtail Garden Seeds
+				</h1>
+				<h2>
+					Address:
+				</h2>
+				<p>
+					S.G.S.
+					<br>
+					122 Calistoga Road, #178
+					<br>
+					Santa Rosa, CA 95409
+				</p>
+				<h2>
+					Phone:
+				</h2>
+				<p>
+					Toll Free 1-877-489-7333 or 707-538-3585
+					<br>
+					Our staff assisted hours are Monday through Friday, 9 AM to 5 PM (Pacific Standard Time).
+				</p>
+				<h2>
+					Fax:
+				</h2>
+				<p>
+					Toll Free fax line 1-855-726-7333 or 707-538-3584
+					<br>
+          We welcome fax orders, 24 hours a day, 7 days a week. A link to our	<a href="{{ url_for('seeds.printable_order_form') }}">Print Order Form</a>	can be found near the lower left corner on any page of our online catalog.
+				</p>
+				<h2>
+					Email:
+				</h2>
+				<p>
+					<a class="main" href="mailto:info@swallowtailgardenseeds.com">info@swallowtailgardenseeds.com</a>
+					<br>
+					<br>
+					Email questions and comments are always welcome. We respond to most emails within 24 hours. Emails sent over the weekend are typically answered by the end of the next business day.
+				</p>
 {% endblock %}
+{% block scripts %}
+ <script src="https://www.swallowtailgardenseeds.com/scripts/other-scripts.js"></script>
+ {% endblock %}

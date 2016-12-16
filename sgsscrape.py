@@ -543,7 +543,9 @@ def download_misc_images():
         'https://www.swallowtailgardenseeds.com/images/'
         'mary-about-us-morning-glory.jpg',
         'https://www.swallowtailgardenseeds.com/images/'
-        'nicholas-about-us-tree.png'
+        'nicholas-about-us-tree.png',
+        'https://www.swallowtailgardenseeds.com/images/logo2.gif',
+        'https://www.swallowtailgardenseeds.com/images/zonemap.jpg'
     ]
     for image in images:
         download_image(image)

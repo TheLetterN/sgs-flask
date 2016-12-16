@@ -1,27 +1,420 @@
-{# This file is part of SGS-Flask.
-SGS-Flask is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-SGS-Flask is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see
-<http://www.gnu.org/licenses/>.
-Copyright Swallowtail Garden Seeds, Inc
-#}
-{% extends "includes/base.html" %}
-{# This is an example of how to add a 'static' HTML page. #}
-{# Put head data in block head, and main content in block main. #}
-{# Any templates in this folder will be rendered when accessed from root. #}
-{# i.e. localhost:5000/example.html in testing/dev mode renders this template. #}
-{% block head %}
-<title>Test Page Please Ignore</title>
-<link rel="canonical" href="{{ url_for('seeds.static_html', page=page,  _external=True) }}">
-{% endblock %}
-{% block main %}
-<h1>Test Page Please Ignore</h1>
-<iframe width="640" height="360" src="https://www.youtube.com/embed/FMNJuSl91qY" frameborder="0" allowfullscreen></iframe>
-{% endblock %}
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html>
+	<head>
+		<meta content="NOINDEX, FOLLOW" name="ROBOTS">
+		<link href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700,400italic,700italic |Droid+Sans:400,700" rel="stylesheet">
+		<meta content="width=device-width, initial-scale=1" name="viewport">
+		<title>Swallowtail Garden Seeds - Mail Order/Fax Form</title>
+	</head>
+	<body>
+		<table border="0" width="640">
+			<tbody>
+				<tr height="5">
+					<td width="33%">
+						<p align="left">
+              <a href="{{ url_for('seeds.home', _external=True) }}">
+								<font color="Maroon" face="verdana" size="-1">
+									BACK TO SITE
+								</font>
+							</a>
+						</p>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+		<table border="0" width="640">
+			<tbody>
+				<tr height="15">
+					<td width="33%">
+						<p align="center">
+							<font color="Maroon" face="verdana" size="-1">
+								122 Calistoga Road, #178
+								<br>
+								Santa Rosa, CA 95409
+							</font>
+						</p>
+					</td>
+					<td width="34%">
+						<p align="center">
+							<a href="{{ url_for('seeds.home', _external=True) }}">
+                <img alt="Swallowtail Garden Seeds Logo" border="0" height="182" src="{{ url_for('static', filename='images/logo2.gif') }}" width="186">
+							</a>
+						</p>
+					</td>
+					<td width="33%">
+						<p align="center">
+							<font color="Maroon" face="Verdana" size="-1">
+								24 Hour Fax:
+								<br>
+								Toll Free 1-855-726-SEED (7333) or (707) 538-3584
+								<br>
+								Cust. Serv.:
+								<br>
+								Toll Free 1-877-489-SEED (7333) or (707) 538-3585
+								<br>
+								www.swallowtailgardenseeds.com
+							</font>
+						</p>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+ <!-- Return Address Table -->
+		<table border="0" width="640">
+			<tbody>
+				<tr height="15">
+					<td width="3%">
+					</td>
+					<td>
+						<p align="left">
+							<font color="Maroon" face="Verdana" size="-1">
+								<b>
+									<br>
+									Name: ___________________________________________________________
+									<br>
+									<br>
+									Address: _________________________________________________________
+									<br>
+									<br>
+									City: _______________________________ State: ______ Zip: _____________
+									<br>
+									<br>
+									Telephone: _______________________________________________________
+									<br>
+								</b>
+							</font>
+						</p>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+		<br>
+ <!-- Form Table -->
+		<table border="1" width="640">
+			<tbody>
+				<tr height="22">
+					<td align="center" width="13%">
+						<font color="Maroon" face="Verdana" size="-1">
+							<b>
+								ITEM#
+							</b>
+						</font>
+					</td>
+					<td align="center" width="7%">
+						<font color="Maroon" face="Verdana" size="-1">
+							<b>
+								QTY
+							</b>
+						</font>
+					</td>
+					<td align="center" width="55%">
+						<font color="Maroon" face="Verdana" size="-1">
+							<b>
+								DESCRIPTION
+							</b>
+						</font>
+					</td>
+					<td align="center" width="13%">
+						<font color="Maroon" face="Verdana" size="-1">
+							<b>
+								UNIT PRICE
+							</b>
+						</font>
+					</td>
+					<td align="center" width="12%">
+						<font color="Maroon" face="Verdana" size="-1">
+							<b>
+								TOTAL
+							</b>
+						</font>
+					</td>
+				</tr>
+				<tr height="22">
+					<td width="13%">
+					</td>
+					<td width="7%">
+					</td>
+					<td width="55%">
+					</td>
+					<td width="13%">
+					</td>
+					<td width="12%">
+					</td>
+				</tr>
+				<tr height="22">
+					<td width="13%">
+					</td>
+					<td width="7%">
+					</td>
+					<td width="55%">
+					</td>
+					<td width="13%">
+					</td>
+					<td width="12%">
+					</td>
+				</tr>
+				<tr height="22">
+					<td width="13%">
+					</td>
+					<td width="7%">
+					</td>
+					<td width="55%">
+					</td>
+					<td width="13%">
+					</td>
+					<td width="12%">
+					</td>
+				</tr>
+				<tr height="22">
+					<td width="13%">
+					</td>
+					<td width="7%">
+					</td>
+					<td width="55%">
+					</td>
+					<td width="13%">
+					</td>
+					<td width="12%">
+					</td>
+				</tr>
+				<tr height="22">
+					<td width="13%">
+					</td>
+					<td width="7%">
+					</td>
+					<td width="55%">
+					</td>
+					<td width="13%">
+					</td>
+					<td width="12%">
+					</td>
+				</tr>
+				<tr height="22">
+					<td width="13%">
+					</td>
+					<td width="7%">
+					</td>
+					<td width="55%">
+					</td>
+					<td width="13%">
+					</td>
+					<td width="12%">
+					</td>
+				</tr>
+				<tr height="22">
+					<td width="13%">
+					</td>
+					<td width="7%">
+					</td>
+					<td width="55%">
+					</td>
+					<td width="13%">
+					</td>
+					<td width="12%">
+					</td>
+				</tr>
+				<tr height="22">
+					<td width="13%">
+					</td>
+					<td width="7%">
+					</td>
+					<td width="55%">
+					</td>
+					<td width="13%">
+					</td>
+					<td width="12%">
+					</td>
+				</tr>
+				<tr height="22">
+					<td width="13%">
+					</td>
+					<td width="7%">
+					</td>
+					<td width="55%">
+					</td>
+					<td width="13%">
+					</td>
+					<td width="12%">
+					</td>
+				</tr>
+				<tr height="22">
+					<td width="13%">
+					</td>
+					<td width="7%">
+					</td>
+					<td width="55%">
+					</td>
+					<td width="13%">
+					</td>
+					<td width="12%">
+					</td>
+				</tr>
+				<tr height="22">
+					<td width="13%">
+					</td>
+					<td width="7%">
+					</td>
+					<td width="55%">
+					</td>
+					<td width="13%">
+					</td>
+					<td width="12%">
+					</td>
+				</tr>
+				<tr height="22">
+					<td width="13%">
+					</td>
+					<td width="7%">
+					</td>
+					<td width="55%">
+					</td>
+					<td width="13%">
+					</td>
+					<td width="12%">
+					</td>
+				</tr>
+				<tr height="22">
+					<td width="13%">
+					</td>
+					<td width="7%">
+					</td>
+					<td width="55%">
+					</td>
+					<td width="13%">
+					</td>
+					<td width="12%">
+					</td>
+				</tr>
+				<tr height="22">
+					<td width="13%">
+					</td>
+					<td width="7%">
+					</td>
+					<td width="55%">
+					</td>
+					<td width="13%">
+					</td>
+					<td width="12%">
+					</td>
+				</tr>
+			</tbody>
+		</table>
+ <!-- Lower Form Table -->
+		<br>
+		<table border="0" width="640">
+			<tbody>
+				<tr height="25">
+					<td align="left" width="58%">
+						<font color="Maroon" face="Verdana" size="-1">
+							<b>
+								* California residents add 8.75% sales tax
+							</b>
+						</font>
+					</td>
+					<td align="right" width="30%">
+						<font color="Maroon" face="Verdana" size="-1">
+							<b>
+								SUBTOTAL:
+							</b>
+						</font>
+					</td>
+					<td align="center" width="12%">
+						<font color="Maroon" face="Verdana" size="-1">
+							<b>
+								_________
+							</b>
+						</font>
+					</td>
+				</tr>
+				<tr height="25">
+					<td align="left" width="58%">
+						<font color="Maroon" face="Verdana" size="-1">
+							<b>
+								on all flowers and medicinal herbs.
+							</b>
+						</font>
+					</td>
+					<td align="right" width="30%">
+						<font color="Maroon" face="Verdana" size="-1">
+							<b>
+								* TAX:
+							</b>
+						</font>
+					</td>
+					<td align="center" width="12%">
+						<font color="Maroon" face="Verdana" size="-1">
+							<b>
+								_________
+							</b>
+						</font>
+					</td>
+				</tr>
+				<tr height="25">
+					<td align="left" width="58%">
+						<font color="Maroon" face="Verdana" size="-1">
+							<b>
+							</b>
+						</font>
+					</td>
+					<td align="right" width="30%">
+						<font color="Maroon" face="Verdana" size="-1">
+							<b>
+								U.S. SHIPPING:
+							</b>
+						</font>
+					</td>
+					<td align="center" width="12%">
+						<font color="Maroon" face="Verdana" size="-1">
+							<b>
+								$4.95
+							</b>
+						</font>
+					</td>
+				</tr>
+				<tr height="25">
+					<td align="left" width="58%">
+						<font color="Maroon" face="Verdana" size="-1">
+							<b>
+								Please make checks payable to S.G.S.
+							</b>
+						</font>
+					</td>
+					<td align="right" width="30%">
+						<font color="Maroon" face="Verdana" size="-1">
+							<b>
+								TOTAL:
+							</b>
+						</font>
+					</td>
+					<td align="center" width="12%">
+						<font color="Maroon" face="Verdana" size="-1">
+							<b>
+								_________
+							</b>
+						</font>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+		<br>
+		<p>
+			<font color="Maroon" face="Verdana" size="-1">
+				<b>
+					Please charge my credit card:
+					<br>
+					<br>
+					MasterCard ________ Visa ________  Discover ________ Expiration Date: _________
+					<br>
+					<br>
+					Card Number: __ __ __ __  __ __ __ __ __ __ __ __  __ __ __ __ CVV Code: __ __ __
+					<br>
+					<br>
+					Print Name: _________________________________________________________
+					<br>
+					<br>
+					Signature: __________________________________________________________
+				</b>
+			</font>
+		</p>
+	</body>
+</html>

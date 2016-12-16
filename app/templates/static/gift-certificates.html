@@ -13,15 +13,188 @@ along with this program.  If not, see
 Copyright Swallowtail Garden Seeds, Inc
 #}
 {% extends "includes/base.html" %}
-{# This is an example of how to add a 'static' HTML page. #}
-{# Put head data in block head, and main content in block main. #}
-{# Any templates in this folder will be rendered when accessed from root. #}
-{# i.e. localhost:5000/example.html in testing/dev mode renders this template. #}
-{% block head %}
-<title>Test Page Please Ignore</title>
-<link rel="canonical" href="{{ url_for('seeds.static_html', page=page,  _external=True) }}">
+{% block title %}Swallowtail Garden Seeds - Gift Certificates{% endblock %}
+{% block meta_description %}Gift Certificates for Swallowtail Garden Seeds{% endblock %}
+{% block style %}
+      #main p{margin-bottom:1em;}
 {% endblock %}
+
 {% block main %}
-<h1>Test Page Please Ignore</h1>
-<iframe width="640" height="360" src="https://www.youtube.com/embed/FMNJuSl91qY" frameborder="0" allowfullscreen></iframe>
+				<div class="Header">
+					<h1 class="Header_h1">
+						Gift Certificates
+					</h1>
+					<h2 class="Header_h2">
+						for Swallowtail Garden Seeds
+					</h2>
+				</div>
+				<p>
+					Gift certificates make a wonderful gift for anyone that loves to grow flowers, vegetables or herbs from seed. Your gift recipient gets the pleasure of choosing from over 1,800 varieties of seeds in our online catalog. Our seed packets include detailed plant descriptions and planting instructions, making excellent gifts for gardeners of any experience level.
+				</p>
+				<p>
+					There is no shipping charge for gift certificates. They can be sent as a pdf document by email or as a printed gift certificate by regular mail. Please let us know your preference and the recipient's name and email address in the shipping comments box on the Billing and Shipping Page in the shopping cart. To redeem a gift certificate, contact us toll-free at 1-877-489-7333 or fill out our
+          <a href="{{ url_for('seeds.printable_order_form') }}">
+						Print Order Form
+					</a>
+					and send it to us with a printed copy of your gift certificate.
+				</p>
+				<div class="Cultivar">
+					<table class="Cultivar_table">
+						<tbody>
+							<tr>
+								<td class="Cultivar_table_size_price" colspan="3">
+									<b>
+										$15 Gift Certificate
+									</b>
+								</td>
+							</tr>
+							<tr>
+								<th class="Cultivar_table_qty">
+									Qty:
+								</th>
+								<th class="Cultivar_table_th">
+									<input class="Cultivar_table_text" name="Qty" id="quantity-GC15" min="1" type="number" value="1">
+								</th>
+								<th class="Cultivar_table_th2">
+									<button class="Cultivar_button_submit snipcart-add-item" data-item-id="GC15" data-item-name="$15 Gift Certificate" data-item-price="15.00" data-item-taxable="false" data-item-shippable="false" data-item-url="{{ url_for('seeds.gift_certificates', _external=True) }}" id="button-GC15" type="button">
+										ADD TO CART
+									</button>
+								</th>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+				<div class="Cultivar">
+					<table class="Cultivar_table">
+						<tbody>
+							<tr>
+								<td class="Cultivar_table_size_price" colspan="3">
+									<b>
+										$25 Gift Certificate
+									</b>
+								</td>
+							</tr>
+							<tr>
+								<th class="Cultivar_table_qty">
+									Qty:
+								</th>
+								<th class="Cultivar_table_th">
+									<input class="Cultivar_table_text" name="Qty" id="quantity-GC25" min="1" type="number" value="1">
+								</th>
+								<th class="Cultivar_table_th2">
+									<button class="Cultivar_button_submit snipcart-add-item" data-item-id="GC25" data-item-name="$25 Gift Certificate" data-item-price="25.00" data-item-taxable="false" data-item-shippable="false" data-item-url="{{ url_for('seeds.gift_certificates', _external=True) }}" id="button-GC25" type="button">
+										ADD TO CART
+									</button>
+								</th>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+				<div class="Cultivar">
+					<table class="Cultivar_table">
+						<tbody>
+							<tr>
+								<td class="Cultivar_table_size_price" colspan="3">
+									<b>
+										$40 Gift Certificate
+									</b>
+								</td>
+							</tr>
+							<tr>
+								<th class="Cultivar_table_qty">
+									Qty:
+								</th>
+								<th class="Cultivar_table_th">
+									<input class="Cultivar_table_text" name="Qty" id="quantity-GC40" min="1" type="number" value="1">
+								</th>
+								<th class="Cultivar_table_th2">
+									<button class="Cultivar_button_submit snipcart-add-item" data-item-id="GC40" data-item-name="$40 Gift Certificate" data-item-price="40.00" data-item-taxable="false" data-item-shippable="false" data-item-url="{{ url_for('seeds.gift_certificates', _external=True) }}" id="button-GC40" type="button">
+										ADD TO CART
+									</button>
+								</th>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+				<div class="Cultivar">
+					<table class="Cultivar_table">
+						<tbody>
+							<tr>
+								<td class="Cultivar_table_size_price" colspan="3">
+									<b>
+										$50 Gift Certificate
+									</b>
+								</td>
+							</tr>
+							<tr>
+								<th class="Cultivar_table_qty">
+									Qty:
+								</th>
+								<th class="Cultivar_table_th">
+									<input class="Cultivar_table_text" name="Qty" id="quantity-GC50" min="1" type="number" value="1">
+								</th>
+								<th class="Cultivar_table_th2">
+									<button class="Cultivar_button_submit snipcart-add-item" data-item-id="GC50" data-item-name="$50 Gift Certificate" data-item-price="50.00" data-item-taxable="false" data-item-shippable="false" data-item-url="{{ url_for('seeds.gift_certificates', _external=True) }}" id="button-GC50" type="button">
+										ADD TO CART
+									</button>
+								</th>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+				<div class="Cultivar">
+					<table class="Cultivar_table">
+						<tbody>
+							<tr>
+								<td class="Cultivar_table_size_price" colspan="3">
+									<b>
+										$75 Gift Certificate
+									</b>
+								</td>
+							</tr>
+							<tr>
+								<th class="Cultivar_table_qty">
+									Qty:
+								</th>
+								<th class="Cultivar_table_th">
+									<input class="Cultivar_table_text" name="Qty" id="quantity-GC75" min="1" type="number" value="1">
+								</th>
+								<th class="Cultivar_table_th2">
+									<button class="Cultivar_button_submit snipcart-add-item" data-item-id="GC75" data-item-name="$75 Gift Certificate" data-item-price="75.00" data-item-taxable="false" data-item-shippable="false" data-item-url="{{ url_for('seeds.gift_certificates', _external=True) }}" id="button-GC75" type="button">
+										ADD TO CART
+									</button>
+								</th>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+				<div class="Cultivar">
+					<table class="Cultivar_table">
+						<tbody>
+							<tr>
+								<td class="Cultivar_table_size_price" colspan="3">
+									<b>
+										$100 Gift Certificate
+									</b>
+								</td>
+							</tr>
+							<tr>
+								<th class="Cultivar_table_qty">
+									Qty:
+								</th>
+								<th class="Cultivar_table_th">
+									<input class="Cultivar_table_text" name="Qty" id="quantity-GC100" min="1" type="number" value="1">
+								</th>
+								<th class="Cultivar_table_th2">
+									<button class="Cultivar_button_submit snipcart-add-item" data-item-id="GC100" data-item-name="$100 Gift Certificate" data-item-price="100.00" data-item-taxable="false" data-item-shippable="false" data-item-url="{{ url_for('seeds.gift_certificates', _external=True) }}" id="button-GC100" type="button">
+										ADD TO CART
+									</button>
+								</th>
+							</tr>
+						</tbody>
+					</table>
+				</div>
 {% endblock %}
+{% block scripts %}
+ <script src="https://www.swallowtailgardenseeds.com/scripts/other-scripts.js"></script>
+ {% endblock %}

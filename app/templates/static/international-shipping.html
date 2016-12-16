@@ -13,15 +13,256 @@ along with this program.  If not, see
 Copyright Swallowtail Garden Seeds, Inc
 #}
 {% extends "includes/base.html" %}
-{# This is an example of how to add a 'static' HTML page. #}
-{# Put head data in block head, and main content in block main. #}
-{# Any templates in this folder will be rendered when accessed from root. #}
-{# i.e. localhost:5000/example.html in testing/dev mode renders this template. #}
-{% block head %}
-<title>Test Page Please Ignore</title>
-<link rel="canonical" href="{{ url_for('seeds.static_html', page=page,  _external=True) }}">
+{% block title %}International Shipping Information - Swallowtail Garden Seeds{% endblock %}
+{% block meta_description %}Information about shipping seeds internationally from Swallowtail Garden Seeds.{% endblock %}
+{% block meta_keywords %}swallowtail garden seeds, international, shipping, international shipping, information, shipping information, seeds, phytosanitary certificate, phytosanitary, phyto, seeds{% endblock %}
+{% block style %}
+      #main p{margin-bottom:1em;}
+      #main h2{margin-top:.95em;margin-bottom:.35em}
+      #main .small{font-size:small;}
 {% endblock %}
 {% block main %}
-<h1>Test Page Please Ignore</h1>
-<iframe width="640" height="360" src="https://www.youtube.com/embed/FMNJuSl91qY" frameborder="0" allowfullscreen></iframe>
+				<h1>
+					International Shipping
+				</h1>
+				<div>
+					We work hard to ensure all international seed orders are quickly processed and shipped. Our extensive experience shipping seed internationally helps shipments arrive without significant delays. Even with our experience and knowledge of shipping seed internationally, we recommend all of our international customers familiarize themselves with the current requirements of their country's ministry of agriculture.
+					<br>
+					<h2>
+						Shipping Charges:
+					</h2>
+					Standard international shipping is $6.95. Additional shipping charges may apply to international orders (excluding Canada) with a value greater than $200.00 USD. For orders shipping to Canada, additional shipping charges may apply to orders with a value greater than $400.00 USD. We will contact you before processing your order if any additional shipping charges apply.
+					<br>
+					<h2>
+						Payment Options:
+					</h2>
+					We accept Visa and Mastercard payments on our secure website. All charges are made in U.S. dollars. Some credit card companies require notification before international charges are made. We will contact you if we are unable to process your international payment.
+					<br>
+					<h2>
+						Phytosanitary Certificates:
+					</h2>
+					Most small, home-garden size seed orders shipped without a phytosanitary certificate arrive at their destination without an extra delay in customs. Please let us know if you require a phytosanitary certificate for your small, home-garden size seed order.
+					<br><br>
+					We require the purchase of a phytosanitary certificate for seed orders shipping internationally (excluding Canada) with a value greater than $500.00 USD. We do not require a phytosanitary certificate for orders shipping to Canada.
+					<br><br>
+					The cost for a phytosanitary certificate is $99.99 USD per shipment.
+					<br>
+					<h2>
+						International Shipping Questions:
+					</h2>
+					Please contact us if you have any questions.
+					<br>
+					Email:
+					<a href="mailto:info@swallowtailgardenseeds.com">
+						info@swallowtailgardenseeds.com
+					</a>
+					<br>
+					Phone: 1-707-538-3585
+					<br>
+					<div>
+						<h2>
+							We ship to:
+						</h2>
+						Australia
+						<br>
+						Belgium
+						<br>
+						Canada
+						<br>
+						Chile
+						<br>
+						Denmark
+						<br>
+						Finland
+						<br>
+						France
+						<br>
+						Georgia
+						<br>
+						Germany
+						<br>
+						Hungary
+						<br>
+						Italy
+						<br>
+						Ireland
+						<br>
+						Japan
+						<br>
+						Netherlands
+						<br>
+						Norway *
+						<br>
+						Puerto Rico
+						<br>
+						Scotland
+						<br>
+						Spain
+						<br>
+						Sri Lanka
+						<br>
+						Sweden
+						<br>
+						Switzerland
+						<br>
+						United Kingdom
+					</div>
+					<div>
+						<h2>
+							We ship to (with acceptance of risk ¹):
+						</h2>
+						Argentina
+						<br>
+						Barbados
+						<br>
+						Bulgaria
+						<br>
+						Brunei
+						<br>
+						Colombia
+						<br>
+						Croatia
+						<br>
+						Cyprus
+						<br>
+						Czech Republic
+						<br>
+						Dubai
+						<br>
+						Estonia
+						<br>
+						Iceland
+						<br>
+						Indonesia
+						<br>
+						Lithuania
+						<br>
+						Malaysia
+						<br>
+						Netherlands Antilles
+						<br>
+						Norway *
+						<br>
+						Philippines
+						<br>
+						Poland
+						<br>
+						Portugal
+						<br>
+						Qatar
+						<br>
+						Russia
+						<br>
+						Singapore
+						<br>
+						Slovakia
+						<br>
+						Slovenia
+						<br>
+						Solomon Islands
+						<br>
+						South Korea
+						<br>
+						Thailand
+						<br>
+						Ukraine
+						<br>
+						United Arab Emirates
+					</div>
+					<br>
+					<div class="small" style="line-height: 100%;">
+						* Orders over $50 USD shipping to Norway require acceptance of risk.
+						<br>
+						<br>
+						** If the country you wish to ship to does not appear on any of the shipping lists, please
+						<a href="mailto:info@swallowtailgardenseeds.com">
+							contact us
+						</a>
+						.
+					</div>
+					<div>
+						<h2>
+							We are unable to ship to ²:
+						</h2>
+						Bangladesh
+						<br>
+						Brazil
+						<br>
+						China
+						<br>
+						Cuba
+						<br>
+						Ecuador
+						<br>
+						Greece
+						<br>
+						Honduras
+						<br>
+						Hong Kong
+						<br>
+						India
+						<br>
+						Iran
+						<br>
+						Iraq
+						<br>
+						Israel
+						<br>
+						Jamaica
+						<br>
+						Jordan
+						<br>
+						Lebanon
+						<br>
+						Libya
+						<br>
+						Mauritius
+						<br>
+						Mexico
+						<br>
+						Mongolia
+						<br>
+						Myanmar
+						<br>
+						New Zealand
+						<br>
+						Oman
+						<br>
+						Pakistan
+						<br>
+						Romania
+						<br>
+						Saudi Arabia
+						<br>
+						Serbia
+						<br>
+						Taiwan
+						<br>
+						Tajikistan
+						<br>
+						Turkey
+						<br>
+						Uzbekistan
+						<br>
+						Venezuela
+						<br>
+						Vietnam
+						<br>
+						Yemen
+						<br>
+						All Countries in Africa
+					</div>
+					<br>
+					<div class="small" style="line-height: 100%;">
+						¹ Prior to shipping to these countries, we request confirmation that Swallowtail Garden Seeds will not be held responsible for any lost or confiscated merchandise.
+						<br>
+						<br>
+						² Customs has not allowed our packages into these countries.
+						<br>
+						<br>
+					</div>
+				</div>
+{% endblock %}
+{% block scripts %}
+ <script src="https://www.swallowtailgardenseeds.com/scripts/other-scripts.js"></script>
 {% endblock %}

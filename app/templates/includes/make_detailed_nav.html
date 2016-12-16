@@ -18,7 +18,7 @@
 {% macro make_detailed_nav(items, idx_slug=None) %}
 {% for item in items  %}
         <li>
-          <a href="{{ item['URL'] }}">{{ item['Header'] }}</a>
+          <a href="{{ item['URL'] }}">{% if item['Header'] == 'Bulk' %}Bulk Catalog{% else %}{{ item['Header'] }}{% endif %}</a>
         </li>
   {% if item['Slug'] == idx_slug %}
         <li>

@@ -129,14 +129,18 @@ Copyright Swallowtail Garden Seeds, Inc
       <ul class="Sidebar_nav">
         {% from 'includes/make_detailed_nav.html' import make_detailed_nav %}
         {% block detailed_nav %}{{ make_detailed_nav(nav_data) }}{% endblock %}
-        <li><a href="{{ url_for('seeds.tips_lists', _external=True) }}">Gardening Tips</a></li>
+        <li><a href="{{ url_for('seeds.tips_lists', _external=True) }}" title="Gardening Tips">Gardening Tips</a></li>
         <li><a href="{{ url_for('seeds.about', _external=True) }}" title="About Us">About Us</a></li>
+        <li><a href="{{ url_for('seeds.contact', _external=True) }}" title="Contact Us">Contact Us</a></li>
+        <li><a href="{{ url_for('seeds.how_to_order', _external=True) }}" title="How to Order">How to Order</a></li>
+        <li><a href="{{ url_for('seeds.gift_certificates', _external=True) }}" title="Gift Certificates">Gift Certificates</a></li>
+        <li><a href="{{ url_for('seeds.international_shipping', _external=True) }}" title="International Shipping">International Shipping</a></li>
+        <li><a href="{{ url_for('seeds.privacy_policy', _external=True) }}" title="Privacy Policy">Privacy Policy</a></li>
+        <li><a href="{{ url_for('seeds.zone_map', _external=True) }}" title="Zone Map">Zone Map</a></li>
       </ul>
     </div>
     <div class="Footer">
-      {# TODO: Replace Site Map link with correct one.
-      <a class="Footer_site-map-link" href="{{ url_for('seeds.static_html', page='site-map',  _external=True) }}">Site Map</a>
-      #}
+      <a class="Footer_site-map-link" href="{{ url_for('seeds.site_map', _external=True) }}">Site Map</a>
       <p class="Footer_copyright_p">Copyright&nbsp;&#169;&nbsp;2016 Swallowtail&nbsp;Garden&nbsp;Seeds - All&nbsp;Rights&nbsp;Reserved
       </p>
       <p class="Footer_copyright_p Footer_copyright_p2">Copyright pertains to all images, none of which may be reproduced in any form without<br class="no-mobile-display"> the expressed written consent of Swallowtail Garden Seeds.
